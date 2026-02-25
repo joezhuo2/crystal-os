@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useApp, type Transaction } from "@/contexts/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, X, Settings } from "lucide-react";
+import { CategoryManagerButton } from "./CategoryManager";
 import {
   AreaChart, Area, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -194,11 +195,14 @@ export default function FinancialsPage() {
         <CategoryDonut />
       </div>
       <SavingsTrend />
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-sm font-semibold">Recent Transactions</p>
-        <button onClick={() => setShowDrawer(!showDrawer)} className="glass-card-hover px-3 py-1.5 rounded-lg text-xs font-medium text-primary hover:text-primary-foreground hover:bg-primary transition-colors flex items-center gap-1">
-          <Plus className="w-3.5 h-3.5" /> Quick Add
-        </button>
+        <div className="flex items-center gap-2">
+          <CategoryManagerButton mode="financial" />
+          <button onClick={() => setShowDrawer(!showDrawer)} className="glass-card-hover px-3 py-1.5 rounded-lg text-xs font-medium text-primary hover:text-primary-foreground hover:bg-primary transition-colors flex items-center gap-1">
+            <Plus className="w-3.5 h-3.5" /> Quick Add
+          </button>
+        </div>
       </div>
       <AnimatePresence>{showDrawer && <TransactionDrawer onClose={() => setShowDrawer(false)} />}</AnimatePresence>
       <TransactionList />
