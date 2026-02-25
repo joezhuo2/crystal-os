@@ -1,13 +1,43 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { AppProvider } from "@/contexts/AppContext";
+import { SidebarNav, BottomNav, type TabId } from "@/components/layout/Navigation";
+import { AnimatePresence, motion } from "framer-motion";
+import HomePage from "@/components/views/HomePage";
+import TasksPage from "@/components/views/TasksPage";
+import CalendarPage from "@/components/views/CalendarPage";
+import FinancialsPage from "@/components/views/FinancialsPage";
+
+const views: Record<TabId, React.ComponentType> = {
+  home: HomePage,
+  tasks: TasksPage,
+  calendar: CalendarPage,
+  financials: FinancialsPage,
+};
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState<TabId>("home");
+  const View = views[activeTab];
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <AppProvider>
+      <div className="min-h-screen mesh-gradient-bg flex">
+        <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
+        <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.2 }}
+            >
+              <View />
+            </motion.div>
+          </AnimatePresence>
+        </main>
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
-    </div>
+    </AppProvider>
   );
 };
 
