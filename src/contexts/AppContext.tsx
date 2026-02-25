@@ -47,6 +47,7 @@ type AppState = {
   deleteTransaction: (id: string) => void;
   setDailyFocus: (focus: string) => void;
   addTaskCategory: (cat: Omit<TaskCategory, "id">) => void;
+  deleteTaskCategory: (id: string) => void;
   addFinancialCategory: (cat: Omit<FinancialCategory, "id">) => void;
   deleteFinancialCategory: (id: string) => void;
 };
@@ -126,6 +127,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTaskCategories((prev) => [...prev, { ...cat, id: genId() }]);
   }, []);
 
+  const deleteTaskCategory = useCallback((id: string) => {
+    setTaskCategories((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
   const addFinancialCategory = useCallback((cat: Omit<FinancialCategory, "id">) => {
     setFinancialCategories((prev) => [...prev, { ...cat, id: genId() }]);
   }, []);
@@ -138,11 +143,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     () => ({
       tasks, transactions, taskCategories, financialCategories, dailyFocus,
       addTask, updateTask, deleteTask, addTransaction, deleteTransaction,
-      setDailyFocus, addTaskCategory, addFinancialCategory, deleteFinancialCategory,
+      setDailyFocus, addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
     }),
     [tasks, transactions, taskCategories, financialCategories, dailyFocus,
      addTask, updateTask, deleteTask, addTransaction, deleteTransaction,
-     addTaskCategory, addFinancialCategory, deleteFinancialCategory]
+     addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

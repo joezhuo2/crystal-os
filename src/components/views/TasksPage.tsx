@@ -3,6 +3,7 @@ import { useApp, type Task, type Priority } from "@/contexts/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Check, Trash2, LayoutList, Columns, X } from "lucide-react";
 import PomodoroTimer from "./PomodoroTimer";
+import { CategoryManagerButton } from "./CategoryManager";
 
 const priorityLabel: Record<Priority, string> = { low: "Low", medium: "Med", high: "High", urgent: "Urgent" };
 const priorityClass: Record<Priority, string> = { low: "priority-low", medium: "priority-medium", high: "priority-high", urgent: "priority-urgent" };
@@ -150,7 +151,7 @@ export default function TasksPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <div className="flex glass-card p-0.5 rounded-lg">
           <button onClick={() => setView("list")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <LayoutList className="w-3.5 h-3.5 inline mr-1" />List
@@ -159,6 +160,7 @@ export default function TasksPage() {
             <Columns className="w-3.5 h-3.5 inline mr-1" />Board
           </button>
         </div>
+        <CategoryManagerButton mode="task" />
         <button onClick={() => setShowForm(!showForm)} className="ml-auto glass-card-hover px-3 py-1.5 rounded-lg text-xs font-medium text-primary hover:text-primary-foreground hover:bg-primary transition-colors flex items-center gap-1">
           <Plus className="w-3.5 h-3.5" /> Add Task
         </button>
