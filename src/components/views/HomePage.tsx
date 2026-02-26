@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Cloud, Sun, Moon, CloudRain } from "lucide-react";
+import { Cloud, Sun, Moon, CloudRain, CloudSun, CloudSnow, CloudLightning, CloudDrizzle, MoonStar } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { motion } from "framer-motion";
 import { taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
+import { useWeather, AVAILABLE_CITIES } from "@/hooks/useWeather";
 
 function Clock() {
   const [time, setTime] = useState(new Date());
@@ -27,18 +28,65 @@ function Clock() {
   );
 }
 
-function WeatherWidget() {
-  const hour = new Date().getHours();
-  const isNight = hour < 6 || hour > 20;
-  const Icon = isNight ? Moon : Sun;
+const CITY_STORAGE_KEY = "crystal-os-weather-city";
+
+function HomeWeatherIcon({ code, className = "w-6 h-6" }: { code: number; className?: string }) {
+  const props = { className };
+  if (code === 0 || code === 1) return <Sun {...props} />;
+  if (code === 2) return <CloudSun {...props} />;
+  if (code >= 3 && code <= 4) return <Cloud {...props} />;
+  if (code === 5 || code === 27) return <CloudDrizzle {...props} />;
+  if (code === 6 || code === 11 || code === 12 || code === 36) return <CloudRain {...props} />;
+  if (code === 7 || code === 8 || code === 28 || code === 37) return <CloudSnow {...props} />;
+  if (code === 9 || code === 18 || code === 19 || code === 39) return <CloudLightning {...props} />;
+  if (code === 10 || code === 33 || code === 34) return <Cloud {...props} />;
+  if (code >= 13 && code <= 17) return <CloudSnow {...props} />;
+  if (code === 30 || code === 31) return <MoonStar {...props} />;
+  if (code === 32) return <Moon {...props} />;
+  if (code === 38) return <CloudSnow {...props} />;
+  return <Cloud {...props} />;
+}
+
+function WeatherWidget({ onClick }: { onClick?: () => void }) {
+  const cityId = (() => {
+    try { return localStorage.getItem(CITY_STORAGE_KEY) ?? "on-85"; } catch { return "on-85"; }
+  })();
+  const { data, isLoading } = useWeather(cityId);
+  const cityName = AVAILABLE_CITIES.find((c) => c.id === cityId)?.name ?? "Markham";
+
+  // Find today's high/low from daily forecasts
+  const todayHigh = data?.dailyForecasts?.[0]?.high ?? data?.dailyForecasts?.[1]?.high ?? null;
+  const todayLow = data?.dailyForecasts?.[0]?.low ?? data?.dailyForecasts?.[1]?.low ?? null;
+
+  if (isLoading || !data) {
+    return (
+      <div className="glass-card-hover p-6 flex items-center gap-4 cursor-pointer" onClick={onClick}>
+        <div className="p-3 rounded-xl animate-pulse" style={{ background: "hsl(239 84% 67% / 0.12)" }}>
+          <Cloud className="w-6 h-6 text-primary/30" />
+        </div>
+        <div className="space-y-1.5">
+          <div className="w-16 h-7 rounded bg-primary/10 animate-pulse" />
+          <div className="w-32 h-3 rounded bg-primary/5 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="glass-card-hover p-6 flex items-center gap-4">
+    <div className="glass-card-hover p-6 flex items-center gap-4 cursor-pointer" onClick={onClick}>
       <div className="p-3 rounded-xl" style={{ background: "hsl(239 84% 67% / 0.12)" }}>
-        <Icon className="w-6 h-6 text-primary" />
+        <HomeWeatherIcon code={data.current.iconCode} className="w-6 h-6 text-primary" />
       </div>
       <div>
-        <p className="text-2xl font-semibold">72°F</p>
-        <p className="text-xs text-muted-foreground">{isNight ? "Clear Night" : "Partly Cloudy"} · San Francisco</p>
+        <div className="flex items-baseline gap-2">
+          <p className="text-2xl font-semibold">{Math.round(data.current.temperature)}°C</p>
+          {todayHigh !== null && todayLow !== null && (
+            <p className="text-xs text-muted-foreground">
+              H:{todayHigh}° L:{todayLow}°
+            </p>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">{data.current.condition} · {cityName}</p>
       </div>
     </div>
   );
@@ -121,7 +169,7 @@ function SmartSummary() {
   );
 }
 
-export default function HomePage() {
+export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -129,7 +177,7 @@ export default function HomePage() {
       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
     >
       <Clock />
-      <WeatherWidget />
+      <WeatherWidget onClick={() => onNavigate?.("weather")} />
       <SmartSummary />
       <DailyFocus />
     </motion.div>

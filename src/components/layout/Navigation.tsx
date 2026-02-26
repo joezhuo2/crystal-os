@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { Home, ListTodo, Calendar, Wallet } from "lucide-react";
+import { Home, ListTodo, Calendar, Wallet, CloudSun } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export type TabId = "home" | "tasks" | "calendar" | "financials";
+export type TabId = "home" | "tasks" | "calendar" | "financials" | "weather";
 
 const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: "home", label: "The Pulse", icon: Home },
   { id: "tasks", label: "The Engine", icon: ListTodo },
   { id: "calendar", label: "The Horizon", icon: Calendar },
   { id: "financials", label: "The Vault", icon: Wallet },
+  { id: "weather", label: "The Atmosphere", icon: CloudSun },
 ];
 
 interface SidebarNavProps {

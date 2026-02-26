@@ -6,13 +6,19 @@ import HomePage from "@/components/views/HomePage";
 import TasksPage, { TaskForm } from "@/components/views/TasksPage";
 import CalendarPage from "@/components/views/CalendarPage";
 import FinancialsPage, { TransactionDrawer } from "@/components/views/FinancialsPage";
+import WeatherPage from "@/components/views/WeatherPage";
 import CommandPalette from "@/components/CommandPalette";
 
-const views: Record<TabId, React.ComponentType> = {
+interface ViewProps {
+  onNavigate?: (tab: TabId) => void;
+}
+
+const views: Record<TabId, React.ComponentType<ViewProps>> = {
   home: HomePage,
   tasks: TasksPage,
   calendar: CalendarPage,
   financials: FinancialsPage,
+  weather: WeatherPage,
 };
 
 function GlobalOverlays() {
@@ -47,7 +53,7 @@ const Index = () => {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.2 }}
             >
-              <View />
+              <View onNavigate={setActiveTab} />
             </motion.div>
           </AnimatePresence>
         </main>
