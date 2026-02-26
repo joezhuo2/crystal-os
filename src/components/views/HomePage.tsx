@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Cloud, Sun, Moon, CloudRain } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { motion } from "framer-motion";
+import { taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 
 function Clock() {
   const [time, setTime] = useState(new Date());
@@ -80,8 +81,8 @@ function DailyFocus() {
 
 function SmartSummary() {
   const { tasks, transactions } = useApp();
-  const today = new Date().toISOString().split("T")[0];
-  const todayTasks = tasks.filter((t) => t.date === today);
+  const today = toLocalDateStr();
+  const todayTasks = tasks.filter((t) => taskFallsOnDate(t, today));
   const dueTasks = todayTasks.filter((t) => !t.completed);
   const completedTasks = todayTasks.filter((t) => t.completed);
 

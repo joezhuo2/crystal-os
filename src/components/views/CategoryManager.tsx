@@ -26,6 +26,7 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
   const categories = mode === "task" ? taskCategories : financialCategories;
   const [name, setName] = useState("");
   const [color, setColor] = useState(presetColors[0]);
+  const [hexInput, setHexInput] = useState("");
 
   const add = () => {
     if (!name.trim()) return;
@@ -98,17 +99,42 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
           />
           <div>
             <p className="text-xs text-muted-foreground mb-2">Color</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-3">
               {presetColors.map((c) => (
                 <button
                   key={c}
-                  onClick={() => setColor(c)}
+                  onClick={() => { setColor(c); setHexInput(""); }}
                   className={`w-7 h-7 rounded-full transition-all ${
-                    color === c ? "ring-2 ring-foreground ring-offset-2 ring-offset-background scale-110" : "hover:scale-105"
+                    color === c && !hexInput ? "ring-2 ring-foreground ring-offset-2 ring-offset-background scale-110" : "hover:scale-105"
                   }`}
                   style={{ background: c }}
                 />
               ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="relative shrink-0">
+                <input
+                  type="color"
+                  value={color.startsWith("#") ? color : "#6366f1"}
+                  onChange={(e) => { setColor(e.target.value); setHexInput(e.target.value); }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div
+                  className="w-8 h-8 rounded-lg border border-white/10 cursor-pointer"
+                  style={{ background: hexInput || color }}
+                />
+              </label>
+              <input
+                value={hexInput}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setHexInput(v);
+                  if (/^#[0-9a-fA-F]{6}$/.test(v)) setColor(v);
+                }}
+                placeholder="#6366f1"
+                className="flex-1 bg-secondary/50 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary/50 font-mono"
+              />
+              <span className="text-[10px] text-muted-foreground shrink-0">Hex</span>
             </div>
           </div>
           <button

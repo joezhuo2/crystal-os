@@ -1,15 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Play, Pause, RotateCcw } from "lucide-react";
 
-const WORK_DURATION = 25 * 60;
-const BREAK_DURATION = 5 * 60;
+const DEFAULT_WORK = 25 * 60;
+const DEFAULT_BREAK = 5 * 60;
 
 export default function PomodoroTimer() {
-  const [seconds, setSeconds] = useState(WORK_DURATION);
+  const [workDuration, setWorkDuration] = useState(DEFAULT_WORK);
+  const [breakDuration, setBreakDuration] = useState(DEFAULT_BREAK);
+  const [seconds, setSeconds] = useState(DEFAULT_WORK);
   const [running, setRunning] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const total = isBreak ? BREAK_DURATION : WORK_DURATION;
+  const total = isBreak ? breakDuration : workDuration;
   const progress = (total - seconds) / total;
   const radius = 90;
   const circumference = 2 * Math.PI * radius;
@@ -22,22 +27,56 @@ export default function PomodoroTimer() {
         if (s <= 1) {
           setRunning(false);
           setIsBreak((b) => !b);
-          return isBreak ? WORK_DURATION : BREAK_DURATION;
+          return isBreak ? workDuration : breakDuration;
         }
         return s - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [running, isBreak]);
+  }, [running, isBreak, workDuration, breakDuration]);
 
   const reset = useCallback(() => {
     setRunning(false);
-    setSeconds(isBreak ? BREAK_DURATION : WORK_DURATION);
-  }, [isBreak]);
+    setSeconds(isBreak ? breakDuration : workDuration);
+  }, [isBreak, workDuration, breakDuration]);
 
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   const strokeColor = isBreak ? "hsl(160 84% 39%)" : "hsl(239 84% 67%)";
+
+  const handleTimeClick = () => {
+    if (running) return;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    setEditValue(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    setEditing(true);
+    setTimeout(() => inputRef.current?.select(), 0);
+  };
+
+  const commitEdit = () => {
+    const match = editValue.match(/^(\d{1,2}):(\d{2})$/);
+    if (match) {
+      const h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+        const newDuration = h * 3600 + m * 60;
+        if (newDuration > 0) {
+          if (isBreak) {
+            setBreakDuration(newDuration);
+          } else {
+            setWorkDuration(newDuration);
+          }
+          setSeconds(newDuration);
+        }
+      }
+    }
+    setEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") commitEdit();
+    if (e.key === "Escape") setEditing(false);
+  };
 
   return (
     <div className="glass-card p-5 flex flex-col items-center">
@@ -55,9 +94,27 @@ export default function PomodoroTimer() {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-bold tabular-nums">
-            {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
-          </span>
+          {editing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={handleKeyDown}
+              className="w-28 text-center text-3xl font-bold tabular-nums bg-transparent border-b border-primary outline-none"
+              placeholder="HH:MM"
+              maxLength={5}
+            />
+          ) : (
+            <span
+              className={`text-3xl font-bold tabular-nums ${!running ? "cursor-pointer hover:text-primary transition-colors" : ""}`}
+              onClick={handleTimeClick}
+              title={!running ? "Click to edit time" : undefined}
+            >
+              {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+            </span>
+          )}
           <span className="text-[10px] text-muted-foreground mt-1">{isBreak ? "Relax" : "Focus"}</span>
         </div>
       </div>

@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Home, ListTodo, Calendar, Wallet } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export type TabId = "home" | "tasks" | "calendar" | "financials";
 
@@ -16,14 +17,34 @@ interface SidebarNavProps {
 }
 
 export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <aside className="hidden md:flex flex-col w-64 min-h-screen glass-card border-r border-t-0 border-b-0 border-l-0 rounded-none p-4 pt-8 gap-2">
-      <div className="mb-8 px-3">
-        <h1 className="text-xl font-bold tracking-tight">
-          <span className="text-gradient-indigo">Crystal</span>{" "}
-          <span className="text-muted-foreground font-light">OS</span>
-        </h1>
-        <p className="text-xs text-muted-foreground mt-1">Productivity Ecosystem</p>
+    <motion.aside
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+      animate={{ width: expanded ? 256 : 64 }}
+      transition={{ type: "spring", bounce: 0.15, duration: 0.35 }}
+      className="hidden md:flex flex-col h-screen sticky top-0 glass-card border-r border-t-0 border-b-0 border-l-0 rounded-none p-4 pt-8 gap-2 overflow-hidden"
+    >
+      <div className="mb-8 px-3 whitespace-nowrap overflow-hidden">
+        <AnimatePresence mode="wait">
+          {expanded ? (
+            <motion.div key="full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+              <h1 className="text-xl font-bold tracking-tight">
+                <span className="text-gradient-indigo">Crystal</span>{" "}
+                <span className="text-muted-foreground font-light">OS</span>
+              </h1>
+              <p className="text-xs text-muted-foreground mt-1">Productivity Ecosystem</p>
+            </motion.div>
+          ) : (
+            <motion.div key="icon" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+              <h1 className="text-xl font-bold tracking-tight">
+                <span className="text-gradient-indigo">C</span>
+              </h1>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       <nav className="flex flex-col gap-1">
         {tabs.map((tab) => {
@@ -32,11 +53,12 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap overflow-hidden ${
                 isActive
                   ? "text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
               }`}
+              title={!expanded ? tab.label : undefined}
             >
               {isActive && (
                 <motion.div
@@ -49,13 +71,19 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
                   transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
                 />
               )}
-              <tab.icon className="w-4 h-4 relative z-10" />
-              <span className="relative z-10">{tab.label}</span>
+              <tab.icon className="w-4 h-4 relative z-10 shrink-0" />
+              <motion.span
+                className="relative z-10"
+                animate={{ opacity: expanded ? 1 : 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                {tab.label}
+              </motion.span>
             </button>
           );
         })}
       </nav>
-    </aside>
+    </motion.aside>
   );
 }
 
