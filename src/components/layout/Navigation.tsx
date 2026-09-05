@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Home, ListTodo, Calendar, Wallet, CloudSun } from "lucide-react";
+import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export type TabId = "home" | "tasks" | "calendar" | "financials" | "weather";
+export type TabId = "home" | "tasks" | "calendar" | "financials" | "weather" | "archive";
 
 const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: "home", label: "The Pulse", icon: Home },
@@ -10,6 +10,7 @@ const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: "calendar", label: "The Horizon", icon: Calendar },
   { id: "financials", label: "The Vault", icon: Wallet },
   { id: "weather", label: "The Atmosphere", icon: CloudSun },
+  { id: "archive", label: "The Archive", icon: BookOpen },
 ];
 
 interface SidebarNavProps {

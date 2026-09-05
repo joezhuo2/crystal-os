@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useApp } from "@/contexts/AppContext";
-import { toLocalDateStr } from "@/lib/utils";
+import { toLocalDateStr, useDebouncedValue } from "@/lib/utils";
+import { useVaultNotes } from "@/hooks/useVault";
 import type { TabId } from "@/components/layout/Navigation";
 import {
   Command,
@@ -18,6 +19,8 @@ import {
   ArrowRight,
   DollarSign,
   CheckCircle2,
+  NotebookPen,
+  BookOpen,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -29,7 +32,7 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
   const [focused, setFocused] = useState(false);
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
-  const { tasks, transactions, taskCategories, financialCategories, addTask, addTransaction, setShowTaskForm, setShowTransactionForm } = useApp();
+  const { tasks, transactions, taskCategories, financialCategories, addTask, addTransaction, setShowTaskForm, setShowTransactionForm, setSelectedNotePath, setShowQuickAdd, setQuickAddDraft } = useApp();
 
   const showDropdown = focused && (search.length > 0 || focused);
 
@@ -98,10 +101,31 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
         )
       : [];
 
+  // ---------- Search the Obsidian vault ----------
+  const vaultQuery = !addPrefix && !logPrefix ? search.trim() : "";
+  const debouncedVaultQuery = useDebouncedValue(vaultQuery, 250);
+  const { data: vaultData } = useVaultNotes(
+    { q: debouncedVaultQuery, limit: 5 },
+    debouncedVaultQuery.length >= 2,
+  );
+  const matchedNotes = debouncedVaultQuery.length >= 2 ? (vaultData?.notes ?? []) : [];
+
   // ---------- Handlers ----------
   const handleNavigate = (tab: TabId) => {
     onNavigate(tab);
     close();
+  };
+
+  const handleQuickAdd = () => {
+    // Seed the dialog with whatever was typed, minus the command prefixes.
+    setQuickAddDraft(addPrefix || logPrefix ? "" : search.trim());
+    close();
+    setShowQuickAdd(true);
+  };
+
+  const handleOpenNote = (notePath: string) => {
+    setSelectedNotePath(notePath);
+    handleNavigate("archive");
   };
 
   const handleAddTask = () => {
@@ -128,6 +152,10 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
           transition: "border-color 0.2s, box-shadow 0.2s",
         }}
         filter={(value, search) => {
+          // Vault notes are matched server-side (including on body text), and
+          // Quick Add is always offered — neither can pass a local substring
+          // test against the raw query, so they opt out of cmdk's filter.
+          if (value === "quick-add-vault" || value.startsWith("note-")) return 1;
           if (value.toLowerCase().includes(search.toLowerCase())) return 1;
           return 0;
         }}
@@ -171,6 +199,28 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
                 <CommandEmpty className="py-6 text-center text-sm text-muted-foreground/70">
                   No results found. Try "add Buy milk" or "log 25 for Lunch".
                 </CommandEmpty>
+
+                {/* ── Quick Add to the vault — always the first row ── */}
+                <CommandGroup heading="Vault">
+                  <CommandItem
+                    value="quick-add-vault"
+                    onSelect={handleQuickAdd}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/15">
+                      <NotebookPen className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {vaultQuery ? `Quick add "${vaultQuery}"` : "Quick Add to Vault"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Append to Inbox.md in your Obsidian vault
+                      </p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground/40" />
+                  </CommandItem>
+                </CommandGroup>
 
                 {/* ── Natural Language: Add Task ── */}
                 {addPrefix && (
@@ -277,6 +327,33 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
                           </CommandItem>
                         );
                       })}
+                    </CommandGroup>
+                  </>
+                )}
+
+                {/* ── Matching Vault Notes ── */}
+                {matchedNotes.length > 0 && (
+                  <>
+                    <CommandSeparator className="my-1 bg-white/[0.06]" />
+                    <CommandGroup heading="Vault Notes">
+                      {matchedNotes.map((note) => (
+                        <CommandItem
+                          key={note.path}
+                          value={`note-${note.title}-${note.tags.join("-")}-${note.path}`}
+                          onSelect={() => handleOpenNote(note.path)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                        >
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 shrink-0">
+                            <BookOpen className="w-4 h-4 text-sky-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{note.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {note.matchContext ?? (note.tags.length ? note.tags.join(" · ") : note.path)}
+                            </p>
+                          </div>
+                        </CommandItem>
+                      ))}
                     </CommandGroup>
                   </>
                 )}

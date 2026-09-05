@@ -7,7 +7,9 @@ import TasksPage, { TaskForm } from "@/components/views/TasksPage";
 import CalendarPage from "@/components/views/CalendarPage";
 import FinancialsPage, { TransactionDrawer } from "@/components/views/FinancialsPage";
 import WeatherPage from "@/components/views/WeatherPage";
+import ArchivePage from "@/components/views/ArchivePage";
 import CommandPalette from "@/components/CommandPalette";
+import QuickAddDialog from "@/components/QuickAddDialog";
 
 interface ViewProps {
   onNavigate?: (tab: TabId) => void;
@@ -19,6 +21,7 @@ const views: Record<TabId, React.ComponentType<ViewProps>> = {
   calendar: CalendarPage,
   financials: FinancialsPage,
   weather: WeatherPage,
+  archive: ArchivePage,
 };
 
 function GlobalOverlays() {
@@ -31,6 +34,7 @@ function GlobalOverlays() {
       <AnimatePresence>
         {showTransactionForm && <TransactionDrawer editingTransaction={editingTransaction} onClose={() => { setShowTransactionForm(false); setEditingTransaction(null); }} />}
       </AnimatePresence>
+      <QuickAddDialog />
     </>
   );
 }

@@ -4,6 +4,9 @@ import { useApp } from "@/contexts/AppContext";
 import { motion } from "framer-motion";
 import { taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 import { useWeather, AVAILABLE_CITIES } from "@/hooks/useWeather";
+import { useVaultNotes } from "@/hooks/useVault";
+import { BookOpen, NotebookPen } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 function Clock() {
   const [time, setTime] = useState(new Date());
@@ -88,6 +91,108 @@ function WeatherWidget({ onClick }: { onClick?: () => void }) {
         </div>
         <p className="text-xs text-muted-foreground">{data.current.condition} · {cityName}</p>
       </div>
+    </div>
+  );
+}
+
+function VaultWidget({ onClick }: { onClick?: () => void }) {
+  const { setSelectedNotePath, setShowQuickAdd, setQuickAddDraft } = useApp();
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const { data, isLoading, error } = useVaultNotes({
+    tag: activeTag ?? undefined,
+    limit: 4,
+  });
+
+  const openQuickAdd = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setQuickAddDraft("");
+    setShowQuickAdd(true);
+  };
+
+  return (
+    <div className="glass-card-hover p-6 col-span-full lg:col-span-1">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-muted-foreground uppercase tracking-widest">The Archive</p>
+        <button
+          onClick={openQuickAdd}
+          title="Quick add to vault"
+          className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+        >
+          <NotebookPen className="w-4 h-4" />
+        </button>
+      </div>
+
+      {error && <p className="text-xs text-muted-foreground">Vault unavailable.</p>}
+
+      {isLoading && (
+        <div className="space-y-2">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="w-full h-4 rounded bg-primary/5 animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {!isLoading && !error && data && (
+        <>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {data.allTags.slice(0, 5).map((tag) => {
+              const active = activeTag === tag;
+              return (
+                <button
+                  key={tag}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTag(active ? null : tag);
+                  }}
+                  className="px-2 py-0.5 rounded-full text-[10px] transition-colors border"
+                  style={{
+                    background: active ? "hsl(239 84% 67% / 0.18)" : "hsl(0 0% 100% / 0.04)",
+                    borderColor: active ? "hsl(239 84% 67% / 0.4)" : "hsl(0 0% 100% / 0.08)",
+                  }}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="space-y-1.5">
+            {data.notes.length === 0 && (
+              <p className="text-xs text-muted-foreground">No notes for this tag.</p>
+            )}
+            {data.notes.map((note, i) => (
+              <motion.button
+                key={note.path}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                onClick={() => {
+                  setSelectedNotePath(note.path);
+                  onClick?.();
+                }}
+                className="w-full flex items-center gap-2 text-left group"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-sky-400/60 shrink-0" />
+                <span className="text-sm truncate group-hover:text-primary transition-colors">
+                  {note.title}
+                </span>
+                <span className="ml-auto text-[10px] text-muted-foreground/50 shrink-0">
+                  {formatDistanceToNow(new Date(note.date ? Date.parse(note.date) : note.mtime), {
+                    addSuffix: true,
+                  })}
+                </span>
+              </motion.button>
+            ))}
+          </div>
+
+          <button
+            onClick={onClick}
+            className="text-xs text-muted-foreground hover:text-primary transition-colors mt-3"
+          >
+            Browse all {data.total} notes →
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -180,6 +285,7 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
       <WeatherWidget onClick={() => onNavigate?.("weather")} />
       <SmartSummary />
       <DailyFocus />
+      <VaultWidget onClick={() => onNavigate?.("archive")} />
     </motion.div>
   );
 }

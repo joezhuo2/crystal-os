@@ -1,4 +1,112 @@
+# ---------------------------------------------------------------------------
+# Secrets and local configuration
+# ---------------------------------------------------------------------------
+# .env.example is the only env file that belongs in the repo — it must never
+# contain real values.
+.env
+.env.*
+!.env.example
+*.local
+.envrc
+.direnv/
+
+# Credentials, keys, certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+*.jks
+*.keystore
+*.asc
+*.gpg
+id_rsa*
+id_ed25519*
+*.ppk
+secrets.*
+secret.*
+credentials.*
+*credentials.json
+service-account*.json
+*.secret
+*.secrets
+.npmrc
+.yarnrc
+.netrc
+.htpasswd
+
+# Cloud / deploy provider state
+.vercel
+.netlify
+.firebase/
+.firebaserc
+.wrangler/
+.serverless/
+.aws/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# Supabase local state (keep supabase/migrations and supabase/config.toml)
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# ---------------------------------------------------------------------------
+# Personal data
+# ---------------------------------------------------------------------------
+# Never commit vault contents, exports, or captures — this app reads a
+# personal Obsidian vault from disk.
+vault/
+Vault/
+*.obsidian/
+notes/
+exports/
+backups/
+*.sqlite
+*.sqlite3
+*.db
+
+# ---------------------------------------------------------------------------
+# Dependencies and build output
+# ---------------------------------------------------------------------------
+node_modules
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/versions
+dist
+dist-ssr
+build
+out
+.output/
+.vite/
+*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Caches and test output
+# ---------------------------------------------------------------------------
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+coverage/
+*.lcov
+.nyc_output/
+.vitest/
+playwright-report/
+test-results/
+.turbo/
+
+# ---------------------------------------------------------------------------
 # Logs
+# ---------------------------------------------------------------------------
 logs
 *.log
 npm-debug.log*
@@ -6,19 +114,44 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+report.*.json
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
+# ---------------------------------------------------------------------------
+# Editor, tooling, and OS files
+# ---------------------------------------------------------------------------
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*~
+.history/
+.VSCodeCounter/
+
+# AI assistant local state
+.claude/
+.cursor/
+.aider*
+CLAUDE.local.md
+
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ---------------------------------------------------------------------------
+# Scratch
+# ---------------------------------------------------------------------------
+tmp/
+temp/
+scratch/
+*.bak
+*.orig
+*.rej

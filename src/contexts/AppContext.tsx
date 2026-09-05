@@ -62,6 +62,14 @@ type AppState = {
   setEditingTask: (task: Task | null) => void;
   editingTransaction: Transaction | null;
   setEditingTransaction: (tx: Transaction | null) => void;
+  /** Vault note the Archive page should open. UI-only, never persisted. */
+  selectedNotePath: string | null;
+  setSelectedNotePath: (path: string | null) => void;
+  showQuickAdd: boolean;
+  setShowQuickAdd: (show: boolean) => void;
+  /** Seeds the Quick Add dialog, e.g. with whatever was typed in the palette. */
+  quickAddDraft: string;
+  setQuickAddDraft: (text: string) => void;
 };
 
 const defaultTaskCategories: TaskCategory[] = [
@@ -153,6 +161,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [selectedNotePath, setSelectedNotePath] = useState<string | null>(null);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickAddDraft, setQuickAddDraft] = useState("");
 
   // ── Fetch all data on mount ──
   useEffect(() => {
@@ -264,11 +275,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setDailyFocus, addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
       showTaskForm, setShowTaskForm, showTransactionForm, setShowTransactionForm,
       editingTask, setEditingTask, editingTransaction, setEditingTransaction,
+      selectedNotePath, setSelectedNotePath, showQuickAdd, setShowQuickAdd,
+      quickAddDraft, setQuickAddDraft,
     }),
     [tasks, transactions, taskCategories, financialCategories, dailyFocus, loading,
      addTask, updateTask, deleteTask, addTransaction, updateTransaction, deleteTransaction,
      setDailyFocus, addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
-     showTaskForm, showTransactionForm, editingTask, editingTransaction]
+     showTaskForm, showTransactionForm, editingTask, editingTransaction,
+     selectedNotePath, showQuickAdd, quickAddDraft]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
