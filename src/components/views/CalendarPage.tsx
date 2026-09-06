@@ -1,60 +1,408 @@
-import { useState, useMemo } from "react";
-import { useApp, type Task, type Priority } from "@/contexts/AppContext";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, X, Check, Calendar, Columns } from "lucide-react";
-import { taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
+import {
+  AlertTriangle,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  List,
+  Loader2,
+  MapPin,
+  Pencil,
+  Plus,
+  Repeat,
+  Trash2,
+  Unplug,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+import { toLocalDateStr } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  type CalendarEvent,
+  type EventScope,
+  type RecurrenceFreq,
+  buildRecurrence,
+  localTimeZone,
+  parseRecurrence,
+  useCalendarEvents,
+  useCalendarList,
+  useCalendarStatus,
+  useCreateEvent,
+  useDeleteEvent,
+  useDisconnectCalendar,
+  useUpdateEvent,
+} from "@/hooks/useGoogleCalendar";
 
-const priorityColor: Record<Priority, string> = {
-  low: "hsl(160 84% 39%)",
-  medium: "hsl(45 93% 47%)",
-  high: "hsl(25 95% 53%)",
-  urgent: "hsl(0 72% 51%)",
-};
-const priorityRank: Record<Priority, number> = { low: 0, medium: 1, high: 2, urgent: 3 };
+const CALENDAR_STORAGE_KEY = "crystal-os-google-calendar";
+const DEFAULT_COLOR = "hsl(239 84% 67%)";
+const AGENDA_DAYS = 30;
+const DAY_MS = 86400000;
 
-function HabitStreak() {
-  const { tasks } = useApp();
-  // Build a simple 7x7 grid of recent days
-  const grid = useMemo(() => {
-    const days: { date: string; count: number }[] = [];
-    for (let i = 48; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 86400000);
-      const dateStr = toLocalDateStr(d);
-      const count = tasks.filter((t) => taskFallsOnDate(t, dateStr) && t.completed).length;
-      days.push({ date: dateStr, count });
-    }
-    return days;
-  }, [tasks]);
+const FIELD_CLASS =
+  "w-full bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary/50";
 
-  const getOpacity = (count: number) => {
-    if (count === 0) return 0.08;
-    if (count === 1) return 0.3;
-    if (count === 2) return 0.55;
-    return 0.85;
-  };
+/* ── date helpers ── */
+
+/** Events span whole days inclusively, so a date lands inside [start, end]. */
+function eventFallsOnDate(event: CalendarEvent, dateStr: string): boolean {
+  return event.startDate <= dateStr && event.endDate >= dateStr;
+}
+
+function formatTime(time: string): string {
+  if (!time) return "";
+  return new Date(`2000-01-01T${time}:00`).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatDayHeading(dateStr: string): string {
+  return new Date(`${dateStr}T12:00:00`).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+/** The one-line "when" label used on every event row. */
+function eventTimeLabel(event: CalendarEvent): string {
+  if (event.allDay) {
+    return event.startDate === event.endDate
+      ? "All day"
+      : `All day · through ${event.endDate}`;
+  }
+  const span = `${formatTime(event.startTime)} – ${formatTime(event.endTime)}`;
+  return event.startDate === event.endDate ? span : `${span} (${event.endDate})`;
+}
+
+/* ── connect / error states ── */
+
+function ConnectPanel({
+  configured,
+  message,
+  isLoading,
+}: {
+  configured: boolean;
+  message?: string;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="glass-card p-6 space-y-3">
+        <div className="w-1/3 h-4 rounded bg-primary/10 animate-pulse" />
+        <div className="w-2/3 h-3 rounded bg-primary/10 animate-pulse" />
+      </div>
+    );
+  }
 
   return (
-    <div className="glass-card p-5">
-      <p className="text-xs text-muted-foreground uppercase tracking-widest mb-3">Habit Streaks</p>
-      <div className="grid grid-cols-7 gap-1">
-        {grid.map((day) => (
-          <div
-            key={day.date}
-            title={`${day.date}: ${day.count} completed`}
-            className="w-full aspect-square rounded-sm"
-            style={{ background: `hsl(160 84% 39% / ${getOpacity(day.count)})` }}
-          />
-        ))}
+    <div className="glass-card p-8 text-center space-y-4">
+      <AlertTriangle className="w-8 h-8 text-destructive mx-auto" />
+      <div className="space-y-1">
+        <p className="text-sm font-semibold">
+          {configured
+            ? "Google Calendar is not connected"
+            : "Google Calendar is not configured"}
+        </p>
+        {message && (
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">
+            {message}
+          </p>
+        )}
       </div>
-      <p className="text-[10px] text-muted-foreground mt-2">Last 7 weeks · Completed tasks per day</p>
+
+      {configured ? (
+        <a
+          href="/api/calendar/auth/start"
+          className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
+        >
+          <CalendarDays className="w-4 h-4" />
+          Connect Google Calendar
+        </a>
+      ) : (
+        <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
+          Set <code>GOOGLE_CLIENT_ID</code> and{" "}
+          <code>GOOGLE_CLIENT_SECRET</code> in <code>.env.local</code>, then
+          restart the dev server. See <code>.env.example</code> for the full
+          list of keys.
+        </p>
+      )}
     </div>
   );
 }
 
-function DayModal({ date, onClose }: { date: string; onClose: () => void }) {
-  const { tasks, taskCategories } = useApp();
-  const dayTasks = tasks.filter((t) => taskFallsOnDate(t, date)).sort((a, b) => a.startTime.localeCompare(b.startTime));
-  const dateObj = new Date(date + "T12:00:00");
+/* ── event row ── */
+
+function EventRow({
+  event,
+  color,
+  onEdit,
+  onDelete,
+}: {
+  event: CalendarEvent;
+  color: string;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="group flex items-start gap-3 p-3 rounded-lg bg-secondary/30">
+      <div
+        className="w-1 self-stretch min-h-[2rem] rounded-full shrink-0"
+        style={{ background: color }}
+      />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{event.summary}</p>
+        <p className="text-[10px] text-muted-foreground">
+          {eventTimeLabel(event)}
+        </p>
+        {event.location && (
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+            <MapPin className="w-3 h-3 shrink-0" />
+            <span className="truncate">{event.location}</span>
+          </p>
+        )}
+        {event.recurringEventId && (
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+            <Repeat className="w-3 h-3 shrink-0" />
+            Repeating event
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        {event.htmlLink && (
+          <a
+            href={event.htmlLink}
+            target="_blank"
+            rel="noreferrer"
+            title="Open in Google Calendar"
+            className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        )}
+        <button
+          onClick={onEdit}
+          title="Edit event"
+          className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={onDelete}
+          title="Delete event"
+          className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── month grid ── */
+
+function MonthGrid({
+  currentDate,
+  events,
+  color,
+  onPrev,
+  onNext,
+  onSelectDay,
+}: {
+  currentDate: Date;
+  events: CalendarEvent[];
+  color: string;
+  onPrev: () => void;
+  onNext: () => void;
+  onSelectDay: (dateStr: string) => void;
+}) {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = toLocalDateStr();
+
+  const days = useMemo(() => {
+    const arr: (number | null)[] = [];
+    for (let i = 0; i < firstDay; i++) arr.push(null);
+    for (let i = 1; i <= daysInMonth; i++) arr.push(i);
+    return arr;
+  }, [firstDay, daysInMonth]);
+
+  const getDateStr = (day: number) =>
+    `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+  const countFor = (day: number) =>
+    events.filter((e) => eventFallsOnDate(e, getDateStr(day))).length;
+
+  return (
+    <div className="glass-card p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold">
+          {currentDate.toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+          })}
+        </h2>
+        <div className="flex gap-1">
+          <button
+            onClick={onPrev}
+            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onNext}
+            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+          <p key={d} className="text-[10px] text-muted-foreground text-center py-1">
+            {d}
+          </p>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((day, i) => {
+          if (day === null) return <div key={`empty-${i}`} />;
+          const dateStr = getDateStr(day);
+          const count = countFor(day);
+          const isToday = dateStr === today;
+
+          return (
+            <button
+              key={day}
+              onClick={() => onSelectDay(dateStr)}
+              className={`relative aspect-square flex flex-col items-center justify-center rounded-lg text-sm transition-all hover:bg-secondary/50 ${
+                isToday ? "ring-1 ring-primary bg-primary/10 font-semibold" : ""
+              }`}
+              style={
+                count > 3
+                  ? {
+                      boxShadow: `0 0 12px hsl(239 84% 67% / ${Math.min(count * 0.1, 0.5)})`,
+                    }
+                  : undefined
+              }
+            >
+              {day}
+              {count > 0 && (
+                <div className="flex gap-1 mt-0.5">
+                  {Array.from({ length: Math.min(count, 3) }).map((_, j) => (
+                    <div
+                      key={j}
+                      className="w-2 h-2 rounded-full"
+                      style={{ background: color, boxShadow: `0 0 4px ${color}` }}
+                    />
+                  ))}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── agenda ── */
+
+function AgendaList({
+  events,
+  color,
+  onEdit,
+  onDelete,
+}: {
+  events: CalendarEvent[];
+  color: string;
+  onEdit: (event: CalendarEvent) => void;
+  onDelete: (event: CalendarEvent) => void;
+}) {
+  const groups = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    for (const event of [...events].sort((a, b) =>
+      a.startISO.localeCompare(b.startISO),
+    )) {
+      const list = map.get(event.startDate) ?? [];
+      list.push(event);
+      map.set(event.startDate, list);
+    }
+    return [...map.entries()];
+  }, [events]);
+
+  if (groups.length === 0) {
+    return (
+      <div className="glass-card p-8 text-center">
+        <p className="text-sm text-muted-foreground">
+          Nothing scheduled in the next {AGENDA_DAYS} days.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {groups.map(([dateStr, dayEvents]) => (
+        <div key={dateStr} className="glass-card p-5">
+          <p className="text-xs text-muted-foreground uppercase tracking-widest mb-3">
+            {formatDayHeading(dateStr)}
+          </p>
+          <div className="space-y-2">
+            {dayEvents.map((event) => (
+              <EventRow
+                key={event.id}
+                event={event}
+                color={color}
+                onEdit={() => onEdit(event)}
+                onDelete={() => onDelete(event)}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── day modal ── */
+
+function DayPanel({
+  date,
+  events,
+  color,
+  onClose,
+  onCreate,
+  onEdit,
+  onDelete,
+}: {
+  date: string;
+  events: CalendarEvent[];
+  color: string;
+  onClose: () => void;
+  onCreate: () => void;
+  onEdit: (event: CalendarEvent) => void;
+  onDelete: (event: CalendarEvent) => void;
+}) {
+  const dayEvents = events
+    .filter((e) => eventFallsOnDate(e, date))
+    .sort((a, b) => a.startISO.localeCompare(b.startISO));
 
   return (
     <motion.div
@@ -74,360 +422,684 @@ function DayModal({ date, onClose }: { date: string; onClose: () => void }) {
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-lg font-semibold">{dateObj.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
-            <p className="text-xs text-muted-foreground">{dayTasks.length} tasks</p>
+            <p className="text-lg font-semibold">{formatDayHeading(date)}</p>
+            <p className="text-xs text-muted-foreground">
+              {dayEvents.length} {dayEvents.length === 1 ? "event" : "events"}
+            </p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        {dayTasks.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">No tasks scheduled</p>
+
+        {dayEvents.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            No events scheduled
+          </p>
         ) : (
           <div className="space-y-2">
-            {dayTasks.map((task) => {
-              const cat = taskCategories.find((c) => c.id === task.categoryId);
-              return (
-                <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30">
-                  <div className="w-1 h-8 rounded-full" style={{ background: cat?.color || "hsl(239 84% 67%)" }} />
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${task.completed ? "line-through opacity-50" : ""}`}>{task.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{task.startDate} {task.startTime} – {task.endDate === task.startDate ? "" : `${task.endDate} `}{task.endTime}</p>
-                  </div>
-                </div>
-              );
-            })}
+            {dayEvents.map((event) => (
+              <EventRow
+                key={event.id}
+                event={event}
+                color={color}
+                onEdit={() => onEdit(event)}
+                onDelete={() => onDelete(event)}
+              />
+            ))}
           </div>
         )}
+
+        <button
+          onClick={onCreate}
+          className="w-full mt-4 flex items-center justify-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg py-2.5 text-sm font-medium transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New event on this day
+        </button>
       </motion.div>
     </motion.div>
   );
 }
 
-/* ── Weekly Board with drag-and-drop ── */
+/* ── create / edit form ── */
 
-function BoardTaskCard({ task, dateStr }: { task: Task; dateStr: string }) {
-  const { taskCategories, updateTask } = useApp();
-  const cat = taskCategories.find((c) => c.id === task.categoryId);
+function EventForm({
+  calendarId,
+  editingEvent,
+  defaultDate,
+  onClose,
+}: {
+  calendarId: string;
+  editingEvent: CalendarEvent | null;
+  defaultDate: string;
+  onClose: () => void;
+}) {
+  const create = useCreateEvent();
+  const update = useUpdateEvent();
+  const initialRecurrence = parseRecurrence(editingEvent?.recurrence ?? null);
+
+  const [form, setForm] = useState({
+    summary: editingEvent?.summary ?? "",
+    description: editingEvent?.description ?? "",
+    location: editingEvent?.location ?? "",
+    allDay: editingEvent?.allDay ?? false,
+    startDate: editingEvent?.startDate || defaultDate,
+    startTime: editingEvent?.startTime || "09:00",
+    endDate: editingEvent?.endDate || defaultDate,
+    endTime: editingEvent?.endTime || "10:00",
+    freq: initialRecurrence.freq as RecurrenceFreq,
+    until: initialRecurrence.until,
+  });
+  const [scope, setScope] = useState<EventScope>("single");
+  // An instance carries no RRULE of its own, so leaving recurrence untouched
+  // must send `undefined` — sending null would wipe the whole series.
+  const [recurrenceTouched, setRecurrenceTouched] = useState(false);
+
+  const isSeriesInstance = Boolean(editingEvent?.recurringEventId);
+  const showRecurrence = !isSeriesInstance || scope === "all";
+  const pending = create.isPending || update.isPending;
+  const error = create.error ?? update.error;
+  const valid = form.summary.trim().length > 0;
+
+  const submit = () => {
+    if (!valid || pending) return;
+
+    const recurrence =
+      !showRecurrence || (isSeriesInstance && !recurrenceTouched)
+        ? undefined
+        : buildRecurrence(form.freq, form.until || undefined);
+
+    const input = {
+      summary: form.summary,
+      description: form.description,
+      location: form.location,
+      allDay: form.allDay,
+      startDate: form.startDate,
+      startTime: form.allDay ? "" : form.startTime,
+      endDate: form.endDate,
+      endTime: form.allDay ? "" : form.endTime,
+      timeZone: localTimeZone(),
+      recurrence,
+    };
+
+    if (editingEvent) {
+      update.mutate(
+        {
+          calendarId,
+          eventId: editingEvent.id,
+          scope,
+          recurringEventId: editingEvent.recurringEventId,
+          input,
+        },
+        {
+          onSuccess: () => {
+            toast.success("Event updated", {
+              description:
+                scope === "all" ? "Applied to every occurrence." : undefined,
+            });
+            onClose();
+          },
+        },
+      );
+    } else {
+      create.mutate(
+        { calendarId, input },
+        {
+          onSuccess: () => {
+            toast.success("Event created");
+            onClose();
+          },
+        },
+      );
+    }
+  };
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      draggable
-      onDragStart={(e: any) => {
-        e.dataTransfer?.setData("application/task-id", task.id);
-        e.dataTransfer?.setData("application/source-date", dateStr);
-        e.dataTransfer.effectAllowed = "move";
-      }}
-      className={`glass-card-hover p-3 flex items-start gap-2 group cursor-grab active:cursor-grabbing ${
-        task.completed ? "opacity-50" : ""
-      }`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
-      <button
-        onClick={() => updateTask(task.id, { completed: !task.completed })}
-        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-          task.completed ? "bg-accent border-accent" : "border-muted-foreground/40 hover:border-primary"
-        }`}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={pending ? undefined : onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+        className="glass-card p-6 space-y-4 w-full max-w-md relative z-10 max-h-[85vh] overflow-y-auto scrollbar-thin"
       >
-        {task.completed && <Check className="w-2.5 h-2.5 text-accent-foreground" />}
-      </button>
-      <div className="flex-1 min-w-0">
-        <p className={`text-xs font-medium truncate ${task.completed ? "line-through" : ""}`}>
-          {task.name}
-        </p>
-        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-          <span className="text-[10px] text-muted-foreground">{task.startTime}–{task.endTime}</span>
-          <span
-            className="text-[10px] font-semibold"
-            style={{
-              color: priorityColor[task.priority],
-            }}
+        <div className="flex items-center justify-between">
+          <p className="text-lg font-semibold">
+            {editingEvent ? "Edit Event" : "New Event"}
+          </p>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
           >
-            {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-          </span>
-          {cat && (
-            <span
-              className="text-[10px] px-1.5 py-0.5 rounded-full"
-              style={{ background: `${cat.color}22`, color: cat.color }}
-            >
-              {cat.name}
-            </span>
-          )}
+            <X className="w-5 h-5" />
+          </button>
         </div>
-      </div>
+
+        <input
+          autoFocus
+          value={form.summary}
+          onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
+          placeholder="Event title..."
+          className={FIELD_CLASS}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+        />
+
+        {isSeriesInstance && (
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground block">
+              This change applies to
+            </label>
+            <div className="flex glass-card p-0.5 rounded-lg">
+              {(
+                [
+                  ["single", "This event"],
+                  ["all", "All events"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setScope(value)}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    scope === value
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {scope === "all" && (
+              <p className="text-[10px] text-muted-foreground">
+                Editing the series moves every occurrence, including past ones.
+              </p>
+            )}
+          </div>
+        )}
+
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={form.allDay}
+            onChange={(e) => setForm((f) => ({ ...f, allDay: e.target.checked }))}
+            className="accent-primary w-3.5 h-3.5"
+          />
+          All day
+        </label>
+
+        <div className="space-y-2">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">
+              Start
+            </label>
+            <div className="flex gap-1">
+              <input
+                type="date"
+                value={form.startDate}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    startDate: e.target.value,
+                    endDate:
+                      f.endDate < e.target.value ? e.target.value : f.endDate,
+                  }))
+                }
+                className="flex-1 bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none"
+              />
+              {!form.allDay && (
+                <input
+                  type="time"
+                  value={form.startTime}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, startTime: e.target.value }))
+                  }
+                  className="flex-1 bg-secondary/50 rounded-lg px-2 py-2.5 text-sm outline-none"
+                />
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">End</label>
+            <div className="flex gap-1">
+              <input
+                type="date"
+                value={form.endDate}
+                min={form.startDate}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, endDate: e.target.value }))
+                }
+                className="flex-1 bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none"
+              />
+              {!form.allDay && (
+                <input
+                  type="time"
+                  value={form.endTime}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, endTime: e.target.value }))
+                  }
+                  className="flex-1 bg-secondary/50 rounded-lg px-2 py-2.5 text-sm outline-none"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        <input
+          value={form.location}
+          onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+          placeholder="Location (optional)"
+          className={FIELD_CLASS}
+        />
+
+        <textarea
+          value={form.description}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, description: e.target.value }))
+          }
+          placeholder="Description (optional)"
+          rows={3}
+          className={`${FIELD_CLASS} resize-none scrollbar-thin`}
+        />
+
+        {showRecurrence && (
+          <div className="flex gap-2">
+            <select
+              value={form.freq}
+              onChange={(e) => {
+                setRecurrenceTouched(true);
+                setForm((f) => ({
+                  ...f,
+                  freq: e.target.value as RecurrenceFreq,
+                }));
+              }}
+              className="flex-1 bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none"
+            >
+              <option value="NONE">Does not repeat</option>
+              <option value="DAILY">Daily</option>
+              <option value="WEEKLY">Weekly</option>
+              <option value="MONTHLY">Monthly</option>
+              <option value="YEARLY">Yearly</option>
+            </select>
+            {form.freq !== "NONE" && (
+              <input
+                type="date"
+                value={form.until}
+                min={form.startDate}
+                title="Repeat until (optional)"
+                onChange={(e) => {
+                  setRecurrenceTouched(true);
+                  setForm((f) => ({ ...f, until: e.target.value }));
+                }}
+                className="flex-1 bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none"
+              />
+            )}
+          </div>
+        )}
+
+        {error && (
+          // Keep the dialog open on failure so nothing typed is ever lost.
+          <div className="flex items-start gap-2 rounded-lg p-3 bg-destructive/10 border border-destructive/20">
+            <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+            <p className="text-xs text-destructive">{error.message}</p>
+          </div>
+        )}
+
+        <button
+          onClick={submit}
+          disabled={!valid || pending}
+          className="w-full flex items-center justify-center bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-lg py-2.5 text-sm font-medium transition-colors"
+        >
+          {pending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+          {editingEvent ? "Save Changes" : "Add Event"}
+        </button>
+      </motion.div>
     </motion.div>
   );
 }
 
-function WeeklyBoard() {
-  const { tasks, updateTask } = useApp();
-  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+/* ── delete confirmation ── */
 
-  const weekDays = useMemo(() => {
-    const today = new Date();
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      return {
-        dateStr: toLocalDateStr(d),
-        dayName: d.toLocaleDateString("en-US", { weekday: "short" }),
-        dayNum: d.getDate(),
-        monthName: d.toLocaleDateString("en-US", { month: "short" }),
-        isToday: i === 0,
-      };
-    });
-  }, []);
+function DeleteEventDialog({
+  calendarId,
+  event,
+  onClose,
+}: {
+  calendarId: string;
+  event: CalendarEvent;
+  onClose: () => void;
+}) {
+  const remove = useDeleteEvent();
+  const isSeriesInstance = Boolean(event.recurringEventId);
 
-  const tasksByDay = useMemo(() => {
-    const map: Record<string, Task[]> = {};
-    for (const day of weekDays) {
-      map[day.dateStr] = tasks
-        .filter((t) => taskFallsOnDate(t, day.dateStr))
-        .sort((a, b) => {
-          if (a.completed !== b.completed) return a.completed ? 1 : -1;
-          return a.startTime.localeCompare(b.startTime);
-        });
-    }
-    return map;
-  }, [tasks, weekDays]);
-
-  const handleDragOver = (e: React.DragEvent, dateStr: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverDate(dateStr);
-  };
-
-  const handleDrop = (e: React.DragEvent, targetDate: string) => {
-    e.preventDefault();
-    const taskId = e.dataTransfer.getData("application/task-id");
-    if (!taskId) return;
-
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
-
-    // Calculate the day offset and shift both start and end dates
-    const oldStart = new Date(task.startDate + "T12:00:00");
-    const newStart = new Date(targetDate + "T12:00:00");
-    const diffMs = newStart.getTime() - oldStart.getTime();
-    const diffDays = Math.round(diffMs / 86400000);
-
-    if (diffDays === 0) {
-      setDragOverDate(null);
-      return;
-    }
-
-    const oldEnd = new Date(task.endDate + "T12:00:00");
-    const newEnd = new Date(oldEnd.getTime() + diffDays * 86400000);
-
-    updateTask(taskId, {
-      startDate: toLocalDateStr(newStart),
-      endDate: toLocalDateStr(newEnd),
-    });
-
-    setDragOverDate(null);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    // Only clear if we're leaving the column (not entering a child)
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-    setDragOverDate(null);
+  const confirm = (scope: EventScope) => {
+    remove.mutate(
+      {
+        calendarId,
+        eventId: event.id,
+        scope,
+        recurringEventId: event.recurringEventId,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Event deleted", {
+            description:
+              scope === "all" ? "Every occurrence was removed." : undefined,
+          });
+          onClose();
+        },
+      },
+    );
   };
 
   return (
-    <div className="glass-card p-5 col-span-full">
-      <p className="text-xs text-muted-foreground uppercase tracking-widest mb-4">
-        Weekly Board
-      </p>
-      <div className="grid grid-cols-7 gap-2 min-h-[200px]">
-        {weekDays.map((day) => {
-          const dayTasks = tasksByDay[day.dateStr] || [];
-          const isOver = dragOverDate === day.dateStr;
+    <AlertDialog open onOpenChange={(open) => !open && onClose()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete “{event.summary}”?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {isSeriesInstance
+              ? "This is part of a repeating event. Choose whether to remove just this occurrence or the whole series. This cannot be undone."
+              : "This removes the event from your Google Calendar. This cannot be undone."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
 
-          return (
-            <div
-              key={day.dateStr}
-              onDragOver={(e) => handleDragOver(e, day.dateStr)}
-              onDrop={(e) => handleDrop(e, day.dateStr)}
-              onDragLeave={handleDragLeave}
-              className={`rounded-xl p-2 transition-all min-h-[180px] ${
-                isOver
-                  ? "bg-primary/10 ring-1 ring-primary/30"
-                  : "bg-secondary/20"
-              }`}
-            >
-              {/* Day header */}
-              <div
-                className={`text-center mb-2 pb-2 border-b border-border/30 ${
-                  day.isToday ? "text-primary" : ""
-                }`}
+        {remove.error && (
+          <div className="flex items-start gap-2 rounded-lg p-3 bg-destructive/10 border border-destructive/20">
+            <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+            <p className="text-xs text-destructive">{remove.error.message}</p>
+          </div>
+        )}
+
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={remove.isPending}>Cancel</AlertDialogCancel>
+          {isSeriesInstance ? (
+            <>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  confirm("single");
+                }}
+                disabled={remove.isPending}
+                className={buttonVariants({ variant: "destructive" })}
               >
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                  {day.dayName}
-                </p>
-                <p
-                  className={`text-sm font-semibold ${
-                    day.isToday
-                      ? "bg-primary text-primary-foreground w-7 h-7 rounded-full flex items-center justify-center mx-auto"
-                      : ""
-                  }`}
-                >
-                  {day.dayNum}
-                </p>
-                <p className="text-[10px] text-muted-foreground">{day.monthName}</p>
-              </div>
-
-              {/* Tasks */}
-              <div className="space-y-1.5">
-                <AnimatePresence>
-                  {dayTasks.map((task) => (
-                    <BoardTaskCard
-                      key={task.id}
-                      task={task}
-                      dateStr={day.dateStr}
-                    />
-                  ))}
-                </AnimatePresence>
-                {dayTasks.length === 0 && (
-                  <p className="text-[10px] text-muted-foreground/40 text-center py-6">
-                    No tasks
-                  </p>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+                This event
+              </AlertDialogAction>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  confirm("all");
+                }}
+                disabled={remove.isPending}
+                className={buttonVariants({ variant: "destructive" })}
+              >
+                All events
+              </AlertDialogAction>
+            </>
+          ) : (
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirm("single");
+              }}
+              disabled={remove.isPending}
+              className={buttonVariants({ variant: "destructive" })}
+            >
+              {remove.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Delete
+            </AlertDialogAction>
+          )}
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
-function MonthlyCalendar() {
-  const { tasks } = useApp();
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today = toLocalDateStr();
-
-  const days = useMemo(() => {
-    const arr: (number | null)[] = [];
-    for (let i = 0; i < firstDay; i++) arr.push(null);
-    for (let i = 1; i <= daysInMonth; i++) arr.push(i);
-    return arr;
-  }, [firstDay, daysInMonth]);
-
-  const getDateStr = (day: number) => `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-  const getTaskCount = (day: number) => { const d = getDateStr(day); return tasks.filter((t) => taskFallsOnDate(t, d)).length; };
-  const getDayTasks = (day: number) => { const d = getDateStr(day); return tasks.filter((t) => taskFallsOnDate(t, d)); };
-  const getHighestPriority = (dayTasks: typeof tasks): Priority | null => {
-    if (dayTasks.length === 0) return null;
-    return dayTasks.reduce<Priority>((best, t) => priorityRank[t.priority] > priorityRank[best] ? t.priority : best, dayTasks[0].priority);
-  };
-
-  const prev = () => setCurrentDate(new Date(year, month - 1, 1));
-  const next = () => setCurrentDate(new Date(year, month + 1, 1));
-
-  return (
-    <>
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
-        <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold">
-              {currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-            </h2>
-            <div className="flex gap-1">
-              <button onClick={prev} className="p-2 rounded-lg hover:bg-secondary transition-colors"><ChevronLeft className="w-4 h-4" /></button>
-              <button onClick={next} className="p-2 rounded-lg hover:bg-secondary transition-colors"><ChevronRight className="w-4 h-4" /></button>
-            </div>
-          </div>
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-              <p key={d} className="text-[10px] text-muted-foreground text-center py-1">{d}</p>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {days.map((day, i) => {
-              if (day === null) return <div key={`empty-${i}`} />;
-              const dateStr = getDateStr(day);
-              const count = getTaskCount(day);
-              const isToday = dateStr === today;
-              return (
-                <button
-                  key={day}
-                  onClick={() => setSelectedDay(dateStr)}
-                  className={`relative aspect-square flex flex-col items-center justify-center rounded-lg text-sm transition-all hover:bg-secondary/50 ${
-                    isToday ? "ring-1 ring-primary bg-primary/10 font-semibold" : ""
-                  }`}
-                  style={count > 3 ? { boxShadow: `0 0 12px hsl(239 84% 67% / ${Math.min(count * 0.1, 0.5)})` } : undefined}
-                >
-                  {day}
-                  {count > 0 && (() => {
-                    const dayTasks = getDayTasks(day);
-                    const highest = getHighestPriority(dayTasks);
-                    const dotColor = highest ? priorityColor[highest] : "hsl(239 84% 67%)";
-                    return (
-                      <div className="flex gap-1 mt-0.5">
-                        {Array.from({ length: Math.min(count, 3) }).map((_, j) => {
-                          const taskPrio = dayTasks[j]?.priority;
-                          const c = taskPrio ? priorityColor[taskPrio] : dotColor;
-                          return (
-                            <div
-                              key={j}
-                              className="w-2 h-2 rounded-full"
-                              style={{ background: c, boxShadow: `0 0 4px ${c}` }}
-                            />
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <HabitStreak />
-      </div>
-
-      <AnimatePresence>
-        {selectedDay && <DayModal date={selectedDay} onClose={() => setSelectedDay(null)} />}
-      </AnimatePresence>
-    </>
-  );
-}
+/* ── page ── */
 
 export default function CalendarPage() {
-  const [view, setView] = useState<"calendar" | "board">("calendar");
+  const status = useCalendarStatus();
+  const connected = Boolean(status.data?.connected);
+
+  const [view, setView] = useState<"month" | "agenda">("month");
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [formState, setFormState] = useState<{
+    open: boolean;
+    event: CalendarEvent | null;
+    date: string;
+  }>({ open: false, event: null, date: toLocalDateStr() });
+  const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
+
+  const [calendarId, setCalendarId] = useState(() => {
+    try {
+      return localStorage.getItem(CALENDAR_STORAGE_KEY) ?? "primary";
+    } catch {
+      return "primary";
+    }
+  });
+
+  const calendars = useCalendarList(connected);
+  const disconnect = useDisconnectCalendar();
+
+  const selectCalendar = (id: string) => {
+    setCalendarId(id);
+    try {
+      localStorage.setItem(CALENDAR_STORAGE_KEY, id);
+    } catch {
+      /* ignore localStorage errors */
+    }
+  };
+
+  const range = useMemo(() => {
+    if (view === "agenda") {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      return {
+        timeMin: start.toISOString(),
+        timeMax: new Date(start.getTime() + AGENDA_DAYS * DAY_MS).toISOString(),
+      };
+    }
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    return {
+      timeMin: new Date(year, month, 1).toISOString(),
+      timeMax: new Date(year, month + 1, 1).toISOString(),
+    };
+  }, [view, currentDate]);
+
+  const eventsQuery = useCalendarEvents({ calendarId, ...range }, connected);
+  const events = eventsQuery.data?.events ?? [];
+
+  const activeCalendar = calendars.data?.calendars.find(
+    (c) => c.id === calendarId,
+  );
+  const color = activeCalendar?.backgroundColor || DEFAULT_COLOR;
+
+  const openCreate = (date: string) =>
+    setFormState({ open: true, event: null, date });
+  const openEdit = (event: CalendarEvent) =>
+    setFormState({ open: true, event, date: event.startDate });
+  const closeForm = () => setFormState((s) => ({ ...s, open: false }));
+
+  if (!connected) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-4"
+      >
+        <ConnectPanel
+          configured={Boolean(status.data?.configured)}
+          message={status.data?.error ?? status.error?.message}
+          isLoading={status.isLoading}
+        />
+      </motion.div>
+    );
+  }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-4"
+    >
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex glass-card p-0.5 rounded-lg">
           <button
-            onClick={() => setView("calendar")}
+            onClick={() => setView("month")}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              view === "calendar" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              view === "month"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Calendar className="w-3.5 h-3.5 inline mr-1" />Calendar
+            <CalendarDays className="w-3.5 h-3.5 inline mr-1" />
+            Month
           </button>
           <button
-            onClick={() => setView("board")}
+            onClick={() => setView("agenda")}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              view === "board" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              view === "agenda"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Columns className="w-3.5 h-3.5 inline mr-1" />Board
+            <List className="w-3.5 h-3.5 inline mr-1" />
+            Agenda
+          </button>
+        </div>
+
+        {(calendars.data?.calendars.length ?? 0) > 1 && (
+          <select
+            value={calendarId}
+            onChange={(e) => selectCalendar(e.target.value)}
+            className="glass-card px-3 py-1.5 rounded-lg text-xs font-medium bg-transparent outline-none"
+          >
+            {calendars.data?.calendars.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.summary}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <button
+          onClick={() => openCreate(toLocalDateStr())}
+          className="flex items-center gap-1 bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          New Event
+        </button>
+
+        <div className="flex items-center gap-2 ml-auto">
+          {eventsQuery.isFetching && (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+          )}
+          {status.data?.account && (
+            <span className="text-[10px] text-muted-foreground hidden sm:inline">
+              {status.data.account}
+            </span>
+          )}
+          <button
+            onClick={() => {
+              disconnect.mutate(undefined, {
+                onSuccess: () => toast.success("Google Calendar disconnected"),
+              });
+            }}
+            disabled={disconnect.isPending}
+            title="Disconnect Google Calendar"
+            className="glass-card-hover px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <Unplug className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {view === "calendar" ? <MonthlyCalendar /> : <WeeklyBoard />}
+      {eventsQuery.isError && (
+        <div className="glass-card p-4 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+          <p className="text-xs text-destructive">
+            {eventsQuery.error.message}
+          </p>
+        </div>
+      )}
+
+      {view === "month" ? (
+        <MonthGrid
+          currentDate={currentDate}
+          events={events}
+          color={color}
+          onPrev={() =>
+            setCurrentDate(
+              new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
+            )
+          }
+          onNext={() =>
+            setCurrentDate(
+              new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
+            )
+          }
+          onSelectDay={setSelectedDay}
+        />
+      ) : (
+        <AgendaList
+          events={events}
+          color={color}
+          onEdit={openEdit}
+          onDelete={setDeleteTarget}
+        />
+      )}
+
+      <AnimatePresence>
+        {selectedDay && (
+          <DayPanel
+            date={selectedDay}
+            events={events}
+            color={color}
+            onClose={() => setSelectedDay(null)}
+            onCreate={() => openCreate(selectedDay)}
+            onEdit={openEdit}
+            onDelete={setDeleteTarget}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {formState.open && (
+          <EventForm
+            // Remount on target change so the form state re-initialises.
+            key={formState.event?.id ?? `new-${formState.date}`}
+            calendarId={calendarId}
+            editingEvent={formState.event}
+            defaultDate={formState.date}
+            onClose={closeForm}
+          />
+        )}
+      </AnimatePresence>
+
+      {deleteTarget && (
+        <DeleteEventDialog
+          calendarId={calendarId}
+          event={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
     </motion.div>
   );
 }

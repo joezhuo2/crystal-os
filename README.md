@@ -1,16 +1,17 @@
 # Crystal OS
 
-> A personal productivity dashboard built with React, TypeScript, Supabase, and your Obsidian vault. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
+> A personal productivity dashboard built with React, TypeScript, Supabase, your Google Calendar, and your Obsidian vault. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
 ![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-43%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-76%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.2.0-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-See [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.2.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -19,7 +20,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 | Feature | Description |
 |---------|-------------|
 | **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking |
-| **📅 Calendar** | Monthly view with task integration, event creation, and date navigation |
+| **📅 The Horizon** | Google Calendar, live: month and agenda views, create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations |
 | **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown |
@@ -40,6 +41,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 | **State** | React Context + TanStack Query (React Query v5) |
 | **Backend** | Supabase (PostgreSQL, Auth, Realtime) |
 | **Vault** | Vite middleware plugin + `fast-glob` + `gray-matter` (Node-only, server side) |
+| **Calendar** | Vite middleware plugin + `googleapis` OAuth2 (Node-only, server side) |
 | **Markdown** | react-markdown + remark-gfm + `@tailwindcss/typography` |
 | **Forms** | React Hook Form + Zod validation |
 | **Animation** | Framer Motion |
@@ -76,9 +78,16 @@ Then edit `.env.local` to point `OBSIDIAN_VAULT_PATH` at your vault, and open ht
 # Read server-side only (see server/obsidian/plugin.ts) — deliberately NOT
 # VITE_-prefixed, so it is never inlined into the client bundle.
 OBSIDIAN_VAULT_PATH=C:/Users/you/Documents/MyVault
+
+# Google Calendar. Same rule: server-side only, never VITE_-prefixed.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=http://localhost:8080/api/calendar/auth/callback
+# Written automatically after you click Connect. Leave blank.
+GOOGLE_REFRESH_TOKEN=
 ```
 
-Changing `OBSIDIAN_VAULT_PATH` requires a dev-server restart — Vite reads it once at config time.
+Changing `OBSIDIAN_VAULT_PATH` or the `GOOGLE_*` keys requires a dev-server restart — Vite reads them once at config time. The one exception is `GOOGLE_REFRESH_TOKEN`, which the OAuth callback also holds in memory, so connecting takes effect immediately.
 
 > **Note:** the Supabase URL and anon key currently live in `src/lib/supabase.ts` rather than in env vars. Point them at your own project before deploying.
 
@@ -88,10 +97,18 @@ Changing `OBSIDIAN_VAULT_PATH` requires a dev-server restart — Vite reads it o
 
 ```
 server/
-└── obsidian/
-    ├── plugin.ts               # Vite middleware: /api/obsidian/* routes
-    ├── vault.ts                # Vault reads, search, frontmatter tag upsert, quick add
-    └── vault.test.ts           # 42 unit tests over vault.ts
+├── obsidian/
+│   ├── plugin.ts               # Vite middleware: /api/obsidian/* routes
+│   ├── vault.ts                # Vault reads, search, frontmatter tag upsert, quick add
+│   └── vault.test.ts           # 42 unit tests over vault.ts
+└── calendar/
+    ├── plugin.ts               # Vite middleware: /api/calendar/* routes
+    ├── oauth.ts                # OAuth2 client, refresh-token store, consent + revoke
+    ├── events.ts               # Google Calendar calls + event shape mapping
+    ├── envFile.ts              # Read/upsert a single key in .env.local
+    ├── errors.ts               # CalendarError (message + HTTP status)
+    ├── envFile.test.ts         # 12 unit tests over envFile.ts
+    └── events.test.ts          # 21 unit tests over the event mappers
 
 src/
 ├── components/
@@ -101,7 +118,7 @@ src/
 │   ├── views/                  # Page-level components
 │   │   ├── HomePage.tsx        # Clock, weather, smart summary, daily focus, vault widget
 │   │   ├── TasksPage.tsx       # Task list, form, filtering, Pomodoro
-│   │   ├── CalendarPage.tsx    # Monthly calendar with events
+│   │   ├── CalendarPage.tsx    # Google Calendar: month + agenda, event CRUD
 │   │   ├── FinancialsPage.tsx  # Transactions, summaries, charts
 │   │   ├── WeatherPage.tsx     # Detailed weather view
 │   │   ├── ArchivePage.tsx     # Vault browser: search, tags, markdown reader
@@ -114,6 +131,7 @@ src/
 │   └── AppContext.tsx          # Global state (tasks, transactions, categories, vault UI)
 ├── hooks/
 │   ├── useVault.ts             # React Query bindings for /api/obsidian/*
+│   ├── useGoogleCalendar.ts    # React Query bindings for /api/calendar/*
 │   ├── useWeather.ts           # Weather API integration
 │   ├── use-toast.ts            # Toast notifications (Sonner)
 │   └── use-mobile.tsx          # Responsive breakpoint hook
@@ -157,6 +175,46 @@ Every filesystem access goes through `resolveVaultPath`, which rejects absolute 
 
 ---
 
+## 📅 The Horizon (Google Calendar integration)
+
+The calendar tab reads and writes your real Google Calendar. The client secret and refresh token must never reach the browser, so every Google call happens in a Vite middleware plugin and the bundle only ever sees JSON — the same shape as the Obsidian tier above.
+
+### Setup
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), create a project and enable the **Google Calendar API**.
+2. On the OAuth consent screen, choose **External**, add your own account under **Test users**, and add the scopes `.../auth/calendar.events` and `.../auth/calendar.readonly`.
+3. Create an OAuth client of type **Web application** with the authorized redirect URI `http://localhost:8080/api/calendar/auth/callback` — it must match `GOOGLE_REDIRECT_URI` exactly.
+4. Put the client id and secret in `.env.local`, restart the dev server, open **The Horizon**, and click **Connect Google Calendar**.
+
+### Endpoints
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| `GET` | `/api/calendar/status` | `{ configured, connected, account? }` — drives the connect UI |
+| `GET` | `/api/calendar/auth/start` | Redirect to Google's consent screen |
+| `GET` | `/api/calendar/auth/callback` | Exchange the code and store the refresh token |
+| `POST` | `/api/calendar/auth/disconnect` | Revoke the grant and forget the token |
+| `GET` | `/api/calendar/calendars` | List the calendars you can pick between |
+| `GET` | `/api/calendar/events` | List events (`?calendarId=&timeMin=&timeMax=`) |
+| `POST` | `/api/calendar/events` | Create an event |
+| `PATCH` | `/api/calendar/events/:id` | Update an event (`?scope=single\|all`) |
+| `DELETE` | `/api/calendar/events/:id` | Delete an event (`?scope=single\|all`) |
+
+As with the vault, the middleware is mounted on the dev server and `vite preview` only — a bare `dist/` deployment has no calendar access.
+
+### Behaviour
+
+- **Tokens** — only the refresh token is persisted, mirrored into `.env.local` on a single line without disturbing anything else in the file. The access token lives in process memory and is refreshed automatically. Neither is ever sent to the browser.
+- **Dates** — Google's `date`/`dateTime` union is flattened server-side into the `YYYY-MM-DD` + `HH:MM` strings the rest of the app uses, and an all-day event's exclusive end date is shifted back so it reads inclusively. Wall-clock parts are read off Google's own strings, so an event shows the time its calendar says it is, not the server's.
+- **Recurrence** — the form writes a single `RRULE` (daily/weekly/monthly/yearly, with an optional end date). Listing expands a series into instances, so editing or deleting one asks whether you mean *this event* or *all events*; leaving the repeat field alone never rewrites the series.
+- **Deleting** — the only destructive action in the app behind a confirmation dialog. Nothing is removed until you confirm.
+
+### Safety
+
+The consent flow carries a random `state` nonce that is verified on callback and expires after 10 minutes. Request bodies are capped at 64 KB. `googleapis` is Node-only and is never imported from `src/` — the client re-declares the event types it needs.
+
+---
+
 ## 🗄️ Database Schema (Supabase)
 
 ```sql
@@ -180,7 +238,7 @@ Create these in the Supabase Dashboard → SQL Editor. Migrations are not yet ch
 npm run dev          # Start dev server (port 8080)
 npm run build        # Production build
 npm run build:dev    # Development build
-npm run preview      # Preview production build (vault API included)
+npm run preview      # Preview production build (vault + calendar APIs included)
 npm run lint         # ESLint check
 npm run test         # Run tests (Vitest) — covers src/ and server/
 npm run test:watch   # Watch mode
