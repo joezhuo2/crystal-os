@@ -3,6 +3,7 @@ import { useApp, type Task, type Priority } from "@/contexts/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil } from "lucide-react";
 import { toLocalDateStr } from "@/lib/utils";
+import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
 import PomodoroTimer from "./PomodoroTimer";
 import { CategoryManagerButton } from "./CategoryManager";
 
@@ -180,34 +181,40 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Start</label>
             <div className="flex gap-1">
-              <input type="date" value={form.startDate} onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value, endDate: f.endDate < e.target.value ? e.target.value : f.endDate }))}
-                className="flex-1 bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none" />
-              <input type="time" value={form.startTime} onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))}
-                className="flex-1 bg-secondary/50 rounded-lg px-2 py-2.5 text-sm outline-none" />
+              <DateField value={form.startDate} aria-label="Start date"
+                onChange={(v) => setForm((f) => ({ ...f, startDate: v, endDate: f.endDate < v ? v : f.endDate }))}
+                className="flex-1" />
+              <TimeField value={form.startTime} aria-label="Start time"
+                onChange={(v) => setForm((f) => ({ ...f, startTime: v }))}
+                className="flex-1 px-2" />
             </div>
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">End</label>
             <div className="flex gap-1">
-              <input type="date" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-                className="flex-1 bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none" min={form.startDate} />
-              <input type="time" value={form.endTime} onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))}
-                className="flex-1 bg-secondary/50 rounded-lg px-2 py-2.5 text-sm outline-none" />
+              <DateField value={form.endDate} aria-label="End date" min={form.startDate}
+                onChange={(v) => setForm((f) => ({ ...f, endDate: v }))}
+                className="flex-1" />
+              <TimeField value={form.endTime} aria-label="End time"
+                onChange={(v) => setForm((f) => ({ ...f, endTime: v }))}
+                className="flex-1 px-2" />
             </div>
           </div>
         </div>
         <div className="flex gap-2">
-          <select value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value as Priority }))}
-            className="flex-1 bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none">
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
-          </select>
-          <select value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
-            className="flex-1 bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none">
-            {taskCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <ThemedSelect value={form.priority} aria-label="Priority"
+            onChange={(v) => setForm((f) => ({ ...f, priority: v as Priority }))}
+            options={[
+              { value: "low", label: "Low" },
+              { value: "medium", label: "Medium" },
+              { value: "high", label: "High" },
+              { value: "urgent", label: "Urgent" },
+            ]}
+            className="flex-1" />
+          <ThemedSelect value={form.categoryId} aria-label="Category"
+            onChange={(v) => setForm((f) => ({ ...f, categoryId: v }))}
+            options={taskCategories.map((c) => ({ value: c.id, label: c.name, color: c.color }))}
+            className="flex-1" />
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-muted-foreground">Repeat every</label>

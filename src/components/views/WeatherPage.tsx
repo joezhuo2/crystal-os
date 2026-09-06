@@ -28,6 +28,7 @@ import {
   type DayForecast,
   type HourlyForecast,
 } from "@/hooks/useWeather";
+import { ThemedSelect } from "@/components/ui/field-controls";
 
 // ── Weather icon mapping ──
 
@@ -106,17 +107,13 @@ function CurrentConditions({
         </div>
 
         <div className="flex items-center gap-2">
-          <select
+          <ThemedSelect
             value={cityId}
-            onChange={(e) => onCityChange(e.target.value)}
-            className="bg-background/50 border border-border/50 rounded-lg px-3 py-1.5 text-sm text-foreground outline-none focus:border-primary/50 transition-colors"
-          >
-            {AVAILABLE_CITIES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            aria-label="City"
+            onChange={onCityChange}
+            options={AVAILABLE_CITIES.map((c) => ({ value: c.id, label: c.name }))}
+            className="w-auto min-w-[8rem] border border-border/50 bg-background/50 px-3 py-1.5 hover:bg-background/70"
+          />
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertTriangle,
@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { toLocalDateStr } from "@/lib/utils";
+import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
+import { useApp } from "@/contexts/AppContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -647,27 +649,24 @@ function EventForm({
               Start
             </label>
             <div className="flex gap-1">
-              <input
-                type="date"
+              <DateField
                 value={form.startDate}
-                onChange={(e) =>
+                aria-label="Start date"
+                onChange={(v) =>
                   setForm((f) => ({
                     ...f,
-                    startDate: e.target.value,
-                    endDate:
-                      f.endDate < e.target.value ? e.target.value : f.endDate,
+                    startDate: v,
+                    endDate: f.endDate < v ? v : f.endDate,
                   }))
                 }
-                className="flex-1 bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none"
+                className="flex-1"
               />
               {!form.allDay && (
-                <input
-                  type="time"
+                <TimeField
                   value={form.startTime}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, startTime: e.target.value }))
-                  }
-                  className="flex-1 bg-secondary/50 rounded-lg px-2 py-2.5 text-sm outline-none"
+                  aria-label="Start time"
+                  onChange={(v) => setForm((f) => ({ ...f, startTime: v }))}
+                  className="flex-1 px-2"
                 />
               )}
             </div>
@@ -675,23 +674,19 @@ function EventForm({
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">End</label>
             <div className="flex gap-1">
-              <input
-                type="date"
+              <DateField
                 value={form.endDate}
+                aria-label="End date"
                 min={form.startDate}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, endDate: e.target.value }))
-                }
-                className="flex-1 bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none"
+                onChange={(v) => setForm((f) => ({ ...f, endDate: v }))}
+                className="flex-1"
               />
               {!form.allDay && (
-                <input
-                  type="time"
+                <TimeField
                   value={form.endTime}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, endTime: e.target.value }))
-                  }
-                  className="flex-1 bg-secondary/50 rounded-lg px-2 py-2.5 text-sm outline-none"
+                  aria-label="End time"
+                  onChange={(v) => setForm((f) => ({ ...f, endTime: v }))}
+                  className="flex-1 px-2"
                 />
               )}
             </div>
@@ -717,34 +712,35 @@ function EventForm({
 
         {showRecurrence && (
           <div className="flex gap-2">
-            <select
+            <ThemedSelect
               value={form.freq}
-              onChange={(e) => {
+              aria-label="Repeat"
+              onChange={(v) => {
                 setRecurrenceTouched(true);
-                setForm((f) => ({
-                  ...f,
-                  freq: e.target.value as RecurrenceFreq,
-                }));
+                setForm((f) => ({ ...f, freq: v as RecurrenceFreq }));
               }}
-              className="flex-1 bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none"
-            >
-              <option value="NONE">Does not repeat</option>
-              <option value="DAILY">Daily</option>
-              <option value="WEEKLY">Weekly</option>
-              <option value="MONTHLY">Monthly</option>
-              <option value="YEARLY">Yearly</option>
-            </select>
+              options={[
+                { value: "NONE", label: "Does not repeat" },
+                { value: "DAILY", label: "Daily" },
+                { value: "WEEKLY", label: "Weekly" },
+                { value: "MONTHLY", label: "Monthly" },
+                { value: "YEARLY", label: "Yearly" },
+              ]}
+              className="flex-1"
+            />
             {form.freq !== "NONE" && (
-              <input
-                type="date"
+              <DateField
                 value={form.until}
                 min={form.startDate}
+                clearable
+                placeholder="Repeat until…"
                 title="Repeat until (optional)"
-                onChange={(e) => {
+                aria-label="Repeat until"
+                onChange={(v) => {
                   setRecurrenceTouched(true);
-                  setForm((f) => ({ ...f, until: e.target.value }));
+                  setForm((f) => ({ ...f, until: v }));
                 }}
-                className="flex-1 bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none"
+                className="flex-1"
               />
             )}
           </div>
@@ -875,6 +871,7 @@ function DeleteEventDialog({
 export default function CalendarPage() {
   const status = useCalendarStatus();
   const connected = Boolean(status.data?.connected);
+  const { showEventForm, setShowEventForm } = useApp();
 
   const [view, setView] = useState<"month" | "agenda">("month");
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -937,6 +934,17 @@ export default function CalendarPage() {
     setFormState({ open: true, event, date: event.startDate });
   const closeForm = () => setFormState((s) => ({ ...s, open: false }));
 
+  // The command palette can request the create form from any tab; the request
+  // lands here once this page mounts. Wait for the status query to settle so a
+  // still-loading `connected === false` does not swallow it, then clear the
+  // request either way so it cannot fire again on a later visit.
+  useEffect(() => {
+    if (!showEventForm || status.isPending) return;
+    setShowEventForm(false);
+    if (connected) openCreate(toLocalDateStr());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showEventForm, connected, status.isPending]);
+
   if (!connected) {
     return (
       <motion.div
@@ -986,17 +994,16 @@ export default function CalendarPage() {
         </div>
 
         {(calendars.data?.calendars.length ?? 0) > 1 && (
-          <select
+          <ThemedSelect
             value={calendarId}
-            onChange={(e) => selectCalendar(e.target.value)}
-            className="glass-card px-3 py-1.5 rounded-lg text-xs font-medium bg-transparent outline-none"
-          >
-            {calendars.data?.calendars.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.summary}
-              </option>
-            ))}
-          </select>
+            aria-label="Calendar"
+            onChange={selectCalendar}
+            options={(calendars.data?.calendars ?? []).map((c) => ({
+              value: c.id,
+              label: c.summary,
+            }))}
+            className="glass-card w-auto max-w-[14rem] bg-transparent px-3 py-1.5 text-xs font-medium hover:bg-white/5"
+          />
         )}
 
         <button
