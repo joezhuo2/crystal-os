@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   NotebookPen,
   BookOpen,
+  CalendarPlus,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -32,7 +33,7 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
   const [focused, setFocused] = useState(false);
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
-  const { tasks, transactions, taskCategories, financialCategories, addTask, addTransaction, setShowTaskForm, setShowTransactionForm, setSelectedNotePath, setShowQuickAdd, setQuickAddDraft } = useApp();
+  const { tasks, transactions, taskCategories, financialCategories, addTask, addTransaction, setShowTaskForm, setShowTransactionForm, setSelectedNotePath, setShowQuickAdd, setQuickAddDraft, setShowEventForm } = useApp();
 
   const showDropdown = focused && (search.length > 0 || focused);
 
@@ -136,6 +137,12 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
   const handleLogExpense = () => {
     close();
     setShowTransactionForm(true);
+  };
+
+  const handleAddEvent = () => {
+    // The Horizon owns the event form, so flag the request and navigate there.
+    setShowEventForm(true);
+    handleNavigate("calendar");
   };
 
   // ---------- Render ----------
@@ -384,6 +391,17 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
                         </div>
                         <span className="text-sm font-medium">Log an expense</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">or type "log"</span>
+                      </CommandItem>
+                      <CommandItem
+                        value="add-new-event"
+                        onSelect={handleAddEvent}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
+                          <CalendarPlus className="w-4 h-4 text-indigo-400" />
+                        </div>
+                        <span className="text-sm font-medium">Add a new event</span>
+                        <span className="ml-auto text-xs text-muted-foreground/50">The Horizon</span>
                       </CommandItem>
                       <CommandItem
                         value="search-tasks-transactions"

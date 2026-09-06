@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-76%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.2.0-6366F1)
+![Version](https://img.shields.io/badge/version-0.2.5-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.2.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.2.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -21,13 +21,14 @@ Current release: **v0.2.0** — see [CHANGELOG.md](CHANGELOG.md) for release his
 |---------|-------------|
 | **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking |
 | **📅 The Horizon** | Google Calendar, live: month and agenda views, create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker |
+| **🏠 The Pulse** | Clock, weather, AI smart summary, daily focus, today's calendar events, and a vault widget — each with its own shimmer skeleton while loading |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations |
 | **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
 | **⏱️ Pomodoro** | Customizable focus/break intervals, session tracking, and audio notifications (Tasks view) |
-| **⌨️ Command Palette** | Global search over tasks, transactions, and vault note bodies, plus natural-language `add` / `log` commands |
-| **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations |
+| **⌨️ Command Palette** | Global search over tasks, transactions, and vault note bodies, plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event |
+| **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
 | **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar |
 
 ---
@@ -115,8 +116,10 @@ src/
 │   ├── layout/
 │   │   └── Navigation.tsx      # Sidebar + BottomNav
 │   ├── ui/                     # shadcn/ui components (40+)
+│   │   ├── field-controls.tsx  # ThemedSelect, DateField, TimeField (portalled popups)
+│   │   └── dashboard-skeletons.tsx # Per-widget loading skeletons for The Pulse
 │   ├── views/                  # Page-level components
-│   │   ├── HomePage.tsx        # Clock, weather, smart summary, daily focus, vault widget
+│   │   ├── HomePage.tsx        # Clock, weather, smart summary, daily focus, today's events, vault widget
 │   │   ├── TasksPage.tsx       # Task list, form, filtering, Pomodoro
 │   │   ├── CalendarPage.tsx    # Google Calendar: month + agenda, event CRUD
 │   │   ├── FinancialsPage.tsx  # Transactions, summaries, charts
@@ -128,7 +131,7 @@ src/
 │   ├── QuickAddDialog.tsx      # Append a capture to a vault note
 │   └── NavLink.tsx
 ├── contexts/
-│   └── AppContext.tsx          # Global state (tasks, transactions, categories, vault UI)
+│   └── AppContext.tsx          # Global state (tasks, transactions, categories, vault + event-form UI)
 ├── hooks/
 │   ├── useVault.ts             # React Query bindings for /api/obsidian/*
 │   ├── useGoogleCalendar.ts    # React Query bindings for /api/calendar/*
@@ -254,6 +257,7 @@ npm run test:watch   # Watch mode
 |-------|--------|
 | `add Buy milk` | Creates a task |
 | `log 25 for Lunch` | Records an expense |
+| *"Add a new event"* | Opens The Horizon's create-event form for today |
 | *anything else* | Filters tasks, transactions, and vault notes; **Quick Add** is always offered as the first row |
 
 Selecting a note result opens it in The Archive.
@@ -266,7 +270,9 @@ Selecting a note result opens it in The Archive.
 Edit `tailwind.config.ts` and `src/index.css` for:
 - Color palette (CSS variables in `:root` and `.dark`)
 - Glassmorphism intensity (`backdrop-blur`, opacity)
-- Animation durations
+- Animation durations (including the `shimmer` keyframe behind `.skeleton-shimmer`)
+
+Native `<select>`, date, and time inputs are replaced app-wide by `src/components/ui/field-controls.tsx`, because the browser's own popups render as OS chrome — a white sheet on Windows/Chrome — through the dark glass theme. Their popups are portalled, so a dialog's overflow or stacking context cannot clip them, and they flip above the trigger when the viewport has no room below. `:root` also sets `color-scheme: dark` so any remaining native chrome (number spinners, scrollbars) stays dark.
 
 ### Adding New Views
 1. Create the component in `src/components/views/`
