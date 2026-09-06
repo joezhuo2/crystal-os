@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toLocalDateStr } from "@/lib/utils";
 import { Plus, Trash2, X, Settings, Pencil } from "lucide-react";
 import { CategoryManagerButton } from "./CategoryManager";
+import { DateField, ThemedSelect } from "@/components/ui/field-controls";
 import {
   AreaChart, Area, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -53,9 +54,11 @@ function CashFlowChart() {
             </linearGradient>
           </defs>
           <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toFixed(2)} />
           <Tooltip
-            contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12 }}
+            contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12, color: "hsl(210 40% 96%)" }}
+            labelStyle={{ color: "hsl(210 40% 96%)", fontWeight: 600 }}
+            itemStyle={{ color: "hsl(215 20% 75%)" }}
             formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name.charAt(0).toUpperCase() + name.slice(1)]}
           />
           <Area type="monotone" dataKey="income" stroke="hsl(160 84% 39%)" fill="url(#incomeGrad)" strokeWidth={2} />
@@ -100,7 +103,9 @@ function CategoryDonut() {
             {data.map((entry, i) => <Cell key={i} fill={entry.color} />)}
           </Pie>
           <Tooltip
-            contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12 }}
+            contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12, color: "hsl(210 40% 96%)" }}
+            labelStyle={{ color: "hsl(210 40% 96%)", fontWeight: 600 }}
+            itemStyle={{ color: "hsl(215 20% 75%)" }}
             formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
           />
         </PieChart>
@@ -129,7 +134,7 @@ function SavingsTrend() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, val]) => {
         running += val;
-        return { date: date.slice(5), savings: running };
+        return { date: date.slice(5), savings: Math.round(running * 100) / 100 };
       });
   }, [transactions]);
 
@@ -139,8 +144,13 @@ function SavingsTrend() {
       <ResponsiveContainer width="100%" height={160}>
         <LineChart data={data}>
           <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} />
-          <Tooltip contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12 }} />
+          <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toFixed(2)} />
+          <Tooltip
+            contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12, color: "hsl(210 40% 96%)" }}
+            labelStyle={{ color: "hsl(210 40% 96%)", fontWeight: 600 }}
+            itemStyle={{ color: "hsl(215 20% 75%)" }}
+            formatter={(value: number) => [`$${value.toFixed(2)}`, "Savings"]}
+          />
           <Line type="monotone" dataKey="savings" stroke="hsl(160 84% 39%)" strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
@@ -196,19 +206,19 @@ export function TransactionDrawer({ onClose, editingTransaction }: { onClose: ()
         <div className="grid grid-cols-2 gap-2">
           <input type="number" step="0.01" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} placeholder="Amount"
             className="bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none" />
-          <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as "income" | "expense" }))}
-            className="bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none">
-            <option value="expense">Expense</option>
-            <option value="income">Income</option>
-          </select>
+          <ThemedSelect value={form.type} aria-label="Transaction type"
+            onChange={(v) => setForm((f) => ({ ...f, type: v as "income" | "expense" }))}
+            options={[
+              { value: "expense", label: "Expense" },
+              { value: "income", label: "Income" },
+            ]} />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <select value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
-            className="bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none">
-            {financialCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-            className="bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none" />
+          <ThemedSelect value={form.categoryId} aria-label="Category"
+            onChange={(v) => setForm((f) => ({ ...f, categoryId: v }))}
+            options={financialCategories.map((c) => ({ value: c.id, label: c.name, color: c.color }))} />
+          <DateField value={form.date} aria-label="Date"
+            onChange={(v) => setForm((f) => ({ ...f, date: v }))} />
         </div>
         <button onClick={submit} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg py-2.5 text-sm font-medium transition-colors">
           {editingTransaction ? "Save Changes" : "Add Transaction"}

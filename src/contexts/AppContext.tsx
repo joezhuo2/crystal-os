@@ -67,6 +67,9 @@ type AppState = {
   setSelectedNotePath: (path: string | null) => void;
   showQuickAdd: boolean;
   setShowQuickAdd: (show: boolean) => void;
+  /** Requests that the Horizon open its "New Event" form. UI-only, never persisted. */
+  showEventForm: boolean;
+  setShowEventForm: (show: boolean) => void;
   /** Seeds the Quick Add dialog, e.g. with whatever was typed in the palette. */
   quickAddDraft: string;
   setQuickAddDraft: (text: string) => void;
@@ -163,6 +166,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [selectedNotePath, setSelectedNotePath] = useState<string | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showEventForm, setShowEventForm] = useState(false);
   const [quickAddDraft, setQuickAddDraft] = useState("");
 
   // ── Fetch all data on mount ──
@@ -276,13 +280,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showTaskForm, setShowTaskForm, showTransactionForm, setShowTransactionForm,
       editingTask, setEditingTask, editingTransaction, setEditingTransaction,
       selectedNotePath, setSelectedNotePath, showQuickAdd, setShowQuickAdd,
+      showEventForm, setShowEventForm,
       quickAddDraft, setQuickAddDraft,
     }),
     [tasks, transactions, taskCategories, financialCategories, dailyFocus, loading,
      addTask, updateTask, deleteTask, addTransaction, updateTransaction, deleteTransaction,
      setDailyFocus, addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
      showTaskForm, showTransactionForm, editingTask, editingTransaction,
-     selectedNotePath, showQuickAdd, quickAddDraft]
+     selectedNotePath, showQuickAdd, showEventForm, quickAddDraft]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
