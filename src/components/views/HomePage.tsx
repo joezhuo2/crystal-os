@@ -1,12 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Cloud, Sun, Moon, CloudRain, CloudSun, CloudSnow, CloudLightning, CloudDrizzle, MoonStar } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { motion } from "framer-motion";
 import { taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 import { useWeather, AVAILABLE_CITIES } from "@/hooks/useWeather";
 import { useVaultNotes } from "@/hooks/useVault";
-import { BookOpen, NotebookPen } from "lucide-react";
+import {
+  useCalendarEvents,
+  useCalendarStatus,
+  type CalendarEvent,
+} from "@/hooks/useGoogleCalendar";
+import { BookOpen, NotebookPen, CalendarClock, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import {
+  DailyFocusSkeleton,
+  SmartSummarySkeleton,
+  TodayHorizonContentSkeleton,
+  VaultContentSkeleton,
+  WeatherWidgetSkeleton,
+} from "@/components/ui/dashboard-skeletons";
 
 function Clock() {
   const [time, setTime] = useState(new Date());
@@ -62,17 +74,7 @@ function WeatherWidget({ onClick }: { onClick?: () => void }) {
   const todayLow = data?.dailyForecasts?.[0]?.low ?? data?.dailyForecasts?.[1]?.low ?? null;
 
   if (isLoading || !data) {
-    return (
-      <div className="glass-card-hover p-6 flex items-center gap-4 cursor-pointer" onClick={onClick}>
-        <div className="p-3 rounded-xl animate-pulse" style={{ background: "hsl(239 84% 67% / 0.12)" }}>
-          <Cloud className="w-6 h-6 text-primary/30" />
-        </div>
-        <div className="space-y-1.5">
-          <div className="w-16 h-7 rounded bg-primary/10 animate-pulse" />
-          <div className="w-32 h-3 rounded bg-primary/5 animate-pulse" />
-        </div>
-      </div>
-    );
+    return <WeatherWidgetSkeleton />;
   }
 
   return (
@@ -124,13 +126,7 @@ function VaultWidget({ onClick }: { onClick?: () => void }) {
 
       {error && <p className="text-xs text-muted-foreground">Vault unavailable.</p>}
 
-      {isLoading && (
-        <div className="space-y-2">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="w-full h-4 rounded bg-primary/5 animate-pulse" />
-          ))}
-        </div>
-      )}
+      {isLoading && <VaultContentSkeleton />}
 
       {!isLoading && !error && data && (
         <>
@@ -197,15 +193,140 @@ function VaultWidget({ onClick }: { onClick?: () => void }) {
   );
 }
 
+/** Format a "HH:MM" value as a friendly 12-hour time. */
+function formatEventTime(time: string): string {
+  if (!time) return "";
+  return new Date(`2000-01-01T${time}:00`).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** Matches CalendarPage's key so the widget follows the calendar you picked there. */
+const CALENDAR_STORAGE_KEY = "crystal-os-google-calendar";
+
+function TodayHorizon({ onClick }: { onClick?: () => void }) {
+  const today = toLocalDateStr();
+
+  const calendarId = (() => {
+    try {
+      return localStorage.getItem(CALENDAR_STORAGE_KEY) ?? "primary";
+    } catch {
+      return "primary";
+    }
+  })();
+
+  const status = useCalendarStatus();
+  const connected = status.data?.connected === true;
+
+  // Local midnight today through local midnight tomorrow.
+  const range = useMemo(() => {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    return {
+      timeMin: startOfDay.toISOString(),
+      timeMax: new Date(startOfDay.getTime() + 86400000).toISOString(),
+    };
+  }, [today]);
+
+  const eventsQuery = useCalendarEvents({ calendarId, ...range }, connected);
+
+  // The query window can still return multi-day events that merely overlap today.
+  const todayEvents = (eventsQuery.data?.events ?? [])
+    .filter((e) => e.startDate <= today && e.endDate >= today)
+    .slice()
+    .sort((a, b) => {
+      // All-day events float to the top, then earliest start, then earliest end.
+      if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
+      if (a.startTime !== b.startTime) return a.startTime.localeCompare(b.startTime);
+      return a.endTime.localeCompare(b.endTime);
+    });
+
+  const loading = status.isLoading || (connected && eventsQuery.isLoading);
+
+  const timeLabel = (e: CalendarEvent) => {
+    if (e.allDay) return e.startDate === e.endDate ? "All day" : `All day · thru ${e.endDate}`;
+    const span = `${formatEventTime(e.startTime)} – ${formatEventTime(e.endTime)}`;
+    return e.startDate === e.endDate ? span : `${span} (${e.endDate})`;
+  };
+
+  return (
+    <div
+      onClick={onClick}
+      className="glass-card-hover p-6 col-span-full cursor-pointer group"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-muted-foreground uppercase tracking-widest">Today on the Horizon</p>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary">
+          Open <ChevronRight className="w-3.5 h-3.5" />
+        </span>
+      </div>
+
+      {loading ? (
+        <TodayHorizonContentSkeleton />
+      ) : !connected ? (
+        <p className="text-sm text-muted-foreground">
+          Google Calendar is not connected. Open the Horizon to connect it.
+        </p>
+      ) : eventsQuery.error ? (
+        <p className="text-sm text-muted-foreground">Could not load today's events.</p>
+      ) : (
+        <>
+          <div className="flex items-baseline gap-2 mb-4">
+            <span className="text-3xl font-bold tabular-nums">{todayEvents.length}</span>
+            <span className="text-sm text-muted-foreground">
+              event{todayEvents.length !== 1 ? "s" : ""} today
+            </span>
+          </div>
+
+          {todayEvents.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing scheduled. The horizon is clear.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {todayEvents.map((event, i) => (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="flex items-center gap-3"
+                >
+                  <CalendarClock className="w-3.5 h-3.5 text-primary/60 shrink-0" />
+                  <span className="text-sm truncate">{event.summary || "(no title)"}</span>
+                  {event.location && (
+                    <span className="text-[10px] text-muted-foreground/60 truncate hidden sm:inline">
+                      {event.location}
+                    </span>
+                  )}
+                  <span className="ml-auto text-xs text-muted-foreground tabular-nums shrink-0">
+                    {timeLabel(event)}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function DailyFocus() {
-  const { dailyFocus, setDailyFocus } = useApp();
+  const { dailyFocus, setDailyFocus, loading } = useApp();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(dailyFocus);
+
+  // The stored focus arrives with the rest of the app data, so seed the input once it lands.
+  useEffect(() => {
+    if (!editing) setValue(dailyFocus);
+  }, [dailyFocus, editing]);
 
   const save = () => {
     setDailyFocus(value);
     setEditing(false);
   };
+
+  if (loading) return <DailyFocusSkeleton />;
 
   return (
     <div className="glass-card-hover p-6 col-span-full lg:col-span-2">
@@ -233,7 +354,7 @@ function DailyFocus() {
 }
 
 function SmartSummary() {
-  const { tasks, transactions } = useApp();
+  const { tasks, transactions, loading } = useApp();
   const today = toLocalDateStr();
   const todayTasks = tasks.filter((t) => taskFallsOnDate(t, today));
   const dueTasks = todayTasks.filter((t) => !t.completed);
@@ -253,6 +374,8 @@ function SmartSummary() {
     totalExpenses > 0 ? `Total spending tracked: $${totalExpenses.toFixed(2)}.` : "",
     coffeeSpend > 5 ? `You've spent $${coffeeSpend.toFixed(2)} on coffee recently.` : "",
   ].filter(Boolean);
+
+  if (loading) return <SmartSummarySkeleton />;
 
   return (
     <div className="glass-card-hover glass-card-emerald p-6">
@@ -284,6 +407,7 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
       <Clock />
       <WeatherWidget onClick={() => onNavigate?.("weather")} />
       <SmartSummary />
+      <TodayHorizon onClick={() => onNavigate?.("calendar")} />
       <DailyFocus />
       <VaultWidget onClick={() => onNavigate?.("archive")} />
     </motion.div>
