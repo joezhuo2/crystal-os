@@ -36,6 +36,15 @@ service-account*.json
 .yarnrc
 .netrc
 .htpasswd
+# Token / password stores
+token.json
+tokens.json
+*.token
+.token
+*.kdbx
+*.ovpn
+.mcp.json
+*.mcp.json
 
 # Cloud / deploy provider state
 .vercel
@@ -55,6 +64,11 @@ service-account*.json
 supabase/.branches/
 supabase/.temp/
 supabase/.env
+.supabase/
+supabase/.env.*
+supabase/seed.sql
+# Supabase service_role key must NEVER be committed - it bypasses RLS.
+# Keep every Supabase credential in .env.local (ignored above).
 
 # ---------------------------------------------------------------------------
 # Personal data
@@ -70,6 +84,20 @@ backups/
 *.sqlite
 *.sqlite3
 *.db
+# Calendar / contact exports and captures
+*.ics
+*.vcf
+*.har
+*.mbox
+*.pst
+*.ost
+# Data dumps pulled out of Supabase or the vault
+*.dump
+*.sql.gz
+export-*.csv
+export-*.json
+*-export.csv
+*-export.json
 
 # ---------------------------------------------------------------------------
 # Dependencies and build output
@@ -155,3 +183,6 @@ scratch/
 *.bak
 *.orig
 *.rej
+
+# Personal / career material kept alongside the repo but never part of it
+Claude outputs/

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest, shouldRetry } from "@/lib/apiRequest";
 
 const API_BASE = "/api/obsidian";
 
@@ -43,22 +44,8 @@ export interface QuickAddResult {
   tagsAdded: string[];
 }
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
-  if (!res.ok) {
-    // The middleware always replies with { error } — surface that instead of a
-    // bare status code, since "OBSIDIAN_VAULT_PATH is not set" is actionable.
-    let message = `Vault API error: ${res.status}`;
-    try {
-      const body = await res.json();
-      if (body?.error) message = body.error;
-    } catch {
-      /* non-JSON response, keep the status message */
-    }
-    throw new Error(message);
-  }
-  return res.json() as Promise<T>;
-}
+const request = <T,>(url: string, init?: RequestInit) =>
+  apiRequest<T>(url, init, "Vault API error");
 
 export interface VaultQuery {
   q?: string;
@@ -81,7 +68,7 @@ export function useVaultNotes(params: VaultQuery = {}, enabled = true) {
     queryKey: ["vault", "notes", params],
     queryFn: () => request<VaultNotesResponse>(`${API_BASE}/notes${buildQuery(params)}`),
     staleTime: 30 * 1000,
-    retry: 1,
+    retry: shouldRetry,
     enabled,
   });
 }
@@ -96,7 +83,7 @@ export function useVaultNote(notePath: string | null) {
       ),
     enabled: !!notePath,
     staleTime: 30 * 1000,
-    retry: 1,
+    retry: shouldRetry,
   });
 }
 

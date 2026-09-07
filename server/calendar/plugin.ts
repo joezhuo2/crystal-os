@@ -1,5 +1,6 @@
 import type { Connect, Plugin } from "vite";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { RequireUser } from "../auth/requireUser";
 import { CalendarError } from "./errors";
 import {
   type CalendarAuth,
@@ -194,7 +195,10 @@ async function handleAuthCallback(
  * servers. The client secret and refresh token must never reach the browser, so
  * every Google call happens here and the bundle only ever sees the JSON.
  */
-export function calendarApi(config: CalendarConfig): Plugin {
+export function calendarApi(
+  config: CalendarConfig,
+  requireUser?: RequireUser,
+): Plugin {
   const auth = createCalendarAuth(config);
 
   const middleware: Connect.NextHandleFunction = (req, res, next) => {
@@ -210,6 +214,19 @@ export function calendarApi(config: CalendarConfig): Plugin {
         const calendarId = url.searchParams.get("calendarId") || "primary";
         const scope = url.searchParams.get("scope") === "all" ? "all" : "single";
 
+        // /auth/callback is the one exemption, and it has to be: it is a
+        // redirect issued by Google's servers, which will never send our
+        // Authorization header. It carries its own protection — a random state
+        // nonce, verified here, expiring after 10 minutes.
+        if (route !== "/auth/callback") {
+          if (!requireUser) {
+            throw new CalendarError("Auth is not configured on the server", 503);
+          }
+          if (!(await requireUser(req))) {
+            throw new CalendarError("Unauthorized", 401);
+          }
+        }
+
         if (route === "/status") {
           if (method !== "GET") throw new CalendarError("Use GET", 405);
           sendJson(res, 200, await auth.getStatus());
@@ -218,10 +235,12 @@ export function calendarApi(config: CalendarConfig): Plugin {
 
         if (route === "/auth/start") {
           if (method !== "GET") throw new CalendarError("Use GET", 405);
-          res.statusCode = 302;
-          res.setHeader("Location", auth.buildConsentUrl());
+          // Returns the URL rather than 302-ing to it. A top-level navigation
+          // cannot carry an Authorization header, so this route would be
+          // unreachable once gated; the client fetches the URL and navigates
+          // itself.
           res.setHeader("Cache-Control", "no-store");
-          res.end();
+          sendJson(res, 200, { url: auth.buildConsentUrl() });
           return;
         }
 
