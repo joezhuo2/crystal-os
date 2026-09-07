@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { apiRequest } from "@/lib/apiRequest";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertTriangle,
@@ -100,6 +101,27 @@ function ConnectPanel({
   message?: string;
   isLoading: boolean;
 }) {
+  const [connectError, setConnectError] = useState<string | null>(null);
+
+  // A top-level <a href> cannot carry the Authorization header, so this route
+  // is fetched rather than navigated to; the server returns the consent URL and
+  // the browser goes there afterwards.
+  async function startConnect() {
+    setConnectError(null);
+    try {
+      const { url } = await apiRequest<{ url: string }>(
+        "/api/calendar/auth/start",
+        undefined,
+        "Calendar API error",
+      );
+      window.location.href = url;
+    } catch (err) {
+      setConnectError(
+        err instanceof Error ? err.message : "Could not start Google sign-in.",
+      );
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="glass-card p-6 space-y-3">
@@ -126,13 +148,21 @@ function ConnectPanel({
       </div>
 
       {configured ? (
-        <a
-          href="/api/calendar/auth/start"
-          className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
-        >
-          <CalendarDays className="w-4 h-4" />
-          Connect Google Calendar
-        </a>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={startConnect}
+            className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
+          >
+            <CalendarDays className="w-4 h-4" />
+            Connect Google Calendar
+          </button>
+          {connectError && (
+            <p role="alert" className="text-xs text-destructive">
+              {connectError}
+            </p>
+          )}
+        </div>
       ) : (
         <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
           Set <code>GOOGLE_CLIENT_ID</code> and{" "}

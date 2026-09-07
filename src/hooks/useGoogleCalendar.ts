@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest, shouldRetry } from "@/lib/apiRequest";
 
 const API_BASE = "/api/calendar";
 
@@ -66,22 +67,8 @@ export interface EventInput {
 /** Which occurrences of a recurring event an edit or delete applies to. */
 export type EventScope = "single" | "all";
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
-  if (!res.ok) {
-    // The middleware always replies with { error } — surface that instead of a
-    // bare status code, since "GOOGLE_CLIENT_ID is not set" is actionable.
-    let message = `Calendar API error: ${res.status}`;
-    try {
-      const body = await res.json();
-      if (body?.error) message = body.error;
-    } catch {
-      /* non-JSON response, keep the status message */
-    }
-    throw new Error(message);
-  }
-  return res.json() as Promise<T>;
-}
+const request = <T,>(url: string, init?: RequestInit) =>
+  apiRequest<T>(url, init, "Calendar API error");
 
 const jsonInit = (method: string, body: unknown): RequestInit => ({
   method,
@@ -146,7 +133,7 @@ export function useCalendarList(enabled: boolean) {
     queryFn: () =>
       request<{ calendars: CalendarSummary[] }>(`${API_BASE}/calendars`),
     staleTime: 5 * 60 * 1000,
-    retry: 1,
+    retry: shouldRetry,
     enabled,
   });
 }
@@ -171,7 +158,7 @@ export function useCalendarEvents(params: EventsQuery, enabled: boolean) {
       return request<{ events: CalendarEvent[] }>(`${API_BASE}/events?${qs}`);
     },
     staleTime: 30 * 1000,
-    retry: 1,
+    retry: shouldRetry,
     enabled,
   });
 }

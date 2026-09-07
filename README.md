@@ -93,8 +93,11 @@ Changing `OBSIDIAN_VAULT_PATH` or the `GOOGLE_*` keys requires a dev-server rest
 > **Note:** the Supabase URL and anon key are read from `VITE_SUPABASE_URL` and
 > `VITE_SUPABASE_ANON_KEY` in `.env.local`. Being `VITE_`-prefixed, they are inlined
 > into the client bundle and are public at runtime — that is normal for the anon key.
-> **Enable Row Level Security on every table**; without it the anon key gives anyone
-> full read/write access to your database. Never expose the `service_role` key.
+> Row Level Security is what protects the data. Never expose the `service_role` key.
+>
+> This app has no registration flow by design. Create your single account in the
+> Supabase dashboard under **Authentication → Users**, and disable new signups under
+> **Authentication → Providers**.
 
 ---
 
@@ -225,17 +228,22 @@ The consent flow carries a random `state` nonce that is verified on callback and
 ## 🗄️ Database Schema (Supabase)
 
 ```sql
--- Core tables
-profiles (id, user_id, display_name, avatar_url, created_at)
-categories (id, user_id, name, color, icon, type, created_at)
-tasks (id, user_id, category_id, title, description, due_date, priority, completed, created_at)
-transactions (id, user_id, category_id, amount, type, description, date, created_at)
-
--- Row Level Security enabled on all tables
--- Policies: users can only access their own data
+tasks                (id, user_id, name, start_date, start_time, end_date,
+                      end_time, priority, category_id, completed, repeat_days)
+transactions         (id, user_id, name, amount, type, category_id, date)
+task_categories      (id, user_id, name, color)
+financial_categories (id, user_id, name, color)
+settings             (user_id, key, value)   -- primary key (user_id, key)
 ```
 
-Create these in the Supabase Dashboard → SQL Editor. Migrations are not yet checked into this repo.
+Row Level Security is enabled on all five tables, with select/insert/update/delete
+policies scoped to `auth.uid() = user_id`. `user_id` defaults to `auth.uid()`, so the
+client never sends it. Category foreign keys are `on delete set null`, so deleting a
+category leaves its tasks intact and uncategorised rather than deleting them.
+
+Apply [`supabase/migrations/0001_auth_and_rls.sql`](supabase/migrations/0001_auth_and_rls.sql)
+in the Supabase Dashboard → SQL Editor, then run `npm run verify:rls` to confirm the
+anon role can read and write nothing.
 
 ---
 

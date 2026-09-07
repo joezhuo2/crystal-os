@@ -1,5 +1,6 @@
 import type { Connect, Plugin } from "vite";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { RequireUser } from "../auth/requireUser";
 import {
   VaultError,
   appendToNote,
@@ -129,13 +130,25 @@ async function handleQuickAdd(
  * is a local directory, so this middleware is where that work has to happen -
  * the browser bundle only ever sees the JSON.
  */
-export function obsidianApi(vaultPath?: string): Plugin {
+export function obsidianApi(
+  vaultPath?: string,
+  requireUser?: RequireUser,
+): Plugin {
   const middleware: Connect.NextHandleFunction = (req, res, next) => {
     const rawUrl = req.url ?? "";
     if (!rawUrl.startsWith(ROUTE_PREFIX)) return next();
 
     void (async () => {
       try {
+        // Authorization first: an unauthenticated caller should not be able to
+        // probe whether a vault is configured on this machine.
+        if (!requireUser) {
+          throw new VaultError("Auth is not configured on the server", 503);
+        }
+        if (!(await requireUser(req))) {
+          throw new VaultError("Unauthorized", 401);
+        }
+
         if (!vaultPath) {
           throw new VaultError(
             "OBSIDIAN_VAULT_PATH is not set in .env.local",
