@@ -90,7 +90,11 @@ GOOGLE_REFRESH_TOKEN=
 
 Changing `OBSIDIAN_VAULT_PATH` or the `GOOGLE_*` keys requires a dev-server restart — Vite reads them once at config time. The one exception is `GOOGLE_REFRESH_TOKEN`, which the OAuth callback also holds in memory, so connecting takes effect immediately.
 
-> **Note:** the Supabase URL and anon key currently live in `src/lib/supabase.ts` rather than in env vars. Point them at your own project before deploying.
+> **Note:** the Supabase URL and anon key are read from `VITE_SUPABASE_URL` and
+> `VITE_SUPABASE_ANON_KEY` in `.env.local`. Being `VITE_`-prefixed, they are inlined
+> into the client bundle and are public at runtime — that is normal for the anon key.
+> **Enable Row Level Security on every table**; without it the anon key gives anyone
+> full read/write access to your database. Never expose the `service_role` key.
 
 ---
 
