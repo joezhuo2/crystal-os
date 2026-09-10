@@ -5,6 +5,15 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-09-10
+
+### Changed
+
+- **The Archive — the left rail is now two independent scroll regions.** The tag cloud and the note list each take half the rail and scroll on their own, so a vault with several dozen tags no longer pushes the note list off the bottom of the panel. Previously the tags were an unbounded `flex-wrap` block above a single scroller: the more tags a vault had, the less of the list was reachable, and past roughly thirty tags none of it was.
+  - The rail's height is fixed (`70vh`, or `calc(100vh - 13rem)` from `lg` up) rather than capped with `max-height`, because an equal split needs a definite height to divide. Both halves are `flex-1 basis-0 min-h-0`, so they share the space evenly when both overflow and the tag half still shrinks to its content when a vault has only a few tags.
+  - The note count sits between them as a fixed divider, so it stays visible while either half scrolls.
+  - The search field remains pinned above both.
+
 ## [0.3.0] - 2026-09-07
 
 Authentication and per-user data isolation. Nothing in the application is reachable without a session, and both the Obsidian and Google Calendar routes now require one.

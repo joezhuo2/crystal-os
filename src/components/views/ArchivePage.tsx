@@ -270,7 +270,7 @@ export default function ArchivePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] gap-4">
         {/* ── Left rail: search, tags, note list ── */}
-        <div className="glass-card p-4 flex flex-col gap-3 lg:max-h-[calc(100vh-13rem)]">
+        <div className="glass-card p-4 flex flex-col gap-3 h-[70vh] lg:h-[calc(100vh-13rem)]">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background/30">
             <Search className="w-4 h-4 text-muted-foreground/50 shrink-0" />
             <input
@@ -281,30 +281,34 @@ export default function ArchivePage() {
             />
           </div>
 
+          {/* Top half: tags, scrolls on its own so a big tag cloud never buries the list. */}
           {(data?.allTags.length ?? 0) > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              <TagChip
-                tag="all"
-                active={activeTag === null}
-                onClick={() => setActiveTag(null)}
-              />
-              {data!.allTags.map((tag) => (
+            <div className="flex-1 basis-0 min-h-0 overflow-y-auto scrollbar-thin -mx-1 px-1">
+              <div className="flex flex-wrap gap-1.5">
                 <TagChip
-                  key={tag}
-                  tag={tag}
-                  active={activeTag === tag}
-                  onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                  tag="all"
+                  active={activeTag === null}
+                  onClick={() => setActiveTag(null)}
                 />
-              ))}
+                {data!.allTags.map((tag) => (
+                  <TagChip
+                    key={tag}
+                    tag={tag}
+                    active={activeTag === tag}
+                    onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1 border-t border-white/5 shrink-0">
             <TagIcon className="w-3 h-3" />
             {isLoading ? "Loading…" : `${data?.total ?? 0} note${data?.total === 1 ? "" : "s"}`}
           </div>
 
-          <div className="flex-1 overflow-y-auto scrollbar-thin space-y-1 -mx-1 px-1">
+          {/* Bottom half: filtered notes. */}
+          <div className="flex-1 basis-0 min-h-0 overflow-y-auto scrollbar-thin space-y-1 -mx-1 px-1">
             {isLoading &&
               [...Array(6)].map((_, i) => (
                 <div key={i} className="px-3 py-2.5 space-y-1.5">

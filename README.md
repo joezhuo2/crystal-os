@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-76%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.2.5-6366F1)
+![Tests](https://img.shields.io/badge/tests-101%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.3.1-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.2.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.3.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -24,7 +24,7 @@ Current release: **v0.2.5** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | **🏠 The Pulse** | Clock, weather, AI smart summary, daily focus, today's calendar events, and a vault widget — each with its own shimmer skeleton while loading |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations |
-| **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown |
+| **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
 | **⏱️ Pomodoro** | Customizable focus/break intervals, session tracking, and audio notifications (Tasks view) |
 | **⌨️ Command Palette** | Global search over tasks, transactions, and vault note bodies, plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event |
@@ -178,6 +178,10 @@ The middleware is mounted on both the dev server and `vite preview`. It is **not
 - **Wikilinks** — `[[Note]]` and `[[Note|alias]]` resolve to in-app navigation; unresolved links stay plain text rather than becoming dead anchors.
 - **Quick Add** — appends a `- **HH:MM** text` bullet under a `## YYYY-MM-DD` heading, creating the note (and any parent directories) when missing. Supplied tags are merged into the note's frontmatter; the existing YAML list style (inline or block) is preserved and no other key is reformatted.
 - **Caching** — parsed notes are cached per path and invalidated on `mtime` change.
+
+### Layout
+
+The browser rail is a fixed-height column split into two halves that scroll independently: the tag cloud on top, the filtered note list below, with the note count between them as a divider and the search field pinned above both. Each half is `flex-1 basis-0 min-h-0`, so a vault with many tags cannot crowd the list out of view, and a vault with few tags leaves the extra space to the list.
 
 ### Safety
 
