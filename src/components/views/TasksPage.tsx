@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil } from "lucide-react";
 import { toLocalDateStr } from "@/lib/utils";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 import PomodoroTimer from "./PomodoroTimer";
 import { CategoryManagerButton } from "./CategoryManager";
 
@@ -147,6 +148,7 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
     }
     onClose();
   };
+  useEscapeKey(onClose);
 
   return (
     <motion.div

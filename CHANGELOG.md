@@ -5,6 +5,19 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-09-12
+
+### Added
+
+- **Escape closes overlays.** Pressing `Escape` now dismisses the event form and day panel in The Horizon, the transaction drawer in Financials, the task form in Tasks, and the category manager in both. Previously only the command palette, the Pomodoro timer, and the field-control popups responded to it; every other overlay had to be closed with its button or backdrop.
+  - **`useEscapeKey`** (`src/hooks/useEscapeKey.ts`) — a shared hook backed by a module-level stack of handlers and a single `keydown` listener that is attached while at least one overlay is mounted. Only the most recently mounted overlay closes on each press, so stacked overlays peel off one at a time: with an event form open over a day panel, the first press closes the form and the second closes the panel.
+  - Events that are already `defaultPrevented` are ignored, so an open `ThemedSelect`, `DateField`, or Radix popup inside an overlay closes first without taking the overlay with it. IME composition keystrokes are ignored too.
+  - The event form will not close while a create or update is still saving, matching its backdrop.
+
+### Changed
+
+- **The Horizon — month grid shows up to 21 event dots per day.** Dots are smaller (`w-1.5 h-1.5`) and wrap into rows of seven inside a 54px column, instead of a single row capped at three. A day with a dozen events no longer looks the same as a day with three.
+
 ## [0.3.1] - 2026-09-10
 
 ### Changed

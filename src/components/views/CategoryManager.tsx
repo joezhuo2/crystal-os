@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, Settings } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 type Mode = "task" | "financial";
 
@@ -39,6 +40,8 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
     if (mode === "task") deleteTaskCategory(id);
     else deleteFinancialCategory(id);
   };
+
+  useEscapeKey(onClose);
 
   return (
     <motion.div

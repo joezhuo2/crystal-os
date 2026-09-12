@@ -47,6 +47,7 @@ import {
   useDisconnectCalendar,
   useUpdateEvent,
 } from "@/hooks/useGoogleCalendar";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const CALENDAR_STORAGE_KEY = "crystal-os-google-calendar";
 const DEFAULT_COLOR = "hsl(239 84% 67%)";
@@ -336,11 +337,11 @@ function MonthGrid({
             >
               {day}
               {count > 0 && (
-                <div className="flex gap-1 mt-0.5">
-                  {Array.from({ length: Math.min(count, 3) }).map((_, j) => (
+                <div className="flex flex-wrap justify-center gap-0.5 mt-0.5 max-w-[54px]">
+                  {Array.from({ length: Math.min(count, 21) }).map((_, j) => (
                     <div
                       key={j}
-                      className="w-2 h-2 rounded-full"
+                      className="w-1.5 h-1.5 rounded-full"
                       style={{ background: color, boxShadow: `0 0 4px ${color}` }}
                     />
                   ))}
@@ -435,6 +436,7 @@ function DayPanel({
   const dayEvents = events
     .filter((e) => eventFallsOnDate(e, date))
     .sort((a, b) => a.startISO.localeCompare(b.startISO));
+  useEscapeKey(onClose);
 
   return (
     <motion.div
@@ -536,6 +538,10 @@ function EventForm({
   const pending = create.isPending || update.isPending;
   const error = create.error ?? update.error;
   const valid = form.summary.trim().length > 0;
+  // Mirror the backdrop: don't dismiss mid-save.
+  useEscapeKey(() => {
+    if (!pending) onClose();
+  });
 
   const submit = () => {
     if (!valid || pending) return;

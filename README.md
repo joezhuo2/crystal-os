@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-101%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.3.1-6366F1)
+![Version](https://img.shields.io/badge/version-0.3.2-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.3.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.3.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -20,7 +20,7 @@ Current release: **v0.3.1** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | Feature | Description |
 |---------|-------------|
 | **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking |
-| **📅 The Horizon** | Google Calendar, live: month and agenda views, create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker |
+| **📅 The Horizon** | Google Calendar, live: month and agenda views, create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 21 event dots per day in the month grid |
 | **🏠 The Pulse** | Clock, weather, AI smart summary, daily focus, today's calendar events, and a vault widget — each with its own shimmer skeleton while loading |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations |
@@ -142,6 +142,7 @@ src/
 ├── hooks/
 │   ├── useVault.ts             # React Query bindings for /api/obsidian/*
 │   ├── useGoogleCalendar.ts    # React Query bindings for /api/calendar/*
+│   ├── useEscapeKey.ts         # Stacked Escape-to-close for overlays (topmost closes first)
 │   ├── useWeather.ts           # Weather API integration
 │   ├── use-toast.ts            # Toast notifications (Sonner)
 │   └── use-mobile.tsx          # Responsive breakpoint hook
@@ -277,6 +278,10 @@ npm run test:watch   # Watch mode
 | *anything else* | Filters tasks, transactions, and vault notes; **Quick Add** is always offered as the first row |
 
 Selecting a note result opens it in The Archive.
+
+### Closing overlays
+
+`Escape` closes whichever overlay is on top — the palette, event form, day panel, task form, transaction drawer, or category manager. Stacked overlays close one per press, and an open select or date popup inside a form closes before the form does. The event form ignores `Escape` while a save is in flight.
 
 ---
 

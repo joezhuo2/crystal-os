@@ -5,6 +5,7 @@ import { toLocalDateStr } from "@/lib/utils";
 import { Plus, Trash2, X, Settings, Pencil } from "lucide-react";
 import { CategoryManagerButton } from "./CategoryManager";
 import { DateField, ThemedSelect } from "@/components/ui/field-controls";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 import {
   AreaChart, Area, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -178,6 +179,7 @@ export function TransactionDrawer({ onClose, editingTransaction }: { onClose: ()
     }
     onClose();
   };
+  useEscapeKey(onClose);
 
   return (
     <motion.div
