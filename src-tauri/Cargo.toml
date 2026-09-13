@@ -1,6 +1,6 @@
 [package]
 name = "crystal-os"
-version = "0.3.2"
+version = "0.4.1"
 description = "Crystal OS desktop shell"
 authors = ["Joe Zhuo"]
 license = ""
@@ -23,3 +23,4 @@ tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-shell = "2"
+tauri-plugin-global-shortcut = "2"

@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-101%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.3.2-6366F1)
+![Version](https://img.shields.io/badge/version-0.4.1-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.3.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.4.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -300,6 +300,8 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 1. Copy `.env.local` to `%APPDATA%\com.crystalos.desktop\.env.local`. It needs the `VITE_SUPABASE_*` keys too, for token checks.
 2. Add `http://127.0.0.1:8787/api/calendar/auth/callback` as a second authorized redirect URI on your Google OAuth client, and set `GOOGLE_REDIRECT_URI` to it in that copy.
 3. Launch Crystal OS. **Connect** in The Horizon opens Google in your default browser. Once it reports success, switch back to the app.
+
+**Global hotkey.** `Alt+Space` shows Crystal OS from any app and focuses the command palette; press it again while the app is focused to hide it. Change it with **Change global hotkey** in the palette. The combo is saved as `globalShortcut` in `%APPDATA%\com.crystalos.desktop\settings.json`. If another app already owns it, Crystal OS still starts and shows a toast.
 
 Code that behaves differently on desktop goes through `src/lib/platform.ts` (`isDesktop()`, `apiUrl()`, `openExternal()`), so the web bundle never imports Tauri.
 

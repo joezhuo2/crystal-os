@@ -22,8 +22,12 @@ import {
   NotebookPen,
   BookOpen,
   CalendarPlus,
+  Keyboard,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useGlobalHotkey } from "@/hooks/useGlobalHotkey";
+import { formatAccelerator } from "@/lib/hotkey";
+import HotkeySettingsDialog from "@/components/HotkeySettingsDialog";
 
 interface CommandPaletteProps {
   onNavigate: (tab: TabId) => void;
@@ -32,7 +36,9 @@ interface CommandPaletteProps {
 export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
   const [focused, setFocused] = useState(false);
   const [search, setSearch] = useState("");
+  const [showHotkeySettings, setShowHotkeySettings] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { tasks, transactions, taskCategories, financialCategories, addTask, addTransaction, setShowTaskForm, setShowTransactionForm, setSelectedNotePath, setShowQuickAdd, setQuickAddDraft, setShowEventForm } = useApp();
 
   const showDropdown = focused && (search.length > 0 || focused);
@@ -61,6 +67,22 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
     setFocused(false);
     setSearch("");
   }, []);
+
+  // ---------- Desktop global hotkey ----------
+  // Rust shows and focuses the window first; the webview may not have focus
+  // back until the next frame. setFocused is explicit because Escape closes
+  // the dropdown without blurring the input, so focus() alone would not fire
+  // onFocus.
+  const hotkey = useGlobalHotkey(() => {
+    requestAnimationFrame(() => {
+      const input = inputRef.current;
+      if (!input) return;
+      containerRef.current?.scrollIntoView({ block: "nearest" });
+      input.focus();
+      input.select();
+      setFocused(true);
+    });
+  });
 
   // ---------- Natural-language parsing ----------
   const addPrefix = search.toLowerCase().startsWith("add ");
@@ -171,6 +193,7 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
         <div className="flex items-center gap-3 px-5 py-3 min-w-0">
           <Search className="w-5 h-5 text-muted-foreground/50 shrink-0" />
           <CommandInput
+            ref={inputRef}
             value={search}
             onValueChange={setSearch}
             onFocus={() => setFocused(true)}
@@ -417,6 +440,31 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
                     </CommandGroup>
                   </>
                 )}
+
+                {/* ── Desktop settings (matched by cmdk's filter on `value`) ── */}
+                {hotkey.status && !addPrefix && !logPrefix && (
+                  <>
+                    <CommandSeparator className="my-1 bg-white/[0.06]" />
+                    <CommandGroup heading="Settings">
+                      <CommandItem
+                        value="global-hotkey-shortcut-keyboard-settings"
+                        onSelect={() => {
+                          close();
+                          setShowHotkeySettings(true);
+                        }}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-500/10">
+                          <Keyboard className="w-4 h-4 text-violet-400" />
+                        </div>
+                        <span className="text-sm font-medium">Change global hotkey</span>
+                        <span className={`ml-auto text-xs ${hotkey.status.error ? "text-red-400/80" : "text-muted-foreground/50"}`}>
+                          {hotkey.status.error ? "not registered" : formatAccelerator(hotkey.status.accelerator)}
+                        </span>
+                      </CommandItem>
+                    </CommandGroup>
+                  </>
+                )}
               </CommandList>
 
               {/* Footer */}
@@ -437,6 +485,16 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
           )}
         </AnimatePresence>
       </Command>
+
+      {hotkey.status && (
+        <HotkeySettingsDialog
+          open={showHotkeySettings}
+          onOpenChange={setShowHotkeySettings}
+          status={hotkey.status}
+          setAccelerator={hotkey.setAccelerator}
+          pause={hotkey.pause}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,213 @@
+//! Global hotkey that summons the command palette from anywhere.
+//!
+//! The combo lives in `settings.json` in the app config dir (next to
+//! `.env.local`), so it is registered in Rust at startup, before the webview
+//! has loaded or anyone has signed in. A registration failure never aborts
+//! startup: it is kept in [`HotkeyState`] and the webview reads it on mount to
+//! show a toast.
+
+use std::path::PathBuf;
+use std::sync::Mutex;
+
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+
+pub const DEFAULT_ACCELERATOR: &str = "Alt+Space";
+
+/// Event the webview listens for to open and focus `CommandPalette`.
+const OPEN_PALETTE_EVENT: &str = "palette://open";
+
+const SETTINGS_FILE: &str = "settings.json";
+
+#[derive(Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct Settings {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  global_shortcut: Option<String>,
+  /// Keys this module does not own are carried through untouched.
+  #[serde(flatten)]
+  rest: serde_json::Map<String, serde_json::Value>,
+}
+
+/// What the webview needs to render the setting and report failures.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HotkeyStatus {
+  accelerator: String,
+  registered: bool,
+  error: Option<String>,
+}
+
+pub struct HotkeyState(Mutex<HotkeyStatus>);
+
+impl Default for HotkeyState {
+  fn default() -> Self {
+    Self(Mutex::new(HotkeyStatus {
+      accelerator: DEFAULT_ACCELERATOR.into(),
+      registered: false,
+      error: None,
+    }))
+  }
+}
+
+fn settings_path<R: Runtime>(app: &AppHandle<R>) -> Option<PathBuf> {
+  app.path().app_config_dir().ok().map(|dir| dir.join(SETTINGS_FILE))
+}
+
+fn read_settings<R: Runtime>(app: &AppHandle<R>) -> Settings {
+  settings_path(app)
+    .and_then(|path| std::fs::read_to_string(path).ok())
+    .and_then(|raw| serde_json::from_str(&raw).ok())
+    .unwrap_or_default()
+}
+
+fn write_accelerator<R: Runtime>(app: &AppHandle<R>, accelerator: &str) -> Result<(), String> {
+  let path = settings_path(app).ok_or("App config directory is unavailable")?;
+  let mut settings = read_settings(app);
+  settings.global_shortcut = Some(accelerator.to_string());
+  if let Some(dir) = path.parent() {
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+  }
+  let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
+  std::fs::write(path, json).map_err(|e| e.to_string())
+}
+
+/// Turn a plugin error into something a toast can say.
+fn describe(accelerator: &str, err: impl std::fmt::Display) -> String {
+  let msg = err.to_string();
+  if msg.contains("already registered") {
+    format!("{accelerator} is already in use by another app")
+  } else {
+    format!("Could not register {accelerator}: {msg}")
+  }
+}
+
+fn register<R: Runtime>(app: &AppHandle<R>, accelerator: &str) -> Result<(), String> {
+  let shortcut: Shortcut = accelerator
+    .parse()
+    .map_err(|e| format!("\"{accelerator}\" is not a valid shortcut: {e}"))?;
+  app.global_shortcut().register(shortcut).map_err(|e| describe(accelerator, e))
+}
+
+/// Show + focus the main window, or hide it if it already has focus. The
+/// window is only re-centred when it was actually hidden or minimised, so
+/// summoning an unfocused but visible window does not move it.
+fn toggle_main_window<R: Runtime>(app: &AppHandle<R>) {
+  let Some(window) = app.get_webview_window("main") else { return };
+
+  let visible = window.is_visible().unwrap_or(false);
+  let minimized = window.is_minimized().unwrap_or(false);
+  let focused = window.is_focused().unwrap_or(false);
+
+  if visible && !minimized && focused {
+    let _ = window.hide();
+    return;
+  }
+
+  if minimized {
+    let _ = window.unminimize();
+  }
+  if !visible || minimized {
+    let _ = window.center();
+  }
+  let _ = window.show();
+  let _ = window.set_focus();
+  let _ = app.emit(OPEN_PALETTE_EVENT, ());
+}
+
+pub fn plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
+  tauri_plugin_global_shortcut::Builder::new()
+    .with_handler(|app, _shortcut, event| {
+      // Only one shortcut is ever registered, so any press is ours. The
+      // handler must not lock HotkeyState: the commands below hold that lock
+      // while (un)registering on the main thread, which is where this runs.
+      if event.state() == ShortcutState::Pressed {
+        toggle_main_window(app);
+      }
+    })
+    .build()
+}
+
+/// Register the saved combo (or the default) at startup. Never fails.
+pub fn init<R: Runtime>(app: &AppHandle<R>) {
+  let accelerator = read_settings(app)
+    .global_shortcut
+    .unwrap_or_else(|| DEFAULT_ACCELERATOR.to_string());
+
+  let result = register(app, &accelerator);
+  if let Err(err) = &result {
+    log::warn!("[hotkey] {err}");
+  }
+
+  *app.state::<HotkeyState>().0.lock().unwrap() = HotkeyStatus {
+    registered: result.is_ok(),
+    error: result.err(),
+    accelerator,
+  };
+}
+
+#[tauri::command]
+pub async fn get_global_shortcut<R: Runtime>(app: AppHandle<R>) -> HotkeyStatus {
+  app.state::<HotkeyState>().0.lock().unwrap().clone()
+}
+
+/// Swap the combo. The new one is only saved once it registers; on failure
+/// the previous combo is restored and the error is returned for a toast.
+#[tauri::command]
+pub async fn set_global_shortcut<R: Runtime>(
+  app: AppHandle<R>,
+  accelerator: String,
+) -> Result<HotkeyStatus, String> {
+  let state = app.state::<HotkeyState>();
+  let mut status = state.0.lock().unwrap();
+  let previous = status.accelerator.clone();
+
+  if status.registered {
+    if previous.eq_ignore_ascii_case(&accelerator) {
+      return Ok(status.clone());
+    }
+    let _ = app.global_shortcut().unregister(previous.as_str());
+  }
+
+  if let Err(err) = register(&app, &accelerator) {
+    status.registered = register(&app, &previous).is_ok();
+    return Err(err);
+  }
+
+  if let Err(err) = write_accelerator(&app, &accelerator) {
+    // Registered but not saved: keep the old combo so the next launch agrees
+    // with what is active now.
+    let _ = app.global_shortcut().unregister(accelerator.as_str());
+    status.registered = register(&app, &previous).is_ok();
+    return Err(format!("Could not save the shortcut: {err}"));
+  }
+
+  *status = HotkeyStatus { accelerator, registered: true, error: None };
+  Ok(status.clone())
+}
+
+/// Release the combo while the settings dialog records a new one; otherwise
+/// pressing the current combo would hide the window instead of being captured.
+#[tauri::command]
+pub async fn pause_global_shortcut<R: Runtime>(app: AppHandle<R>, paused: bool) -> Result<(), String> {
+  let state = app.state::<HotkeyState>();
+  let mut status = state.0.lock().unwrap();
+  let accelerator = status.accelerator.clone();
+
+  if paused {
+    if status.registered {
+      app.global_shortcut().unregister(accelerator.as_str()).map_err(|e| e.to_string())?;
+      status.registered = false;
+    }
+    return Ok(());
+  }
+
+  if !status.registered {
+    let result = register(&app, &accelerator);
+    status.registered = result.is_ok();
+    status.error = result.clone().err();
+    return result;
+  }
+  Ok(())
+}

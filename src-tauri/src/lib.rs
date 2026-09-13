@@ -1,5 +1,7 @@
 use tauri::{Manager, RunEvent};
 
+mod hotkey;
+
 /// Handle to the `crystal-api` sidecar, kept so it can be killed on exit.
 /// Only populated in release builds; `dev:desktop` uses the Vite server's
 /// middleware instead.
@@ -47,8 +49,17 @@ pub fn run() {
     )
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_shell::init())
+    .plugin(hotkey::plugin())
     .manage(Sidecar::default())
+    .manage(hotkey::HotkeyState::default())
+    .invoke_handler(tauri::generate_handler![
+      hotkey::get_global_shortcut,
+      hotkey::set_global_shortcut,
+      hotkey::pause_global_shortcut,
+    ])
     .setup(|_app| {
+      hotkey::init(_app.handle());
+
       #[cfg(not(debug_assertions))]
       if let Err(err) = spawn_sidecar(_app) {
         // Not fatal: Supabase-backed views still work; Archive and Calendar

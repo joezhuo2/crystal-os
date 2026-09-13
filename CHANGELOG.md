@@ -5,7 +5,24 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.4.0]
+## [0.4.1] - 2026-09-13
+
+### Added
+
+- **Global hotkey (desktop).** `Alt+Space` summons Crystal OS from any app and opens the existing command palette with its input focused and any previous query selected. Pressing it again while Crystal OS has focus hides the window. There is no second palette: the hotkey drives `CommandPalette.tsx`.
+  - **Toggle.** A hidden or minimised window is restored, centred, shown, and focused. A window that is visible but behind another app is focused where it is, not moved. The window only hides when it already has focus.
+  - **Registered in Rust at startup** (`src-tauri/src/hotkey.rs`, via `tauri-plugin-global-shortcut`), so the combo works before the webview has loaded or anyone has signed in. Rust emits `palette://open` after showing the window; `useGlobalHotkey` (`src/hooks/useGlobalHotkey.ts`) listens for it.
+  - **Configurable.** "Change global hotkey" in the palette (desktop only, also found by typing "hotkey") opens a dialog that records a new combo. At least one of Ctrl, Alt, Shift, or Win is required, except for F-keys. The current combo is released while the dialog is open, so pressing it there is captured rather than hiding the window. **Reset to Alt + Space** restores the default.
+  - **Persisted** as `globalShortcut` in `%APPDATA%\com.crystalos.desktop\settings.json`, next to the sidecar's `.env.local`. Other keys in that file are preserved. A combo is only saved once it registers, so the file never holds one that failed.
+  - **Registration failure does not crash the app.** If another app already owns the combo at startup, Crystal OS starts normally, logs a warning, and shows a toast once the palette mounts; the palette row reads "not registered". If a new combo fails in the dialog, the error is shown inline and as a toast, and the previous combo is re-registered.
+- **`src/lib/hotkey.ts`.** `acceleratorFromEvent()` turns a `keydown` into the plugin's accelerator format using `KeyboardEvent.code`, so the combo does not depend on keyboard layout. `formatAccelerator()` renders it for display (`Ctrl+Super+KeyK` becomes `Ctrl + Win + K`). Covered by `src/lib/hotkey.test.ts`.
+
+### Notes
+
+- There is no tray icon yet (planned for 1.3), so a window hidden with the hotkey can only be brought back with the hotkey. Closing the window still quits the app.
+- The web app is unchanged. `useGlobalHotkey` is a no-op outside Tauri and loads `@tauri-apps/api` only through dynamic imports.
+
+## [0.4.0]
 
 ### Added
 
