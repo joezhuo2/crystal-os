@@ -5,6 +5,19 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.4.0]
+
+### Added
+
+- **Desktop app (Tauri 2).** `npm run dev:desktop` opens Crystal OS in a native window on the Vite dev server. `npm run build:desktop` produces a Windows installer. The web commands are unchanged and need no Rust. The reasoning is recorded in `docs/adr/0001-desktop-shell.md`.
+  - **`crystal-api` sidecar.** The packaged app has no Vite server, so the vault and Google Calendar middleware ship as a Node single-executable (`scripts/build-sidecar.mjs`). Tauri launches it on `127.0.0.1:8787` and kills it on exit. It keeps the Supabase-JWT gate on every route and accepts cross-origin requests only from the Tauri webview. It reads `.env.local` from `%APPDATA%\com.crystalos.desktop\`.
+  - **`src/lib/platform.ts`.** `isDesktop()`, `apiUrl()`, and `openExternal()`. `apiRequest` routes through `apiUrl`, so only the packaged app talks to the sidecar. The module has no top-level Tauri import, so the web bundle does not carry it.
+
+### Changed
+
+- **Google Calendar Connect opens the system browser on desktop.** Google refuses OAuth inside embedded webviews. The web app still navigates in place.
+- **`server/obsidian/plugin.ts` and `server/calendar/plugin.ts` export `createObsidianMiddleware` and `createCalendarMiddleware`.** The Vite plugins and the sidecar share one implementation. Web behaviour is unchanged.
+
 ## [0.3.2] - 2026-09-12
 
 ### Added

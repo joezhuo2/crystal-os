@@ -82,8 +82,10 @@ function sendCallbackPage(
   status: number,
   heading: string,
   detail: string,
+  returnUrl: string | null = "/",
 ) {
   const ok = status === 200;
+  const refresh = ok && returnUrl !== null;
   res.statusCode = status;
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -92,7 +94,7 @@ function sendCallbackPage(
   <head>
     <meta charset="utf-8" />
     <title>Google Calendar</title>
-    ${ok ? '<meta http-equiv="refresh" content="1;url=/" />' : ""}
+    ${refresh ? `<meta http-equiv="refresh" content="1;url=${escapeHtml(returnUrl)}" />` : ""}
     <style>
       body { margin: 0; min-height: 100vh; display: flex; align-items: center;
              justify-content: center; background: hsl(222 47% 11%);
@@ -107,7 +109,7 @@ function sendCallbackPage(
     <main>
       <h1>${escapeHtml(heading)}</h1>
       <p>${escapeHtml(detail)}</p>
-      ${ok ? "" : '<p style="margin-top:1rem"><a href="/">Back to Crystal OS</a></p>'}
+      ${ok || returnUrl === null ? "" : `<p style="margin-top:1rem"><a href="${escapeHtml(returnUrl)}">Back to Crystal OS</a></p>`}
     </main>
   </body>
 </html>`);
@@ -154,10 +156,17 @@ async function handleAuthCallback(
   auth: CalendarAuth,
   url: URL,
   res: ServerResponse,
+  returnUrl: string | null,
 ): Promise<void> {
   const error = url.searchParams.get("error");
   if (error) {
-    sendCallbackPage(res, 400, "Connection cancelled", `Google replied: ${error}`);
+    sendCallbackPage(
+      res,
+      400,
+      "Connection cancelled",
+      `Google replied: ${error}`,
+      returnUrl,
+    );
     return;
   }
 
@@ -175,7 +184,10 @@ async function handleAuthCallback(
     res,
     200,
     "Google Calendar connected",
-    "Returning to Crystal OS...",
+    returnUrl === null
+      ? "You can close this tab and return to Crystal OS."
+      : "Returning to Crystal OS...",
+    returnUrl,
   );
 
   // 3. Mirror to .env.local detached. Vite restarts the dev server when an env
@@ -190,18 +202,28 @@ async function handleAuthCallback(
   });
 }
 
+export interface CalendarMiddlewareOptions {
+  /**
+   * Where the OAuth callback page bounces to once connected. `null` shows a
+   * "close this tab" page instead — used by the desktop sidecar, where the
+   * consent flow runs in the system browser rather than inside the app.
+   */
+  returnUrl?: string | null;
+}
+
 /**
- * Serves Google Calendar over `/api/calendar/*` from the Vite dev and preview
- * servers. The client secret and refresh token must never reach the browser, so
- * every Google call happens here and the bundle only ever sees the JSON.
+ * Connect-style handler for `/api/calendar/*`. Framework-free so the same code
+ * runs inside Vite (dev/preview) and in the desktop sidecar (server/standalone.ts).
  */
-export function calendarApi(
+export function createCalendarMiddleware(
   config: CalendarConfig,
   requireUser?: RequireUser,
-): Plugin {
+  opts: CalendarMiddlewareOptions = {},
+): Connect.NextHandleFunction {
   const auth = createCalendarAuth(config);
+  const returnUrl = opts.returnUrl === undefined ? "/" : opts.returnUrl;
 
-  const middleware: Connect.NextHandleFunction = (req, res, next) => {
+  return (req, res, next) => {
     const rawUrl = req.url ?? "";
     if (!rawUrl.startsWith(ROUTE_PREFIX)) return next();
 
@@ -246,7 +268,7 @@ export function calendarApi(
 
         if (route === "/auth/callback") {
           if (method !== "GET") throw new CalendarError("Use GET", 405);
-          await handleAuthCallback(auth, url, res);
+          await handleAuthCallback(auth, url, res, returnUrl);
           return;
         }
 
@@ -338,6 +360,18 @@ export function calendarApi(
       }
     })();
   };
+}
+
+/**
+ * Serves Google Calendar over `/api/calendar/*` from the Vite dev and preview
+ * servers. The client secret and refresh token must never reach the browser, so
+ * every Google call happens here and the bundle only ever sees the JSON.
+ */
+export function calendarApi(
+  config: CalendarConfig,
+  requireUser?: RequireUser,
+): Plugin {
+  const middleware = createCalendarMiddleware(config, requireUser);
 
   return {
     name: "crystal-os:calendar-api",

@@ -125,16 +125,14 @@ async function handleQuickAdd(
 }
 
 /**
- * Serves the Obsidian vault over `/api/obsidian/*` from the Vite dev and
- * preview servers. `fast-glob` and `gray-matter` are Node-only, and the vault
- * is a local directory, so this middleware is where that work has to happen -
- * the browser bundle only ever sees the JSON.
+ * Connect-style handler for `/api/obsidian/*`. Framework-free so the same code
+ * runs inside Vite (dev/preview) and in the desktop sidecar (server/standalone.ts).
  */
-export function obsidianApi(
+export function createObsidianMiddleware(
   vaultPath?: string,
   requireUser?: RequireUser,
-): Plugin {
-  const middleware: Connect.NextHandleFunction = (req, res, next) => {
+): Connect.NextHandleFunction {
+  return (req, res, next) => {
     const rawUrl = req.url ?? "";
     if (!rawUrl.startsWith(ROUTE_PREFIX)) return next();
 
@@ -178,6 +176,19 @@ export function obsidianApi(
       }
     })();
   };
+}
+
+/**
+ * Serves the Obsidian vault over `/api/obsidian/*` from the Vite dev and
+ * preview servers. `fast-glob` and `gray-matter` are Node-only, and the vault
+ * is a local directory, so this middleware is where that work has to happen -
+ * the browser bundle only ever sees the JSON.
+ */
+export function obsidianApi(
+  vaultPath?: string,
+  requireUser?: RequireUser,
+): Plugin {
+  const middleware = createObsidianMiddleware(vaultPath, requireUser);
 
   return {
     name: "crystal-os:obsidian-api",

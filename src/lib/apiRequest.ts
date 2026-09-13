@@ -1,3 +1,4 @@
+import { apiUrl } from "./platform";
 import { supabase } from "./supabase";
 
 /** Carries the HTTP status so retry policy can distinguish 401 from 503. */
@@ -45,7 +46,7 @@ export async function apiRequest<T>(
   const headers = new Headers(init?.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(url, { ...init, headers });
+  const res = await fetch(apiUrl(url), { ...init, headers });
 
   if (!res.ok) {
     // The middleware always replies with { error } — surface that instead of a

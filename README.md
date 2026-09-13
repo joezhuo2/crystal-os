@@ -262,7 +262,46 @@ npm run preview      # Preview production build (vault + calendar APIs included)
 npm run lint         # ESLint check
 npm run test         # Run tests (Vitest) — covers src/ and server/
 npm run test:watch   # Watch mode
+
+npm run dev:desktop   # Native window on the Vite dev server (needs Rust)
+npm run build:sidecar # Bundle server/ into src-tauri/binaries/crystal-api-<triple>.exe
+npm run build:desktop # Sidecar + web build + Windows installer
 ```
+
+---
+
+## 🖥️ Desktop App (Tauri)
+
+The same app runs as a native window. The web commands above are unchanged, and none of them need Rust. See [ADR 0001](docs/adr/0001-desktop-shell.md) for the reasoning.
+
+### Prerequisites
+- [Rust](https://rustup.rs) (`winget install Rustlang.Rustup`, then `rustup default stable-msvc`)
+- Visual Studio 2022 Build Tools with the **Desktop development with C++** workload
+- WebView2 (preinstalled on Windows 11)
+
+### Development
+
+```bash
+npm run dev:desktop
+```
+
+This starts Vite on port 8080 and opens a native window on it. HMR works, and the vault and calendar APIs come from the Vite middleware, the same as in the browser. It reads the repo's `.env.local`.
+
+### Packaged build
+
+```bash
+npm run build:desktop
+```
+
+This produces an installer in `src-tauri/target/release/bundle/`. The packaged app has no Vite server. Instead, Tauri launches `crystal-api`, a Node sidecar that serves the same `/api/obsidian` and `/api/calendar` routes on `127.0.0.1:8787` and exits with the app.
+
+`VITE_SUPABASE_*` are baked in at build time. The sidecar reads its server-side settings from the app config directory:
+
+1. Copy `.env.local` to `%APPDATA%\com.crystalos.desktop\.env.local`. It needs the `VITE_SUPABASE_*` keys too, for token checks.
+2. Add `http://127.0.0.1:8787/api/calendar/auth/callback` as a second authorized redirect URI on your Google OAuth client, and set `GOOGLE_REDIRECT_URI` to it in that copy.
+3. Launch Crystal OS. **Connect** in The Horizon opens Google in your default browser. Once it reports success, switch back to the app.
+
+Code that behaves differently on desktop goes through `src/lib/platform.ts` (`isDesktop()`, `apiUrl()`, `openExternal()`), so the web bundle never imports Tauri.
 
 ---
 

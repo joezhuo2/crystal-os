@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/apiRequest";
+import { openExternal } from "@/lib/platform";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertTriangle,
@@ -115,7 +116,7 @@ function ConnectPanel({
         undefined,
         "Calendar API error",
       );
-      window.location.href = url;
+      await openExternal(url);
     } catch (err) {
       setConnectError(
         err instanceof Error ? err.message : "Could not start Google sign-in.",
@@ -337,11 +338,11 @@ function MonthGrid({
             >
               {day}
               {count > 0 && (
-                <div className="flex flex-wrap justify-center gap-0.5 mt-0.5 max-w-[54px]">
-                  {Array.from({ length: Math.min(count, 21) }).map((_, j) => (
+                <div className="flex flex-wrap justify-center gap-1.5 mt-1 max-w-[64px]">
+                  {Array.from({ length: Math.min(count, 15) }).map((_, j) => (
                     <div
                       key={j}
-                      className="w-1.5 h-1.5 rounded-full"
+                      className="w-2 h-2 rounded-full"
                       style={{ background: color, boxShadow: `0 0 4px ${color}` }}
                     />
                   ))}

@@ -116,6 +116,10 @@ out
 .output/
 .vite/
 *.tsbuildinfo
+# Desktop shell: Cargo output, the bundled sidecar, and its build intermediates
+src-tauri/target/
+src-tauri/binaries/
+server-dist/
 
 # ---------------------------------------------------------------------------
 # Caches and test output

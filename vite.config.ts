@@ -36,7 +36,14 @@ export default defineConfig(({ mode }) => {
       hmr: {
         overlay: false,
       },
+      // Cargo writes thousands of files under src-tauri/target during
+      // `dev:desktop`; watching them would trigger endless reloads.
+      watch: {
+        ignored: ["**/src-tauri/**", "**/server-dist/**"],
+      },
     },
+    // Keep Tauri CLI output visible when Vite runs as its beforeDevCommand.
+    clearScreen: false,
     plugins: [
       react(),
       obsidianApi(env.OBSIDIAN_VAULT_PATH, requireUser),
