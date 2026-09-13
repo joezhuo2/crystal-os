@@ -6,10 +6,9 @@
 //! startup: it is kept in [`HotkeyState`] and the webview reads it on mount to
 //! show a toast.
 
-use std::path::PathBuf;
 use std::sync::Mutex;
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
@@ -18,17 +17,8 @@ pub const DEFAULT_ACCELERATOR: &str = "Alt+Space";
 /// Event the webview listens for to open and focus `CommandPalette`.
 const OPEN_PALETTE_EVENT: &str = "palette://open";
 
-const SETTINGS_FILE: &str = "settings.json";
-
-#[derive(Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-struct Settings {
-  #[serde(skip_serializing_if = "Option::is_none")]
-  global_shortcut: Option<String>,
-  /// Keys this module does not own are carried through untouched.
-  #[serde(flatten)]
-  rest: serde_json::Map<String, serde_json::Value>,
-}
+/// Key in `settings.json` (see settings.rs).
+const SETTINGS_KEY: &str = "globalShortcut";
 
 /// What the webview needs to render the setting and report failures.
 #[derive(Clone, Serialize)]
@@ -51,26 +41,8 @@ impl Default for HotkeyState {
   }
 }
 
-fn settings_path<R: Runtime>(app: &AppHandle<R>) -> Option<PathBuf> {
-  app.path().app_config_dir().ok().map(|dir| dir.join(SETTINGS_FILE))
-}
-
-fn read_settings<R: Runtime>(app: &AppHandle<R>) -> Settings {
-  settings_path(app)
-    .and_then(|path| std::fs::read_to_string(path).ok())
-    .and_then(|raw| serde_json::from_str(&raw).ok())
-    .unwrap_or_default()
-}
-
 fn write_accelerator<R: Runtime>(app: &AppHandle<R>, accelerator: &str) -> Result<(), String> {
-  let path = settings_path(app).ok_or("App config directory is unavailable")?;
-  let mut settings = read_settings(app);
-  settings.global_shortcut = Some(accelerator.to_string());
-  if let Some(dir) = path.parent() {
-    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-  }
-  let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
-  std::fs::write(path, json).map_err(|e| e.to_string())
+  crate::settings::set(app, SETTINGS_KEY, accelerator.into())
 }
 
 /// Turn a plugin error into something a toast can say.
@@ -119,8 +91,7 @@ pub fn plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
 
 /// Register the saved combo (or the default) at startup. Never fails.
 pub fn init<R: Runtime>(app: &AppHandle<R>) {
-  let accelerator = read_settings(app)
-    .global_shortcut
+  let accelerator = crate::settings::get_string(app, SETTINGS_KEY)
     .unwrap_or_else(|| DEFAULT_ACCELERATOR.to_string());
 
   let result = register(app, &accelerator);

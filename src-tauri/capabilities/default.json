@@ -1,13 +1,23 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Main window permissions. No shell or fs access for the webview; the sidecar is spawned from Rust.",
+  "description": "Main window permissions. No shell, fs, or dialog plugin access for the webview: the sidecar is spawned from Rust, and the vault is only reachable through the vault commands, which confine every path to the folder the user picked (src-tauri/src/vault.rs).",
   "windows": ["main"],
   "permissions": [
     "core:default",
     {
       "identifier": "opener:allow-open-url",
       "allow": [{ "url": "https://accounts.google.com/*" }]
-    }
+    },
+    "allow-get-global-shortcut",
+    "allow-set-global-shortcut",
+    "allow-pause-global-shortcut",
+    "allow-update-tray-pomodoro",
+    "allow-get-vault-status",
+    "allow-pick-vault",
+    "allow-list-vault",
+    "allow-read-vault-file",
+    "allow-write-vault-file",
+    "allow-watch-vault"
   ]
 }

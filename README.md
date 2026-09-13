@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-134%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.4.2-6366F1)
+![Version](https://img.shields.io/badge/version-0.4.3-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.4.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.4.3** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -107,7 +107,7 @@ Changing `OBSIDIAN_VAULT_PATH` or the `GOOGLE_*` keys requires a dev-server rest
 server/
 ├── obsidian/
 │   ├── plugin.ts               # Vite middleware: /api/obsidian/* routes
-│   ├── vault.ts                # Vault reads, search, frontmatter tag upsert, quick add
+│   ├── vault.ts                # Node vault I/O (fast-glob, gray-matter) over src/lib/vaultCore.ts
 │   └── vault.test.ts           # 42 unit tests over vault.ts
 └── calendar/
     ├── plugin.ts               # Vite middleware: /api/calendar/* routes
@@ -140,7 +140,7 @@ src/
 ├── contexts/
 │   └── AppContext.tsx          # Global state (tasks, transactions, categories, vault + event-form UI)
 ├── hooks/
-│   ├── useVault.ts             # React Query bindings for /api/obsidian/*
+│   ├── useVault.ts             # React Query bindings: /api/obsidian/* on web, Rust on desktop
 │   ├── useGoogleCalendar.ts    # React Query bindings for /api/calendar/*
 │   ├── useEscapeKey.ts         # Stacked Escape-to-close for overlays (topmost closes first)
 │   ├── useWeather.ts           # Weather API integration
@@ -148,6 +148,8 @@ src/
 │   └── use-mobile.tsx          # Responsive breakpoint hook
 ├── lib/
 │   ├── supabase.ts             # Supabase client + helpers
+│   ├── vaultCore.ts            # Shared vault logic: parsing, search, tags, quick-add formatting
+│   ├── vaultNative.ts          # Desktop vault client for src-tauri/src/vault.rs
 │   └── utils.ts                # cn(), useDebouncedValue(), date helpers, formatters
 ├── pages/
 │   ├── Index.tsx               # Main layout, view registry, global overlays
@@ -160,7 +162,12 @@ src/
 
 ## 📖 The Archive (Obsidian integration)
 
-Crystal OS reads your vault directly off disk. `fast-glob` and `gray-matter` are Node-only and the vault is a local directory, so all of that work happens in a Vite middleware plugin — the browser bundle only ever sees JSON.
+Crystal OS reads your vault directly off disk, through one of two backends behind the same hooks (`src/hooks/useVault.ts`):
+
+- **Web** — a Vite middleware plugin. `fast-glob` and `gray-matter` are Node-only and the vault is a local directory, so that work happens server-side and the browser bundle only ever sees JSON. The vault is set with `OBSIDIAN_VAULT_PATH`.
+- **Desktop** — Rust commands in `src-tauri/src/vault.rs`, on a folder picked in the app. See [Desktop App → Vault](#-desktop-app-tauri).
+
+Parsing, search ranking, tag handling, and quick-add formatting live in `src/lib/vaultCore.ts` and are shared by both, so the two behave the same.
 
 ### Endpoints
 
@@ -186,7 +193,7 @@ The browser rail is a fixed-height column split into two halves that scroll inde
 
 ### Safety
 
-Every filesystem access goes through `resolveVaultPath`, which rejects absolute paths, drive letters, and any traversal escaping the vault root. Request bodies are capped at 64 KB, capture text at 10,000 characters, and tags at 12 per request / 60 characters each, validated against the Obsidian tag charset.
+On the web, every filesystem access goes through `resolveVaultPath`, which rejects absolute paths, drive letters, and any traversal escaping the vault root. On desktop, `vault.rs` does the same and also refuses `..`, NTFS stream names, and symlinks or junctions that lead out of the vault. Request bodies are capped at 64 KB, capture text at 10,000 characters, and tags at 12 per request / 60 characters each, validated against the Obsidian tag charset.
 
 ---
 
@@ -311,6 +318,13 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 - **Quit Crystal OS**
 
 The Pomodoro timer lives in `src/lib/pomodoro.ts`, so it keeps running when you leave the Tasks page and the tray and the on-page timer always agree. Tray clicks reach it as Tauri events (`tray://pomodoro`, `tray://quick-add`) handled in `src/lib/tray.ts`, which reports every visible change back to Rust (`update_tray_pomodoro` in `src-tauri/src/tray.rs`).
+
+**Vault.** The desktop app reads your Obsidian vault natively; it does not use `OBSIDIAN_VAULT_PATH` or the sidecar's `/api/obsidian` routes. On first launch, The Archive shows **Choose vault folder**, which opens the system folder picker. The choice is saved as `vaultPath` in `settings.json`; change it later with **Change vault folder** in the command palette.
+
+- **Live updates.** A file watcher (`notify`, debounced 250 ms) emits `vault://changed` whenever a note is added, edited, renamed, or deleted, and every vault view refetches. Edits made in Obsidian show up without a refresh. Only changed notes are re-read.
+- **Scoped access.** The webview has no fs, shell, or dialog plugin permissions. It reaches the vault only through six commands (`get_vault_status`, `pick_vault`, `list_vault`, `read_vault_file`, `write_vault_file`, `watch_vault`), and `src-tauri/capabilities/default.json` allowlists every app command by name. Each path must be a `.md` file inside the picked folder, outside `.obsidian`, `.trash`, `.git`, and `node_modules`.
+- **Safe writes.** Quick Add writes to a temp file and swaps it in. It sends the `mtime` it read, so if Obsidian saves the note in between, the append is redone on top of that edit instead of overwriting it.
+- **When things go wrong.** A saved folder that is gone at startup (renamed, or on an unplugged drive) or unreadable shows a card with **Choose vault folder** and **Retry**; the watcher restarts once the folder is back. A note deleted while open shows **This note is gone** with **Close note**.
 
 Code that behaves differently on desktop goes through `src/lib/platform.ts` (`isDesktop()`, `apiUrl()`, `openExternal()`), so the web bundle never imports Tauri.
 

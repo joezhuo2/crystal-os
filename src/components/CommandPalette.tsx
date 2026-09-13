@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { toLocalDateStr, useDebouncedValue } from "@/lib/utils";
-import { useVaultNotes } from "@/hooks/useVault";
+import { usePickVault, useVaultNotes, useVaultStatus } from "@/hooks/useVault";
+import { toast } from "sonner";
 import type { TabId } from "@/components/layout/Navigation";
 import {
   Command,
@@ -23,6 +24,7 @@ import {
   BookOpen,
   CalendarPlus,
   Keyboard,
+  FolderOpen,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGlobalHotkey } from "@/hooks/useGlobalHotkey";
@@ -67,6 +69,17 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
     setFocused(false);
     setSearch("");
   }, []);
+
+  // ---------- Desktop vault folder ----------
+  const vaultStatus = useVaultStatus();
+  const pickVault = usePickVault();
+  const chooseVault = () =>
+    pickVault.mutate(undefined, {
+      onSuccess: (status) => {
+        if (status) toast.success("Vault connected", { description: status.path ?? undefined });
+      },
+      onError: (err) => toast.error("Could not use that folder", { description: err.message }),
+    });
 
   // ---------- Desktop global hotkey ----------
   // Rust shows and focuses the window first; the webview may not have focus
@@ -460,6 +473,29 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
                         <span className="text-sm font-medium">Change global hotkey</span>
                         <span className={`ml-auto text-xs ${hotkey.status.error ? "text-red-400/80" : "text-muted-foreground/50"}`}>
                           {hotkey.status.error ? "not registered" : formatAccelerator(hotkey.status.accelerator)}
+                        </span>
+                      </CommandItem>
+                      <CommandItem
+                        value="obsidian-vault-folder-archive-settings"
+                        onSelect={() => {
+                          close();
+                          chooseVault();
+                        }}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
+                          <FolderOpen className="w-4 h-4 text-indigo-400" />
+                        </div>
+                        <span className="text-sm font-medium">
+                          {vaultStatus.data?.path ? "Change vault folder" : "Choose vault folder"}
+                        </span>
+                        <span
+                          className={`ml-auto text-xs truncate max-w-[45%] ${vaultStatus.data?.error ? "text-red-400/80" : "text-muted-foreground/50"}`}
+                          title={vaultStatus.data?.path ?? undefined}
+                        >
+                          {vaultStatus.data?.error && vaultStatus.data.path
+                            ? "unavailable"
+                            : vaultStatus.data?.path ?? "not set"}
                         </span>
                       </CommandItem>
                     </CommandGroup>

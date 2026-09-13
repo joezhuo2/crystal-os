@@ -3,15 +3,27 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   AlertTriangle,
   FileText,
+  FileX,
+  FolderOpen,
   NotebookPen,
+  RotateCw,
   Search,
   Tag as TagIcon,
 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
-import { useVaultNote, useVaultNotes, type VaultNote } from "@/hooks/useVault";
+import {
+  usePickVault,
+  useVaultNote,
+  useVaultNotes,
+  vaultErrorCode,
+  type VaultNote,
+} from "@/hooks/useVault";
+import { isDesktop } from "@/lib/platform";
 import { useDebouncedValue } from "@/lib/utils";
 
 function relativeDate(note: VaultNote): string {
@@ -121,6 +133,24 @@ function NoteReader({ notes }: { notes: VaultNote[] }) {
     );
   }
 
+  if (vaultErrorCode(error) === "not_found") {
+    return (
+      <div className="glass-card p-10 flex flex-col items-center justify-center text-center h-full min-h-[320px]">
+        <FileX className="w-8 h-8 text-muted-foreground/40 mb-3" />
+        <p className="text-sm font-medium">This note is gone</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          <code>{selectedNotePath}</code> was deleted or moved.
+        </p>
+        <button
+          onClick={() => setSelectedNotePath(null)}
+          className="mt-4 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10 hover:bg-white/5 transition-colors"
+        >
+          Close note
+        </button>
+      </div>
+    );
+  }
+
   if (error || !note) {
     return (
       <div className="glass-card p-6 min-h-[320px]">
@@ -202,6 +232,97 @@ function NoteReader({ notes }: { notes: VaultNote[] }) {
   );
 }
 
+const DESKTOP_HINTS: Record<string, { title: string; hint: string }> = {
+  not_configured: {
+    title: "Choose your vault",
+    hint: "Pick the folder that holds your Obsidian vault. Crystal OS only reads and writes notes inside it.",
+  },
+  missing: {
+    title: "Vault folder not found",
+    hint: "It may have been moved or renamed, or it lives on a drive that is not connected. Reconnect it and retry, or choose another folder.",
+  },
+  permission_denied: {
+    title: "Vault folder is not readable",
+    hint: "Crystal OS does not have permission to read this folder. Check its permissions, or choose another folder.",
+  },
+};
+
+/** Why the vault cannot be listed, and on desktop, the way out. */
+function VaultUnavailable({ error }: { error: Error }) {
+  const queryClient = useQueryClient();
+  const pickVault = usePickVault();
+  const desktop = isDesktop();
+  const code = vaultErrorCode(error);
+  const copy = desktop ? DESKTOP_HINTS[code ?? ""] : undefined;
+  // First run on desktop is setup, not a failure.
+  const setup = desktop && code === "not_configured";
+
+  const choose = () =>
+    pickVault.mutate(undefined, {
+      onSuccess: (status) => {
+        if (status) toast.success("Vault connected", { description: status.path ?? undefined });
+      },
+      onError: (err) => toast.error("Could not use that folder", { description: err.message }),
+    });
+
+  return (
+    <div className="glass-card p-6">
+      <div className="flex items-start gap-3">
+        {setup ? (
+          <FolderOpen className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+        ) : (
+          <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+        )}
+        <div className="min-w-0">
+          <p
+            className={`text-sm font-medium ${setup ? "" : "text-destructive"}`}
+          >
+            {copy?.title ?? "Vault unavailable"}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 break-words">
+            {copy ? copy.hint : error.message}
+          </p>
+          {copy && !setup && (
+            <p className="text-xs text-muted-foreground/70 mt-1 break-all">{error.message}</p>
+          )}
+
+          {desktop ? (
+            <div className="flex items-center gap-2 mt-4">
+              <button
+                onClick={choose}
+                disabled={pickVault.isPending}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50"
+                style={{
+                  background: "hsl(239 84% 67% / 0.15)",
+                  borderColor: "hsl(239 84% 67% / 0.3)",
+                  color: "hsl(239 84% 80%)",
+                }}
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                Choose vault folder
+              </button>
+              {!setup && (
+                <button
+                  onClick={() => queryClient.invalidateQueries({ queryKey: ["vault"] })}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10 hover:bg-white/5 transition-colors"
+                >
+                  <RotateCw className="w-3.5 h-3.5" />
+                  Retry
+                </button>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground/70 mt-2">
+              Set <code>OBSIDIAN_VAULT_PATH</code> in <code>.env.local</code> and restart
+              the dev server.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ArchivePage() {
   const { selectedNotePath, setSelectedNotePath, setShowQuickAdd, setQuickAddDraft } = useApp();
   const [search, setSearch] = useState("");
@@ -247,19 +368,7 @@ export default function ArchivePage() {
     return (
       <div>
         {header}
-        <div className="glass-card p-6">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-destructive">Vault unavailable</p>
-              <p className="text-xs text-muted-foreground mt-1">{error.message}</p>
-              <p className="text-xs text-muted-foreground/70 mt-2">
-                Set <code>OBSIDIAN_VAULT_PATH</code> in <code>.env.local</code> and restart
-                the dev server.
-              </p>
-            </div>
-          </div>
-        </div>
+        <VaultUnavailable error={error} />
       </div>
     );
   }

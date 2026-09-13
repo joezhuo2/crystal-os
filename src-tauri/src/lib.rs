@@ -1,7 +1,9 @@
 use tauri::{Manager, RunEvent};
 
 mod hotkey;
+mod settings;
 mod tray;
+mod vault;
 mod window;
 
 /// Handle to the `crystal-api` sidecar, kept so it can be killed on exit.
@@ -51,17 +53,26 @@ pub fn run() {
     )
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_shell::init())
+    .plugin(tauri_plugin_dialog::init())
     .plugin(hotkey::plugin())
     .manage(Sidecar::default())
     .manage(hotkey::HotkeyState::default())
+    .manage(vault::VaultState::default())
     .invoke_handler(tauri::generate_handler![
       hotkey::get_global_shortcut,
       hotkey::set_global_shortcut,
       hotkey::pause_global_shortcut,
       tray::update_tray_pomodoro,
+      vault::get_vault_status,
+      vault::pick_vault,
+      vault::list_vault,
+      vault::read_vault_file,
+      vault::write_vault_file,
+      vault::watch_vault,
     ])
     .setup(|_app| {
       hotkey::init(_app.handle());
+      vault::init(_app.handle());
 
       // Not fatal: the window and hotkey still work without a tray.
       if let Err(err) = tray::init(_app.handle()) {

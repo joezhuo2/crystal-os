@@ -1,6 +1,6 @@
 [package]
 name = "crystal-os"
-version = "0.4.2"
+version = "0.4.3"
 description = "Crystal OS desktop shell"
 authors = ["Joe Zhuo"]
 license = ""
@@ -24,3 +24,8 @@ tauri-plugin-log = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-global-shortcut = "2"
+tauri-plugin-dialog = "2"
+notify-debouncer-mini = "0.7.0"
+
+[dev-dependencies]
+tempfile = "3.27.0"

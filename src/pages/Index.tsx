@@ -13,6 +13,7 @@ import ArchivePage from "@/components/views/ArchivePage";
 import CommandPalette from "@/components/CommandPalette";
 import QuickAddDialog from "@/components/QuickAddDialog";
 import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
+import { useVaultLiveUpdates } from "@/hooks/useVault";
 
 interface ViewProps {
   onNavigate?: (tab: TabId) => void;
@@ -33,6 +34,7 @@ function GlobalOverlays() {
     setQuickAddDraft("");
     setShowQuickAdd(true);
   });
+  useVaultLiveUpdates();
   return (
     <>
       <AnimatePresence>

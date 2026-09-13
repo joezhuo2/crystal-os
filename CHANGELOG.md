@@ -5,6 +5,33 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-09-13 - Native Vault
+
+### Added
+
+- **Native vault access (desktop).** The Archive, the home vault widget, the palette's note results, and Quick Add now read and write your Obsidian vault through Rust (`src-tauri/src/vault.rs`) instead of the sidecar's `/api/obsidian` routes. The desktop app no longer needs `OBSIDIAN_VAULT_PATH`.
+  - **Commands.** `list_vault` returns every note's path, `mtime`, and size. `read_vault_file` and `write_vault_file` read and write one note. `watch_vault` restarts the file watcher. `get_vault_status` and `pick_vault` report and change the vault folder. Errors come back as `{ code, message }` with a stable code: `not_configured`, `missing`, `permission_denied`, `not_found`, `invalid_path`, `conflict`, or `io`.
+  - **Folder picker.** On first launch, The Archive shows **Choose vault folder**, which opens the system folder dialog from Rust (`tauri-plugin-dialog`). The folder is saved as `vaultPath` in `%APPDATA%\com.crystalos.desktop\settings.json` and loaded at startup. **Choose / Change vault folder** in the command palette switches vaults later and shows the current folder.
+  - **Live updates.** A recursive watcher (`notify-debouncer-mini`, 250 ms) emits `vault://changed` with the changed note paths. `useVaultLiveUpdates`, mounted once in `Index.tsx`, refetches every vault query, so edits, renames, and deletions made in Obsidian appear without a refresh.
+  - **Incremental reads.** `src/lib/vaultNative.ts` caches parsed notes by `mtime` and only re-reads files whose `mtime` changed, 16 at a time. Frontmatter is parsed with `js-yaml`, since `gray-matter` needs Node; invalid YAML is ignored instead of hiding the note.
+  - **Safe quick add.** Writes go to a temp file (`.<name>.crystal-tmp`) that is then swapped in, falling back to an in-place write if Windows refuses the swap. Each write sends the `mtime` it read. If Obsidian saved the note in between, Rust returns `conflict` and the append is redone on top of the new content, up to three attempts.
+- **Error states in The Archive (desktop).** A saved folder that is gone at startup, for example renamed or on an unplugged drive, shows **Vault folder not found** with **Choose vault folder** and **Retry**. An unreadable folder shows **Vault folder is not readable**. The watcher restarts when the folder is reachable again. A note deleted while open shows **This note is gone** with **Close note**, instead of a generic error. These errors are not retried automatically.
+- **`src/lib/vaultCore.ts`.** Note parsing, search ranking, tag filtering, frontmatter tag upsert, and quick-add formatting (`planQuickAdd`, `queryNotes`, `normalizeNotePath`), with no Node imports. Both the Node middleware and the desktop client use it.
+- **`src-tauri/src/settings.rs`.** Shared read-modify-write access to `settings.json`, used by the hotkey (`globalShortcut`) and the vault (`vaultPath`). Writes hold a lock so the two cannot overwrite each other's key.
+
+### Changed
+
+- **The webview can only call app commands it is granted.** `build.rs` now declares every app command, and `src-tauri/capabilities/default.json` allowlists each one (`allow-list-vault`, `allow-get-global-shortcut`, and so on). The webview still has no fs, shell, or dialog plugin permissions. The vault commands accept only `.md` paths inside the picked folder: `..`, absolute paths, drive letters, NTFS stream names, `.obsidian`/`.trash`/`.git`/`node_modules`, and symlinks or junctions that lead outside are all refused. Tauri 2 has no fs allowlist in `tauri.conf.json`, so the scope is enforced in `vault.rs` and in the capability file.
+- **`server/obsidian/vault.ts` and `plugin.ts` delegate to `vaultCore.ts`.** The API and responses are unchanged. `appendToNote` now writes the note in one call rather than a frontmatter write followed by an append.
+- `hotkey.rs` reads and writes `settings.json` through `settings.rs`.
+
+### Notes
+
+- The web app and `npm run dev` still use the `/api/obsidian` middleware and `OBSIDIAN_VAULT_PATH`. The sidecar still serves those routes, but the desktop Archive no longer calls them.
+- New dependencies: `tauri-plugin-dialog` and `notify-debouncer-mini` (Rust), `js-yaml` (npm), and `tempfile` for Rust tests.
+- Tests: 9 Rust unit tests in `vault.rs` (path normalisation, escape attempts, ignored folders, stale-write conflicts, deleted notes, missing root, symlink escape, watcher filtering), plus `src/lib/vaultCore.test.ts` and `src/lib/vaultNative.test.ts`. Vitest: 152 passing.
+- Not yet verified in a running desktop window.
+
 ## [0.4.2] - 2026-09-13 - Tray Menu
 
 ### Added

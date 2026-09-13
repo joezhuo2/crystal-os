@@ -1,19 +1,10 @@
 import type { Connect, Plugin } from "vite";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { RequireUser } from "../auth/requireUser";
-import {
-  VaultError,
-  appendToNote,
-  collectTags,
-  listNotes,
-  readNote,
-  searchNotes,
-  toSummary,
-} from "./vault";
+import { VaultError, appendToNote, listNotes, readNote } from "./vault";
+import { DEFAULT_NOTE_PATH, queryNotes } from "../../src/lib/vaultCore";
 
 const ROUTE_PREFIX = "/api/obsidian";
-const DEFAULT_NOTE_PATH = "Inbox.md";
-const DEFAULT_LIMIT = 50;
 const MAX_BODY_BYTES = 64 * 1024;
 
 function sendJson(res: ServerResponse, status: number, payload: unknown) {
@@ -75,29 +66,14 @@ async function handleNotes(
     return;
   }
 
-  const all = await listNotes(vaultPath);
-  const allTags = collectTags(all);
-
-  const q = url.searchParams.get("q")?.trim() ?? "";
-  const tag = url.searchParams.get("tag")?.trim() ?? "";
-  const limitParam = Number.parseInt(url.searchParams.get("limit") ?? "", 10);
-  const limit =
-    Number.isFinite(limitParam) && limitParam > 0 ? limitParam : DEFAULT_LIMIT;
-
-  let notes = q
-    ? searchNotes(all, q)
-    : all.map((note) => ({ ...toSummary(note), score: 0, matchContext: null }));
-
-  if (tag) {
-    const wanted = tag.toLowerCase();
-    notes = notes.filter((n) => n.tags.some((t) => t.toLowerCase() === wanted));
-  }
-
-  sendJson(res, 200, {
-    notes: notes.slice(0, limit),
-    allTags,
-    total: notes.length,
+  const limit = Number.parseInt(url.searchParams.get("limit") ?? "", 10);
+  const response = queryNotes(await listNotes(vaultPath), {
+    q: url.searchParams.get("q") ?? undefined,
+    tag: url.searchParams.get("tag") ?? undefined,
+    limit: Number.isFinite(limit) ? limit : undefined,
   });
+
+  sendJson(res, 200, response);
 }
 
 async function handleQuickAdd(
