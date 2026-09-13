@@ -5,6 +5,8 @@ fn main() {
     "get_global_shortcut",
     "set_global_shortcut",
     "pause_global_shortcut",
+    "get_launch_at_login",
+    "set_launch_at_login",
     "update_tray_pomodoro",
     "get_vault_status",
     "pick_vault",

@@ -529,6 +529,8 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
           status={hotkey.status}
           setAccelerator={hotkey.setAccelerator}
           pause={hotkey.pause}
+          launchAtLogin={hotkey.launchAtLogin}
+          setLaunchAtLogin={hotkey.setLaunchAtLogin}
         />
       )}
     </div>

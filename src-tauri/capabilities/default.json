@@ -12,6 +12,8 @@
     "allow-get-global-shortcut",
     "allow-set-global-shortcut",
     "allow-pause-global-shortcut",
+    "allow-get-launch-at-login",
+    "allow-set-launch-at-login",
     "allow-update-tray-pomodoro",
     "allow-get-vault-status",
     "allow-pick-vault",

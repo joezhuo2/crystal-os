@@ -5,6 +5,18 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-09-13 - Always-On Hotkey
+
+### Added
+
+- **Launch at login (desktop).** The global hotkey used to work only after you opened Crystal OS yourself. Now the packaged app registers itself to start at sign-in (`tauri-plugin-autostart`; the `HKCU\...\Run` key on Windows, a LaunchAgent on macOS) with `--hidden`, so it waits in the tray and `Alt+Space` works right after login. On by default, and re-applied on every launch so the entry survives a reinstall. **Launch at login** in the **Change global hotkey** dialog turns it off; the choice is saved as `launchAtLogin` in `settings.json`. New commands: `get_launch_at_login`, `set_launch_at_login` (`src-tauri/src/autostart.rs`). Debug builds never register.
+- **Single instance.** Opening Crystal OS while it is already running (for example from the Start menu while it sits in the tray) shows the existing window instead of starting a second process that could not claim the hotkey (`tauri-plugin-single-instance`).
+
+### Changed
+
+- **Closing the window hides it to the tray instead of quitting**, so the hotkey stays live. **Quit Crystal OS** in the tray still exits and stops the sidecar.
+- The main window is created hidden (`"visible": false`) and shown in `setup` unless the app was started with `--hidden`, so a login launch never flashes the window.
+
 ## [0.4.3] - 2026-09-13 - Native Vault
 
 ### Added

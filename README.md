@@ -310,6 +310,12 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 
 **Global hotkey.** `Alt+Space` shows Crystal OS from any app and focuses the command palette; press it again while the app is focused to hide it. Change it with **Change global hotkey** in the palette. The combo is saved as `globalShortcut` in `%APPDATA%\com.crystalos.desktop\settings.json`. If another app already owns it, Crystal OS still starts and shows a toast.
 
+**Always ready.** The hotkey only works while Crystal OS is running, so the app stays running in the tray:
+
+- **Launch at login** is on by default. The first time you open the packaged app it registers itself to start at sign-in with `--hidden`, which keeps the window in the tray until you press the hotkey. Turn it off in **Change global hotkey**; the choice is saved as `launchAtLogin` in `settings.json`. Debug builds (`npm run dev:desktop`) never register.
+- **Closing the window hides it to the tray.** Use **Quit Crystal OS** in the tray to exit.
+- **One instance.** Opening Crystal OS while it is already running shows the existing window.
+
 **Tray.** Crystal OS adds a gem icon to the system tray (a monochrome template icon in the macOS menu bar). Left-click it on Windows to show or hide the window; right-click for the menu:
 
 - **Show / Hide Crystal OS**

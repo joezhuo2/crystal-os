@@ -29,6 +29,10 @@ pub fn get_string<R: Runtime>(app: &AppHandle<R>, key: &str) -> Option<String> {
   read_all(app).get(key).and_then(Value::as_str).map(str::to_string)
 }
 
+pub fn get_bool<R: Runtime>(app: &AppHandle<R>, key: &str) -> Option<bool> {
+  read_all(app).get(key).and_then(Value::as_bool)
+}
+
 pub fn set<R: Runtime>(app: &AppHandle<R>, key: &str, value: Value) -> Result<(), String> {
   let _guard = WRITE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
   let path = settings_path(app).ok_or("App config directory is unavailable")?;

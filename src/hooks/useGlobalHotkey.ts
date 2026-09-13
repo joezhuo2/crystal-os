@@ -25,6 +25,7 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
  */
 export function useGlobalHotkey(onOpen: () => void) {
   const [status, setStatus] = useState<HotkeyStatus | null>(null);
+  const [launchAtLogin, setLaunchAtLoginState] = useState<boolean | null>(null);
   const onOpenRef = useRef(onOpen);
   onOpenRef.current = onOpen;
 
@@ -49,6 +50,11 @@ export function useGlobalHotkey(onOpen: () => void) {
         });
       }
     });
+
+    invoke<boolean>("get_launch_at_login").then(
+      (enabled) => !cancelled && setLaunchAtLoginState(enabled),
+      () => {},
+    );
 
     return () => {
       cancelled = true;
@@ -77,5 +83,15 @@ export function useGlobalHotkey(onOpen: () => void) {
     }
   }, []);
 
-  return { status, setAccelerator, pause };
+  /** Starts Crystal OS hidden in the tray at login so the hotkey is always live. */
+  const setLaunchAtLogin = useCallback(async (enabled: boolean) => {
+    try {
+      setLaunchAtLoginState(await invoke<boolean>("set_launch_at_login", { enabled }));
+    } catch (err) {
+      toast.error("Could not change launch at login", { description: String(err) });
+      invoke<boolean>("get_launch_at_login").then(setLaunchAtLoginState, () => {});
+    }
+  }, []);
+
+  return { status, setAccelerator, pause, launchAtLogin, setLaunchAtLogin };
 }

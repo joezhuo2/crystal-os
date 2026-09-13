@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { DEFAULT_ACCELERATOR, acceleratorFromEvent, formatAccelerator } from "@/lib/hotkey";
 import type { HotkeyStatus } from "@/hooks/useGlobalHotkey";
@@ -13,6 +14,9 @@ interface HotkeySettingsDialogProps {
   status: HotkeyStatus | null;
   setAccelerator: (accelerator: string) => Promise<HotkeyStatus>;
   pause: (paused: boolean) => Promise<void>;
+  /** null until Rust reports; the switch is hidden until then. */
+  launchAtLogin: boolean | null;
+  setLaunchAtLogin: (enabled: boolean) => Promise<void>;
 }
 
 /**
@@ -20,7 +24,15 @@ interface HotkeySettingsDialogProps {
  * is open so pressing it here is captured instead of hiding the window, and
  * re-registered on close unless a new one was saved.
  */
-export default function HotkeySettingsDialog({ open, onOpenChange, status, setAccelerator, pause }: HotkeySettingsDialogProps) {
+export default function HotkeySettingsDialog({
+  open,
+  onOpenChange,
+  status,
+  setAccelerator,
+  pause,
+  launchAtLogin,
+  setLaunchAtLogin,
+}: HotkeySettingsDialogProps) {
   const [draft, setDraft] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +95,7 @@ export default function HotkeySettingsDialog({ open, onOpenChange, status, setAc
           </DialogTitle>
           <DialogDescription>
             Shows Crystal OS and opens the command palette from any app. Press it again while Crystal OS is focused to hide it.
+            Closing the window keeps Crystal OS in the tray so the hotkey still works; use Quit in the tray to exit.
           </DialogDescription>
         </DialogHeader>
 
@@ -110,6 +123,18 @@ export default function HotkeySettingsDialog({ open, onOpenChange, status, setAc
             {error ?? hint ?? `Current: ${formatAccelerator(current)}${failed ? " (not registered)" : ""}`}
           </p>
         </div>
+
+        {launchAtLogin !== null && (
+          <label className="flex items-center justify-between gap-4 rounded-lg border border-input bg-background/40 px-3 py-2.5">
+            <span className="space-y-0.5">
+              <span className="block text-sm font-medium">Launch at login</span>
+              <span className="block text-xs text-muted-foreground">
+                Starts hidden in the tray so the hotkey works right after you sign in.
+              </span>
+            </span>
+            <Switch checked={launchAtLogin} onCheckedChange={setLaunchAtLogin} />
+          </label>
+        )}
 
         <div className="flex justify-between gap-2">
           <Button

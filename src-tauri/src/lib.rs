@@ -1,5 +1,6 @@
-use tauri::{Manager, RunEvent};
+use tauri::{Manager, RunEvent, WindowEvent};
 
+mod autostart;
 mod hotkey;
 mod settings;
 mod tray;
@@ -46,6 +47,12 @@ fn spawn_sidecar(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   let app = tauri::Builder::default()
+    // Must be registered first. Opening the app while it already runs (for
+    // example hidden in the tray after login) shows the existing window
+    // instead of starting a second process that cannot claim the hotkey.
+    .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+      window::show(app);
+    }))
     .plugin(
       tauri_plugin_log::Builder::default()
         .level(log::LevelFilter::Info)
@@ -55,6 +62,15 @@ pub fn run() {
     .plugin(tauri_plugin_shell::init())
     .plugin(tauri_plugin_dialog::init())
     .plugin(hotkey::plugin())
+    .plugin(autostart::plugin())
+    // Closing the window hides it to the tray so the hotkey stays live. Tray
+    // Quit calls app.exit, which does not go through CloseRequested.
+    .on_window_event(|window, event| {
+      if let WindowEvent::CloseRequested { api, .. } = event {
+        api.prevent_close();
+        let _ = window.hide();
+      }
+    })
     .manage(Sidecar::default())
     .manage(hotkey::HotkeyState::default())
     .manage(vault::VaultState::default())
@@ -62,6 +78,8 @@ pub fn run() {
       hotkey::get_global_shortcut,
       hotkey::set_global_shortcut,
       hotkey::pause_global_shortcut,
+      autostart::get_launch_at_login,
+      autostart::set_launch_at_login,
       tray::update_tray_pomodoro,
       vault::get_vault_status,
       vault::pick_vault,
@@ -73,6 +91,13 @@ pub fn run() {
     .setup(|_app| {
       hotkey::init(_app.handle());
       vault::init(_app.handle());
+      autostart::init(_app.handle());
+
+      // The window starts hidden (tauri.conf.json). The login entry keeps it
+      // in the tray; any other launch shows it.
+      if !std::env::args().any(|arg| arg == autostart::HIDDEN_ARG) {
+        window::show(_app.handle());
+      }
 
       // Not fatal: the window and hotkey still work without a tray.
       if let Err(err) = tray::init(_app.handle()) {
