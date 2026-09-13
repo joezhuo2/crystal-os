@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-101%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.4.1-6366F1)
+![Tests](https://img.shields.io/badge/tests-134%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.4.2-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.4.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.4.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -302,6 +302,15 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 3. Launch Crystal OS. **Connect** in The Horizon opens Google in your default browser. Once it reports success, switch back to the app.
 
 **Global hotkey.** `Alt+Space` shows Crystal OS from any app and focuses the command palette; press it again while the app is focused to hide it. Change it with **Change global hotkey** in the palette. The combo is saved as `globalShortcut` in `%APPDATA%\com.crystalos.desktop\settings.json`. If another app already owns it, Crystal OS still starts and shows a toast.
+
+**Tray.** Crystal OS adds a gem icon to the system tray (a monochrome template icon in the macOS menu bar). Left-click it on Windows to show or hide the window; right-click for the menu:
+
+- **Show / Hide Crystal OS**
+- **Pomodoro** — a live status row (`Focus 24:12`), **Start**/**Pause**, and **Reset**. The tray tooltip shows the same countdown.
+- **Quick Add…** — shows the window and opens the Quick Add dialog.
+- **Quit Crystal OS**
+
+The Pomodoro timer lives in `src/lib/pomodoro.ts`, so it keeps running when you leave the Tasks page and the tray and the on-page timer always agree. Tray clicks reach it as Tauri events (`tray://pomodoro`, `tray://quick-add`) handled in `src/lib/tray.ts`, which reports every visible change back to Rust (`update_tray_pomodoro` in `src-tauri/src/tray.rs`).
 
 Code that behaves differently on desktop goes through `src/lib/platform.ts` (`isDesktop()`, `apiUrl()`, `openExternal()`), so the web bundle never imports Tauri.
 

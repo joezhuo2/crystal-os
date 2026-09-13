@@ -90,29 +90,17 @@ fn register<R: Runtime>(app: &AppHandle<R>, accelerator: &str) -> Result<(), Str
   app.global_shortcut().register(shortcut).map_err(|e| describe(accelerator, e))
 }
 
-/// Show + focus the main window, or hide it if it already has focus. The
-/// window is only re-centred when it was actually hidden or minimised, so
-/// summoning an unfocused but visible window does not move it.
+/// Show + focus the main window and open the palette, or hide the window if
+/// it already has focus.
 fn toggle_main_window<R: Runtime>(app: &AppHandle<R>) {
-  let Some(window) = app.get_webview_window("main") else { return };
+  let Some(window) = crate::window::main_window(app) else { return };
 
-  let visible = window.is_visible().unwrap_or(false);
-  let minimized = window.is_minimized().unwrap_or(false);
-  let focused = window.is_focused().unwrap_or(false);
-
-  if visible && !minimized && focused {
-    let _ = window.hide();
+  if crate::window::is_shown(&window) && window.is_focused().unwrap_or(false) {
+    crate::window::hide(app);
     return;
   }
 
-  if minimized {
-    let _ = window.unminimize();
-  }
-  if !visible || minimized {
-    let _ = window.center();
-  }
-  let _ = window.show();
-  let _ = window.set_focus();
+  crate::window::show(app);
   let _ = app.emit(OPEN_PALETTE_EVENT, ());
 }
 

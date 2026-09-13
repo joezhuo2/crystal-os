@@ -1,6 +1,8 @@
 use tauri::{Manager, RunEvent};
 
 mod hotkey;
+mod tray;
+mod window;
 
 /// Handle to the `crystal-api` sidecar, kept so it can be killed on exit.
 /// Only populated in release builds; `dev:desktop` uses the Vite server's
@@ -56,9 +58,15 @@ pub fn run() {
       hotkey::get_global_shortcut,
       hotkey::set_global_shortcut,
       hotkey::pause_global_shortcut,
+      tray::update_tray_pomodoro,
     ])
     .setup(|_app| {
       hotkey::init(_app.handle());
+
+      // Not fatal: the window and hotkey still work without a tray.
+      if let Err(err) = tray::init(_app.handle()) {
+        log::error!("[tray] failed to create: {err}");
+      }
 
       #[cfg(not(debug_assertions))]
       if let Err(err) = spawn_sidecar(_app) {

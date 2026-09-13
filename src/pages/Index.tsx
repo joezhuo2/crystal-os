@@ -12,6 +12,7 @@ import WeatherPage from "@/components/views/WeatherPage";
 import ArchivePage from "@/components/views/ArchivePage";
 import CommandPalette from "@/components/CommandPalette";
 import QuickAddDialog from "@/components/QuickAddDialog";
+import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
 
 interface ViewProps {
   onNavigate?: (tab: TabId) => void;
@@ -27,7 +28,11 @@ const views: Record<TabId, React.ComponentType<ViewProps>> = {
 };
 
 function GlobalOverlays() {
-  const { showTaskForm, setShowTaskForm, showTransactionForm, setShowTransactionForm, editingTask, setEditingTask, editingTransaction, setEditingTransaction } = useApp();
+  const { showTaskForm, setShowTaskForm, showTransactionForm, setShowTransactionForm, editingTask, setEditingTask, editingTransaction, setEditingTransaction, setQuickAddDraft, setShowQuickAdd } = useApp();
+  useTrayQuickAdd(() => {
+    setQuickAddDraft("");
+    setShowQuickAdd(true);
+  });
   return (
     <>
       <AnimatePresence>

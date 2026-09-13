@@ -5,7 +5,31 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.1] - 2026-09-13
+## [0.4.2] - 2026-09-13 - Tray Menu
+
+### Added
+
+- **System tray (desktop).** Crystal OS now has a tray icon with a menu: **Show / Hide Crystal OS**, a Pomodoro section, **Quick Add…**, and **Quit Crystal OS**.
+  - **Icons.** Windows and Linux show a colour gem (`src-tauri/icons/tray/tray-color.png`, 32px). macOS uses a monochrome template image (`tray-template.png`, 44px for Retina) so the menu bar tints it for light and dark mode. Both are rasterised from the SVGs beside them with `tauri icon`.
+  - **Clicks.** On Windows, left-clicking the icon shows or hides the window and right-clicking opens the menu. On macOS any click opens the menu. Show/Hide checks whether the window is on screen, not whether it has focus, because clicking the tray takes focus away from the window.
+  - **Pomodoro.** A disabled status row shows the phase and time left (`Focus 24:12`, or `Focus 25:00 (paused)`). **Start** relabels itself **Pause** while the timer runs. **Reset** restores the current phase's full length. The tray tooltip shows the same countdown and updates every second.
+  - **Quick Add…** shows and focuses the window, then opens the existing Quick Add dialog with an empty draft. Signed out, it just shows the window.
+  - **Quit** exits the app; the sidecar is still killed on exit.
+  - **IPC.** Tray → Rust → webview event → store. Rust emits `tray://pomodoro` (`"toggle"` or `"reset"`) and `tray://quick-add`. `src/lib/tray.ts` applies them and pushes `{ label, tooltip, running }` back through the `update_tray_pomodoro` command whenever that view changes. Rust keeps no copy of the countdown. The bridge starts in `main.tsx`, outside React, so it works on the login screen and on every page.
+  - **Failure is not fatal.** If the tray cannot be created, the error is logged and the window and hotkey work as before.
+- **`src-tauri/src/window.rs`.** Show, hide, and on-screen checks shared by the hotkey and the tray. The hotkey's toggle behaviour is unchanged.
+
+### Changed
+
+- **The Pomodoro timer keeps running when you leave the Tasks page.** Its state moved out of `PomodoroTimer.tsx` into a module-level store (`src/lib/pomodoro.ts`, read with `usePomodoro`). Previously navigating away unmounted the component and threw the countdown away.
+- **The Pomodoro countdown no longer drifts.** Time left is computed from a wall-clock deadline instead of subtracting one second per `setInterval` tick, which a throttled background webview could delay. Covered by `src/lib/pomodoro.test.ts` and `src/lib/tray.test.ts`.
+
+### Notes
+
+- Closing the window still quits the app rather than hiding it to the tray.
+- The web app is unchanged. `initTrayBridge()` and `useTrayQuickAdd` are no-ops outside Tauri and load `@tauri-apps/api` only through dynamic imports.
+
+## [0.4.1] - 2026-09-13 - Global Hotkey
 
 ### Added
 
@@ -22,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - There is no tray icon yet (planned for 1.3), so a window hidden with the hotkey can only be brought back with the hotkey. Closing the window still quits the app.
 - The web app is unchanged. `useGlobalHotkey` is a no-op outside Tauri and loads `@tauri-apps/api` only through dynamic imports.
 
-## [0.4.0]
+## [0.4.0] - 2026-09-12 - Desktop App
 
 ### Added
 

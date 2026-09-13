@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Cloud, Sun, Moon, CloudRain, CloudSun, CloudSnow, CloudLightning, CloudDrizzle, MoonStar } from "lucide-react";
-import { useApp } from "@/contexts/AppContext";
+import { useApp, type Priority, type Task } from "@/contexts/AppContext";
 import { motion } from "framer-motion";
 import { taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 import { useWeather, AVAILABLE_CITIES } from "@/hooks/useWeather";
@@ -10,7 +10,7 @@ import {
   useCalendarStatus,
   type CalendarEvent,
 } from "@/hooks/useGoogleCalendar";
-import { BookOpen, NotebookPen, CalendarClock, ChevronRight } from "lucide-react";
+import { BookOpen, NotebookPen, CalendarClock, ChevronRight, Plus, Check } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   DailyFocusSkeleton,
@@ -253,7 +253,7 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
   return (
     <div
       onClick={onClick}
-      className="glass-card-hover p-6 col-span-full cursor-pointer group"
+      className="glass-card-hover p-6 cursor-pointer group"
     >
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs text-muted-foreground uppercase tracking-widest">Today on the Horizon</p>
@@ -304,6 +304,104 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
                 </motion.div>
               ))}
             </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+const PRIORITY_CLASS: Record<Priority, string> = {
+  low: "priority-low",
+  medium: "priority-medium",
+  high: "priority-high",
+  urgent: "priority-urgent",
+};
+
+function EngineWidget({ onClick }: { onClick?: () => void }) {
+  const { tasks, updateTask, setEditingTask, setShowTaskForm, loading } = useApp();
+  const today = toLocalDateStr();
+
+  // Repeating tasks recur rather than lapse, so only one-off tasks count as overdue.
+  const isOverdue = (t: Task) => !t.repeatDays && t.endDate < today;
+
+  // Open work for today plus anything overdue, most pressing first.
+  const openTasks = tasks
+    .filter((t) => !t.completed && (taskFallsOnDate(t, today) || isOverdue(t)))
+    .sort((a, b) => {
+      if (a.priority !== b.priority) return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+      if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
+      return a.startTime.localeCompare(b.startTime);
+    });
+  const topTasks = openTasks.slice(0, 3);
+  const remaining = openTasks.length - topTasks.length;
+
+  const openNewTask = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingTask(null);
+    setShowTaskForm(true);
+  };
+
+  return (
+    <div onClick={onClick} className="glass-card-hover p-6 cursor-pointer group">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-muted-foreground uppercase tracking-widest">The Engine</p>
+        <button
+          onClick={openNewTask}
+          title="Add task"
+          className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+
+      {loading ? (
+        <TodayHorizonContentSkeleton />
+      ) : (
+        <>
+          <div className="flex items-baseline gap-2 mb-4">
+            <span className="text-3xl font-bold tabular-nums">{openTasks.length}</span>
+            <span className="text-sm text-muted-foreground">
+              open task{openTasks.length !== 1 ? "s" : ""} today
+            </span>
+          </div>
+
+          {topTasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">All clear. Nothing left to run.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {topTasks.map((task, i) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="flex items-center gap-3"
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateTask(task.id, { completed: true });
+                    }}
+                    title="Complete task"
+                    className="w-4 h-4 rounded-full border-2 border-muted-foreground/40 hover:border-accent hover:bg-accent/20 flex items-center justify-center shrink-0 transition-colors group/check"
+                  >
+                    <Check className="w-2.5 h-2.5 text-accent opacity-0 group-hover/check:opacity-100" />
+                  </button>
+                  <span className="text-sm truncate">{task.name}</span>
+                  <span className={`ml-auto text-[10px] font-semibold shrink-0 ${PRIORITY_CLASS[task.priority]}`}>
+                    {isOverdue(task) ? "Overdue" : task.startTime ? formatEventTime(task.startTime) : ""}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {remaining > 0 && (
+            <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors mt-3">
+              +{remaining} more task{remaining !== 1 ? "s" : ""} →
+            </p>
           )}
         </>
       )}
@@ -407,7 +505,10 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
       <Clock />
       <WeatherWidget onClick={() => onNavigate?.("weather")} />
       <SmartSummary />
-      <TodayHorizon onClick={() => onNavigate?.("calendar")} />
+      <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4">
+        <EngineWidget onClick={() => onNavigate?.("tasks")} />
+        <TodayHorizon onClick={() => onNavigate?.("calendar")} />
+      </div>
       <DailyFocus />
       <VaultWidget onClick={() => onNavigate?.("archive")} />
     </motion.div>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <mask id="facets">
+    <rect width="1024" height="1024" fill="#fff"/>
+    <polyline points="124,390 334,390 512,40 690,390 900,390" fill="none" stroke="#000" stroke-width="70" stroke-linejoin="round"/>
+    <polyline points="334,390 512,990 690,390" fill="none" stroke="#000" stroke-width="70" stroke-linejoin="round"/>
+  </mask>
+  <polygon points="512,40 900,390 512,990 124,390" fill="#000" mask="url(#facets)"/>
+</svg>
