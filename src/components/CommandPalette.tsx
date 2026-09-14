@@ -23,10 +23,17 @@ import {
   BookOpen,
   CalendarPlus,
   Settings,
+  SquareTerminal,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePaletteHotkey } from "@/hooks/useGlobalHotkey";
 import { isPaletteShortcut, paletteShortcutLabel } from "@/lib/hotkey";
+import { isDesktop } from "@/lib/platform";
+
+/** Keys typed into the Terminal tab belong to the shell. */
+function inTerminal(e: KeyboardEvent) {
+  return e.target instanceof Element && e.target.closest(".xterm") !== null;
+}
 
 interface CommandPaletteProps {
   onNavigate: (tab: TabId) => void;
@@ -55,7 +62,7 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
   // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFocused(false);
+      if (e.key === "Escape" && !inTerminal(e)) setFocused(false);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -86,7 +93,7 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
   // such as the hotkey recorder.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || !isPaletteShortcut(e)) return;
+      if (e.defaultPrevented || !isPaletteShortcut(e) || inTerminal(e)) return;
       e.preventDefault();
       focusBar();
     };
@@ -465,6 +472,19 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
                         <span className="text-sm font-medium">Open Settings</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">hotkeys, startup, vault</span>
                       </CommandItem>
+                      {isDesktop() && (
+                        <CommandItem
+                          value="terminal-powershell-shell-command-line-console"
+                          onSelect={() => handleNavigate("terminal")}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                        >
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10">
+                            <SquareTerminal className="w-4 h-4 text-emerald-400" />
+                          </div>
+                          <span className="text-sm font-medium">Open Terminal</span>
+                          <span className="ml-auto text-xs text-muted-foreground/50">PowerShell</span>
+                        </CommandItem>
+                      )}
                     </CommandGroup>
                   </>
                 )}

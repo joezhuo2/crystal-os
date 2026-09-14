@@ -11,6 +11,7 @@ import FinancialsPage, { TransactionDrawer } from "@/components/views/Financials
 import WeatherPage from "@/components/views/WeatherPage";
 import ArchivePage from "@/components/views/ArchivePage";
 import SettingsPage from "@/components/views/SettingsPage";
+import TerminalPage from "@/components/views/TerminalPage";
 import CommandPalette from "@/components/CommandPalette";
 import QuickAddDialog from "@/components/QuickAddDialog";
 import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
@@ -27,6 +28,7 @@ const views: Record<TabId, React.ComponentType<ViewProps>> = {
   financials: FinancialsPage,
   weather: WeatherPage,
   archive: ArchivePage,
+  terminal: TerminalPage,
   settings: SettingsPage,
 };
 

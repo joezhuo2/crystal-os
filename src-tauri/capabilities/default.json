@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Main window permissions. No shell, fs, or dialog plugin access for the webview: the sidecar is spawned from Rust, and the vault is only reachable through the vault commands, which confine every path to the folder the user picked (src-tauri/src/vault.rs).",
+  "description": "Main window permissions. No shell, fs, or dialog plugin access for the webview: the sidecar is spawned from Rust, and the vault is only reachable through the vault commands, which confine every path to the folder the user picked (src-tauri/src/vault.rs). The Terminal tab can run anything the user types: the terminal commands drive one shell spawned from Rust (src-tauri/src/terminal.rs).",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -20,6 +20,10 @@
     "allow-list-vault",
     "allow-read-vault-file",
     "allow-write-vault-file",
-    "allow-watch-vault"
+    "allow-watch-vault",
+    "allow-terminal-attach",
+    "allow-terminal-restart",
+    "allow-terminal-write",
+    "allow-terminal-resize"
   ]
 }

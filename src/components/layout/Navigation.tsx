@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings } from "lucide-react";
+import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings, SquareTerminal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { isDesktop } from "@/lib/platform";
 
-export type TabId = "home" | "tasks" | "calendar" | "financials" | "weather" | "archive" | "settings";
+export type TabId = "home" | "tasks" | "calendar" | "financials" | "weather" | "archive" | "terminal" | "settings";
 
 interface Tab {
   id: TabId;
@@ -21,6 +22,9 @@ const tabs: Tab[] = [
 
 /** Pinned to the bottom of the sidebar, apart from the views above. */
 const settingsTab: Tab = { id: "settings", label: "Settings", icon: Settings };
+
+/** Desktop only, above Settings. The shell runs in Rust (src-tauri/src/terminal.rs). */
+const terminalTab: Tab = { id: "terminal", label: "Terminal", icon: SquareTerminal };
 
 interface SidebarNavProps {
   activeTab: TabId;
@@ -102,7 +106,15 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
           />
         ))}
       </nav>
-      <div className="mt-auto flex flex-col">
+      <div className="mt-auto flex flex-col gap-1">
+        {isDesktop() && (
+          <SidebarButton
+            tab={terminalTab}
+            active={activeTab === terminalTab.id}
+            expanded={expanded}
+            onClick={() => onTabChange(terminalTab.id)}
+          />
+        )}
         <SidebarButton
           tab={settingsTab}
           active={activeTab === settingsTab.id}

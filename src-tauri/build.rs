@@ -14,6 +14,10 @@ fn main() {
     "read_vault_file",
     "write_vault_file",
     "watch_vault",
+    "terminal_attach",
+    "terminal_restart",
+    "terminal_write",
+    "terminal_resize",
   ]);
   tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))
     .expect("failed to run tauri-build");

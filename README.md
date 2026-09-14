@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-134%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.4.3-6366F1)
+![Tests](https://img.shields.io/badge/tests-159%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.4.6-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.4.3** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.4.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -310,6 +310,12 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 
 **Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: both global hotkeys, **Launch at login**, and the vault folder. The palette's **Open Settings** row goes there too.
 
+**Terminal.** The terminal icon above Settings opens a PowerShell terminal (PowerShell 7 if installed, otherwise Windows PowerShell) running on a real pseudoconsole, so colours, tab completion, and interactive prompts work. The shell keeps running while you switch tabs and is killed when Crystal OS quits.
+
+- **Refresh** restarts the shell with PATH and the other environment variables read again from the registry. Use it after installing something (`winget`, `npm -g`, an installer) that the terminal does not find yet: a running app keeps the environment it started with, so a plain restart of the shell would not see the change.
+- Ctrl+C copies when text is selected and interrupts otherwise; Ctrl+V pastes.
+- The shell runs in Rust (`src-tauri/src/terminal.rs`) and the view talks to it through `terminal_attach`, `terminal_restart`, `terminal_write`, and `terminal_resize` (`src/lib/terminalNative.ts`).
+
 **Global hotkeys.** Two combos work from any app:
 
 - `Alt+Space` shows Crystal OS; press it again while the app is focused to hide it. It does not touch the search bar. Saved as `globalShortcut`.
@@ -335,7 +341,7 @@ The Pomodoro timer lives in `src/lib/pomodoro.ts`, so it keeps running when you 
 **Vault.** The desktop app reads your Obsidian vault natively; it does not use `OBSIDIAN_VAULT_PATH` or the sidecar's `/api/obsidian` routes. On first launch, The Archive shows **Choose vault folder**, which opens the system folder picker. The choice is saved as `vaultPath` in `settings.json`; change it later with **Change folder** in Settings.
 
 - **Live updates.** A file watcher (`notify`, debounced 250 ms) emits `vault://changed` whenever a note is added, edited, renamed, or deleted, and every vault view refetches. Edits made in Obsidian show up without a refresh. Only changed notes are re-read.
-- **Scoped access.** The webview has no fs, shell, or dialog plugin permissions. It reaches the vault only through six commands (`get_vault_status`, `pick_vault`, `list_vault`, `read_vault_file`, `write_vault_file`, `watch_vault`), and `src-tauri/capabilities/default.json` allowlists every app command by name. Each path must be a `.md` file inside the picked folder, outside `.obsidian`, `.trash`, `.git`, and `node_modules`.
+- **Scoped access.** The webview has no fs, shell, or dialog plugin permissions (the Terminal tab runs its shell through its own commands, not the shell plugin). It reaches the vault only through six commands (`get_vault_status`, `pick_vault`, `list_vault`, `read_vault_file`, `write_vault_file`, `watch_vault`), and `src-tauri/capabilities/default.json` allowlists every app command by name. Each path must be a `.md` file inside the picked folder, outside `.obsidian`, `.trash`, `.git`, and `node_modules`.
 - **Safe writes.** Quick Add writes to a temp file and swaps it in. It sends the `mtime` it read, so if Obsidian saves the note in between, the append is redone on top of that edit instead of overwriting it.
 - **When things go wrong.** A saved folder that is gone at startup (renamed, or on an unplugged drive) or unreadable shows a card with **Choose vault folder** and **Retry**; the watcher restarts once the folder is back. A note deleted while open shows **This note is gone** with **Close note**.
 

@@ -3,6 +3,7 @@ use tauri::{Manager, RunEvent, WindowEvent};
 mod autostart;
 mod hotkey;
 mod settings;
+mod terminal;
 mod tray;
 mod vault;
 mod window;
@@ -74,6 +75,7 @@ pub fn run() {
     .manage(Sidecar::default())
     .manage(hotkey::HotkeyState::default())
     .manage(vault::VaultState::default())
+    .manage(terminal::TerminalState::default())
     .invoke_handler(tauri::generate_handler![
       hotkey::get_global_shortcut,
       hotkey::set_global_shortcut,
@@ -87,6 +89,10 @@ pub fn run() {
       vault::read_vault_file,
       vault::write_vault_file,
       vault::watch_vault,
+      terminal::terminal_attach,
+      terminal::terminal_restart,
+      terminal::terminal_write,
+      terminal::terminal_resize,
     ])
     .setup(|_app| {
       hotkey::init(_app.handle());
@@ -117,6 +123,7 @@ pub fn run() {
 
   app.run(|app, event| {
     if let RunEvent::Exit = event {
+      terminal::shutdown(app);
       if let Some(child) = app.state::<Sidecar>().0.lock().unwrap().take() {
         let _ = child.kill();
       }

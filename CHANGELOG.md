@@ -5,6 +5,15 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] - 2026-09-14 - Terminal
+
+### Added
+
+- **Terminal tab (desktop).** A terminal icon above Settings in the sidebar opens a PowerShell terminal inside Crystal OS (`src/components/views/TerminalPage.tsx`). It uses xterm.js on a real Windows pseudoconsole (`portable-pty`), so colours, tab completion, history, and prompts that ask for input all work. PowerShell 7 (`pwsh`) is used when installed, otherwise Windows PowerShell. The palette has an **Open Terminal** row. The web build does not show the tab.
+- **Refresh.** Programs installed after Crystal OS started are not on the shell's PATH, because a child process copies the app's environment from launch time. **Refresh** starts a new shell with PATH and the other variables read again from the registry (machine, then user).
+- The shell keeps running while you use other tabs; coming back redraws the last 256 KB of output. Ctrl+C copies when text is selected and interrupts otherwise; Ctrl+V pastes. Ctrl+K and Escape go to the shell while the terminal has focus.
+- New commands: `terminal_attach`, `terminal_restart`, `terminal_write`, `terminal_resize` (`src-tauri/src/terminal.rs`), each allowlisted in `capabilities/default.json`. The shell is killed when the app quits.
+
 ## [0.4.5] - 2026-09-14 - Settings Page
 
 ### Added
