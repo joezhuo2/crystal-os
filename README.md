@@ -308,11 +308,18 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 2. Add `http://127.0.0.1:8787/api/calendar/auth/callback` as a second authorized redirect URI on your Google OAuth client, and set `GOOGLE_REDIRECT_URI` to it in that copy.
 3. Launch Crystal OS. **Connect** in The Horizon opens Google in your default browser. Once it reports success, switch back to the app.
 
-**Global hotkey.** `Alt+Space` shows Crystal OS from any app and focuses the command palette; press it again while the app is focused to hide it. Change it with **Change global hotkey** in the palette. The combo is saved as `globalShortcut` in `%APPDATA%\com.crystalos.desktop\settings.json`. If another app already owns it, Crystal OS still starts and shows a toast.
+**Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: both global hotkeys, **Launch at login**, and the vault folder. The palette's **Open Settings** row goes there too.
 
-**Always ready.** The hotkey only works while Crystal OS is running, so the app stays running in the tray:
+**Global hotkeys.** Two combos work from any app:
 
-- **Launch at login** is on by default. The first time you open the packaged app it registers itself to start at sign-in with `--hidden`, which keeps the window in the tray until you press the hotkey. Turn it off in **Change global hotkey**; the choice is saved as `launchAtLogin` in `settings.json`. Debug builds (`npm run dev:desktop`) never register.
+- `Alt+Space` shows Crystal OS; press it again while the app is focused to hide it. It does not touch the search bar. Saved as `globalShortcut`.
+- `Alt+Shift+Space` shows Crystal OS and focuses the search bar. Saved as `paletteShortcut`.
+
+Change either with **Change** in Settings. Both are saved in `%APPDATA%\com.crystalos.desktop\settings.json`, and the two cannot share a combo. If another app already owns one, Crystal OS still starts and shows a toast.
+
+**Always ready.** The hotkeys only work while Crystal OS is running, so the app stays running in the tray:
+
+- **Launch at login** is on by default. The first time you open the packaged app it registers itself to start at sign-in with `--hidden`, which keeps the window in the tray until you press a hotkey. Turn it off in Settings; the choice is saved as `launchAtLogin` in `settings.json`. Debug builds (`npm run dev:desktop`) never register.
 - **Closing the window hides it to the tray.** Use **Quit Crystal OS** in the tray to exit.
 - **One instance.** Opening Crystal OS while it is already running shows the existing window.
 
@@ -325,7 +332,7 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 
 The Pomodoro timer lives in `src/lib/pomodoro.ts`, so it keeps running when you leave the Tasks page and the tray and the on-page timer always agree. Tray clicks reach it as Tauri events (`tray://pomodoro`, `tray://quick-add`) handled in `src/lib/tray.ts`, which reports every visible change back to Rust (`update_tray_pomodoro` in `src-tauri/src/tray.rs`).
 
-**Vault.** The desktop app reads your Obsidian vault natively; it does not use `OBSIDIAN_VAULT_PATH` or the sidecar's `/api/obsidian` routes. On first launch, The Archive shows **Choose vault folder**, which opens the system folder picker. The choice is saved as `vaultPath` in `settings.json`; change it later with **Change vault folder** in the command palette.
+**Vault.** The desktop app reads your Obsidian vault natively; it does not use `OBSIDIAN_VAULT_PATH` or the sidecar's `/api/obsidian` routes. On first launch, The Archive shows **Choose vault folder**, which opens the system folder picker. The choice is saved as `vaultPath` in `settings.json`; change it later with **Change folder** in Settings.
 
 - **Live updates.** A file watcher (`notify`, debounced 250 ms) emits `vault://changed` whenever a note is added, edited, renamed, or deleted, and every vault view refetches. Edits made in Obsidian show up without a refresh. Only changed notes are re-read.
 - **Scoped access.** The webview has no fs, shell, or dialog plugin permissions. It reaches the vault only through six commands (`get_vault_status`, `pick_vault`, `list_vault`, `read_vault_file`, `write_vault_file`, `watch_vault`), and `src-tauri/capabilities/default.json` allowlists every app command by name. Each path must be a `.md` file inside the picked folder, outside `.obsidian`, `.trash`, `.git`, and `node_modules`.
@@ -338,7 +345,7 @@ Code that behaves differently on desktop goes through `src/lib/platform.ts` (`is
 
 ## ⌨️ Command Palette
 
-`Cmd/Ctrl + K` focuses the palette. It filters tasks and transactions locally and searches vault notes server-side (2+ characters, debounced 250 ms), and understands two natural-language prefixes:
+`Cmd/Ctrl + K` focuses the palette while Crystal OS is focused; on desktop, `Alt+Shift+Space` does the same from any app. It filters tasks and transactions locally and searches vault notes server-side (2+ characters, debounced 250 ms), and understands two natural-language prefixes:
 
 | Input | Result |
 |-------|--------|

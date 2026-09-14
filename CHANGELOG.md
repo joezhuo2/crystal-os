@@ -5,6 +5,20 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2026-09-14 - Settings Page
+
+### Added
+
+- **Settings page.** A gear pinned to the bottom of the sidebar opens **Settings** (`src/components/views/SettingsPage.tsx`) with every desktop preference in one place: both global hotkeys, **Launch at login**, and the vault folder. On the web it lists the in-app shortcut and notes that the rest lives in the desktop app.
+- **Search bar hotkey.** `Alt+Shift+Space` (desktop, global) shows Crystal OS and focuses the search bar. Saved as `paletteShortcut` in `settings.json`; the two global hotkeys cannot share a combo.
+- **`Cmd/Ctrl + K`** focuses the search bar while Crystal OS is focused, on web and desktop. The bar shows the shortcut until focused.
+
+### Changed
+
+- **`Alt+Space` only shows or hides the window.** It no longer opens the search bar. A combo saved before this release (`globalShortcut`) keeps working for show/hide.
+- `set_global_shortcut` takes an `action` (`"toggle"` or `"palette"`), `get_global_shortcut` and `set_global_shortcut` return both statuses, and `pause_global_shortcut` releases both combos while one is being recorded.
+- The palette's **Change global hotkey** and **Change vault folder** rows are replaced by a single **Open Settings** row. **Launch at login** moved from the hotkey dialog to Settings.
+
 ## [0.4.4] - 2026-09-13 - Always-On Hotkey
 
 ### Added

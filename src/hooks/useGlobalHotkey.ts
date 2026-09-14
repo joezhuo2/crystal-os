@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { isDesktop } from "@/lib/platform";
+import type { HotkeyAction } from "@/lib/hotkey";
 
 /** Mirrors `HotkeyStatus` in src-tauri/src/hotkey.rs. */
 export interface HotkeyStatus {
@@ -9,7 +10,10 @@ export interface HotkeyStatus {
   error: string | null;
 }
 
-/** Emitted by Rust after the hotkey shows and focuses the window. */
+/** Mirrors `HotkeyStatuses` in src-tauri/src/hotkey.rs. */
+export type HotkeyStatuses = Record<HotkeyAction, HotkeyStatus>;
+
+/** Emitted by Rust after the palette hotkey shows and focuses the window. */
 const OPEN_PALETTE_EVENT = "palette://open";
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -18,14 +22,12 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
 }
 
 /**
- * Desktop global hotkey. Calls `onOpen` whenever the hotkey summons the
- * window, and toasts once if the saved combo failed to register at startup.
- * A no-op on the web: `status` stays null and nothing from `@tauri-apps/*` is
+ * Desktop palette hotkey. Calls `onOpen` whenever the global palette hotkey
+ * summons the window, and toasts once for each combo that failed to register
+ * at startup. Mount once. A no-op on the web: nothing from `@tauri-apps/*` is
  * loaded.
  */
-export function useGlobalHotkey(onOpen: () => void) {
-  const [status, setStatus] = useState<HotkeyStatus | null>(null);
-  const [launchAtLogin, setLaunchAtLoginState] = useState<boolean | null>(null);
+export function usePaletteHotkey(onOpen: () => void) {
   const onOpenRef = useRef(onOpen);
   onOpenRef.current = onOpen;
 
@@ -41,16 +43,40 @@ export function useGlobalHotkey(onOpen: () => void) {
       }),
     );
 
-    invoke<HotkeyStatus>("get_global_shortcut").then((s) => {
+    invoke<HotkeyStatuses>("get_global_shortcut").then((statuses) => {
       if (cancelled) return;
-      setStatus(s);
-      if (s.error) {
-        toast.error("Global hotkey unavailable", {
-          description: `${s.error}. Pick another combo from the command palette.`,
-        });
+      for (const status of Object.values(statuses)) {
+        if (status.error) {
+          toast.error("Global hotkey unavailable", {
+            description: `${status.error}. Pick another combo in Settings.`,
+          });
+        }
       }
     });
 
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, []);
+}
+
+/**
+ * Global hotkey and launch-at-login settings for the Settings page. `statuses`
+ * and `launchAtLogin` stay null on the web and until Rust reports.
+ */
+export function useGlobalHotkeys() {
+  const [statuses, setStatuses] = useState<HotkeyStatuses | null>(null);
+  const [launchAtLogin, setLaunchAtLoginState] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!isDesktop()) return;
+    let cancelled = false;
+
+    invoke<HotkeyStatuses>("get_global_shortcut").then(
+      (s) => !cancelled && setStatuses(s),
+      () => {},
+    );
     invoke<boolean>("get_launch_at_login").then(
       (enabled) => !cancelled && setLaunchAtLoginState(enabled),
       () => {},
@@ -58,32 +84,33 @@ export function useGlobalHotkey(onOpen: () => void) {
 
     return () => {
       cancelled = true;
-      unlisten?.();
     };
   }, []);
 
   /** Throws the Rust error message if the combo cannot be registered. */
-  const setAccelerator = useCallback(async (accelerator: string) => {
+  const setAccelerator = useCallback(async (action: HotkeyAction, accelerator: string) => {
     try {
-      const next = await invoke<HotkeyStatus>("set_global_shortcut", { accelerator });
-      setStatus(next);
+      const next = await invoke<HotkeyStatuses>("set_global_shortcut", { action, accelerator });
+      setStatuses(next);
       return next;
     } catch (err) {
       // Rust restores the previous combo; refresh so `registered` is accurate.
-      invoke<HotkeyStatus>("get_global_shortcut").then(setStatus, () => {});
+      invoke<HotkeyStatuses>("get_global_shortcut").then(setStatuses, () => {});
       throw new Error(typeof err === "string" ? err : String(err));
     }
   }, []);
 
+  /** Releases every combo while a new one is recorded, and restores them after. */
   const pause = useCallback(async (paused: boolean) => {
     try {
       await invoke("pause_global_shortcut", { paused });
     } catch (err) {
       if (!paused) toast.error("Global hotkey unavailable", { description: String(err) });
     }
+    if (!paused) invoke<HotkeyStatuses>("get_global_shortcut").then(setStatuses, () => {});
   }, []);
 
-  /** Starts Crystal OS hidden in the tray at login so the hotkey is always live. */
+  /** Starts Crystal OS hidden in the tray at login so the hotkeys are always live. */
   const setLaunchAtLogin = useCallback(async (enabled: boolean) => {
     try {
       setLaunchAtLoginState(await invoke<boolean>("set_launch_at_login", { enabled }));
@@ -93,5 +120,5 @@ export function useGlobalHotkey(onOpen: () => void) {
     }
   }, []);
 
-  return { status, setAccelerator, pause, launchAtLogin, setLaunchAtLogin };
+  return { statuses, setAccelerator, pause, launchAtLogin, setLaunchAtLogin };
 }

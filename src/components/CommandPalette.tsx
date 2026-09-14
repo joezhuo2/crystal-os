@@ -1,8 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { toLocalDateStr, useDebouncedValue } from "@/lib/utils";
-import { usePickVault, useVaultNotes, useVaultStatus } from "@/hooks/useVault";
-import { toast } from "sonner";
+import { useVaultNotes } from "@/hooks/useVault";
 import type { TabId } from "@/components/layout/Navigation";
 import {
   Command,
@@ -23,13 +22,11 @@ import {
   NotebookPen,
   BookOpen,
   CalendarPlus,
-  Keyboard,
-  FolderOpen,
+  Settings,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useGlobalHotkey } from "@/hooks/useGlobalHotkey";
-import { formatAccelerator } from "@/lib/hotkey";
-import HotkeySettingsDialog from "@/components/HotkeySettingsDialog";
+import { usePaletteHotkey } from "@/hooks/useGlobalHotkey";
+import { isPaletteShortcut, paletteShortcutLabel } from "@/lib/hotkey";
 
 interface CommandPaletteProps {
   onNavigate: (tab: TabId) => void;
@@ -38,7 +35,6 @@ interface CommandPaletteProps {
 export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
   const [focused, setFocused] = useState(false);
   const [search, setSearch] = useState("");
-  const [showHotkeySettings, setShowHotkeySettings] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { tasks, transactions, taskCategories, financialCategories, addTask, addTransaction, setShowTaskForm, setShowTransactionForm, setSelectedNotePath, setShowQuickAdd, setQuickAddDraft, setShowEventForm } = useApp();
@@ -70,32 +66,33 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
     setSearch("");
   }, []);
 
-  // ---------- Desktop vault folder ----------
-  const vaultStatus = useVaultStatus();
-  const pickVault = usePickVault();
-  const chooseVault = () =>
-    pickVault.mutate(undefined, {
-      onSuccess: (status) => {
-        if (status) toast.success("Vault connected", { description: status.path ?? undefined });
-      },
-      onError: (err) => toast.error("Could not use that folder", { description: err.message }),
-    });
+  // ---------- Focus shortcuts ----------
+  // setFocused is explicit because Escape closes the dropdown without blurring
+  // the input, so focus() alone would not fire onFocus.
+  const focusBar = useCallback(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    containerRef.current?.scrollIntoView({ block: "nearest" });
+    input.focus();
+    input.select();
+    setFocused(true);
+  }, []);
 
-  // ---------- Desktop global hotkey ----------
-  // Rust shows and focuses the window first; the webview may not have focus
-  // back until the next frame. setFocused is explicit because Escape closes
-  // the dropdown without blurring the input, so focus() alone would not fire
-  // onFocus.
-  const hotkey = useGlobalHotkey(() => {
-    requestAnimationFrame(() => {
-      const input = inputRef.current;
-      if (!input) return;
-      containerRef.current?.scrollIntoView({ block: "nearest" });
-      input.focus();
-      input.select();
-      setFocused(true);
-    });
-  });
+  // Desktop global hotkey: Rust shows and focuses the window first; the
+  // webview may not have focus back until the next frame.
+  usePaletteHotkey(() => requestAnimationFrame(focusBar));
+
+  // In-app Ctrl/Cmd+K. Skipped when something else already handled the key,
+  // such as the hotkey recorder.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || !isPaletteShortcut(e)) return;
+      e.preventDefault();
+      focusBar();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [focusBar]);
 
   // ---------- Natural-language parsing ----------
   const addPrefix = search.toLowerCase().startsWith("add ");
@@ -214,11 +211,9 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
             wrapperClassName="border-0 px-0 flex-1 min-w-0"
             className="h-8 text-base bg-transparent border-0 outline-none placeholder:text-muted-foreground/40 focus:ring-0"
           />
-          {focused && (
-            <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-muted-foreground font-medium tracking-wider shrink-0">
-              ESC
-            </kbd>
-          )}
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-muted-foreground font-medium tracking-wider shrink-0">
+            {focused ? "ESC" : paletteShortcutLabel()}
+          </kbd>
         </div>
 
         {/* Dropdown Results */}
@@ -454,49 +449,21 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
                   </>
                 )}
 
-                {/* ── Desktop settings (matched by cmdk's filter on `value`) ── */}
-                {hotkey.status && !addPrefix && !logPrefix && (
+                {/* ── Settings shortcut (matched by cmdk's filter on `value`) ── */}
+                {!addPrefix && !logPrefix && (
                   <>
                     <CommandSeparator className="my-1 bg-white/[0.06]" />
                     <CommandGroup heading="Settings">
                       <CommandItem
-                        value="global-hotkey-shortcut-keyboard-settings"
-                        onSelect={() => {
-                          close();
-                          setShowHotkeySettings(true);
-                        }}
+                        value="settings-preferences-hotkey-shortcut-vault-folder-launch-login"
+                        onSelect={() => handleNavigate("settings")}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
                       >
                         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-500/10">
-                          <Keyboard className="w-4 h-4 text-violet-400" />
+                          <Settings className="w-4 h-4 text-violet-400" />
                         </div>
-                        <span className="text-sm font-medium">Change global hotkey</span>
-                        <span className={`ml-auto text-xs ${hotkey.status.error ? "text-red-400/80" : "text-muted-foreground/50"}`}>
-                          {hotkey.status.error ? "not registered" : formatAccelerator(hotkey.status.accelerator)}
-                        </span>
-                      </CommandItem>
-                      <CommandItem
-                        value="obsidian-vault-folder-archive-settings"
-                        onSelect={() => {
-                          close();
-                          chooseVault();
-                        }}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
-                      >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
-                          <FolderOpen className="w-4 h-4 text-indigo-400" />
-                        </div>
-                        <span className="text-sm font-medium">
-                          {vaultStatus.data?.path ? "Change vault folder" : "Choose vault folder"}
-                        </span>
-                        <span
-                          className={`ml-auto text-xs truncate max-w-[45%] ${vaultStatus.data?.error ? "text-red-400/80" : "text-muted-foreground/50"}`}
-                          title={vaultStatus.data?.path ?? undefined}
-                        >
-                          {vaultStatus.data?.error && vaultStatus.data.path
-                            ? "unavailable"
-                            : vaultStatus.data?.path ?? "not set"}
-                        </span>
+                        <span className="text-sm font-medium">Open Settings</span>
+                        <span className="ml-auto text-xs text-muted-foreground/50">hotkeys, startup, vault</span>
                       </CommandItem>
                     </CommandGroup>
                   </>
@@ -521,18 +488,6 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
           )}
         </AnimatePresence>
       </Command>
-
-      {hotkey.status && (
-        <HotkeySettingsDialog
-          open={showHotkeySettings}
-          onOpenChange={setShowHotkeySettings}
-          status={hotkey.status}
-          setAccelerator={hotkey.setAccelerator}
-          pause={hotkey.pause}
-          launchAtLogin={hotkey.launchAtLogin}
-          setLaunchAtLogin={hotkey.setLaunchAtLogin}
-        />
-      )}
     </div>
   );
 }

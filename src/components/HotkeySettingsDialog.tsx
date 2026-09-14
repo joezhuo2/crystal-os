@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { DEFAULT_ACCELERATOR, acceleratorFromEvent, formatAccelerator } from "@/lib/hotkey";
+import {
+  DEFAULT_ACCELERATORS,
+  HOTKEY_COPY,
+  acceleratorFromEvent,
+  formatAccelerator,
+  type HotkeyAction,
+} from "@/lib/hotkey";
 import type { HotkeyStatus } from "@/hooks/useGlobalHotkey";
 import { Keyboard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -11,27 +16,24 @@ import { toast } from "sonner";
 interface HotkeySettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  action: HotkeyAction;
   status: HotkeyStatus | null;
-  setAccelerator: (accelerator: string) => Promise<HotkeyStatus>;
+  setAccelerator: (action: HotkeyAction, accelerator: string) => Promise<unknown>;
   pause: (paused: boolean) => Promise<void>;
-  /** null until Rust reports; the switch is hidden until then. */
-  launchAtLogin: boolean | null;
-  setLaunchAtLogin: (enabled: boolean) => Promise<void>;
 }
 
 /**
- * Records a new global hotkey. The current combo is released while the dialog
- * is open so pressing it here is captured instead of hiding the window, and
- * re-registered on close unless a new one was saved.
+ * Records a new global hotkey. Every combo is released while the dialog is
+ * open so pressing one here is captured instead of acting on the window, and
+ * re-registered on close.
  */
 export default function HotkeySettingsDialog({
   open,
   onOpenChange,
+  action,
   status,
   setAccelerator,
   pause,
-  launchAtLogin,
-  setLaunchAtLogin,
 }: HotkeySettingsDialogProps) {
   const [draft, setDraft] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -49,8 +51,10 @@ export default function HotkeySettingsDialog({
     };
   }, [open, pause]);
 
-  const current = status?.accelerator ?? DEFAULT_ACCELERATOR;
+  const defaultAccelerator = DEFAULT_ACCELERATORS[action];
+  const current = status?.accelerator ?? defaultAccelerator;
   const failed = Boolean(status?.error);
+  const copy = HOTKEY_COPY[action];
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     // Leave plain Escape and Tab to the dialog so it stays closable and navigable.
@@ -73,8 +77,8 @@ export default function HotkeySettingsDialog({
     setSaving(true);
     setError(null);
     try {
-      await setAccelerator(accelerator);
-      toast.success(`Global hotkey set to ${formatAccelerator(accelerator)}`);
+      await setAccelerator(action, accelerator);
+      toast.success(`${copy.title} set to ${formatAccelerator(accelerator)}`);
       onOpenChange(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -91,12 +95,9 @@ export default function HotkeySettingsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Keyboard className="w-4 h-4 text-primary" />
-            Global hotkey
+            {copy.title}
           </DialogTitle>
-          <DialogDescription>
-            Shows Crystal OS and opens the command palette from any app. Press it again while Crystal OS is focused to hide it.
-            Closing the window keeps Crystal OS in the tray so the hotkey still works; use Quit in the tray to exit.
-          </DialogDescription>
+          <DialogDescription>{copy.description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2">
@@ -124,25 +125,13 @@ export default function HotkeySettingsDialog({
           </p>
         </div>
 
-        {launchAtLogin !== null && (
-          <label className="flex items-center justify-between gap-4 rounded-lg border border-input bg-background/40 px-3 py-2.5">
-            <span className="space-y-0.5">
-              <span className="block text-sm font-medium">Launch at login</span>
-              <span className="block text-xs text-muted-foreground">
-                Starts hidden in the tray so the hotkey works right after you sign in.
-              </span>
-            </span>
-            <Switch checked={launchAtLogin} onCheckedChange={setLaunchAtLogin} />
-          </label>
-        )}
-
         <div className="flex justify-between gap-2">
           <Button
             variant="ghost"
-            disabled={saving || (current === DEFAULT_ACCELERATOR && !failed)}
-            onClick={() => save(DEFAULT_ACCELERATOR)}
+            disabled={saving || (current === defaultAccelerator && !failed)}
+            onClick={() => save(defaultAccelerator)}
           >
-            Reset to {formatAccelerator(DEFAULT_ACCELERATOR)}
+            Reset to {formatAccelerator(defaultAccelerator)}
           </Button>
           <div className="flex gap-2">
             <Button variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>

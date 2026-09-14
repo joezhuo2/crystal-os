@@ -1,10 +1,38 @@
 /**
- * Accelerator strings for the desktop global hotkey, in the format the Tauri
+ * Accelerator strings for the desktop global hotkeys, in the format the Tauri
  * global-shortcut plugin parses: modifiers first, then one key, joined by `+`
  * (e.g. `Alt+Space`, `Ctrl+Shift+KeyK`).
  */
 
-export const DEFAULT_ACCELERATOR = "Alt+Space";
+/** Mirrors `HotkeyAction` in src-tauri/src/hotkey.rs. */
+export type HotkeyAction = "toggle" | "palette";
+
+export const DEFAULT_ACCELERATORS: Record<HotkeyAction, string> = {
+  toggle: "Alt+Space",
+  palette: "Alt+Shift+Space",
+};
+
+export const HOTKEY_COPY: Record<HotkeyAction, { title: string; description: string }> = {
+  toggle: {
+    title: "Show / hide Crystal OS",
+    description: "Shows Crystal OS from any app. Press it again while Crystal OS is focused to hide it.",
+  },
+  palette: {
+    title: "Open search bar",
+    description: "Shows Crystal OS from any app and focuses the search bar.",
+  },
+};
+
+/** True for the in-app shortcut that focuses the search bar: Ctrl+K, or Cmd+K on macOS. */
+export function isPaletteShortcut(e: Pick<KeyboardEvent, "code" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">): boolean {
+  return e.code === "KeyK" && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey;
+}
+
+/** Display form of the in-app search shortcut for this platform. */
+export function paletteShortcutLabel(): string {
+  const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
+  return mac ? "⌘ K" : "Ctrl + K";
+}
 
 type KeyLike = Pick<KeyboardEvent, "code" | "ctrlKey" | "altKey" | "shiftKey" | "metaKey">;
 

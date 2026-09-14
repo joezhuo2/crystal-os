@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acceleratorFromEvent, formatAccelerator } from "./hotkey";
+import { acceleratorFromEvent, formatAccelerator, isPaletteShortcut } from "./hotkey";
 
 const key = (code: string, mods: Partial<Record<"ctrlKey" | "altKey" | "shiftKey" | "metaKey", boolean>> = {}) => ({
   code,
@@ -37,6 +37,19 @@ describe("acceleratorFromEvent", () => {
   it("rejects keys the plugin cannot parse", () => {
     expect(acceleratorFromEvent(key("IntlBackslash", { ctrlKey: true })).kind).toBe("invalid");
     expect(acceleratorFromEvent(key("F25", { ctrlKey: true })).kind).toBe("invalid");
+  });
+});
+
+describe("isPaletteShortcut", () => {
+  it("matches Ctrl+K and Cmd+K", () => {
+    expect(isPaletteShortcut(key("KeyK", { ctrlKey: true }))).toBe(true);
+    expect(isPaletteShortcut(key("KeyK", { metaKey: true }))).toBe(true);
+  });
+
+  it("ignores plain K and other modifier combos", () => {
+    expect(isPaletteShortcut(key("KeyK"))).toBe(false);
+    expect(isPaletteShortcut(key("KeyK", { ctrlKey: true, shiftKey: true }))).toBe(false);
+    expect(isPaletteShortcut(key("KeyJ", { ctrlKey: true }))).toBe(false);
   });
 });
 

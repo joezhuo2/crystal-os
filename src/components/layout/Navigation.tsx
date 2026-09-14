@@ -1,10 +1,16 @@
 import { useState } from "react";
-import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen } from "lucide-react";
+import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export type TabId = "home" | "tasks" | "calendar" | "financials" | "weather" | "archive";
+export type TabId = "home" | "tasks" | "calendar" | "financials" | "weather" | "archive" | "settings";
 
-const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
+interface Tab {
+  id: TabId;
+  label: string;
+  icon: React.ElementType;
+}
+
+const tabs: Tab[] = [
   { id: "home", label: "The Pulse", icon: Home },
   { id: "tasks", label: "The Engine", icon: ListTodo },
   { id: "calendar", label: "The Horizon", icon: Calendar },
@@ -13,9 +19,46 @@ const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: "archive", label: "The Archive", icon: BookOpen },
 ];
 
+/** Pinned to the bottom of the sidebar, apart from the views above. */
+const settingsTab: Tab = { id: "settings", label: "Settings", icon: Settings };
+
 interface SidebarNavProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
+}
+
+function SidebarButton({ tab, active, expanded, onClick }: { tab: Tab; active: boolean; expanded: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap overflow-hidden ${
+        active
+          ? "text-primary-foreground"
+          : "text-muted-foreground hover:text-foreground"
+      }`}
+      title={!expanded ? tab.label : undefined}
+    >
+      {active && (
+        <motion.div
+          layoutId="sidebar-active"
+          className="absolute inset-0 rounded-lg"
+          style={{
+            background: "hsl(239 84% 67% / 0.15)",
+            border: "1px solid hsl(239 84% 67% / 0.25)",
+          }}
+          transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+        />
+      )}
+      <tab.icon className="w-4 h-4 relative z-10 shrink-0" />
+      <motion.span
+        className="relative z-10"
+        animate={{ opacity: expanded ? 1 : 0 }}
+        transition={{ duration: 0.15 }}
+      >
+        {tab.label}
+      </motion.span>
+    </button>
+  );
 }
 
 export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
@@ -49,42 +92,24 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
         </AnimatePresence>
       </div>
       <nav className="flex flex-col gap-1">
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap overflow-hidden ${
-                isActive
-                  ? "text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              title={!expanded ? tab.label : undefined}
-            >
-              {isActive && (
-                <motion.div
-                  layoutId="sidebar-active"
-                  className="absolute inset-0 rounded-lg"
-                  style={{
-                    background: "hsl(239 84% 67% / 0.15)",
-                    border: "1px solid hsl(239 84% 67% / 0.25)",
-                  }}
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
-                />
-              )}
-              <tab.icon className="w-4 h-4 relative z-10 shrink-0" />
-              <motion.span
-                className="relative z-10"
-                animate={{ opacity: expanded ? 1 : 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                {tab.label}
-              </motion.span>
-            </button>
-          );
-        })}
+        {tabs.map((tab) => (
+          <SidebarButton
+            key={tab.id}
+            tab={tab}
+            active={activeTab === tab.id}
+            expanded={expanded}
+            onClick={() => onTabChange(tab.id)}
+          />
+        ))}
       </nav>
+      <div className="mt-auto flex flex-col">
+        <SidebarButton
+          tab={settingsTab}
+          active={activeTab === settingsTab.id}
+          expanded={expanded}
+          onClick={() => onTabChange(settingsTab.id)}
+        />
+      </div>
     </motion.aside>
   );
 }
