@@ -1,13 +1,17 @@
 //! Main-window visibility helpers shared by the global hotkey and the tray.
+//!
+//! These use the plain `Window`, not `WebviewWindow`: once the Portal tab adds
+//! child webviews to "main", Tauri stops treating it as a webview window and
+//! `get_webview_window("main")` returns `None`.
 
-use tauri::{AppHandle, Manager, Runtime, WebviewWindow};
+use tauri::{AppHandle, Manager, Runtime, Window};
 
-pub fn main_window<R: Runtime>(app: &AppHandle<R>) -> Option<WebviewWindow<R>> {
-  app.get_webview_window("main")
+pub fn main_window<R: Runtime>(app: &AppHandle<R>) -> Option<Window<R>> {
+  app.get_window("main")
 }
 
 /// True when the window is on screen (visible and not minimised).
-pub fn is_shown<R: Runtime>(window: &WebviewWindow<R>) -> bool {
+pub fn is_shown<R: Runtime>(window: &Window<R>) -> bool {
   window.is_visible().unwrap_or(false) && !window.is_minimized().unwrap_or(false)
 }
 

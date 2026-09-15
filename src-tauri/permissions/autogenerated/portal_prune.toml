@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-portal-prune"
+description = "Enables the portal_prune command without any pre-configured scope."
+commands.allow = ["portal_prune"]
+
+[[permission]]
+identifier = "deny-portal-prune"
+description = "Denies the portal_prune command without any pre-configured scope."
+commands.deny = ["portal_prune"]

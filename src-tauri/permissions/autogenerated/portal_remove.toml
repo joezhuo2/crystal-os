@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-portal-remove"
+description = "Enables the portal_remove command without any pre-configured scope."
+commands.allow = ["portal_remove"]
+
+[[permission]]
+identifier = "deny-portal-remove"
+description = "Denies the portal_remove command without any pre-configured scope."
+commands.deny = ["portal_remove"]

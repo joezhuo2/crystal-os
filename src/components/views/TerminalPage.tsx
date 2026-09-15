@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RotateCw, SquareTerminal } from "lucide-react";
 import type { Terminal } from "@xterm/xterm";
-import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { isDesktop } from "@/lib/platform";
 import {
@@ -53,9 +52,9 @@ export default function TerminalPage() {
         scrollback: 5000,
         theme: {
           background: "#00000000",
-          foreground: "#e2e8f0",
-          cursor: "#a5b4fc",
-          selectionBackground: "#6366f155",
+          foreground: "#e5e5e5",
+          cursor: "#fafafa",
+          selectionBackground: "#ffffff40",
         },
       });
       const fit = new FitAddon();
@@ -154,28 +153,32 @@ export default function TerminalPage() {
     );
   }
 
+  // The search bar is hidden on this tab (see Index), so the page takes its space.
   return (
-    <div className="flex flex-col gap-4 min-h-[20rem] h-[calc(100vh-11rem)] md:h-[calc(100vh-8.5rem)]">
+    <div className="flex flex-col gap-5 min-h-[20rem] h-[calc(100vh-7.5rem)] md:h-[calc(100vh-4.5rem)]">
       <header className="flex items-center gap-3 px-1">
-        <SquareTerminal className="w-6 h-6 text-primary" />
-        <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-bold tracking-tight">Terminal</h2>
-          <p className="text-sm text-muted-foreground truncate">
+        <SquareTerminal className="w-6 h-6 text-neutral-100" />
+        <div className="min-w-0 flex-1 terminal-font">
+          <h2 className="text-2xl font-bold uppercase tracking-[0.12em]">
+            <span className="terminal-glitch-text" data-text="Terminal">Terminal</span>
+          </h2>
+          <p className="text-xs uppercase tracking-[0.14em] text-neutral-400 truncate">
+            <span className="text-neutral-600" aria-hidden="true">&gt;_ </span>
             {shell ?? "Starting…"}
             {exited && " · exited"}
           </p>
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="outline" size="sm" onClick={refresh} disabled={refreshing}>
-              <RotateCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            <button type="button" className="terminal-btn" onClick={refresh} disabled={refreshing}>
+              <RotateCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
               Refresh
-            </Button>
+            </button>
           </TooltipTrigger>
           <TooltipContent>Restart the shell with an updated PATH, so newly installed programs are found</TooltipContent>
         </Tooltip>
       </header>
-      <div className="glass-card flex-1 min-h-0 p-3">
+      <div className="terminal-glitch-frame flex-1 min-h-0 mx-2 mb-2 p-3">
         <div ref={containerRef} className="h-full w-full" />
       </div>
     </div>

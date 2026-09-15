@@ -2,6 +2,7 @@ use tauri::{Manager, RunEvent, WindowEvent};
 
 mod autostart;
 mod hotkey;
+mod portal;
 mod settings;
 mod terminal;
 mod tray;
@@ -76,6 +77,7 @@ pub fn run() {
     .manage(hotkey::HotkeyState::default())
     .manage(vault::VaultState::default())
     .manage(terminal::TerminalState::default())
+    .manage(portal::PortalState::default())
     .invoke_handler(tauri::generate_handler![
       hotkey::get_global_shortcut,
       hotkey::set_global_shortcut,
@@ -93,6 +95,14 @@ pub fn run() {
       terminal::terminal_restart,
       terminal::terminal_write,
       terminal::terminal_resize,
+      portal::portal_show,
+      portal::portal_hide,
+      portal::portal_fade_out,
+      portal::portal_nav,
+      portal::portal_open_external,
+      portal::portal_sign_out,
+      portal::portal_remove,
+      portal::portal_prune,
     ])
     .setup(|_app| {
       hotkey::init(_app.handle());

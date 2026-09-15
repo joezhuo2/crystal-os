@@ -24,6 +24,7 @@ import {
   CalendarPlus,
   Settings,
   SquareTerminal,
+  Orbit,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePaletteHotkey } from "@/hooks/useGlobalHotkey";
@@ -471,6 +472,17 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
                         </div>
                         <span className="text-sm font-medium">Open Settings</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">hotkeys, startup, vault</span>
+                      </CommandItem>
+                      <CommandItem
+                        value="portal-web-apps-discord-instagram-whatsapp-messenger-slack-telegram-reddit"
+                        onSelect={() => handleNavigate("portal")}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-cyan-500/10">
+                          <Orbit className="w-4 h-4 text-cyan-400" />
+                        </div>
+                        <span className="text-sm font-medium">Open The Portal</span>
+                        <span className="ml-auto text-xs text-muted-foreground/50">Discord, Instagram, web apps</span>
                       </CommandItem>
                       {isDesktop() && (
                         <CommandItem

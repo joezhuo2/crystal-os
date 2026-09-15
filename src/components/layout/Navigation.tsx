@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings, SquareTerminal } from "lucide-react";
+import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings, SquareTerminal, Orbit } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
+import { usePortal } from "@/hooks/usePortal";
+import { badgeLabel, type PortalBadge } from "@/lib/portalApps";
+import { selectBadgeTotal } from "@/lib/portalStore";
 
-export type TabId = "home" | "tasks" | "calendar" | "financials" | "weather" | "archive" | "terminal" | "settings";
+export type TabId = "home" | "tasks" | "calendar" | "financials" | "weather" | "archive" | "portal" | "terminal" | "settings";
 
 interface Tab {
   id: TabId;
@@ -26,34 +29,84 @@ const settingsTab: Tab = { id: "settings", label: "Settings", icon: Settings };
 /** Desktop only, above Settings. The shell runs in Rust (src-tauri/src/terminal.rs). */
 const terminalTab: Tab = { id: "terminal", label: "Terminal", icon: SquareTerminal };
 
+/**
+ * Above Terminal. Shown on the web too, where the page explains that embedding
+ * needs the desktop app (src-tauri/src/portal.rs).
+ */
+const portalTab: Tab = { id: "portal", label: "The Portal", icon: Orbit };
+
+/** The Terminal and Portal tabs restyle the sidebar to match their pages. */
+type SidebarMode = "default" | "terminal" | "portal";
+
 interface SidebarNavProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
 }
 
-function SidebarButton({ tab, active, expanded, onClick }: { tab: Tab; active: boolean; expanded: boolean; onClick: () => void }) {
+const activePillStyle: Record<SidebarMode, React.CSSProperties> = {
+  default: { background: "hsl(239 84% 67% / 0.15)", border: "1px solid hsl(239 84% 67% / 0.25)" },
+  terminal: { background: "#000", border: "1px solid rgb(255 255 255 / 0.25)" },
+  // Colours come from the portal-theme-* class on the page root (index.css).
+  portal: {
+    background: "color-mix(in srgb, var(--portal-a) 18%, transparent)",
+    border: "1px solid color-mix(in srgb, var(--portal-a) 45%, transparent)",
+    boxShadow: "0 0 18px color-mix(in srgb, var(--portal-a) 35%, transparent)",
+  },
+};
+
+function SidebarButton({
+  tab,
+  active,
+  expanded,
+  mode,
+  badge,
+  onClick,
+}: {
+  tab: Tab;
+  active: boolean;
+  expanded: boolean;
+  mode: SidebarMode;
+  badge?: PortalBadge | null;
+  onClick: () => void;
+}) {
+  const textClass =
+    mode === "terminal"
+      ? active
+        ? "text-neutral-50"
+        : "text-neutral-500 hover:text-neutral-100 hover:bg-white/5"
+      : mode === "portal"
+        ? active
+          ? "text-white"
+          : "text-white/45 hover:text-white hover:bg-white/5"
+        : active
+          ? "text-primary-foreground"
+          : "text-muted-foreground hover:text-foreground";
+  const radius = mode === "terminal" ? "rounded-sm" : "rounded-lg";
   return (
     <button
       onClick={onClick}
-      className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap overflow-hidden ${
-        active
-          ? "text-primary-foreground"
-          : "text-muted-foreground hover:text-foreground"
-      }`}
+      className={`relative flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors whitespace-nowrap overflow-hidden ${radius} ${textClass}`}
       title={!expanded ? tab.label : undefined}
     >
       {active && (
         <motion.div
           layoutId="sidebar-active"
-          className="absolute inset-0 rounded-lg"
-          style={{
-            background: "hsl(239 84% 67% / 0.15)",
-            border: "1px solid hsl(239 84% 67% / 0.25)",
-          }}
+          className={`absolute inset-0 ${radius}`}
+          style={activePillStyle[mode]}
           transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
         />
       )}
-      <tab.icon className="w-4 h-4 relative z-10 shrink-0" />
+      <span className="relative z-10 shrink-0">
+        <tab.icon className="w-4 h-4" />
+        {badge != null && (
+          <span
+            className={`sidebar-badge ${badge === "dot" ? "sidebar-badge-dot" : ""}`}
+            aria-label={badge === "dot" ? "Unread" : `${badge} unread`}
+          >
+            {badgeLabel(badge)}
+          </span>
+        )}
+      </span>
       <motion.span
         className="relative z-10"
         animate={{ opacity: expanded ? 1 : 0 }}
@@ -65,8 +118,30 @@ function SidebarButton({ tab, active, expanded, onClick }: { tab: Tab; active: b
   );
 }
 
+/**
+ * Collapsed, the sidebar is 64px wide with a 1px right border. Padding of 12px
+ * left and 11px right leaves a 40px button, so a 16px icon behind 12px of
+ * button padding sits exactly centred in its highlight.
+ */
 export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const [expanded, setExpanded] = useState(false);
+  const portalBadge = selectBadgeTotal(usePortal());
+  const mode: SidebarMode = activeTab === "terminal" ? "terminal" : activeTab === "portal" ? "portal" : "default";
+  const terminal = mode === "terminal";
+  const sidebarClass = terminal ? "sidebar-terminal" : mode === "portal" ? "sidebar-portal" : "";
+  const gradientClass = mode === "portal" ? "portal-gradient-text" : "text-gradient-indigo";
+
+  const button = (tab: Tab, badge?: PortalBadge | null) => (
+    <SidebarButton
+      key={tab.id}
+      tab={tab}
+      active={activeTab === tab.id}
+      expanded={expanded}
+      mode={mode}
+      badge={badge}
+      onClick={() => onTabChange(tab.id)}
+    />
+  );
 
   return (
     <motion.aside
@@ -74,53 +149,45 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
       onMouseLeave={() => setExpanded(false)}
       animate={{ width: expanded ? 256 : 64 }}
       transition={{ type: "spring", bounce: 0.15, duration: 0.35 }}
-      className="hidden md:flex flex-col h-screen sticky top-0 glass-card border-r border-t-0 border-b-0 border-l-0 rounded-none p-4 pt-8 gap-2 overflow-hidden"
+      className={`hidden md:flex flex-col h-screen sticky top-0 glass-card border-r border-t-0 border-b-0 border-l-0 rounded-none pl-3 pr-[11px] pb-4 pt-8 gap-2 overflow-hidden transition-colors duration-300 ${sidebarClass}`}
     >
       <div className="mb-8 px-3 whitespace-nowrap overflow-hidden">
         <AnimatePresence mode="wait">
           {expanded ? (
             <motion.div key="full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-              <h1 className="text-xl font-bold tracking-tight">
-                <span className="text-gradient-indigo">Crystal</span>{" "}
-                <span className="text-muted-foreground font-light">OS</span>
-              </h1>
-              <p className="text-xs text-muted-foreground mt-1">Productivity Ecosystem</p>
+              {terminal ? (
+                <h1 className="text-xl font-bold tracking-tight terminal-font">
+                  <span className="terminal-glitch-text" data-text="Crystal">Crystal</span>{" "}
+                  <span className="text-neutral-500 font-light">OS</span>
+                </h1>
+              ) : (
+                <h1 className="text-xl font-bold tracking-tight">
+                  <span className={gradientClass}>Crystal</span>{" "}
+                  <span className="text-muted-foreground font-light">OS</span>
+                </h1>
+              )}
+              <p className={`text-xs mt-1 ${terminal ? "terminal-font text-neutral-500" : "text-muted-foreground"}`}>
+                Productivity Ecosystem
+              </p>
             </motion.div>
           ) : (
             <motion.div key="icon" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-              <h1 className="text-xl font-bold tracking-tight">
-                <span className="text-gradient-indigo">C</span>
+              <h1 className={`text-xl font-bold tracking-tight ${terminal ? "terminal-font" : ""}`}>
+                {terminal ? (
+                  <span className="terminal-glitch-text" data-text="C">C</span>
+                ) : (
+                  <span className={gradientClass}>C</span>
+                )}
               </h1>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-      <nav className="flex flex-col gap-1">
-        {tabs.map((tab) => (
-          <SidebarButton
-            key={tab.id}
-            tab={tab}
-            active={activeTab === tab.id}
-            expanded={expanded}
-            onClick={() => onTabChange(tab.id)}
-          />
-        ))}
-      </nav>
+      <nav className="flex flex-col gap-1">{tabs.map((tab) => button(tab))}</nav>
       <div className="mt-auto flex flex-col gap-1">
-        {isDesktop() && (
-          <SidebarButton
-            tab={terminalTab}
-            active={activeTab === terminalTab.id}
-            expanded={expanded}
-            onClick={() => onTabChange(terminalTab.id)}
-          />
-        )}
-        <SidebarButton
-          tab={settingsTab}
-          active={activeTab === settingsTab.id}
-          expanded={expanded}
-          onClick={() => onTabChange(settingsTab.id)}
-        />
+        {button(portalTab, portalBadge)}
+        {isDesktop() && button(terminalTab)}
+        {button(settingsTab)}
       </div>
     </motion.aside>
   );

@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-159%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.4.6-6366F1)
+![Tests](https://img.shields.io/badge/tests-184%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.5.0-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.4.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.5.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -20,13 +20,16 @@ Current release: **v0.4.6** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | Feature | Description |
 |---------|-------------|
 | **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking |
-| **📅 The Horizon** | Google Calendar, live: month and agenda views, create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 21 event dots per day in the month grid |
-| **🏠 The Pulse** | Clock, weather, AI smart summary, daily focus, today's calendar events, and a vault widget — each with its own shimmer skeleton while loading |
+| **📅 The Horizon** | Google Calendar, live: month and agenda views, create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid |
+| **🏠 Home widgets** | Clock, weather, AI smart summary, the Engine (top 3 tasks with quick-complete and add), today's calendar events, daily focus, and a vault widget — each with its own shimmer skeleton while loading |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations |
 | **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list |
+| **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges, and three themes (desktop; the web build opens apps in new tabs) |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
-| **⏱️ Pomodoro** | Customizable focus/break intervals, session tracking, and audio notifications (Tasks view) |
+| **⏱️ Pomodoro** | Customizable focus/break intervals, session tracking, audio notifications, and tray controls (Tasks view) |
+| **🖥️ Desktop shell** | Native Tauri window with PowerShell terminal, tray (Pomodoro + Quick Add), always-on global hotkeys, and launch-at-login — the web build is unaffected |
+| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, vault folder, Portal theme |
 | **⌨️ Command Palette** | Global search over tasks, transactions, and vault note bodies, plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
 | **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar |
@@ -43,6 +46,9 @@ Current release: **v0.4.6** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | **Backend** | Supabase (PostgreSQL, Auth, Realtime) |
 | **Vault** | Vite middleware plugin + `fast-glob` + `gray-matter` (Node-only, server side) |
 | **Calendar** | Vite middleware plugin + `googleapis` OAuth2 (Node-only, server side) |
+| **Desktop** | Tauri 2 (Rust): global hotkeys, autostart, tray, native vault fs — plus a Node sidecar for the web APIs |
+| **Terminal** | xterm.js + ConPTY in Rust (PowerShell, desktop only) |
+| **The Portal** | Tauri child webviews (WebView2), one data directory per app (desktop only) |
 | **Markdown** | react-markdown + remark-gfm + `@tailwindcss/typography` |
 | **Forms** | React Hook Form + Zod validation |
 | **Animation** | Framer Motion |
@@ -109,29 +115,41 @@ server/
 │   ├── plugin.ts               # Vite middleware: /api/obsidian/* routes
 │   ├── vault.ts                # Node vault I/O (fast-glob, gray-matter) over src/lib/vaultCore.ts
 │   └── vault.test.ts           # 42 unit tests over vault.ts
-└── calendar/
-    ├── plugin.ts               # Vite middleware: /api/calendar/* routes
-    ├── oauth.ts                # OAuth2 client, refresh-token store, consent + revoke
-    ├── events.ts               # Google Calendar calls + event shape mapping
-    ├── envFile.ts              # Read/upsert a single key in .env.local
-    ├── errors.ts               # CalendarError (message + HTTP status)
-    ├── envFile.test.ts         # 12 unit tests over envFile.ts
-    └── events.test.ts          # 21 unit tests over the event mappers
+├── calendar/
+│   ├── plugin.ts               # Vite middleware: /api/calendar/* routes
+│   ├── oauth.ts                # OAuth2 client, refresh-token store, consent + revoke
+│   ├── events.ts               # Google Calendar calls + event shape mapping
+│   ├── envFile.ts              # Read/upsert a single key in .env.local
+│   ├── errors.ts               # CalendarError (message + HTTP status)
+│   ├── envFile.test.ts         # 12 unit tests over envFile.ts
+│   └── events.test.ts          # 21 unit tests over the event mappers
+├── auth/
+│   └── requireUser.ts          # Supabase token check for authenticated routes
+├── sidecar.ts                  # Node sidecar (crystal-api): serves the APIs on 127.0.0.1:8787
+└── standalone.ts               # Both middlewares, shared by dev server, preview, and sidecar
 
 src/
 ├── components/
 │   ├── layout/
-│   │   └── Navigation.tsx      # Sidebar + BottomNav
+│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal restyle the sidebar)
+│   │   ├── TerminalStatic.tsx  # Static-noise backdrop for the Terminal tab
+│   │   └── PortalBackdrop.tsx  # Themed backdrop for The Portal
+│   ├── portal/
+│   │   ├── PortalNavbar.tsx    # App pills (drag, right-click menu), browser controls
+│   │   └── AddPortalAppDialog.tsx # Presets + custom https app
 │   ├── ui/                     # shadcn/ui components (40+)
 │   │   ├── field-controls.tsx  # ThemedSelect, DateField, TimeField (portalled popups)
-│   │   └── dashboard-skeletons.tsx # Per-widget loading skeletons for The Pulse
+│   │   └── dashboard-skeletons.tsx # Per-widget loading skeletons for the home page
 │   ├── views/                  # Page-level components
-│   │   ├── HomePage.tsx        # Clock, weather, smart summary, daily focus, today's events, vault widget
+│   │   ├── HomePage.tsx        # Clock, weather, smart summary, Engine, today's events, daily focus, vault widget
 │   │   ├── TasksPage.tsx       # Task list, form, filtering, Pomodoro
 │   │   ├── CalendarPage.tsx    # Google Calendar: month + agenda, event CRUD
 │   │   ├── FinancialsPage.tsx  # Transactions, summaries, charts
 │   │   ├── WeatherPage.tsx     # Detailed weather view
 │   │   ├── ArchivePage.tsx     # Vault browser: search, tags, markdown reader
+│   │   ├── TerminalPage.tsx    # PowerShell terminal (xterm.js, desktop only)
+│   │   ├── PortalPage.tsx      # The Portal: places the active app's webview over its frame
+│   │   ├── SettingsPage.tsx    # Hotkeys, launch at login, vault folder, Portal theme
 │   │   ├── PomodoroTimer.tsx   # Focus timer component
 │   │   └── CategoryManager.tsx # Category CRUD for tasks/finances
 │   ├── CommandPalette.tsx      # Search, NL commands, vault note results
@@ -142,6 +160,10 @@ src/
 ├── hooks/
 │   ├── useVault.ts             # React Query bindings: /api/obsidian/* on web, Rust on desktop
 │   ├── useGoogleCalendar.ts    # React Query bindings for /api/calendar/*
+│   ├── useGlobalHotkey.ts      # useGlobalHotkeys (toggle window) + usePaletteHotkey (search)
+│   ├── usePomodoro.ts          # Pomodoro store bindings (page + tray share src/lib/pomodoro.ts)
+│   ├── usePortal.ts            # Portal store bindings, overlay occlusion, session start
+│   ├── useTrayQuickAdd.ts      # Tray Quick Add events
 │   ├── useEscapeKey.ts         # Stacked Escape-to-close for overlays (topmost closes first)
 │   ├── useWeather.ts           # Weather API integration
 │   ├── use-toast.ts            # Toast notifications (Sonner)
@@ -150,12 +172,38 @@ src/
 │   ├── supabase.ts             # Supabase client + helpers
 │   ├── vaultCore.ts            # Shared vault logic: parsing, search, tags, quick-add formatting
 │   ├── vaultNative.ts          # Desktop vault client for src-tauri/src/vault.rs
+│   ├── terminalNative.ts       # Desktop terminal bridge (terminal_* commands)
+│   ├── portalApps.ts           # Portal presets, URL/id validation, badge parsing
+│   ├── portalStore.ts          # Module-level Portal store: apps, active app, badges, theme
+│   ├── portalNative.ts         # Desktop Portal bridge (portal_* commands)
+│   ├── pomodoro.ts             # Module-level Pomodoro store (page + tray agree)
+│   ├── tray.ts                 # Tauri tray events → app, app state → tray menu
+│   ├── hotkey.ts               # Hotkey parsing + combo validation
+│   ├── platform.ts             # isDesktop(), apiUrl(), openExternal()
+│   ├── apiRequest.ts           # Authenticated fetch wrapper for server routes
+│   ├── seedCategories.ts       # Default task/finance category seeds
 │   └── utils.ts                # cn(), useDebouncedValue(), date helpers, formatters
 ├── pages/
 │   ├── Index.tsx               # Main layout, view registry, global overlays
 │   └── NotFound.tsx
 ├── App.tsx                     # Providers + Router setup
 └── main.tsx                    # Entry point
+
+src-tauri/
+├── src/
+│   ├── main.rs                 # Entry point; single-instance enforcement
+│   ├── lib.rs                  # App setup: plugins, tray, hotkeys, command registration
+│   ├── window.rs               # Show/hide-to-tray close behaviour
+│   ├── tray.rs                 # System tray menu + Pomodoro status updates
+│   ├── hotkey.rs               # RegisterHotKey bindings (Alt+Space, Alt+Shift+Space)
+│   ├── autostart.rs            # Launch-at-login (--hidden) registration
+│   ├── settings.rs             # settings.json read/write (hotkeys, vaultPath, launchAtLogin)
+│   ├── vault.rs                # Native vault I/O: list/read/write/status/watch
+│   ├── terminal.rs             # ConPTY PowerShell shell
+│   └── portal.rs               # Portal child webviews: show/hide/fade, per-app data, sign-out
+├── capabilities/
+│   └── default.json            # App command allowlist by name
+└── tauri.conf.json             # Window, tray, bundle config
 ```
 
 ---
@@ -308,13 +356,25 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 2. Add `http://127.0.0.1:8787/api/calendar/auth/callback` as a second authorized redirect URI on your Google OAuth client, and set `GOOGLE_REDIRECT_URI` to it in that copy.
 3. Launch Crystal OS. **Connect** in The Horizon opens Google in your default browser. Once it reports success, switch back to the app.
 
-**Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: both global hotkeys, **Launch at login**, and the vault folder. The palette's **Open Settings** row goes there too.
+**Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: both global hotkeys, **Launch at login**, the vault folder, and The Portal's theme. The palette's **Open Settings** row goes there too.
 
 **Terminal.** The terminal icon above Settings opens a PowerShell terminal (PowerShell 7 if installed, otherwise Windows PowerShell) running on a real pseudoconsole, so colours, tab completion, and interactive prompts work. The shell keeps running while you switch tabs and is killed when Crystal OS quits.
 
 - **Refresh** restarts the shell with PATH and the other environment variables read again from the registry. Use it after installing something (`winget`, `npm -g`, an installer) that the terminal does not find yet: a running app keeps the environment it started with, so a plain restart of the shell would not see the change.
 - Ctrl+C copies when text is selected and interrupts otherwise; Ctrl+V pastes.
 - The shell runs in Rust (`src-tauri/src/terminal.rs`) and the view talks to it through `terminal_attach`, `terminal_restart`, `terminal_write`, and `terminal_resize` (`src/lib/terminalNative.ts`).
+- While the tab is open the window switches to a black, glitching monochrome look, and the search bar is hidden.
+
+**The Portal.** The orbit icon above Terminal opens **The Portal**, where web apps such as Discord and Instagram run as real pages that you sign in to once. See [ADR 0002](docs/adr/0002-portal-child-webviews.md) for how it works.
+
+- **Connect an app** with **+** in the Portal's navbar: pick a preset (Discord, Instagram, WhatsApp, Messenger, X, Reddit, Slack, Telegram) or add any `https://` site by name and address. Google sites are not offered because Google refuses sign-in inside embedded webviews; Spotify is not offered because WebView2 cannot play its DRM-protected audio.
+- **Use it like a browser tab.** Click a pill to switch apps (the pages cross-fade). **Back**, **Forward**, **Reload**, and **Open in browser** act on the app on screen. Links to other sites open in your default browser.
+- **Organise.** Drag pills to reorder them. Right-click a pill to reload it, return to its home page, open it in the browser, **Sign out…**, or **Remove…**.
+- **Sessions.** Each app keeps its cookies and storage in its own folder, `%APPDATA%\com.crystalos.desktop\portal\<app id>\`, so you stay signed in across restarts and apps never share a login. **Sign out** clears that app's cookies and storage; **Remove** deletes its folder too.
+- **Always on.** Apps load the first time you open The Portal after launching Crystal OS, then keep running while you use other tabs. Unread counts from their page titles show on each pill and on the sidebar's Portal icon.
+- **Themes.** Choose **Void swirl** (default), **Event horizon**, or **Stargate blue** under **Settings → The Portal**. The theme styles the backdrop, sidebar, navbar, and the animated ring around the app.
+- **Web build.** Browsers refuse to embed these sites in another page, so there the Portal keeps your app list and opens each app in a new tab.
+- The app pages draw above Crystal OS's own UI, so the search bar is hidden on this tab and dialogs (such as tray **Quick Add**) hide the app while they are open. The pages get no access to Crystal OS commands. The view talks to Rust through the `portal_*` commands in `src/lib/portalNative.ts`.
 
 **Global hotkeys.** Two combos work from any app:
 
@@ -382,6 +442,8 @@ Native `<select>`, date, and time inputs are replaced app-wide by `src/component
 1. Create the component in `src/components/views/`
 2. Add its id to `TabId` and the `tabs` array in `src/components/layout/Navigation.tsx`
 3. Register it in the `views` record in `src/pages/Index.tsx`
+
+Write Tailwind-scanned class names out in full. A class built at runtime, such as `` `portal-theme-${theme}` ``, is purged from the CSS; map values to literal class strings instead (see `PORTAL_THEME_CLASS` in `src/lib/portalStore.ts`).
 
 ---
 

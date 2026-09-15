@@ -18,6 +18,14 @@ fn main() {
     "terminal_restart",
     "terminal_write",
     "terminal_resize",
+    "portal_show",
+    "portal_hide",
+    "portal_fade_out",
+    "portal_nav",
+    "portal_open_external",
+    "portal_sign_out",
+    "portal_remove",
+    "portal_prune",
   ]);
   tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))
     .expect("failed to run tauri-build");

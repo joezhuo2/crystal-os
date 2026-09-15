@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-portal-open-external"
+description = "Enables the portal_open_external command without any pre-configured scope."
+commands.allow = ["portal_open_external"]
+
+[[permission]]
+identifier = "deny-portal-open-external"
+description = "Denies the portal_open_external command without any pre-configured scope."
+commands.deny = ["portal_open_external"]

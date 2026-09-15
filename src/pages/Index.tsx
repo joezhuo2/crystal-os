@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import { useAuth } from "@/contexts/AuthContext";
 import LoginPage from "@/components/auth/LoginPage";
@@ -12,7 +12,14 @@ import WeatherPage from "@/components/views/WeatherPage";
 import ArchivePage from "@/components/views/ArchivePage";
 import SettingsPage from "@/components/views/SettingsPage";
 import TerminalPage from "@/components/views/TerminalPage";
+import PortalPage from "@/components/views/PortalPage";
 import CommandPalette from "@/components/CommandPalette";
+import TerminalStatic from "@/components/layout/TerminalStatic";
+import PortalBackdrop from "@/components/layout/PortalBackdrop";
+import { usePortal } from "@/hooks/usePortal";
+import { isDesktop } from "@/lib/platform";
+import { hidePortal } from "@/lib/portalNative";
+import { PORTAL_THEME_CLASS } from "@/lib/portalStore";
 import QuickAddDialog from "@/components/QuickAddDialog";
 import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
 import { useVaultLiveUpdates } from "@/hooks/useVault";
@@ -28,6 +35,7 @@ const views: Record<TabId, React.ComponentType<ViewProps>> = {
   financials: FinancialsPage,
   weather: WeatherPage,
   archive: ArchivePage,
+  portal: PortalPage,
   terminal: TerminalPage,
   settings: SettingsPage,
 };
@@ -55,7 +63,17 @@ function GlobalOverlays() {
 const Index = () => {
   const { session, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("home");
+  const { theme: portalTheme } = usePortal();
   const View = views[activeTab];
+
+  // Hide the Portal's native webview as soon as another tab is picked. The
+  // page only unmounts after its exit animation, and the webview would sit
+  // over everything until then.
+  const portalOpened = useRef(false);
+  useEffect(() => {
+    if (activeTab === "portal") portalOpened.current = true;
+    else if (portalOpened.current && isDesktop()) hidePortal().catch(() => undefined);
+  }, [activeTab]);
 
   if (loading) {
     return (
@@ -69,12 +87,23 @@ const Index = () => {
   // therefore never issues an unauthenticated query.
   if (!session) return <LoginPage />;
 
+  const rootClass =
+    activeTab === "terminal"
+      ? "bg-black"
+      : activeTab === "portal"
+        ? `portal-root ${PORTAL_THEME_CLASS[portalTheme]}`
+        : "mesh-gradient-bg";
+
   return (
     <AppProvider>
-      <div className="min-h-screen mesh-gradient-bg flex">
+      <div className={`min-h-screen flex isolate ${rootClass}`}>
+        {activeTab === "terminal" && <TerminalStatic />}
+        {activeTab === "portal" && <PortalBackdrop theme={portalTheme} />}
         <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
         <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
-          <CommandPalette onNavigate={setActiveTab} />
+          {/* Unmounted on the Terminal and Portal tabs: hides the bar and drops
+              its shortcuts. On the Portal it would open under the app webview. */}
+          {activeTab !== "terminal" && activeTab !== "portal" && <CommandPalette onNavigate={setActiveTab} />}
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}

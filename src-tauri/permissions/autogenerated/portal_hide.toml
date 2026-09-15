@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-portal-hide"
+description = "Enables the portal_hide command without any pre-configured scope."
+commands.allow = ["portal_hide"]
+
+[[permission]]
+identifier = "deny-portal-hide"
+description = "Denies the portal_hide command without any pre-configured scope."
+commands.deny = ["portal_hide"]

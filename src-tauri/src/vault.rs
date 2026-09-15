@@ -20,7 +20,7 @@ use std::time::{Duration, UNIX_EPOCH};
 use notify_debouncer_mini::notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_mini::{new_debouncer, DebounceEventResult, Debouncer};
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewWindow};
+use tauri::{AppHandle, Emitter, Manager, Runtime, Window};
 
 /// Emitted with a [`VaultChange`] when notes change on disk.
 pub const CHANGED_EVENT: &str = "vault://changed";
@@ -480,7 +480,9 @@ pub async fn get_vault_status<R: Runtime>(app: AppHandle<R>) -> VaultStatus {
 #[tauri::command]
 pub async fn pick_vault<R: Runtime>(
   app: AppHandle<R>,
-  window: WebviewWindow<R>,
+  // Window, not WebviewWindow: the latter fails to extract once the Portal tab
+  // has added child webviews to the main window.
+  window: Window<R>,
 ) -> Result<Option<VaultStatus>, VaultError> {
   use tauri_plugin_dialog::DialogExt;
 

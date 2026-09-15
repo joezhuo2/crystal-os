@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { FolderOpen, Keyboard, Power, Settings } from "lucide-react";
+import { Check, FolderOpen, Keyboard, Orbit, Power, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import HotkeySettingsDialog from "@/components/HotkeySettingsDialog";
@@ -8,6 +8,8 @@ import { useGlobalHotkeys } from "@/hooks/useGlobalHotkey";
 import { usePickVault, useVaultStatus } from "@/hooks/useVault";
 import { HOTKEY_COPY, formatAccelerator, paletteShortcutLabel, type HotkeyAction } from "@/lib/hotkey";
 import { isDesktop } from "@/lib/platform";
+import { usePortal } from "@/hooks/usePortal";
+import { PORTAL_THEMES, portal } from "@/lib/portalStore";
 
 function Section({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
   return (
@@ -50,6 +52,7 @@ export default function SettingsPage() {
   const hotkeys = useGlobalHotkeys();
   const [editing, setEditing] = useState<HotkeyAction>("toggle");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { theme: portalTheme } = usePortal();
 
   const vaultStatus = useVaultStatus();
   const pickVault = usePickVault();
@@ -77,7 +80,7 @@ export default function SettingsPage() {
           <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
           <p className="text-sm text-muted-foreground">
             {desktop
-              ? "Hotkeys, startup, and your vault folder."
+              ? "Hotkeys, startup, your vault folder, and The Portal's theme."
               : "Global hotkeys, launch at login, and the vault folder are set in the desktop app."}
           </p>
         </div>
@@ -126,6 +129,51 @@ export default function SettingsPage() {
           </Row>
         </Section>
       )}
+
+      <Section icon={Orbit} title="The Portal">
+        <div className="py-3 first:pt-0 last:pb-0 space-y-3">
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium">Theme</p>
+            <p className="text-xs text-muted-foreground">How The Portal looks while it is open.</p>
+          </div>
+          <div role="radiogroup" aria-label="Portal theme" className="grid gap-2 sm:grid-cols-3">
+            {PORTAL_THEMES.map((theme) => {
+              const selected = portalTheme === theme.id;
+              const [bg, a, b] = theme.swatch;
+              return (
+                <button
+                  key={theme.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => portal.setTheme(theme.id)}
+                  className={`group flex flex-col gap-2 rounded-lg border p-2 text-left transition-colors ${
+                    selected ? "border-primary/60 bg-primary/10" : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="relative block h-14 overflow-hidden rounded-md"
+                    style={{ background: `radial-gradient(circle at 30% 30%, ${a}33, transparent 60%), ${bg}` }}
+                  >
+                    <span
+                      className="absolute inset-x-5 inset-y-3 rounded-md"
+                      style={{ padding: 2, background: `conic-gradient(from 90deg, ${a}, ${b}, ${a})` }}
+                    >
+                      <span className="block h-full w-full rounded-[4px]" style={{ background: bg }} />
+                    </span>
+                  </span>
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">{theme.name}</span>
+                    {selected && <Check className="h-4 w-4 text-primary" />}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{theme.description}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </Section>
 
       {hotkeys.statuses && (
         <HotkeySettingsDialog

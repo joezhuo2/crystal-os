@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-portal-show"
+description = "Enables the portal_show command without any pre-configured scope."
+commands.allow = ["portal_show"]
+
+[[permission]]
+identifier = "deny-portal-show"
+description = "Denies the portal_show command without any pre-configured scope."
+commands.deny = ["portal_show"]

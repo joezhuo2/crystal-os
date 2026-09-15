@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { useQuickAdd, useVaultNotes } from "@/hooks/useVault";
+import { usePortalOcclusion } from "@/hooks/usePortal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,8 @@ export default function QuickAddDialog() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const quickAdd = useQuickAdd();
+  // Tray Quick Add can fire while the Portal is open; its webview would cover the dialog.
+  usePortalOcclusion(showQuickAdd);
 
   // Only fetched while the dialog is open; react-query serves it from cache
   // when the Archive page has already loaded the same list.

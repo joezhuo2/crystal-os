@@ -5,6 +5,31 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-09-14 - The Portal
+
+### Added
+
+- **The Portal.** A new sidebar tab (orbit icon, above Terminal) that runs external web apps such as Discord and Instagram as real, signed-in pages inside Crystal OS (`src/components/views/PortalPage.tsx`). Its own navbar across the top holds one pill per connected app, a **+** to connect more, and **Back / Forward / Reload / Open in browser** for the app on screen. The palette has an **Open The Portal** row.
+  - **Connecting apps.** **+** opens a dialog with eight presets (Discord, Instagram, WhatsApp, Messenger, X, Reddit, Slack, Telegram) and a **Custom app** form that takes a name and any `https://` address. With no apps yet, the page shows the presets directly. Google sites and Spotify are not offered: Google blocks sign-in inside embedded webviews, and WebView2 has no Widevine DRM for Spotify playback.
+  - **Managing apps.** Drag pills to reorder them. Right-click a pill for **Reload**, **Back to home page**, **Open in browser**, **Sign out…** (clears that app's cookies and storage only), and **Remove…** (also deletes its saved data). Both destructive actions ask first. The list, order, and last app used are saved in localStorage (`crystal-os-portal-apps`, `crystal-os-portal-active`).
+  - **Stays signed in and running.** Each app is a native child webview of the main window (`src-tauri/src/portal.rs`) with its own data folder in `%APPDATA%\com.crystalos.desktop\portal\<app id>\`, so sessions survive restarts and never mix. Apps load on the first Portal visit of a session and then keep running while you use other tabs, so calls and message sockets stay connected. Switching apps fades the current page out and the next one in.
+  - **Unread badges.** Counts are read from page titles (`(3) Discord`, or a dot for `• Discord` / `* Slack`) and shown on each pill, with the total on the sidebar Portal button on every tab.
+  - **Themes.** The Portal restyles the whole window while it is open: backdrop, sidebar, navbar, and an animated gradient ring around the app. Pick one of three in **Settings → The Portal**: **Void swirl** (default; violet and cyan nebula), **Event horizon** (black with a pulsing amber accretion ring), or **Stargate blue** (navy ripples, electric-blue shimmer, twinkling stars). Saved as `crystal-os-portal-theme`. Animations stop under *reduce motion*.
+  - **Web build.** The tab still manages the app list, but clicking an app opens it in a new browser tab, with a note that embedding needs the desktop app (these sites refuse to load inside another page).
+  - New commands: `portal_show`, `portal_hide`, `portal_fade_out`, `portal_nav`, `portal_open_external`, `portal_sign_out`, `portal_remove`, `portal_prune`, each allowlisted in `capabilities/default.json`. The capability has no remote entry, so the loaded sites cannot call any of them. App ids are checked (`[a-z0-9-]`, since they name folders) and only `https` addresses are accepted. Links a site opens to other domains go to the default browser; the site's own popups (sign-in flows) stay in the app.
+  - Tests: `src/lib/portalApps.test.ts` and `src/lib/portalStore.test.ts` (25), plus 4 Rust tests in `portal.rs`.
+- **Terminal look.** While the Terminal tab is open, the window turns black with a flickering static backdrop (`src/components/layout/TerminalStatic.tsx`), the shell sits in a glitching monochrome frame, and the sidebar and header switch to a matching monochrome style.
+
+### Changed
+
+- **The search bar is hidden on the Terminal and Portal tabs.** On the Portal it would open underneath the app, which draws above the page.
+- Tauri's `unstable` feature is enabled, which child webviews need. With child webviews attached, Tauri no longer treats the main window as a webview window, so `window.rs` (hotkey and tray show/hide) and `pick_vault` now use the plain `Window` type.
+- Tray **Quick Add** hides the Portal's app while its dialog is open, so the dialog is visible.
+
+### Fixed
+
+- The active-tab highlight in the collapsed sidebar is centred on its icon. The icon used to sit 12px from the highlight's left edge and 4px from its right.
+
 ## [0.4.6] - 2026-09-14 - Terminal
 
 ### Added
