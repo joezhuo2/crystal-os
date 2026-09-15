@@ -411,6 +411,7 @@
     --portal-surface: #0b0a14;
     --portal-a: #8b5cf6;
     --portal-b: #22d3ee;
+    --portal-hover-text: #e9ddff;
   }
 
   .portal-theme-horizon {
@@ -418,6 +419,7 @@
     --portal-surface: #050403;
     --portal-a: #f59e0b;
     --portal-b: #ea580c;
+    --portal-hover-text: #fde68a;
   }
 
   .portal-theme-stargate {
@@ -425,6 +427,7 @@
     --portal-surface: #04102a;
     --portal-a: #3b82f6;
     --portal-b: #7dd3fc;
+    --portal-hover-text: #e0f2fe;
   }
 
   .portal-root {
@@ -655,11 +658,51 @@
     @apply w-9 justify-center rounded-full;
   }
 
-  .portal-pill:hover,
   .portal-icon-btn:hover {
     color: #fff;
     background: rgb(255 255 255 / 0.08);
     border-color: color-mix(in srgb, var(--portal-a) 45%, transparent);
+  }
+
+  /* App pill hover: a gradient border in the theme colours (an opaque
+     padding-box fill over a border-box gradient), theme-tinted glowing text,
+     and a soft outer glow. The active pill keeps its own style. */
+  .portal-pill:not(.portal-pill-active):hover {
+    color: var(--portal-hover-text, #fff);
+    background:
+      linear-gradient(color-mix(in srgb, var(--portal-a) 14%, var(--portal-surface, #0b0a14)), color-mix(in srgb, var(--portal-b) 8%, var(--portal-surface, #0b0a14))) padding-box,
+      linear-gradient(90deg, var(--portal-a), var(--portal-b)) border-box;
+    border-color: transparent;
+    text-shadow: 0 0 10px color-mix(in srgb, var(--portal-b) 60%, transparent);
+    box-shadow:
+      0 0 14px color-mix(in srgb, var(--portal-a) 32%, transparent),
+      inset 0 0 10px color-mix(in srgb, var(--portal-b) 12%, transparent);
+  }
+
+  /* App pill tooltip (PortalNavbar.tsx): a small themed card with a gradient
+     border, the app name in theme-tinted text, and the hint below it. Scoped
+     under .portal-root so it outranks the default tooltip utilities
+     (bg-popover, text-sm, shadow-md, ...) that TooltipContent also applies. */
+  .portal-root .portal-tooltip {
+    @apply flex flex-col gap-0.5 rounded-lg px-3 py-1.5 text-xs;
+    color: rgb(255 255 255 / 0.72);
+    background:
+      linear-gradient(color-mix(in srgb, var(--portal-a) 16%, var(--portal-surface, #0b0a14)), color-mix(in srgb, var(--portal-b) 10%, var(--portal-surface, #0b0a14))) padding-box,
+      linear-gradient(90deg, var(--portal-a), var(--portal-b)) border-box;
+    border: 1px solid transparent;
+    box-shadow:
+      0 0 18px color-mix(in srgb, var(--portal-a) 35%, transparent),
+      0 8px 24px rgb(0 0 0 / 0.5);
+  }
+
+  .portal-tooltip-name {
+    @apply text-sm font-semibold;
+    color: var(--portal-hover-text, #fff);
+    text-shadow: 0 0 10px color-mix(in srgb, var(--portal-b) 60%, transparent);
+  }
+
+  .portal-pill:not(.portal-pill-active):hover img {
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--portal-b) 70%, transparent));
   }
 
   .portal-pill-active,

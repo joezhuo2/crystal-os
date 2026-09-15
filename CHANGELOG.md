@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4] - 2026-09-15 - Themed app pill hover
+
+### Changed
+
+- **Portal app pills light up in the theme colours on hover.** Hovering an app pill in the Portal navbar now gives it a gradient border running between the theme's two accent colours, a glow around the pill, and theme-tinted text with a soft glow: lavender for **Void swirl**, gold for **Event horizon**, and ice blue for **Stargate blue**. The app's icon glows too. Before, hover only brightened the text and faintly tinted the border. The active pill keeps its own style, and the Back / Forward / Reload / Open in browser buttons are unchanged. Each theme defines a new `--portal-hover-text` colour (`src/index.css`).
+- **Themed navbar tooltips.** Every tooltip in the Portal navbar was the system tooltip. They are now small cards in the Portal theme: gradient border, glow, and the label in the theme's text colour. App pills show the app name with "Right-click for options, drag to reorder" below it (in the web build, "Opens in a new tab"); **Connect an app**, **Back**, **Forward**, **Reload**, and **Open in browser** show their names. Tooltips always open above the control, over the page header, because the app's webview draws above anything placed below the navbar. The browser-control tooltips line up with their button's right edge so they stay inside the window. All use a new `PortalTip` helper (`src/components/portal/PortalNavbar.tsx`).
+
 ## [0.5.3] - 2026-09-15 - Home shortcut
 
 ### Added

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Reorder } from "framer-motion";
 import { ArrowLeft, ArrowRight, ExternalLink, LogOut, Plus, RotateCw, Trash2 } from "lucide-react";
 import {
@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePortalOcclusion } from "@/hooks/usePortal";
 import { badgeLabel, faviconUrl, presetFor, type PortalApp, type PortalBadge } from "@/lib/portalApps";
 import type { PortalNavAction } from "@/lib/portalNative";
@@ -61,6 +62,33 @@ function Badge({ badge }: { badge: PortalBadge }) {
   );
 }
 
+/**
+ * Tooltip in the Portal theme. Always opens above its trigger, over the page
+ * header: the app webview sits above all page content, so a tooltip below
+ * the navbar would be hidden (collision flipping is off for that reason).
+ */
+function PortalTip({
+  children,
+  name,
+  hint,
+  align = "center",
+}: {
+  children: ReactNode;
+  name?: string;
+  hint?: string;
+  align?: "start" | "center" | "end";
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="top" align={align} sideOffset={8} avoidCollisions={false} className="portal-tooltip">
+        {name && <span className="portal-tooltip-name">{name}</span>}
+        {hint && <span className="portal-tooltip-hint">{hint}</span>}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 type Confirm = { kind: "signout" | "remove"; app: PortalApp } | null;
 
 interface PortalNavbarProps {
@@ -80,9 +108,7 @@ interface PortalNavbarProps {
 /**
  * The Portal's own navbar: one pill per connected app (drag to reorder,
  * right-click for more), then browser controls for the active app.
- *
- * Tooltips use the native `title` attribute: page-drawn tooltips would open
- * under the app webview, which sits above all page content.
+ * Every control's tooltip is a themed `PortalTip`.
  */
 export default function PortalNavbar({
   desktop,
@@ -132,17 +158,21 @@ export default function PortalNavbar({
                   className="shrink-0 list-none"
                   whileDrag={{ scale: 1.05, zIndex: 10 }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => onSelect(app)}
-                    className={`portal-pill ${isActive ? "portal-pill-active" : ""}`}
-                    aria-current={isActive ? "page" : undefined}
-                    title={desktop ? `${app.name} (right-click for options, drag to reorder)` : `Open ${app.name} in a new tab`}
+                  <PortalTip
+                    name={app.name}
+                    hint={desktop ? "Right-click for options, drag to reorder" : "Opens in a new tab"}
                   >
-                    <AppIcon app={app} />
-                    <span className="max-w-[9rem] truncate">{app.name}</span>
-                    {badge !== undefined && <Badge badge={badge} />}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(app)}
+                      className={`portal-pill ${isActive ? "portal-pill-active" : ""}`}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      <AppIcon app={app} />
+                      <span className="max-w-[9rem] truncate">{app.name}</span>
+                      {badge !== undefined && <Badge badge={badge} />}
+                    </button>
+                  </PortalTip>
                 </Reorder.Item>
               </ContextMenuTrigger>
               <ContextMenuContent className="w-48">
@@ -174,32 +204,36 @@ export default function PortalNavbar({
           );
         })}
         <li className="shrink-0 list-none">
-          <button type="button" onClick={onAdd} className="portal-icon-btn" title="Connect an app" aria-label="Connect an app">
-            <Plus className="w-4 h-4" />
-          </button>
+          <PortalTip name="Connect an app">
+            <button type="button" onClick={onAdd} className="portal-icon-btn" aria-label="Connect an app">
+              <Plus className="w-4 h-4" />
+            </button>
+          </PortalTip>
         </li>
       </Reorder.Group>
 
       {desktop && active && (
         <div className="flex shrink-0 items-center gap-1" role="toolbar" aria-label={`${active.name} controls`}>
-          <button type="button" className="portal-icon-btn" onClick={() => onNavigate(active, "back")} title="Back" aria-label="Back">
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <button type="button" className="portal-icon-btn" onClick={() => onNavigate(active, "forward")} title="Forward" aria-label="Forward">
-            <ArrowRight className="w-4 h-4" />
-          </button>
-          <button type="button" className="portal-icon-btn" onClick={() => onNavigate(active, "reload")} title="Reload" aria-label="Reload">
-            <RotateCw className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="portal-icon-btn"
-            onClick={() => onOpenExternal(active)}
-            title="Open in browser"
-            aria-label="Open in browser"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </button>
+          <PortalTip name="Back" align="end">
+            <button type="button" className="portal-icon-btn" onClick={() => onNavigate(active, "back")} aria-label="Back">
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          </PortalTip>
+          <PortalTip name="Forward" align="end">
+            <button type="button" className="portal-icon-btn" onClick={() => onNavigate(active, "forward")} aria-label="Forward">
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </PortalTip>
+          <PortalTip name="Reload" align="end">
+            <button type="button" className="portal-icon-btn" onClick={() => onNavigate(active, "reload")} aria-label="Reload">
+              <RotateCw className="w-4 h-4" />
+            </button>
+          </PortalTip>
+          <PortalTip name="Open in browser" align="end">
+            <button type="button" className="portal-icon-btn" onClick={() => onOpenExternal(active)} aria-label="Open in browser">
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          </PortalTip>
         </div>
       )}
 
