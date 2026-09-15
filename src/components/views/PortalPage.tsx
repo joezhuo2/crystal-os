@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Loader2, MonitorSmartphone, Orbit, Plus, RotateCw } from "lucide-react";
+import { AlertTriangle, MonitorSmartphone, Orbit, Plus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import PortalNavbar, { AppIcon } from "@/components/portal/PortalNavbar";
 import AddPortalAppDialog from "@/components/portal/AddPortalAppDialog";
+import PortalSkeleton from "@/components/portal/PortalSkeleton";
 import { startPortalSession, usePortal, usePortalOcclusion } from "@/hooks/usePortal";
 import { isDesktop } from "@/lib/platform";
 import { PRESETS, type PortalApp } from "@/lib/portalApps";
@@ -232,14 +233,16 @@ export default function PortalPage() {
         </button>
       </div>
     );
-  } else if (active) {
-    // Normally covered by the app's webview; seen while it is created or hidden.
+  } else if (active && occluders > 0) {
     content = (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-white/60">
-        {occluders > 0 ? <AppIcon app={active} size={40} /> : <Loader2 className="h-6 w-6 animate-spin portal-accent" />}
-        <p className="text-sm">{occluders > 0 ? active.name : `Opening ${active.name}…`}</p>
+        <AppIcon app={active} size={40} />
+        <p className="text-sm">{active.name}</p>
       </div>
     );
+  } else if (active) {
+    // Covered by the app's webview once its page has loaded.
+    content = <PortalSkeleton app={active} />;
   }
 
   // The search bar is hidden on this tab (see Index), so the page takes its space.

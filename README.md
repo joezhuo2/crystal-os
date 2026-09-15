@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-184%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.5.1-6366F1)
+![Tests](https://img.shields.io/badge/tests-187%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.5.2-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.5.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.5.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -131,11 +131,13 @@ server/
 src/
 ├── components/
 │   ├── layout/
+│   │   ├── AppSplash.tsx       # "Crystal OS / Loading…" splash while the session restores
 │   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal restyle the sidebar)
 │   │   ├── TerminalStatic.tsx  # Static-noise backdrop for the Terminal tab
 │   │   └── PortalBackdrop.tsx  # Themed backdrop for The Portal
 │   ├── portal/
 │   │   ├── PortalNavbar.tsx    # App pills (drag, right-click menu), browser controls
+│   │   ├── PortalSkeleton.tsx  # Themed placeholder shown while an app's page loads
 │   │   └── AddPortalAppDialog.tsx # Presets + custom https app
 │   ├── ui/                     # shadcn/ui components (40+)
 │   │   ├── field-controls.tsx  # ThemedSelect, DateField, TimeField (portalled popups)
@@ -373,6 +375,7 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 - **Use it like a browser tab.** Click a pill to switch apps (the pages cross-fade). **Back**, **Forward**, **Reload**, and **Open in browser** act on the app on screen. Links to other sites open in your default browser.
 - **Organise.** Drag pills to reorder them. Right-click a pill to reload it, return to its home page, open it in the browser, **Sign out…**, or **Remove…**.
 - **Sessions.** Each app keeps its cookies and storage in its own folder, `%APPDATA%\com.crystalos.desktop\portal\<app id>\`, so you stay signed in across restarts and apps never share a login. **Sign out** clears that app's cookies and storage; **Remove** deletes its folder too.
+- **Loading.** While an app's page loads (first open, **Reload**, **Back to home page**, **Sign out**), the frame shows a skeleton of a web app in the theme's colours with "Loading <app>…". The page appears, fading in, once it has finished loading, or after 20 seconds if it never reports that.
 - **Always on.** Apps load the first time you open The Portal after launching Crystal OS, then keep running while you use other tabs. Unread counts from their page titles show on each pill and on the sidebar's Portal icon.
 - **Themes.** Choose **Void swirl** (default), **Event horizon**, or **Stargate blue** under **Settings → The Portal**. The theme styles the backdrop, sidebar, navbar, and the animated ring around the app.
 - **Web build.** Browsers refuse to embed these sites in another page, so there the Portal keeps your app list and opens each app in a new tab.

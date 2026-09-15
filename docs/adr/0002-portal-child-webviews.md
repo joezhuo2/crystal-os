@@ -18,6 +18,7 @@ Each connected app is a real WebView2 webview added to the main window with `Win
 
 - The webviews live in Rust, keyed by app id (`portal-<id>`). The React page (`PortalPage.tsx`) only measures a placeholder element and calls `portal_show` with its bounds. `ResizeObserver`, window resize, and a short per-frame loop while the page slides in keep the webview aligned.
 - Leaving the tab calls `portal_hide`. The webviews keep running, so switching back is instant, and calls and message sockets stay connected. Apps load on the first Portal visit of a session, not at app launch, so login-time startup stays light.
+- A webview stays hidden while its page loads (on creation, Reload, home, and sign-out), so the page's skeleton placeholder shows through instead of an empty dark rectangle. The `on_page_load` hook shows it when the page finishes and the app is still on screen; a 20-second timeout shows it regardless (added in v0.5.2).
 - Switching apps fades the old page out and the new one in by setting `opacity` on the page's root element with `eval`. Native webviews cannot be faded from the host page. Each webview has a dark background colour, so the fade never flashes white.
 
 Rejected alternatives:

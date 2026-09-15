@@ -9,9 +9,63 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!--
+      Boot splash. Inlined so it paints before the app bundle loads; React
+      replaces the markup in #root on its first render. AppSplash
+      (src/components/layout/AppSplash.tsx) reuses these classes while the
+      session is being restored, so the handover does not flicker.
+    -->
+    <style>
+      html, body { background: hsl(222 47% 11%); }
+      .boot-splash {
+        position: fixed; inset: 0; z-index: 50;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: hsl(210 40% 98%);
+        background:
+          radial-gradient(ellipse at 50% 38%, hsl(239 84% 67% / 0.16), transparent 55%),
+          linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(224 47% 14%) 25%, hsl(217 33% 15%) 50%, hsl(230 40% 12%) 75%, hsl(222 47% 11%) 100%);
+      }
+      .boot-splash-gem { width: 56px; height: 56px; filter: drop-shadow(0 0 18px hsl(239 84% 67% / 0.55)); animation: boot-float 2.8s ease-in-out infinite; }
+      .boot-splash-title {
+        margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em;
+        background: linear-gradient(135deg, hsl(239 84% 80%), hsl(199 89% 70%), hsl(270 80% 78%));
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+      }
+      .boot-splash-status { margin: 0; font-size: 13px; letter-spacing: 0.08em; color: hsl(215 20% 65%); }
+      .boot-splash-bar { position: relative; width: 160px; height: 3px; overflow: hidden; border-radius: 999px; background: hsl(217 33% 20%); }
+      .boot-splash-bar::after {
+        content: ""; position: absolute; inset: 0; width: 40%; border-radius: inherit;
+        background: linear-gradient(90deg, transparent, hsl(239 84% 72%), hsl(199 89% 68%), transparent);
+        animation: boot-sweep 1.3s ease-in-out infinite;
+      }
+      @keyframes boot-sweep { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+      @keyframes boot-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-splash-gem, .boot-splash-bar::after { animation: none; }
+        .boot-splash-bar::after { width: 100%; opacity: 0.5; }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-splash" role="status" aria-label="Loading Crystal OS">
+        <svg class="boot-splash-gem" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="boot-gem" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#a5b4fc" />
+              <stop offset="0.55" stop-color="#6366f1" />
+              <stop offset="1" stop-color="#38bdf8" />
+            </linearGradient>
+          </defs>
+          <path d="M20 8h24l14 16-26 32L6 24 20 8Z" fill="url(#boot-gem)" fill-opacity="0.22" stroke="url(#boot-gem)" stroke-width="2.5" stroke-linejoin="round" />
+          <path d="M6 24h52M20 8l12 48M44 8 32 56M20 8l-2 16M44 8l2 16" stroke="url(#boot-gem)" stroke-width="1.5" stroke-linejoin="round" opacity="0.8" />
+        </svg>
+        <h1 class="boot-splash-title">Crystal OS</h1>
+        <div class="boot-splash-bar"></div>
+        <p class="boot-splash-status">Loading…</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

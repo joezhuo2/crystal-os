@@ -12,13 +12,21 @@
 //!
 //! Commands that create webviews are async: creating one from a synchronous
 //! command deadlocks on Windows.
+//!
+//! A webview stays hidden while its page loads (first open, Reload, Back to
+//! home page, Sign out), so the view's skeleton placeholder shows through
+//! instead of a blank dark rectangle. It is revealed when the page finishes
+//! loading, or after `LOAD_TIMEOUT` if it never reports that.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::utils::config::BackgroundThrottlingPolicy;
-use tauri::webview::{Color, NewWindowResponse, WebviewBuilder};
+use tauri::webview::{Color, NewWindowResponse, PageLoadEvent, WebviewBuilder};
 use tauri::{AppHandle, Emitter, EventTarget, LogicalPosition, LogicalSize, Manager, Rect, Runtime, Url, Webview, WebviewUrl};
 use tauri_plugin_opener::OpenerExt;
 
@@ -27,6 +35,10 @@ use tauri_plugin_opener::OpenerExt;
 const TITLE_EVENT: &str = "portal://title";
 const LABEL_PREFIX: &str = "portal-";
 const MAIN: &str = "main";
+
+/// A page that has not finished loading by then is shown anyway, so a stalled
+/// request cannot leave the skeleton up forever.
+const LOAD_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// Webview background while a page is loading or faded out, so neither shows
 /// WebView2's default white.
@@ -51,6 +63,10 @@ pub struct PortalState {
   /// Label of the webview currently on screen. Showing a different one fades
   /// it in; repeated calls that only move the same one do not.
   shown: Mutex<Option<String>>,
+  /// Labels of webviews kept hidden until their page loads, each with the id
+  /// of that load so an older load's timeout does not reveal a newer one.
+  loading: Mutex<HashMap<String, u64>>,
+  next_load: AtomicU64,
 }
 
 /// Mirrors `PortalBounds` in src/lib/portalNative.ts. Logical (CSS) pixels
@@ -143,6 +159,53 @@ fn rect(bounds: Bounds) -> Rect {
   }
 }
 
+/// Records that `label` is loading a page and starts its timeout. The caller
+/// hides the webview (or creates it and then hides it).
+fn start_loading<R: Runtime>(app: &AppHandle<R>, state: &PortalState, label: &str) {
+  let load = state.next_load.fetch_add(1, Ordering::Relaxed);
+  state.loading.lock().unwrap().insert(label.to_string(), load);
+  let app = app.clone();
+  let label = label.to_string();
+  std::thread::spawn(move || {
+    std::thread::sleep(LOAD_TIMEOUT);
+    finish_loading(&app, &label, Some(load));
+  });
+}
+
+/// Hides an existing webview until the page it is about to load finishes.
+fn hide_while_loading<R: Runtime>(app: &AppHandle<R>, webview: &Webview<R>) {
+  start_loading(app, &app.state::<PortalState>(), webview.label());
+  let _ = webview.hide();
+}
+
+/// Ends a load and shows the webview if it is still the one on screen.
+/// `load` is set by the timeout, which only ends the load it started.
+///
+/// Runs on the main thread for page-load events, so each lock is released
+/// before the next is taken; `portal_show` holds `shown` while reading
+/// `loading`.
+fn finish_loading<R: Runtime>(app: &AppHandle<R>, label: &str, load: Option<u64>) {
+  let state = app.state::<PortalState>();
+  {
+    let mut loading = state.loading.lock().unwrap();
+    match (loading.get(label), load) {
+      (None, _) => return,
+      (Some(current), Some(load)) if *current != load => return,
+      _ => {
+        loading.remove(label);
+      }
+    }
+  }
+  let on_screen = state.shown.lock().unwrap().as_deref() == Some(label);
+  if !on_screen {
+    return;
+  }
+  if let Some(webview) = app.get_webview(label) {
+    let _ = webview.eval(FADE_IN);
+    let _ = webview.show();
+  }
+}
+
 fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds) -> Result<Webview<R>, String> {
   let window = app.get_window(MAIN).ok_or("The main window is not available")?;
   let dir = data_dir(app, id)?;
@@ -159,6 +222,11 @@ fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds) -
     // Keeps hidden apps (calls, message sockets) running. Honoured on macOS;
     // WebView2 has no switch for it but does not suspend hidden webviews.
     .background_throttling(BackgroundThrottlingPolicy::Disabled)
+    .on_page_load(|webview, payload| {
+      if payload.event() == PageLoadEvent::Finished {
+        finish_loading(webview.app_handle(), webview.label(), None);
+      }
+    })
     .on_document_title_changed(move |_, title| {
       let payload = TitlePayload { id: title_id.clone(), title };
       let _ = title_app.emit_to(EventTarget::webview(MAIN), TITLE_EVENT, payload);
@@ -198,14 +266,27 @@ pub async fn portal_show<R: Runtime>(
   check_id(&id)?;
   let target = label_of(&id);
 
-  let (webview, created) = {
+  let webview = {
     let _guard = state.create.lock().unwrap();
     match app.get_webview(&target) {
       Some(existing) => {
         existing.set_bounds(rect(bounds)).map_err(|e| e.to_string())?;
-        (existing, false)
+        existing
       }
-      None => (create(&app, &id, parse_home(&url)?, bounds)?, true),
+      None => {
+        let home = parse_home(&url)?;
+        start_loading(&app, &state, &target);
+        match create(&app, &id, home, bounds) {
+          Ok(created) => {
+            let _ = created.hide();
+            created
+          }
+          Err(err) => {
+            state.loading.lock().unwrap().remove(&target);
+            return Err(err);
+          }
+        }
+      }
     }
   };
 
@@ -213,17 +294,17 @@ pub async fn portal_show<R: Runtime>(
   if shown.as_deref() == Some(target.as_str()) {
     return Ok(());
   }
-  // A new webview is still loading on its dark background; only pages that
-  // are already there need the fade.
-  if !created {
-    let _ = webview.eval(FADE_IN);
-  }
   for (label, other) in portal_webviews(&app) {
     if label != target {
       let _ = other.hide();
     }
   }
-  webview.show().map_err(|e| e.to_string())?;
+  // A page still loading stays hidden; `finish_loading` shows it once this
+  // app is recorded as the one on screen.
+  if !state.loading.lock().unwrap().contains_key(&target) {
+    let _ = webview.eval(FADE_IN);
+    webview.show().map_err(|e| e.to_string())?;
+  }
   *shown = Some(target);
   Ok(())
 }
@@ -250,20 +331,28 @@ pub async fn portal_fade_out<R: Runtime>(app: AppHandle<R>, state: tauri::State<
   Ok(())
 }
 
-/// `back`, `forward`, `reload`, or `home` (which needs `url`).
+/// `back`, `forward`, `reload`, or `home` (which needs `url`). Reload and home
+/// hide the app until the page has loaded.
 #[tauri::command]
 pub async fn portal_nav<R: Runtime>(app: AppHandle<R>, id: String, action: String, url: Option<String>) -> Result<(), String> {
   let Some(webview) = find(&app, &id)? else { return Ok(()) };
   let result = match action.as_str() {
     "back" => webview.eval("history.back()"),
     "forward" => webview.eval("history.forward()"),
-    "reload" => webview.reload(),
+    "reload" => {
+      hide_while_loading(&app, &webview);
+      webview.reload()
+    }
     "home" => {
       let home = parse_home(url.as_deref().ok_or("home needs a url")?)?;
+      hide_while_loading(&app, &webview);
       webview.navigate(home)
     }
     other => return Err(format!("Unknown Portal action: {other}")),
   };
+  if result.is_err() {
+    finish_loading(&app, webview.label(), None);
+  }
   result.map_err(|e| e.to_string())
 }
 
@@ -286,8 +375,13 @@ pub async fn portal_open_external<R: Runtime>(app: AppHandle<R>, id: String, url
 pub async fn portal_sign_out<R: Runtime>(app: AppHandle<R>, id: String, url: String) -> Result<(), String> {
   match find(&app, &id)? {
     Some(webview) => {
+      let home = parse_home(&url)?;
       webview.clear_all_browsing_data().map_err(|e| e.to_string())?;
-      webview.navigate(parse_home(&url)?).map_err(|e| e.to_string())
+      hide_while_loading(&app, &webview);
+      webview.navigate(home).map_err(|e| {
+        finish_loading(&app, webview.label(), None);
+        e.to_string()
+      })
     }
     None => remove_dir(&data_dir(&app, &id)?),
   }
@@ -301,6 +395,7 @@ pub async fn portal_remove<R: Runtime>(app: AppHandle<R>, state: tauri::State<'_
   if let Some(webview) = find(&app, &id)? {
     let _ = webview.clear_all_browsing_data();
     webview.close().map_err(|e| e.to_string())?;
+    state.loading.lock().unwrap().remove(webview.label());
     let mut shown = state.shown.lock().unwrap();
     if shown.as_deref() == Some(webview.label()) {
       *shown = None;

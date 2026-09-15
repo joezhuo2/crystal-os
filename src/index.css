@@ -612,6 +612,27 @@
     color: var(--portal-a, hsl(var(--primary)));
   }
 
+  /* Page-loading placeholder (PortalSkeleton.tsx), tinted by the theme. */
+  .portal-skeleton {
+    background: color-mix(in srgb, var(--portal-a, #6366f1) 9%, transparent);
+  }
+
+  .portal-skeleton::after {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--portal-b, #818cf8) 16%, transparent) 50%,
+      transparent 100%
+    );
+  }
+
+  .portal-skeleton-badge {
+    background: color-mix(in srgb, var(--portal-surface, #0b0a14) 85%, transparent);
+    border: 1px solid color-mix(in srgb, var(--portal-a, #6366f1) 35%, transparent);
+    box-shadow: 0 0 24px color-mix(in srgb, var(--portal-a, #6366f1) 25%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
   .portal-orbit-icon {
     animation: portal-rotate 14s linear infinite;
     filter: drop-shadow(0 0 6px color-mix(in srgb, var(--portal-a) 60%, transparent));

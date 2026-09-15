@@ -5,6 +5,17 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-09-15 - Loading screens
+
+### Added
+
+- **Start-up splash.** The window no longer opens on an empty screen. `index.html` now contains a "Crystal OS / Loading…" splash (a crystal mark, the name, and a sweeping progress bar) that paints before the app bundle loads. React replaces it on its first render, and `AppSplash` (`src/components/layout/AppSplash.tsx`) shows the same splash while the saved session is restored, replacing the old spinner. The native window also gets a dark `backgroundColor` in `tauri.conf.json`, so there is no white frame before the page draws. Animations stop under *reduce motion*.
+- **Portal loading skeleton.** While an app's page loads, the Portal frame shows a skeleton of a web app (icon rail, list column, message area) tinted by the current Portal theme, with a "Loading <app>…" badge (`src/components/portal/PortalSkeleton.tsx`). It replaces the "Opening <app>…" spinner.
+
+### Changed
+
+- **Portal webviews stay hidden until their page has loaded** (`src-tauri/src/portal.rs`). Before, a new app showed WebView2's dark background until the site painted. A webview is now hidden on creation and on **Reload**, **Back to home page**, and **Sign out**, and shown (with the usual fade-in) when the page-load hook reports the page finished, provided that app is still the one on screen. A 20-second timeout (`LOAD_TIMEOUT`) shows it anyway if the page never finishes. **Back** and **Forward** do not hide the app.
+
 ## [0.5.1] - 2026-09-15 - Terminal tabs
 
 ### Added
