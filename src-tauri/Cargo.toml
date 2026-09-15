@@ -1,6 +1,6 @@
 [package]
 name = "crystal-os"
-version = "0.5.4"
+version = "0.5.5"
 description = "Crystal OS desktop shell"
 authors = ["Joe Zhuo"]
 license = ""

@@ -247,7 +247,7 @@ export default function PortalPage() {
 
   // The search bar is hidden on this tab (see Index), so the page takes its space.
   return (
-    <div className="flex flex-col gap-3 min-h-[20rem] h-[calc(100vh-7.5rem)] md:h-[calc(100vh-4.5rem)]">
+    <div className="flex flex-col gap-3 min-h-[20rem] h-[calc(100vh-7rem)] md:h-[calc(100vh-4rem)]">
       <header className="flex items-center gap-3 px-1">
         <Orbit className="w-6 h-6 portal-accent portal-orbit-icon" />
         <div className="min-w-0 flex-1">

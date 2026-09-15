@@ -59,6 +59,16 @@
     @apply border-border;
   }
 
+  /* The whole window is a fixed shell: individual panels (left sidebar,
+     the tab's <main> content area, the Terminal/Portal pages) own their own
+     scrolling. Without this, any content taller or wider than the viewport
+     grows html/body and the entire app scrolls into empty space. */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;

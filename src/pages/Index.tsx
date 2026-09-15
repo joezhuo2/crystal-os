@@ -91,11 +91,11 @@ const Index = () => {
 
   return (
     <AppProvider>
-      <div className={`min-h-screen flex isolate ${rootClass}`}>
+      <div className={`h-screen flex isolate overflow-hidden ${rootClass}`}>
         {activeTab === "terminal" && <TerminalStatic />}
         {activeTab === "portal" && <PortalBackdrop theme={portalTheme} />}
         <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
-        <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
+        <main className="flex-1 min-h-0 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
           {/* Unmounted on the Terminal and Portal tabs: hides the bar and drops
               its shortcuts. On the Portal it would open under the app webview. */}
           {activeTab !== "terminal" && activeTab !== "portal" && <CommandPalette onNavigate={setActiveTab} />}

@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2026-09-15 - Locked page scrolling
+
+### Fixed
+
+- **The window no longer scrolls into empty space.** Nothing pinned the app's height before: `html` and `body` rolled freely and the tab's `<main>` panel could not shrink (it is a flex item whose `min-height: auto` keeps it as tall as its content), so whenever a page's content was taller or wider than the viewport the *whole window* scrolled — up, down, and sideways into blank space — instead of the panel scrolling. `html` and `body` are now `overflow: hidden` (`src/index.css`), the app shell is a fixed `h-screen` frame (`src/pages/Index.tsx`), and `<main>` is `min-h-0` so it carries the scrolling. Every tab now scrolls inside its own content area: long pages scroll in the content panel, the Tasks board keeps its own horizontal scroll, and the sidebar and search bar stay put.
+- **Terminal and Portal frames fit the shell.** Their heights were sized for the old, unbounded layout and are now set to the shell's real content box (`calc(100vh - 4rem)` on desktop, `calc(100vh - 7rem)` on mobile), so no residual scrollbar sits between them and the window edge.
+
 ## [0.5.4] - 2026-09-15 - Themed app pill hover
 
 ### Changed
