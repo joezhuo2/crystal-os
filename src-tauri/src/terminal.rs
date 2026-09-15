@@ -1,8 +1,8 @@
-//! Terminal tab: one PowerShell session on a real pseudoconsole (ConPTY on
-//! Windows), streamed to xterm.js in the webview.
+//! Terminal tab: up to `MAX_SESSIONS` PowerShell sessions, each on its own
+//! pseudoconsole (ConPTY on Windows), streamed to xterm.js in the webview.
 //!
-//! The session lives here rather than in the view, so switching tabs does not
-//! kill the shell; `terminal_attach` hands back the scrollback to redraw.
+//! Sessions live here rather than in the view, so switching tabs does not
+//! kill the shells; `terminal_attach` hands back the scrollback to redraw.
 //!
 //! A child process inherits the app's environment, which is frozen at launch,
 //! so a package installed later is missing from PATH. `terminal_restart` reads
@@ -20,6 +20,9 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 const OUTPUT_EVENT: &str = "terminal://output";
 const EXIT_EVENT: &str = "terminal://exit";
+
+/// Shells that can run at once.
+pub const MAX_SESSIONS: usize = 5;
 
 /// Output kept for redrawing the view after a tab switch.
 const SCROLLBACK_BYTES: usize = 256 * 1024;
@@ -49,7 +52,8 @@ struct Scrollback {
 
 #[derive(Default)]
 pub struct TerminalState {
-  session: Mutex<Option<Session>>,
+  /// In tab order. Restart replaces a session in place.
+  sessions: Mutex<Vec<Session>>,
   next_id: AtomicU64,
 }
 
@@ -62,6 +66,15 @@ pub struct TerminalInfo {
   scrollback: String,
   /// Output offset the scrollback runs up to.
   scrollback_end: u64,
+  exited: bool,
+}
+
+/// Mirrors `TerminalSummary` in src/lib/terminalNative.ts.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalSummary {
+  id: u64,
+  shell: String,
   exited: bool,
 }
 
@@ -89,6 +102,10 @@ impl Session {
       scrollback_end: scrollback.end,
       exited: self.master.is_none(),
     }
+  }
+
+  fn summary(&self) -> TerminalSummary {
+    TerminalSummary { id: self.id, shell: self.shell.clone(), exited: self.master.is_none() }
   }
 
   fn kill(mut self) {
@@ -360,8 +377,8 @@ fn spawn_session(app: &AppHandle, state: &TerminalState, cols: u16, rows: u16) -
     let code = child.wait().ok().map(|status| status.exit_code());
     let master = {
       let state = app_handle.state::<TerminalState>();
-      let mut session = state.session.lock().unwrap();
-      session.as_mut().filter(|s| s.id == id).and_then(|s| s.master.take())
+      let mut sessions = state.sessions.lock().unwrap();
+      sessions.iter_mut().find(|s| s.id == id).and_then(|s| s.master.take())
     };
     drop(master);
     let _ = reader_thread.join();
@@ -378,51 +395,93 @@ fn spawn_session(app: &AppHandle, state: &TerminalState, cols: u16, rows: u16) -
   })
 }
 
-/// Kills the shell. Called when the app exits.
+/// Kills every shell. Called when the app exits.
 pub fn shutdown(app: &AppHandle) {
-  if let Some(session) = app.state::<TerminalState>().session.lock().unwrap().take() {
-    session.kill();
-  }
+  let sessions = std::mem::take(&mut *app.state::<TerminalState>().sessions.lock().unwrap());
+  sessions.into_iter().for_each(Session::kill);
+}
+
+fn limit_error(open: usize) -> Option<String> {
+  (open >= MAX_SESSIONS).then(|| format!("At most {MAX_SESSIONS} terminals can run at once."))
+}
+
+fn no_session(id: u64) -> String {
+  format!("Terminal {id} is not running.")
 }
 
 /* ------------------------------------------------------------------ *
  * Commands
  * ------------------------------------------------------------------ */
 
-/// Returns the running session, starting one if there is none.
+/// The running sessions in tab order, without their scrollback.
 #[tauri::command]
-pub fn terminal_attach(app: AppHandle, state: State<'_, TerminalState>, cols: u16, rows: u16) -> Result<TerminalInfo, String> {
-  let mut session = state.session.lock().unwrap();
-  if let Some(current) = session.as_ref() {
-    if let Some(master) = current.master.as_ref() {
-      let _ = master.resize(pty_size(cols, rows));
-    }
-    return Ok(current.info());
+pub fn terminal_list(state: State<'_, TerminalState>) -> Vec<TerminalSummary> {
+  state.sessions.lock().unwrap().iter().map(Session::summary).collect()
+}
+
+/// Starts a new shell as the last tab.
+#[tauri::command]
+pub fn terminal_open(app: AppHandle, state: State<'_, TerminalState>, cols: u16, rows: u16) -> Result<TerminalInfo, String> {
+  if let Some(err) = limit_error(state.sessions.lock().unwrap().len()) {
+    return Err(err);
   }
   let next = spawn_session(&app, &state, cols, rows)?;
   let info = next.info();
-  *session = Some(next);
+  let mut sessions = state.sessions.lock().unwrap();
+  // Checked again: another open may have finished while this shell started.
+  if let Some(err) = limit_error(sessions.len()) {
+    drop(sessions);
+    next.kill();
+    return Err(err);
+  }
+  sessions.push(next);
   Ok(info)
 }
 
-/// Kills the current shell and starts a new one with PATH and the other
-/// variables read again from the registry.
+/// Resizes session `id` to the view and returns it with its scrollback.
 #[tauri::command]
-pub fn terminal_restart(app: AppHandle, state: State<'_, TerminalState>, cols: u16, rows: u16) -> Result<TerminalInfo, String> {
-  let old = state.session.lock().unwrap().take();
-  if let Some(old) = old {
-    old.kill();
+pub fn terminal_attach(state: State<'_, TerminalState>, id: u64, cols: u16, rows: u16) -> Result<TerminalInfo, String> {
+  let sessions = state.sessions.lock().unwrap();
+  let session = sessions.iter().find(|s| s.id == id).ok_or_else(|| no_session(id))?;
+  if let Some(master) = session.master.as_ref() {
+    let _ = master.resize(pty_size(cols, rows));
   }
+  Ok(session.info())
+}
+
+/// Kills session `id` and starts a new shell in its place, with PATH and the
+/// other variables read again from the registry. The new session has a new id.
+#[tauri::command]
+pub fn terminal_restart(app: AppHandle, state: State<'_, TerminalState>, id: u64, cols: u16, rows: u16) -> Result<TerminalInfo, String> {
   let next = spawn_session(&app, &state, cols, rows)?;
   let info = next.info();
-  *state.session.lock().unwrap() = Some(next);
+  let mut sessions = state.sessions.lock().unwrap();
+  let Some(slot) = sessions.iter_mut().find(|s| s.id == id) else {
+    drop(sessions);
+    next.kill();
+    return Err(no_session(id));
+  };
+  let old = std::mem::replace(slot, next);
+  drop(sessions);
+  old.kill();
   Ok(info)
 }
 
+/// Kills session `id` and removes its tab. Closing one that is gone is not an error.
 #[tauri::command]
-pub fn terminal_write(state: State<'_, TerminalState>, data: String) -> Result<(), String> {
-  let mut session = state.session.lock().unwrap();
-  match session.as_mut() {
+pub fn terminal_close(state: State<'_, TerminalState>, id: u64) {
+  let mut sessions = state.sessions.lock().unwrap();
+  if let Some(index) = sessions.iter().position(|s| s.id == id) {
+    let session = sessions.remove(index);
+    drop(sessions);
+    session.kill();
+  }
+}
+
+#[tauri::command]
+pub fn terminal_write(state: State<'_, TerminalState>, id: u64, data: String) -> Result<(), String> {
+  let mut sessions = state.sessions.lock().unwrap();
+  match sessions.iter_mut().find(|s| s.id == id) {
     Some(s) if s.master.is_some() => {
       s.writer.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
       s.writer.flush().map_err(|e| e.to_string())
@@ -432,9 +491,9 @@ pub fn terminal_write(state: State<'_, TerminalState>, data: String) -> Result<(
 }
 
 #[tauri::command]
-pub fn terminal_resize(state: State<'_, TerminalState>, cols: u16, rows: u16) -> Result<(), String> {
-  let session = state.session.lock().unwrap();
-  if let Some(master) = session.as_ref().and_then(|s| s.master.as_ref()) {
+pub fn terminal_resize(state: State<'_, TerminalState>, id: u64, cols: u16, rows: u16) -> Result<(), String> {
+  let sessions = state.sessions.lock().unwrap();
+  if let Some(master) = sessions.iter().find(|s| s.id == id).and_then(|s| s.master.as_ref()) {
     master.resize(pty_size(cols, rows)).map_err(|e| e.to_string())?;
   }
   Ok(())
@@ -497,6 +556,12 @@ mod tests {
     let vars = BTreeMap::from([("A".to_string(), ("A".to_string(), "1".to_string()))]);
     assert_eq!(expand_vars("100% %A%", &vars), "100% 1");
     assert_eq!(expand_vars("%%A%", &vars), "%1");
+  }
+
+  #[test]
+  fn limits_open_sessions() {
+    assert_eq!(limit_error(MAX_SESSIONS - 1), None);
+    assert!(limit_error(MAX_SESSIONS).is_some());
   }
 
   #[test]

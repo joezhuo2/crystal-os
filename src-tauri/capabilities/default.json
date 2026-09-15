@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Main window permissions. No shell, fs, or dialog plugin access for the webview: the sidecar is spawned from Rust, and the vault is only reachable through the vault commands, which confine every path to the folder the user picked (src-tauri/src/vault.rs). Portal webviews load remote https sites; this capability has no remote entry, so those pages cannot call any command (src-tauri/src/portal.rs). The Terminal tab can run anything the user types: the terminal commands drive one shell spawned from Rust (src-tauri/src/terminal.rs).",
+  "description": "Main window permissions. No shell, fs, or dialog plugin access for the webview: the sidecar is spawned from Rust, and the vault is only reachable through the vault commands, which confine every path to the folder the user picked (src-tauri/src/vault.rs). Portal webviews load remote https sites; this capability has no remote entry, so those pages cannot call any command (src-tauri/src/portal.rs). The Terminal tab can run anything the user types: the terminal commands drive up to five shells spawned from Rust (src-tauri/src/terminal.rs).",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -21,8 +21,11 @@
     "allow-read-vault-file",
     "allow-write-vault-file",
     "allow-watch-vault",
+    "allow-terminal-list",
+    "allow-terminal-open",
     "allow-terminal-attach",
     "allow-terminal-restart",
+    "allow-terminal-close",
     "allow-terminal-write",
     "allow-terminal-resize",
     "allow-portal-show",

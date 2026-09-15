@@ -5,6 +5,21 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-09-15 - Terminal tabs
+
+### Added
+
+- **Up to 5 terminals in parallel.** The Terminal page has a tab strip above the frame (`src/components/views/TerminalPage.tsx`): one tab per shell, **+** to open another, **×** or middle-click to close one, and an `n/5` counter. Each shell runs on its own pseudoconsole and keeps running while another tab (or another page) is shown, so a long build in one tab does not block the others. The last remaining terminal cannot be closed. Returning to the Terminal page selects the tab used last.
+- **Tab shortcuts** while a terminal has focus: **Ctrl+Shift+T** opens a tab, **Ctrl+Shift+W** closes the current one, **Ctrl+Tab** / **Ctrl+Shift+Tab** cycle through tabs.
+- New commands `terminal_list`, `terminal_open`, and `terminal_close`, each allowlisted in `capabilities/default.json`. `terminal_open` refuses a sixth shell (`MAX_SESSIONS` in `src-tauri/src/terminal.rs`, mirrored as `MAX_TERMINALS` in `src/lib/terminalNative.ts`).
+
+### Changed
+
+- `terminal_attach`, `terminal_restart`, `terminal_write`, and `terminal_resize` now take the shell's `id`. `terminal_attach` no longer starts a shell; the page lists running shells and opens one only when there are none. **Refresh** restarts only the selected shell and keeps its tab position.
+- Output events are routed per shell by a new `TerminalHub` in `terminalNative.ts`, which holds a new shell's early output until its view attaches and drops events from closed or refreshed shells. `TerminalStream` now handles a single session only.
+- All running shells are killed when the app quits.
+- Tests: `terminalNative.test.ts` covers routing between shells, early output, Refresh, and remounting (8 tests); `terminal.rs` adds a test for the session limit.
+
 ## [0.5.0] - 2026-09-14 - The Portal
 
 ### Added

@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-184%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.5.0-6366F1)
+![Version](https://img.shields.io/badge/version-0.5.1-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.5.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.5.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -147,7 +147,7 @@ src/
 │   │   ├── FinancialsPage.tsx  # Transactions, summaries, charts
 │   │   ├── WeatherPage.tsx     # Detailed weather view
 │   │   ├── ArchivePage.tsx     # Vault browser: search, tags, markdown reader
-│   │   ├── TerminalPage.tsx    # PowerShell terminal (xterm.js, desktop only)
+│   │   ├── TerminalPage.tsx    # Up to 5 PowerShell terminals in tabs (xterm.js, desktop only)
 │   │   ├── PortalPage.tsx      # The Portal: places the active app's webview over its frame
 │   │   ├── SettingsPage.tsx    # Hotkeys, launch at login, vault folder, Portal theme
 │   │   ├── PomodoroTimer.tsx   # Focus timer component
@@ -172,7 +172,7 @@ src/
 │   ├── supabase.ts             # Supabase client + helpers
 │   ├── vaultCore.ts            # Shared vault logic: parsing, search, tags, quick-add formatting
 │   ├── vaultNative.ts          # Desktop vault client for src-tauri/src/vault.rs
-│   ├── terminalNative.ts       # Desktop terminal bridge (terminal_* commands)
+│   ├── terminalNative.ts       # Desktop terminal bridge (terminal_* commands, event routing per shell)
 │   ├── portalApps.ts           # Portal presets, URL/id validation, badge parsing
 │   ├── portalStore.ts          # Module-level Portal store: apps, active app, badges, theme
 │   ├── portalNative.ts         # Desktop Portal bridge (portal_* commands)
@@ -199,7 +199,7 @@ src-tauri/
 │   ├── autostart.rs            # Launch-at-login (--hidden) registration
 │   ├── settings.rs             # settings.json read/write (hotkeys, vaultPath, launchAtLogin)
 │   ├── vault.rs                # Native vault I/O: list/read/write/status/watch
-│   ├── terminal.rs             # ConPTY PowerShell shell
+│   ├── terminal.rs             # ConPTY PowerShell shells (up to 5)
 │   └── portal.rs               # Portal child webviews: show/hide/fade, per-app data, sign-out
 ├── capabilities/
 │   └── default.json            # App command allowlist by name
@@ -358,11 +358,13 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 
 **Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: both global hotkeys, **Launch at login**, the vault folder, and The Portal's theme. The palette's **Open Settings** row goes there too.
 
-**Terminal.** The terminal icon above Settings opens a PowerShell terminal (PowerShell 7 if installed, otherwise Windows PowerShell) running on a real pseudoconsole, so colours, tab completion, and interactive prompts work. The shell keeps running while you switch tabs and is killed when Crystal OS quits.
+**Terminal.** The terminal icon above Settings opens a PowerShell terminal (PowerShell 7 if installed, otherwise Windows PowerShell) running on a real pseudoconsole, so colours, tab completion, and interactive prompts work. Shells keep running while you switch tabs and are killed when Crystal OS quits.
 
-- **Refresh** restarts the shell with PATH and the other environment variables read again from the registry. Use it after installing something (`winget`, `npm -g`, an installer) that the terminal does not find yet: a running app keeps the environment it started with, so a plain restart of the shell would not see the change.
+- **Up to 5 terminals at once.** The strip above the frame has one tab per shell, **+** to open another (disabled at the limit, shown as `n/5`), and **×** to close one. Middle-click also closes a tab. The last terminal cannot be closed. Every shell keeps running in the background; switching tabs never interrupts a command. Coming back to the Terminal page reopens the tab you last used.
+- Shortcuts while a terminal has focus: **Ctrl+Shift+T** new tab, **Ctrl+Shift+W** close tab, **Ctrl+Tab** / **Ctrl+Shift+Tab** next / previous tab.
+- **Refresh** restarts the selected shell with PATH and the other environment variables read again from the registry. Use it after installing something (`winget`, `npm -g`, an installer) that the terminal does not find yet: a running app keeps the environment it started with, so a plain restart of the shell would not see the change.
 - Ctrl+C copies when text is selected and interrupts otherwise; Ctrl+V pastes.
-- The shell runs in Rust (`src-tauri/src/terminal.rs`) and the view talks to it through `terminal_attach`, `terminal_restart`, `terminal_write`, and `terminal_resize` (`src/lib/terminalNative.ts`).
+- The shells run in Rust (`src-tauri/src/terminal.rs`) and the view talks to them through `terminal_list`, `terminal_open`, `terminal_attach`, `terminal_restart`, `terminal_close`, `terminal_write`, and `terminal_resize` (`src/lib/terminalNative.ts`). Every command after `terminal_open` takes the shell's `id`; the Rust side enforces the limit of 5.
 - While the tab is open the window switches to a black, glitching monochrome look, and the search bar is hidden.
 
 **The Portal.** The orbit icon above Terminal opens **The Portal**, where web apps such as Discord and Instagram run as real pages that you sign in to once. See [ADR 0002](docs/adr/0002-portal-child-webviews.md) for how it works.

@@ -324,6 +324,49 @@
     66%  { box-shadow: 0 0 0 1px #000; }
   }
 
+  /* One pill per shell above the terminal frame. */
+  .terminal-tab {
+    @apply inline-flex h-8 max-w-[12rem] shrink-0 items-center rounded-sm text-[11px] uppercase tracking-[0.14em] transition-colors duration-150;
+    font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+    background: #000;
+    color: #a3a3a3;
+    border: 1px solid rgb(255 255 255 / 0.12);
+  }
+
+  .terminal-tab:hover {
+    color: #e5e5e5;
+    border-color: rgb(255 255 255 / 0.3);
+  }
+
+  .terminal-tab[data-active] {
+    color: #fafafa;
+    border-color: #fafafa;
+    box-shadow: 0 0 10px rgb(255 255 255 / 0.18), inset 0 -2px 0 #fafafa;
+  }
+
+  .terminal-tab[data-exited] .terminal-tab-label {
+    @apply line-through decoration-neutral-600;
+  }
+
+  .terminal-tab-label {
+    @apply flex h-full min-w-0 items-center gap-2 pl-3 pr-3 cursor-pointer;
+  }
+
+  .terminal-tab-close {
+    @apply -ml-1.5 mr-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-neutral-500 cursor-pointer;
+  }
+
+  .terminal-tab-close:hover {
+    background: #fafafa;
+    color: #000;
+  }
+
+  .terminal-tab-label:focus-visible,
+  .terminal-tab-close:focus-visible {
+    outline: 2px solid #fafafa;
+    outline-offset: 1px;
+  }
+
   /* Sidebar while the Terminal tab is open. */
   .sidebar-terminal {
     background: rgb(0 0 0 / 0.72);
