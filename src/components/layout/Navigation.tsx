@@ -151,7 +151,13 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
       transition={{ type: "spring", bounce: 0.15, duration: 0.35 }}
       className={`hidden md:flex flex-col h-screen sticky top-0 glass-card border-r border-t-0 border-b-0 border-l-0 rounded-none pl-3 pr-[11px] pb-4 pt-8 gap-2 overflow-hidden transition-colors duration-300 ${sidebarClass}`}
     >
-      <div className="mb-8 px-3 whitespace-nowrap overflow-hidden">
+      <button
+        type="button"
+        onClick={() => onTabChange("home")}
+        className={`block w-full text-left mb-8 px-3 whitespace-nowrap overflow-hidden cursor-pointer transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${terminal ? "rounded-sm" : "rounded-lg"}`}
+        aria-label="Go to home"
+        title={!expanded ? "Home" : undefined}
+      >
         <AnimatePresence mode="wait">
           {expanded ? (
             <motion.div key="full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
@@ -182,7 +188,7 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </button>
       <nav className="flex flex-col gap-1">{tabs.map((tab) => button(tab))}</nav>
       <div className="mt-auto flex flex-col gap-1">
         {button(portalTab, portalBadge)}

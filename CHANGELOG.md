@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-09-15 - Home shortcut
+
+### Added
+
+- **Clickable sidebar logo.** The Crystal OS mark at the top left of the sidebar (the "C" when collapsed, the full name when expanded) is now a button that opens **The Pulse** (home) from any page, including Terminal and Portal. It has a hover fade, a keyboard focus ring, and a "Go to home" label for screen readers (`src/components/layout/Navigation.tsx`).
+
 ## [0.5.2] - 2026-09-15 - Loading screens
 
 ### Added

@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-187%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.5.2-6366F1)
+![Version](https://img.shields.io/badge/version-0.5.3-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.5.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.5.3** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -358,7 +358,7 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 2. Add `http://127.0.0.1:8787/api/calendar/auth/callback` as a second authorized redirect URI on your Google OAuth client, and set `GOOGLE_REDIRECT_URI` to it in that copy.
 3. Launch Crystal OS. **Connect** in The Horizon opens Google in your default browser. Once it reports success, switch back to the app.
 
-**Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: both global hotkeys, **Launch at login**, the vault folder, and The Portal's theme. The palette's **Open Settings** row goes there too.
+**Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: both global hotkeys, **Launch at login**, the vault folder, and The Portal's theme. The palette's **Open Settings** row goes there too. Click the Crystal OS mark at the top of the sidebar to return to **The Pulse** (home) from any page.
 
 **Terminal.** The terminal icon above Settings opens a PowerShell terminal (PowerShell 7 if installed, otherwise Windows PowerShell) running on a real pseudoconsole, so colours, tab completion, and interactive prompts work. Shells keep running while you switch tabs and are killed when Crystal OS quits.
 
