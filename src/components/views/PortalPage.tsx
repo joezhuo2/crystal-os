@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, MonitorSmartphone, Orbit, Plus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
-import PortalNavbar, { AppIcon } from "@/components/portal/PortalNavbar";
+import PortalNavbar, { AppIcon, type Confirm } from "@/components/portal/PortalNavbar";
 import AddPortalAppDialog from "@/components/portal/AddPortalAppDialog";
 import PortalSkeleton from "@/components/portal/PortalSkeleton";
 import { startPortalSession, usePortal, usePortalOcclusion } from "@/hooks/usePortal";
@@ -72,6 +72,7 @@ export default function PortalPage() {
   const active = apps.find((a) => a.id === activeId) ?? null;
   const hostRef = useRef<HTMLDivElement>(null);
   const [adding, setAdding] = useState(false);
+  const [confirm, setConfirm] = useState<Confirm>(null);
   const [error, setError] = useState<{ id: string; message: string } | null>(null);
   const [attempt, setAttempt] = useState(0);
   // The app being switched to while the current one fades out.
@@ -201,6 +202,44 @@ export default function PortalPage() {
     if (desktop) removePortalApp(app.id).catch(fail(`Could not delete ${app.name}'s data`));
   };
 
+  /** Move to the next (−1) or previous (−1) connected app, wrapping around. */
+  const cycle = (direction: -1 | 1) => {
+    if (apps.length === 0 || !activeId) return;
+    const next = (apps.findIndex((a) => a.id === activeId) + direction + apps.length) % apps.length;
+    select(apps[next]);
+  };
+
+  // Browser-style tab shortcuts for the Portal, desktop only. Ctrl+Tab cycles
+  // the connected apps, Ctrl+W removes the active one (confirmed), and Ctrl+R
+  // reloads it. Under the Tauri webview, Ctrl+R would otherwise reload the whole
+  // app — which drops you back on the Home tab while the child webview (Discord,
+  // Instagram…) stays up over the page. preventDefault stops that default reload.
+  useEffect(() => {
+    if (!desktop) return;
+    const handler = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || e.altKey) return;
+
+      // Don't hijack keys while an overlay or dialog is up, or while typing.
+      if (occluders > 0) return;
+      const target = e.target as Element | null;
+      if (target && (target.closest("input, textarea, [contenteditable='true']") || target.isContentEditable)) return;
+
+      if (e.code === "Tab") {
+        e.preventDefault();
+        cycle(e.shiftKey ? -1 : 1);
+      } else if (e.code === "KeyW") {
+        e.preventDefault();
+        if (active) setConfirm({ kind: "remove", app: active });
+      } else if (e.code === "KeyR") {
+        e.preventDefault();
+        if (active) navigate(active, "reload");
+      }
+    };
+    window.addEventListener("keydown", handler, { capture: true });
+    return () => window.removeEventListener("keydown", handler, { capture: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desktop, occluders, apps, activeId, active]);
+
   let content: React.ReactNode;
   if (apps.length === 0) {
     content = <EmptyState onConnect={add} onCustom={() => setAdding(true)} />;
@@ -269,6 +308,8 @@ export default function PortalPage() {
         apps={apps}
         activeId={pendingId ?? activeId}
         badges={badges}
+        confirm={confirm}
+        onConfirmChange={setConfirm}
         onSelect={select}
         onReorder={portal.reorder}
         onAdd={() => setAdding(true)}

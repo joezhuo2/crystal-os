@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-187%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.5.5-6366F1)
+![Version](https://img.shields.io/badge/version-0.5.6-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.5.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.5.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -378,6 +378,7 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 - **Loading.** While an app's page loads (first open, **Reload**, **Back to home page**, **Sign out**), the frame shows a skeleton of a web app in the theme's colours with "Loading <app>…". The page appears, fading in, once it has finished loading, or after 20 seconds if it never reports that.
 - **Always on.** Apps load the first time you open The Portal after launching Crystal OS, then keep running while you use other tabs. Unread counts from their page titles show on each pill and on the sidebar's Portal icon.
 - **Themes.** Choose **Void swirl** (default), **Event horizon**, or **Stargate blue** under **Settings → The Portal**. The theme styles the backdrop, sidebar, navbar, and the animated ring around the app.
+- **Keyboard shortcuts (desktop).** While a Portal app is on screen: **Ctrl+Tab** cycles to the next app, **Ctrl+Shift+Tab** cycles to the previous one, **Ctrl+W** opens the Remove confirmation, and **Ctrl+R** reloads the active app. Shortcuts are disabled while a dialog is open or the focus is inside a text field. `Ctrl+R` prevents Tauri's default full-page reload, which would otherwise drop you to the Home tab.
 - **Web build.** Browsers refuse to embed these sites in another page, so there the Portal keeps your app list and opens each app in a new tab.
 - The app pages draw above Crystal OS's own UI, so the search bar is hidden on this tab and dialogs (such as tray **Quick Add**) hide the app while they are open. The pages get no access to Crystal OS commands. The view talks to Rust through the `portal_*` commands in `src/lib/portalNative.ts`.
 

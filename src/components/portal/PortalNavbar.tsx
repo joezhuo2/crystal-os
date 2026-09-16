@@ -89,13 +89,15 @@ function PortalTip({
   );
 }
 
-type Confirm = { kind: "signout" | "remove"; app: PortalApp } | null;
+export type Confirm = { kind: "signout" | "remove"; app: PortalApp } | null;
 
 interface PortalNavbarProps {
   desktop: boolean;
   apps: PortalApp[];
   activeId: string | null;
   badges: Record<string, PortalBadge>;
+  confirm: Confirm;
+  onConfirmChange: (confirm: Confirm) => void;
   onSelect: (app: PortalApp) => void;
   onReorder: (ids: string[]) => void;
   onAdd: () => void;
@@ -115,6 +117,8 @@ export default function PortalNavbar({
   apps,
   activeId,
   badges,
+  confirm,
+  onConfirmChange,
   onSelect,
   onReorder,
   onAdd,
@@ -124,7 +128,6 @@ export default function PortalNavbar({
   onRemove,
 }: PortalNavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [confirm, setConfirm] = useState<Confirm>(null);
   usePortalOcclusion(menuOpen || confirm !== null);
 
   const active = apps.find((a) => a.id === activeId) ?? null;
@@ -133,7 +136,7 @@ export default function PortalNavbar({
     if (!confirm) return;
     if (confirm.kind === "signout") onSignOut(confirm.app);
     else onRemove(confirm.app);
-    setConfirm(null);
+    onConfirmChange(null);
   };
 
   return (
@@ -188,13 +191,13 @@ export default function PortalNavbar({
                       <ExternalLink className="w-4 h-4 mr-2" /> Open in browser
                     </ContextMenuItem>
                     <ContextMenuSeparator />
-                    <ContextMenuItem onSelect={() => setConfirm({ kind: "signout", app })}>
+                    <ContextMenuItem onSelect={() => onConfirmChange({ kind: "signout", app })}>
                       <LogOut className="w-4 h-4 mr-2" /> Sign out…
                     </ContextMenuItem>
                   </>
                 )}
                 <ContextMenuItem
-                  onSelect={() => setConfirm({ kind: "remove", app })}
+                  onSelect={() => onConfirmChange({ kind: "remove", app })}
                   className="text-destructive focus:text-destructive"
                 >
                   <Trash2 className="w-4 h-4 mr-2" /> Remove…
@@ -237,7 +240,7 @@ export default function PortalNavbar({
         </div>
       )}
 
-      <AlertDialog open={confirm !== null} onOpenChange={(open) => !open && setConfirm(null)}>
+      <AlertDialog open={confirm !== null} onOpenChange={(open) => !open && onConfirmChange(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>

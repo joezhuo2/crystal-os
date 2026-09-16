@@ -5,6 +5,16 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2026-09-16 - Portal keyboard shortcuts
+
+### Added
+
+- **Browser-style tab shortcuts for The Portal (desktop).** Three keyboard shortcuts work while a Portal app is on screen, matching common browser conventions: **Ctrl+Tab** cycles to the next connected app, **Ctrl+Shift+Tab** cycles to the previous one (wrapping at both ends), **Ctrl+W** opens the **Remove…** confirmation for the active app, and **Ctrl+R** reloads it. These only fire when the Portal is the active tab, no overlay is open, and the focus is not inside a text field. `Ctrl+R` in particular prevents Tauri's default behaviour of reloading the whole app, which used to drop you back on the Home tab while the child webview stayed visible over the page (`src/components/views/PortalPage.tsx`).
+
+### Changed
+
+- **Confirm dialog state lifted from navbar to page.** The `sign out` / `remove` confirmation dialog state was moved out of `PortalNavbar` and into `PortalPage`, so both the right-click context menu and the new keyboard shortcuts can open it. The navbar now receives `confirm` and `onConfirmChange` as props (`src/components/portal/PortalNavbar.tsx`).
+
 ## [0.5.5] - 2026-09-15 - Locked page scrolling
 
 ### Fixed
