@@ -5,6 +5,21 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.4] - 2026-09-18 - Self-Hosted Fonts & Clean Builds
+
+### Changed
+
+- **Inter font is now self-hosted via `@fontsource-variable/inter`.** The Google Fonts CDN link in `index.html` was removed because the desktop app's Content Security Policy blocks it, causing the app to silently fall back to the system font. The variable font is now bundled and loaded locally, so the exact same typography renders in both the web and desktop builds. Font references in `tailwind.config.ts`, `src/index.css`, and `index.html` (boot splash) were updated to `Inter Variable` first, with `Inter` as fallback.
+
+### Added
+
+- **`prune:bundles` script.** `npm run build:desktop` now runs `prune:bundles` first, which removes stale MSI and NSIS installers from previous versions in `src-tauri/target/release/bundle/`. Without this, each build left ~70 MB of old installers. The script keeps only installers matching the current `package.json` version.
+- **`@fontsource-variable/inter` dependency** (v5.3.0) for self-hosted variable Inter font.
+
+### Removed
+
+- Google Fonts preconnect and stylesheet links from `index.html`.
+
 ## [v0.6.3] - 2026-09-17 - Lighter Load
 
 ### Fixed

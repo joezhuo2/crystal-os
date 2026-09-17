@@ -11,9 +11,6 @@
 
 - in the bottom of the settings menu, add a place to download the latest exe installer or build the latest one (for latest released version), and add option for user to choose which version they want to download
 
-# Cleanup
-- remove old project files created by `npm run build:desktop` or `npm run build`
-
 # Performance
 
 ## CPU Usage
@@ -38,8 +35,6 @@
 - [ ] **Code-split renderer bundle with manualChunks** — `dist/assets/index-*.js` is 1.59 MB raw with no splitting. recharts, framer-motion, @supabase/supabase-js, lucide-react all inlined. Add `build.rollupOptions.output.manualChunks` in vite config. (`vite.config.ts`)
 
 - [ ] **Add compression plugin** — no `vite-plugin-compression` / brotli / gzip in build config. 1.59 MB raw entry serves uncompressed; gzip would cut ~65-70%. (`vite.config.ts`, `package.json`)
-
-- [ ] **Self-host Google Fonts offline** — render-blocking Google Fonts stylesheet fetch on every desktop app launch despite `display=swap`. Better: self-host the woff2 subset since this is a Tauri desktop app. (`index.html:9-11`)
 
 - [ ] **Dedupe FinancialsPage index keys** — `data.map((entry, i) => <Cell key={i} .../>)` uses index keys on data-driven pie slices; reorder/re-fetch remounts rows. Use stable key. (`src/components/views/FinancialsPage.tsx:104`)
 
