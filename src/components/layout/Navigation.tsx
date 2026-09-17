@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings, SquareTerminal, Orbit } from "lucide-react";
+import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings, SquareTerminal, Orbit, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
 import { usePortal } from "@/hooks/usePortal";
 import { badgeLabel, type PortalBadge } from "@/lib/portalApps";
 import { selectBadgeTotal } from "@/lib/portalStore";
 
-export type TabId = "home" | "tasks" | "calendar" | "financials" | "weather" | "archive" | "portal" | "terminal" | "settings";
+export type TabId = "home" | "tasks" | "calendar" | "financials" | "weather" | "archive" | "portal" | "nebula" | "terminal" | "settings";
 
 interface Tab {
   id: TabId;
@@ -35,8 +35,11 @@ const terminalTab: Tab = { id: "terminal", label: "Terminal", icon: SquareTermin
  */
 const portalTab: Tab = { id: "portal", label: "The Portal", icon: Orbit };
 
-/** The Terminal and Portal tabs restyle the sidebar to match their pages. */
-type SidebarMode = "default" | "terminal" | "portal";
+/** Desktop only, above The Portal. Agents run in Rust (src-tauri/src/harness/). */
+const nebulaTab: Tab = { id: "nebula", label: "The Nebula", icon: Sparkles };
+
+/** The Terminal, Portal, Nebula, and Archive tabs restyle the sidebar to match their pages. */
+type SidebarMode = "default" | "terminal" | "portal" | "nebula" | "obsidian";
 
 interface SidebarNavProps {
   activeTab: TabId;
@@ -51,6 +54,17 @@ const activePillStyle: Record<SidebarMode, React.CSSProperties> = {
     background: "color-mix(in srgb, var(--portal-a) 18%, transparent)",
     border: "1px solid color-mix(in srgb, var(--portal-a) 45%, transparent)",
     boxShadow: "0 0 18px color-mix(in srgb, var(--portal-a) 35%, transparent)",
+  },
+  // Colours come from the --nebula-* variables on the page root (Index.tsx).
+  nebula: {
+    background: "color-mix(in srgb, var(--nebula-a) 22%, transparent)",
+    border: "1px solid color-mix(in srgb, var(--nebula-c) 40%, transparent)",
+    boxShadow: "0 0 18px color-mix(in srgb, var(--nebula-b) 30%, transparent)",
+  },
+  obsidian: {
+    background: "rgb(168 85 247 / 0.22)",
+    border: "1px solid rgb(216 180 254 / 0.4)",
+    boxShadow: "0 0 18px rgb(168 85 247 / 0.35)",
   },
 };
 
@@ -74,7 +88,7 @@ function SidebarButton({
       ? active
         ? "text-neutral-50"
         : "text-neutral-500 hover:text-neutral-100 hover:bg-white/5"
-      : mode === "portal"
+      : mode === "portal" || mode === "nebula" || mode === "obsidian"
         ? active
           ? "text-white"
           : "text-white/45 hover:text-white hover:bg-white/5"
@@ -126,10 +140,28 @@ function SidebarButton({
 export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const [expanded, setExpanded] = useState(false);
   const portalBadge = selectBadgeTotal(usePortal());
-  const mode: SidebarMode = activeTab === "terminal" ? "terminal" : activeTab === "portal" ? "portal" : "default";
+  const mode: SidebarMode =
+    activeTab === "terminal"
+      ? "terminal"
+      : activeTab === "portal"
+        ? "portal"
+        : activeTab === "nebula"
+          ? "nebula"
+          : activeTab === "archive"
+            ? "obsidian"
+            : "default";
   const terminal = mode === "terminal";
-  const sidebarClass = terminal ? "sidebar-terminal" : mode === "portal" ? "sidebar-portal" : "";
-  const gradientClass = mode === "portal" ? "portal-gradient-text" : "text-gradient-indigo";
+  const sidebarClass = terminal
+    ? "sidebar-terminal"
+    : mode === "portal"
+      ? "sidebar-portal"
+      : mode === "nebula"
+        ? "sidebar-nebula"
+        : mode === "obsidian"
+          ? "sidebar-obsidian"
+          : "";
+  const gradientClass =
+    mode === "portal" ? "portal-gradient-text" : mode === "nebula" ? "nebula-title" : mode === "obsidian" ? "obsidian-title" : "text-gradient-indigo";
 
   const button = (tab: Tab, badge?: PortalBadge | null) => (
     <SidebarButton
@@ -191,6 +223,7 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
       </button>
       <nav className="flex flex-col gap-1">{tabs.map((tab) => button(tab))}</nav>
       <div className="mt-auto flex flex-col gap-1">
+        {isDesktop() && button(nebulaTab)}
         {button(portalTab, portalBadge)}
         {isDesktop() && button(terminalTab)}
         {button(settingsTab)}

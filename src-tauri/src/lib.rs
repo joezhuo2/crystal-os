@@ -1,6 +1,7 @@
 use tauri::{Manager, RunEvent, WindowEvent};
 
 mod autostart;
+mod harness;
 mod hotkey;
 mod portal;
 mod settings;
@@ -78,6 +79,7 @@ pub fn run() {
     .manage(vault::VaultState::default())
     .manage(terminal::TerminalState::default())
     .manage(portal::PortalState::default())
+    .manage(harness::HarnessState::default())
     .invoke_handler(tauri::generate_handler![
       hotkey::get_global_shortcut,
       hotkey::set_global_shortcut,
@@ -100,12 +102,33 @@ pub fn run() {
       terminal::terminal_resize,
       portal::portal_show,
       portal::portal_hide,
+      portal::portal_snapshot,
       portal::portal_fade_out,
       portal::portal_nav,
       portal::portal_open_external,
       portal::portal_sign_out,
       portal::portal_remove,
       portal::portal_prune,
+      harness::harness_env_status,
+      harness::harness_install_runtime,
+      harness::harness_get_config,
+      harness::harness_set_config,
+      harness::harness_set_key,
+      harness::harness_discover,
+      harness::harness_probe,
+      harness::harness_dsh_start,
+      harness::harness_acp_open_session,
+      harness::harness_claude_start,
+      harness::harness_send,
+      harness::harness_kill,
+      harness::harness_reset,
+      harness::harness_pick_folder,
+      harness::harness_create_project,
+      harness::harness_state_load,
+      harness::harness_state_save,
+      harness::harness_chat_load,
+      harness::harness_chat_save,
+      harness::harness_chat_delete,
     ])
     .setup(|_app| {
       hotkey::init(_app.handle());
@@ -137,6 +160,7 @@ pub fn run() {
   app.run(|app, event| {
     if let RunEvent::Exit = event {
       terminal::shutdown(app);
+      harness::shutdown(app);
       if let Some(child) = app.state::<Sidecar>().0.lock().unwrap().take() {
         let _ = child.kill();
       }

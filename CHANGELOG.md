@@ -5,7 +5,76 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.6] - 2026-09-16 - Portal keyboard shortcuts
+## [v0.6.2] - 2026-09-17 - Portal Focus
+
+### Fixed
+
+- **The Portal's right-click menu keeps the page visible.** Opening a pill's context menu (or any dialog over The Portal) used to swap the app's page for a large app icon, because the native webview has to be hidden before HTML can draw over it. The page is now captured first with WebView2's `CapturePreview` and shown as a still picture behind the menu. When the menu closes, the live page comes back without a fade. If the capture fails or takes over 800 ms, or the page is still loading, the old icon placeholder is used (`portal_snapshot` in `src-tauri/src/portal.rs`, `snapshotAndHidePortal` in `src/lib/portalNative.ts`).
+- **Portal shortcuts work while typing in an app.** Keys pressed inside Discord, Instagram, or another app page went to that page, so **Ctrl+Tab**, **Ctrl+Shift+Tab**, **Ctrl+W**, and **Ctrl+R** only worked after clicking Crystal OS's own UI. Each app webview now catches those combos with WebView2's `AcceleratorKeyPressed` event before the page sees them and sends them to The Portal as `portal://shortcut` events (`src-tauri/src/portal/webview2.rs`).
+- **The toggle hotkey hides the window after you click into a Portal app.** `Alt+Space` checked whether the window had focus, and a Portal app page taking keyboard focus made that check fail, so the hotkey kept trying to show a window that was already in front. You had to Alt+Tab away and back before it would hide. It now checks whether Crystal OS is the foreground window (`window::is_foreground` in `src-tauri/src/window.rs`).
+- **Keyboard focus lands somewhere useful.** Showing the window with a hotkey or the tray now focuses the Portal app on screen, or the main page when no app is shown, so typing and shortcuts work without a click. When a menu or dialog hides a Portal app, focus moves to the main page so the menu and dialog respond to the keyboard.
+
+## [v0.6.1] - 2026-09-17 - Crystal Archive
+
+### Added
+
+- **The Archive has its own crystal theme.** The tab now looks like a dark amethyst cave instead of the default indigo glass (`src/components/layout/ObsidianBackdrop.tsx`, `src/index.css`).
+  - **Crystals from the edges.** 32 glass crystals in five faceted shapes grow in from the four corners and edges when the tab opens, then drift slowly along their own axis. Each has a resting opacity between 0.3 and 0.9. Every crystal points into the screen, and its flat base always sits past the edge, at any window size. The layout is seeded, so it is the same on every visit (`src/lib/obsidianScene.ts`).
+  - **Sparkles.** Four-point stars twinkle at random positions in the background, and one sits near the tip of each crystal, on top of the glass.
+  - **Cursor light.** A violet aura follows the pointer, breathing between 0.5 and 0.8 opacity, and fades out when the pointer leaves the window.
+  - **Crystals reflect the light.** A crystal near the pointer gets a brighter rim, a halo, and a stronger glass `backdrop-filter` (brightness, saturation, contrast) with a glint that sits where the pointer is. The effect grows as the pointer gets closer, and is measured along each crystal's own tilt.
+  - **Themed page and sidebar.** Panels, tag chips, the note list, the note reader's tags, the Quick Add and vault buttons, the page title, and the sidebar all switch to violet on this tab.
+
+### Performance
+
+- **Pointer tracking without React renders.** One `pointermove` listener schedules at most one animation frame. The frame reads every crystal's position first and then writes CSS custom properties (`--obsidian-mx`/`--obsidian-my` on the backdrop, `--lit`/`--lx`/`--ly` on each crystal), skipping crystals that stay dark. The CSS maps those properties to `transform` and `opacity`, and every animation (float, twinkle, grow, breathe, haze drift) uses only those two, so the compositor does the work. The stronger reflection layer is hidden while its crystal is dark, so its filter only runs near the pointer. No canvas, WebGL, or 3D library is used.
+- **Reduced motion.** With reduced motion on, the crystals, sparkles, haze, and aura stop animating. The cursor light and reflections still follow the pointer.
+
+## [v0.6.0] - 2026-09-17 - The Nebula
+
+### Added
+
+- **The Nebula: a coding agent in its own tab (desktop).** Pick or create a project folder, open chats under it, and ask an agent to read, change, and run things in that folder. The tab sits above The Portal in the sidebar and in the command palette. Design and spike results are in `docs/adr/0003-nebula-deepseek-harness.md`.
+  - **Three model tiers per chat.**
+    - **Low** uses OmniRoute `auto/coding`.
+    - **Medium** uses the first NVIDIA NIM model that answers, in this order: Kimi K3, DeepSeek V4 Flash, Nemotron 3 Ultra, then OmniRoute. A model is skipped for a minute if it has no key, is missing from the endpoint's model list, or fails before producing output; the turn then moves to the next model, with a note in the chat.
+    - **High** runs Claude Code on your own Anthropic account, even when `~/.claude/settings.json` routes Claude Code through a gateway.
+    - Low and Medium share one DeepSeek Harness session. Switching to or from High hands over a summary of the conversation, marked by a divider.
+  - **Effort and modes like Claude Code.**
+    - Effort is low, medium, high, extra high, or max, and applies to Claude Code on High.
+    - Modes are **Auto** (runs tools without asking; a small amber dot marks it), **Manual** (an Allow once / Deny card for each tool request, on every tier), and **Plan** (reads and plans only; changes are refused).
+    - Tier and effort are locked while a turn runs; mode changes take effect immediately.
+  - **Your Claude skills and MCP servers come along.**
+    - DeepSeek chats get the skills from `~/.claude/skills` and enabled plugins, and the local MCP servers from Claude Desktop, Claude Code, and enabled plugins. Each server can be turned off in Settings.
+    - A server that fails to start no longer blocks the chat: the chat opens without MCP servers and a banner says so.
+    - claude.ai connectors cannot be shared, because they sign in on claude.ai.
+  - **Stop a running turn.** While the agent works, the send button turns into a red Stop button, and Esc stops from anywhere on the tab. The agent is asked to cancel; if it has not stopped within 3 seconds, or you press Stop again, its process is ended. Pending approval cards are cancelled, unfinished tool calls are marked failed, and the chat says "Stopped." instead of showing an error or trying the next model.
+  - **Chat history.**
+    - Click a project folder to open a new chat in it (an unused one is reused). The arrow next to it collapses and expands the folder.
+    - Chats are grouped by project, pinned first, then newest. They can be renamed, pinned, and deleted. Removing a project leaves its folder alone.
+    - Transcripts, including tool calls and approvals, are saved after every message and reopen after a restart. Sessions resume where they left off.
+  - **Token counts per model.** The toolbar shows this chat's total, or the project's total while the chat is still empty. Its popover breaks usage down per model, for the chat, its project, and all time, with a reset. Project totals are kept when chats are deleted and are rebuilt from saved chats the first time this version starts. Claude counts are exact. DeepSeek Harness only reports context size, so those counts are estimates, marked with ≈.
+  - **Model names come from your settings.** Badges, skip notices, token rows, and the Medium tooltip show the model ids you configured, so a slot you changed (for example to `z-ai/glm-5.3`) is never reported under its default name. Saving settings warns when NVIDIA NIM does not list a Medium model id, since Medium would otherwise skip it silently. Turns no longer end after 60 seconds: a prompt waits as long as the agent works.
+  - **No search bar on this tab.** Like Terminal and The Portal, The Nebula hides the global search bar and ignores its shortcuts, including the global palette hotkey.
+  - **A swirling nebula.**
+    - The background is a WebGL nebula that blends three colours you choose and turns at a speed you set, with optional twinkling four-point stars at a density you set. Change it from the gear in the tab or in Settings.
+    - It pauses when hidden and draws a still frame when reduced motion is on.
+    - It releases its GPU context when you leave the tab, and falls back to CSS gradients when WebGL is unavailable.
+  - **Settings → The Nebula.**
+    - NVIDIA NIM and OmniRoute API keys: write-only, stored in Crystal OS's own DeepSeek Harness folder, never shown again.
+    - Endpoints and model ids for every tier, and the High tier's Claude model.
+    - The projects folder.
+    - The MCP server list.
+    - The nebula look.
+- **DeepSeek Harness runtime.** The first visit offers to install `@deepseek-ai/dsh@0.1.5-rc.1` with npm into `%APPDATA%\com.crystalos.desktop\dsh` (needs Node.js 22+). It never touches `~/.dsh`. The version is pinned in `src-tauri/src/harness/mod.rs` because the harness is a developer preview.
+- **Native harness module** (`src-tauri/src/harness/`). Twenty new commands:
+  - spawn one DeepSeek Harness process per project folder and one Claude Code process per High chat;
+  - pass the processes' output to the page line by line;
+  - store chats with atomic writes.
+
+  Every child process joins a Windows Job Object, so agents, their MCP servers, and anything they started end when Crystal OS exits or the page reloads. Claude Code's argument list is built only from validated enums, ids, and paths, never prompt text, and every `ANTHROPIC_*` / `CLAUDE*` variable is removed from its environment. API keys and MCP server environment values stay in Rust.
+
+## [v0.5.6] - 2026-09-16 - Portal keyboard shortcuts
 
 ### Added
 
@@ -15,27 +84,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Confirm dialog state lifted from navbar to page.** The `sign out` / `remove` confirmation dialog state was moved out of `PortalNavbar` and into `PortalPage`, so both the right-click context menu and the new keyboard shortcuts can open it. The navbar now receives `confirm` and `onConfirmChange` as props (`src/components/portal/PortalNavbar.tsx`).
 
-## [0.5.5] - 2026-09-15 - Locked page scrolling
+## [v0.5.5] - 2026-09-15 - Locked page scrolling
 
 ### Fixed
 
 - **The window no longer scrolls into empty space.** Nothing pinned the app's height before: `html` and `body` rolled freely and the tab's `<main>` panel could not shrink (it is a flex item whose `min-height: auto` keeps it as tall as its content), so whenever a page's content was taller or wider than the viewport the *whole window* scrolled — up, down, and sideways into blank space — instead of the panel scrolling. `html` and `body` are now `overflow: hidden` (`src/index.css`), the app shell is a fixed `h-screen` frame (`src/pages/Index.tsx`), and `<main>` is `min-h-0` so it carries the scrolling. Every tab now scrolls inside its own content area: long pages scroll in the content panel, the Tasks board keeps its own horizontal scroll, and the sidebar and search bar stay put.
 - **Terminal and Portal frames fit the shell.** Their heights were sized for the old, unbounded layout and are now set to the shell's real content box (`calc(100vh - 4rem)` on desktop, `calc(100vh - 7rem)` on mobile), so no residual scrollbar sits between them and the window edge.
 
-## [0.5.4] - 2026-09-15 - Themed app pill hover
+## [v0.5.4] - 2026-09-15 - Themed app pill hover
 
 ### Changed
 
 - **Portal app pills light up in the theme colours on hover.** Hovering an app pill in the Portal navbar now gives it a gradient border running between the theme's two accent colours, a glow around the pill, and theme-tinted text with a soft glow: lavender for **Void swirl**, gold for **Event horizon**, and ice blue for **Stargate blue**. The app's icon glows too. Before, hover only brightened the text and faintly tinted the border. The active pill keeps its own style, and the Back / Forward / Reload / Open in browser buttons are unchanged. Each theme defines a new `--portal-hover-text` colour (`src/index.css`).
 - **Themed navbar tooltips.** Every tooltip in the Portal navbar was the system tooltip. They are now small cards in the Portal theme: gradient border, glow, and the label in the theme's text colour. App pills show the app name with "Right-click for options, drag to reorder" below it (in the web build, "Opens in a new tab"); **Connect an app**, **Back**, **Forward**, **Reload**, and **Open in browser** show their names. Tooltips always open above the control, over the page header, because the app's webview draws above anything placed below the navbar. The browser-control tooltips line up with their button's right edge so they stay inside the window. All use a new `PortalTip` helper (`src/components/portal/PortalNavbar.tsx`).
 
-## [0.5.3] - 2026-09-15 - Home shortcut
+## [v0.5.3] - 2026-09-15 - Home shortcut
 
 ### Added
 
 - **Clickable sidebar logo.** The Crystal OS mark at the top left of the sidebar (the "C" when collapsed, the full name when expanded) is now a button that opens **The Pulse** (home) from any page, including Terminal and Portal. It has a hover fade, a keyboard focus ring, and a "Go to home" label for screen readers (`src/components/layout/Navigation.tsx`).
 
-## [0.5.2] - 2026-09-15 - Loading screens
+## [v0.5.2] - 2026-09-15 - Loading screens
 
 ### Added
 
@@ -46,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Portal webviews stay hidden until their page has loaded** (`src-tauri/src/portal.rs`). Before, a new app showed WebView2's dark background until the site painted. A webview is now hidden on creation and on **Reload**, **Back to home page**, and **Sign out**, and shown (with the usual fade-in) when the page-load hook reports the page finished, provided that app is still the one on screen. A 20-second timeout (`LOAD_TIMEOUT`) shows it anyway if the page never finishes. **Back** and **Forward** do not hide the app.
 
-## [0.5.1] - 2026-09-15 - Terminal tabs
+## [v0.5.1] - 2026-09-15 - Terminal tabs
 
 ### Added
 
@@ -61,7 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All running shells are killed when the app quits.
 - Tests: `terminalNative.test.ts` covers routing between shells, early output, Refresh, and remounting (8 tests); `terminal.rs` adds a test for the session limit.
 
-## [0.5.0] - 2026-09-14 - The Portal
+## [v0.5.0] - 2026-09-14 - The Portal
 
 ### Added
 
@@ -86,7 +155,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The active-tab highlight in the collapsed sidebar is centred on its icon. The icon used to sit 12px from the highlight's left edge and 4px from its right.
 
-## [0.4.6] - 2026-09-14 - Terminal
+## [v0.4.6] - 2026-09-14 - Terminal
 
 ### Added
 
@@ -95,7 +164,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The shell keeps running while you use other tabs; coming back redraws the last 256 KB of output. Ctrl+C copies when text is selected and interrupts otherwise; Ctrl+V pastes. Ctrl+K and Escape go to the shell while the terminal has focus.
 - New commands: `terminal_attach`, `terminal_restart`, `terminal_write`, `terminal_resize` (`src-tauri/src/terminal.rs`), each allowlisted in `capabilities/default.json`. The shell is killed when the app quits.
 
-## [0.4.5] - 2026-09-14 - Settings Page
+## [v0.4.5] - 2026-09-14 - Settings Page
 
 ### Added
 
@@ -109,7 +178,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `set_global_shortcut` takes an `action` (`"toggle"` or `"palette"`), `get_global_shortcut` and `set_global_shortcut` return both statuses, and `pause_global_shortcut` releases both combos while one is being recorded.
 - The palette's **Change global hotkey** and **Change vault folder** rows are replaced by a single **Open Settings** row. **Launch at login** moved from the hotkey dialog to Settings.
 
-## [0.4.4] - 2026-09-13 - Always-On Hotkey
+## [v0.4.4] - 2026-09-13 - Always-On Hotkey
 
 ### Added
 
@@ -121,7 +190,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Closing the window hides it to the tray instead of quitting**, so the hotkey stays live. **Quit Crystal OS** in the tray still exits and stops the sidecar.
 - The main window is created hidden (`"visible": false`) and shown in `setup` unless the app was started with `--hidden`, so a login launch never flashes the window.
 
-## [0.4.3] - 2026-09-13 - Native Vault
+## [v0.4.3] - 2026-09-13 - Native Vault
 
 ### Added
 
@@ -148,7 +217,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tests: 9 Rust unit tests in `vault.rs` (path normalisation, escape attempts, ignored folders, stale-write conflicts, deleted notes, missing root, symlink escape, watcher filtering), plus `src/lib/vaultCore.test.ts` and `src/lib/vaultNative.test.ts`. Vitest: 152 passing.
 - Not yet verified in a running desktop window.
 
-## [0.4.2] - 2026-09-13 - Tray Menu
+## [v0.4.2] - 2026-09-13 - Tray Menu
 
 ### Added
 
@@ -172,7 +241,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Closing the window still quits the app rather than hiding it to the tray.
 - The web app is unchanged. `initTrayBridge()` and `useTrayQuickAdd` are no-ops outside Tauri and load `@tauri-apps/api` only through dynamic imports.
 
-## [0.4.1] - 2026-09-13 - Global Hotkey
+## [v0.4.1] - 2026-09-13 - Global Hotkey
 
 ### Added
 
@@ -189,7 +258,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - There is no tray icon yet (planned for 1.3), so a window hidden with the hotkey can only be brought back with the hotkey. Closing the window still quits the app.
 - The web app is unchanged. `useGlobalHotkey` is a no-op outside Tauri and loads `@tauri-apps/api` only through dynamic imports.
 
-## [0.4.0] - 2026-09-12 - Desktop App
+## [v0.4.0] - 2026-09-12 - Desktop App
 
 ### Added
 
@@ -202,7 +271,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Google Calendar Connect opens the system browser on desktop.** Google refuses OAuth inside embedded webviews. The web app still navigates in place.
 - **`server/obsidian/plugin.ts` and `server/calendar/plugin.ts` export `createObsidianMiddleware` and `createCalendarMiddleware`.** The Vite plugins and the sidecar share one implementation. Web behaviour is unchanged.
 
-## [0.3.2] - 2026-09-12
+## [v0.3.2] - 2026-09-12
 
 ### Added
 
@@ -215,7 +284,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **The Horizon — month grid shows up to 21 event dots per day.** Dots are smaller (`w-1.5 h-1.5`) and wrap into rows of seven inside a 54px column, instead of a single row capped at three. A day with a dozen events no longer looks the same as a day with three.
 
-## [0.3.1] - 2026-09-10
+## [v0.3.1] - 2026-09-10
 
 ### Changed
 
@@ -224,7 +293,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The note count sits between them as a fixed divider, so it stays visible while either half scrolls.
   - The search field remains pinned above both.
 
-## [0.3.0] - 2026-09-07
+## [v0.3.0] - 2026-09-07
 
 Authentication and per-user data isolation. Nothing in the application is reachable without a session, and both the Obsidian and Google Calendar routes now require one.
 
@@ -267,7 +336,7 @@ Authentication and per-user data isolation. Nothing in the application is reacha
   - `/api/calendar/auth/callback` is the one exemption, and has to be: it is a redirect issued by Google's servers, which will never carry our `Authorization` header. It keeps its own protection — a random `state` nonce, verified on return, expiring after 10 minutes.
 - Row Level Security is enabled on all five tables, replacing unconditional `anon` access.
 
-## [0.2.5] - 2026-09-06
+## [v0.2.5] - 2026-09-06
 
 ### Added
 
@@ -278,14 +347,14 @@ Authentication and per-user data isolation. Nothing in the application is reacha
 
 - `CalendarPage` consumes the request in an effect that waits for the calendar status query to settle, so a still-loading `connected === false` cannot swallow it, and clears the flag either way so it never re-fires on a later visit.
 
-## [0.2.4] - 2026-09-06
+## [v0.2.4] - 2026-09-06
 
 ### Fixed
 
 - **The Vault — number rounding.** The savings running total is rounded to cents before it reaches the chart, and both Y axes format ticks to two decimals, so floating-point accumulation no longer surfaces as `1234.5600000000002` on an axis or in a tooltip.
 - **The Vault — chart hovering.** Recharts tooltips inherited the page's own colours and rendered near-invisible text on the dark surface. Cash Flow, Category and Savings tooltips now set explicit content, label, and item colours, and the Savings tooltip formats its value as currency instead of a bare number.
 
-## [0.2.3] - 2026-09-06
+## [v0.2.3] - 2026-09-06
 
 ### Added
 
@@ -301,7 +370,7 @@ Authentication and per-user data isolation. Nothing in the application is reacha
 - `color-scheme: dark` on `:root`, so remaining native chrome (number spinners, scrollbars, browser pickers) stays dark.
 - `tailwind.config.ts` imports `tailwindcss-animate` and `@tailwindcss/typography` as ES modules instead of calling `require()`.
 
-## [0.2.2] - 2026-09-06
+## [v0.2.2] - 2026-09-06
 
 ### Added
 
@@ -310,7 +379,7 @@ Authentication and per-user data isolation. Nothing in the application is reacha
   - Queries local midnight to local midnight and then filters by date, so a multi-day event that merely overlaps today is shown with its end date rather than as a stray row.
   - Distinct copy for the not-connected, error, and empty states — it never renders a bare zero when Google Calendar simply is not wired up.
 
-## [0.2.1] - 2026-09-06
+## [v0.2.1] - 2026-09-06
 
 ### Added
 
@@ -322,7 +391,7 @@ Authentication and per-user data isolation. Nothing in the application is reacha
 - `Skeleton` takes a `variant` of `"shimmer"` (default) or `"pulse"`, and is `aria-hidden`; the wrappers announce the busy region instead, so screen readers hear one status rather than a pile of empty blocks.
 - The Pulse's widgets render these skeletons while loading, replacing the ad-hoc `animate-pulse` divs that were inlined in `HomePage.tsx`.
 
-## [0.2.0] - 2026-09-06
+## [v0.2.0] - 2026-09-06
 
 The Horizon — the calendar tab now reads and writes a real Google Calendar
 instead of rendering local tasks.
@@ -367,7 +436,7 @@ instead of rendering local tasks.
 
 - Added `googleapis`, `dotenv`.
 
-## [0.1.0] - 2026-09-05
+## [v0.1.0] - 2026-09-05
 
 First tagged release. Crystal OS is a personal productivity dashboard — tasks,
 calendar, finances, weather, Pomodoro — with an Obsidian vault wired in as a

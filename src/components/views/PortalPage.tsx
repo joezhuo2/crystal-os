@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, MonitorSmartphone, Orbit, Plus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import PortalNavbar, { AppIcon, type Confirm } from "@/components/portal/PortalNavbar";
@@ -12,11 +12,14 @@ import {
   fadeOutPortal,
   hidePortal,
   navigatePortalApp,
+  onPortalShortcut,
   openPortalAppExternally,
   removePortalApp,
   showPortalApp,
   signOutPortalApp,
+  snapshotAndHidePortal,
   type PortalNavAction,
+  type PortalShortcut,
 } from "@/lib/portalNative";
 import { portal } from "@/lib/portalStore";
 
@@ -33,6 +36,12 @@ function hostOf(url: string) {
   } catch {
     return url;
   }
+}
+
+/** A picture of an app's page, shown while its webview is hidden. */
+interface Snapshot {
+  id: string;
+  url: string;
 }
 
 function openInNewTab(url: string) {
@@ -78,9 +87,26 @@ export default function PortalPage() {
   // The app being switched to while the current one fades out.
   const [pendingId, setPendingId] = useState<string | null>(null);
   const switchTimer = useRef<number>();
+  // Taken when a menu or dialog hides the webview, so the page stays visible
+  // behind it. Cleared once the webview is back on screen.
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const snapshotRef = useRef<Snapshot | null>(null);
   usePortalOcclusion(adding);
 
-  useEffect(() => () => window.clearTimeout(switchTimer.current), []);
+  const replaceSnapshot = useCallback((next: Snapshot | null) => {
+    const prev = snapshotRef.current;
+    if (prev && prev.url !== next?.url) URL.revokeObjectURL(prev.url);
+    snapshotRef.current = next;
+    setSnapshot(next);
+  }, []);
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(switchTimer.current);
+      if (snapshotRef.current) URL.revokeObjectURL(snapshotRef.current.url);
+    },
+    [],
+  );
 
   useEffect(() => {
     startPortalSession();
@@ -90,12 +116,27 @@ export default function PortalPage() {
   useEffect(() => {
     if (!desktop) return;
     const host = hostRef.current;
-    if (!host || !active || occluders > 0) {
+    if (!host || !active) {
       hidePortal().catch(() => undefined);
       return;
     }
 
     let cancelled = false;
+
+    if (occluders > 0) {
+      // Native webviews draw over everything, so a menu or dialog needs the app
+      // hidden. A picture of the page takes its place until it comes back.
+      snapshotAndHidePortal()
+        .then((url) => {
+          if (!url) return;
+          if (cancelled) URL.revokeObjectURL(url);
+          else replaceSnapshot({ id: active.id, url });
+        })
+        .catch(() => undefined);
+      return () => {
+        cancelled = true;
+      };
+    }
     let lastKey = "";
     let inflight = false;
     let queued = false;
@@ -113,9 +154,13 @@ export default function PortalPage() {
       }
       inflight = true;
       lastKey = key;
-      showPortalApp(active, bounds)
+      // The snapshot already shows the page, so it reappears without a fade.
+      const resuming = snapshotRef.current?.id === active.id;
+      showPortalApp(active, bounds, !resuming)
         .then(() => {
-          if (!cancelled) setError((prev) => (prev ? null : prev));
+          if (cancelled) return;
+          setError((prev) => (prev ? null : prev));
+          if (snapshotRef.current) replaceSnapshot(null);
         })
         .catch((err) => {
           if (!cancelled) setError({ id: active.id, message: errorText(err) });
@@ -146,7 +191,7 @@ export default function PortalPage() {
       observer.disconnect();
       window.removeEventListener("resize", push);
     };
-  }, [desktop, active, occluders, attempt]);
+  }, [desktop, active, occluders, attempt, replaceSnapshot]);
 
   useEffect(() => {
     if (!desktop) return;
@@ -209,11 +254,23 @@ export default function PortalPage() {
     select(apps[next]);
   };
 
+  const runShortcut = (shortcut: PortalShortcut) => {
+    if (shortcut === "next" || shortcut === "previous") cycle(shortcut === "next" ? 1 : -1);
+    else if (!active) return;
+    else if (shortcut === "close") setConfirm({ kind: "remove", app: active });
+    else navigate(active, "reload");
+  };
+  const runShortcutRef = useRef(runShortcut);
+  runShortcutRef.current = runShortcut;
+
   // Browser-style tab shortcuts for the Portal, desktop only. Ctrl+Tab cycles
   // the connected apps, Ctrl+W removes the active one (confirmed), and Ctrl+R
   // reloads it. Under the Tauri webview, Ctrl+R would otherwise reload the whole
   // app — which drops you back on the Home tab while the child webview (Discord,
   // Instagram…) stays up over the page. preventDefault stops that default reload.
+  //
+  // Keys pressed inside an app page never reach this document; Rust catches
+  // the same shortcuts there and sends them as events (below).
   useEffect(() => {
     if (!desktop) return;
     const handler = (e: KeyboardEvent) => {
@@ -221,24 +278,26 @@ export default function PortalPage() {
 
       // Don't hijack keys while an overlay or dialog is up, or while typing.
       if (occluders > 0) return;
-      const target = e.target as Element | null;
+      const target = e.target as HTMLElement | null;
       if (target && (target.closest("input, textarea, [contenteditable='true']") || target.isContentEditable)) return;
 
-      if (e.code === "Tab") {
-        e.preventDefault();
-        cycle(e.shiftKey ? -1 : 1);
-      } else if (e.code === "KeyW") {
-        e.preventDefault();
-        if (active) setConfirm({ kind: "remove", app: active });
-      } else if (e.code === "KeyR") {
-        e.preventDefault();
-        if (active) navigate(active, "reload");
-      }
+      const shortcut: PortalShortcut | null =
+        e.code === "Tab" ? (e.shiftKey ? "previous" : "next") : e.code === "KeyW" ? "close" : e.code === "KeyR" ? "reload" : null;
+      if (!shortcut) return;
+      e.preventDefault();
+      runShortcut(shortcut);
     };
     window.addEventListener("keydown", handler, { capture: true });
     return () => window.removeEventListener("keydown", handler, { capture: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [desktop, occluders, apps, activeId, active]);
+
+  useEffect(() => {
+    if (!desktop) return;
+    return onPortalShortcut((shortcut) => {
+      if (portal.getState().occluders === 0) runShortcutRef.current(shortcut);
+    });
+  }, [desktop]);
 
   let content: React.ReactNode;
   if (apps.length === 0) {
@@ -272,6 +331,9 @@ export default function PortalPage() {
         </button>
       </div>
     );
+  } else if (active && snapshot?.id === active.id) {
+    // The page as it was before a menu or dialog hid the webview.
+    content = <img src={snapshot.url} alt="" draggable={false} className="block h-full w-full select-none" />;
   } else if (active && occluders > 0) {
     content = (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-white/60">

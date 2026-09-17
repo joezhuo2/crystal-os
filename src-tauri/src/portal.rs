@@ -17,6 +17,17 @@
 //! home page, Sign out), so the view's skeleton placeholder shows through
 //! instead of a blank dark rectangle. It is revealed when the page finishes
 //! loading, or after `LOAD_TIMEOUT` if it never reports that.
+//!
+//! Menus and dialogs cannot draw over a native webview, so the view hides it
+//! while one is open. `portal_snapshot` captures the page first, and the view
+//! shows that picture in its place, so the page stays visible behind the menu.
+//!
+//! Keys pressed inside an app page go to that page, not the main webview, so
+//! the tab shortcuts are caught in the app webview and sent to the view as
+//! `SHORTCUT_EVENT` (Windows only; see portal/webview2.rs).
+
+#[cfg(windows)]
+mod webview2;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -27,14 +38,23 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use tauri::utils::config::BackgroundThrottlingPolicy;
 use tauri::webview::{Color, NewWindowResponse, PageLoadEvent, WebviewBuilder};
+use tauri::ipc::Response;
 use tauri::{AppHandle, Emitter, EventTarget, LogicalPosition, LogicalSize, Manager, Rect, Runtime, Url, Webview, WebviewUrl};
 use tauri_plugin_opener::OpenerExt;
 
 /// Page titles carry unread counts, e.g. `(3) Discord`; the view turns them
 /// into badges.
 const TITLE_EVENT: &str = "portal://title";
+/// A tab shortcut pressed inside an app page. Payload: `next`, `previous`,
+/// `close` or `reload` (`PortalShortcut` in src/lib/portalNative.ts).
+const SHORTCUT_EVENT: &str = "portal://shortcut";
 const LABEL_PREFIX: &str = "portal-";
 const MAIN: &str = "main";
+
+/// A snapshot that takes longer than this is skipped; the view falls back to
+/// its placeholder.
+#[cfg(windows)]
+const SNAPSHOT_TIMEOUT: Duration = Duration::from_millis(800);
 
 /// A page that has not finished loading by then is shown anyway, so a stalled
 /// request cannot leave the skeleton up forever.
@@ -50,6 +70,10 @@ const FADE_IN: &str = "(() => { const s = document.documentElement && document.d
   clearTimeout(window.__crystalPortalFade); s.transition = 'none'; s.opacity = '0'; \
   requestAnimationFrame(() => requestAnimationFrame(() => { s.transition = 'opacity 220ms ease-out'; s.opacity = '1'; \
   window.__crystalPortalFade = setTimeout(() => { s.transition = ''; s.opacity = ''; }, 260); })); })();";
+
+/// Shows the page at once. Used when the view already shows a snapshot of it.
+const SHOW_NOW: &str = "(() => { const s = document.documentElement && document.documentElement.style; if (!s) return; \
+  clearTimeout(window.__crystalPortalFade); s.transition = ''; s.opacity = ''; })();";
 
 /// Fades the visible page out before the view switches to another app.
 const FADE_OUT: &str = "(() => { const s = document.documentElement && document.documentElement.style; if (!s) return; \
@@ -133,6 +157,26 @@ fn same_site(home: &Url, target: &Url) -> bool {
 /* ------------------------------------------------------------------ *
  * Helpers
  * ------------------------------------------------------------------ */
+
+/// The Portal shortcut for a key press, matching the view's own keydown
+/// handler: Ctrl+Tab and Ctrl+Shift+Tab cycle apps, Ctrl+W removes the active
+/// one, Ctrl+R reloads it. `key` is a Windows virtual-key code.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn shortcut_for(key: u32, ctrl: bool, shift: bool, alt: bool) -> Option<&'static str> {
+  const TAB: u32 = 0x09;
+  const R: u32 = 0x52;
+  const W: u32 = 0x57;
+  if !ctrl || alt {
+    return None;
+  }
+  match key {
+    TAB if shift => Some("previous"),
+    TAB => Some("next"),
+    W => Some("close"),
+    R => Some("reload"),
+    _ => None,
+  }
+}
 
 fn label_of(id: &str) -> String {
   format!("{LABEL_PREFIX}{id}")
@@ -246,7 +290,22 @@ fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds) -
     });
 
   let r = rect(bounds);
-  window.add_child(builder, r.position, r.size).map_err(|e| e.to_string())
+  let webview = window.add_child(builder, r.position, r.size).map_err(|e| e.to_string())?;
+  #[cfg(windows)]
+  if let Err(err) = webview2::forward_shortcuts(&webview) {
+    log::warn!("[portal] could not forward shortcuts: {err}");
+  }
+  Ok(webview)
+}
+
+/// Gives keyboard focus to the app on screen, or to the main webview when no
+/// app is. Run after the window is shown.
+pub fn focus_content<R: Runtime>(app: &AppHandle<R>) {
+  let shown = app.state::<PortalState>().shown.lock().unwrap().clone();
+  let target = shown.and_then(|label| app.get_webview(&label)).or_else(|| app.get_webview(MAIN));
+  if let Some(webview) = target {
+    let _ = webview.set_focus();
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -254,7 +313,8 @@ fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds) -
  * ------------------------------------------------------------------ */
 
 /// Shows one app at the given bounds, creating its webview on first use, and
-/// hides every other Portal webview.
+/// hides every other Portal webview. `fade` (default true) fades the page in;
+/// the view turns it off when a snapshot of the page is already on screen.
 #[tauri::command]
 pub async fn portal_show<R: Runtime>(
   app: AppHandle<R>,
@@ -262,6 +322,7 @@ pub async fn portal_show<R: Runtime>(
   id: String,
   url: String,
   bounds: Bounds,
+  fade: Option<bool>,
 ) -> Result<(), String> {
   check_id(&id)?;
   let target = label_of(&id);
@@ -302,22 +363,66 @@ pub async fn portal_show<R: Runtime>(
   // A page still loading stays hidden; `finish_loading` shows it once this
   // app is recorded as the one on screen.
   if !state.loading.lock().unwrap().contains_key(&target) {
-    let _ = webview.eval(FADE_IN);
+    let _ = webview.eval(if fade.unwrap_or(true) { FADE_IN } else { SHOW_NOW });
     webview.show().map_err(|e| e.to_string())?;
   }
   *shown = Some(target);
   Ok(())
 }
 
-/// Hides every Portal webview. They keep running.
+/// Hides every Portal webview. They keep running. When an app was on screen,
+/// keyboard focus moves to the main webview, which the menu or dialog opening
+/// in its place needs.
 #[tauri::command]
 pub async fn portal_hide<R: Runtime>(app: AppHandle<R>, state: tauri::State<'_, PortalState>) -> Result<(), String> {
-  let mut shown = state.shown.lock().unwrap();
-  for (_, webview) in portal_webviews(&app) {
-    let _ = webview.hide();
+  let was_shown = {
+    let mut shown = state.shown.lock().unwrap();
+    for (_, webview) in portal_webviews(&app) {
+      let _ = webview.hide();
+    }
+    shown.take().is_some()
+  };
+  if was_shown {
+    if let Some(main) = app.get_webview(MAIN) {
+      let _ = main.set_focus();
+    }
   }
-  *shown = None;
   Ok(())
+}
+
+/// A JPEG of the app on screen, taken before it is hidden for a menu or
+/// dialog. Empty when no app is fully shown, when the capture fails or is
+/// slow, and on platforms other than Windows.
+#[tauri::command]
+pub async fn portal_snapshot<R: Runtime>(app: AppHandle<R>, state: tauri::State<'_, PortalState>) -> Result<Response, String> {
+  let shown = state.shown.lock().unwrap().clone();
+  let Some(label) = shown.filter(|label| !state.loading.lock().unwrap().contains_key(label)) else {
+    return Ok(Response::new(Vec::new()));
+  };
+  let Some(webview) = app.get_webview(&label) else {
+    return Ok(Response::new(Vec::new()));
+  };
+
+  #[cfg(windows)]
+  {
+    let pending = webview2::capture(&webview)?;
+    let result = tauri::async_runtime::spawn_blocking(move || pending.recv_timeout(SNAPSHOT_TIMEOUT))
+      .await
+      .map_err(|e| e.to_string())?;
+    match result {
+      Ok(Ok(bytes)) => Ok(Response::new(bytes)),
+      Ok(Err(err)) => {
+        log::warn!("[portal] snapshot failed: {err}");
+        Ok(Response::new(Vec::new()))
+      }
+      Err(_) => Ok(Response::new(Vec::new())),
+    }
+  }
+  #[cfg(not(windows))]
+  {
+    let _ = webview;
+    Ok(Response::new(Vec::new()))
+  }
 }
 
 /// Starts fading out the app on screen. The view waits for the fade before
@@ -455,6 +560,17 @@ mod tests {
     assert!(parse_home("javascript:alert(1)").is_err());
     assert!(parse_home("file:///C:/Windows").is_err());
     assert!(parse_home("discord.com").is_err());
+  }
+
+  #[test]
+  fn tab_shortcuts_need_ctrl_without_alt() {
+    assert_eq!(shortcut_for(0x09, true, false, false), Some("next"));
+    assert_eq!(shortcut_for(0x09, true, true, false), Some("previous"));
+    assert_eq!(shortcut_for(0x57, true, false, false), Some("close"));
+    assert_eq!(shortcut_for(0x52, true, true, false), Some("reload"));
+    assert_eq!(shortcut_for(0x52, false, false, false), None);
+    assert_eq!(shortcut_for(0x09, true, false, true), None);
+    assert_eq!(shortcut_for(0x41, true, false, false), None);
   }
 
   #[test]

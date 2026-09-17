@@ -49,7 +49,17 @@ A child webview is an OS-level surface, so no DOM element can appear on top of i
 - The search bar is unmounted on the Portal tab.
 - Tooltips in the Portal navbar use native `title` attributes.
 - Any overlay that can cover the frame calls `usePortalOcclusion(open)`. This covers the Add dialog, the pill context menu, the sign-out and remove confirmations, and the global Quick Add dialog. While any occluder is open, the page hides the webview.
-- `showPortalApp` and `hidePortal` run strictly in call order, so a slow first `portal_show` cannot re-show a webview after a later hide.
+- Before hiding, `snapshotAndHidePortal` asks `portal_snapshot` for a JPEG of the page (WebView2 `CapturePreview`) and shows it in the webview's place, so the page stays visible behind the menu or dialog. `portal_show` then brings the live page back with `fade: false`. A page that is still loading, or a capture that fails or takes over 800 ms, falls back to the app-icon placeholder.
+- `showPortalApp`, `hidePortal`, and `snapshotAndHidePortal` run strictly in call order, so a slow first `portal_show` cannot re-show a webview after a later hide.
+
+### Keyboard focus
+
+Each webview has its own keyboard focus, so keys pressed in an app page never reach the main webview's `keydown` listeners.
+
+- The Portal's tab shortcuts (Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+W, Ctrl+R) are caught in each app webview with WebView2's `AcceleratorKeyPressed` event, marked handled so the page ignores them, and sent to the main webview as `portal://shortcut` (`src-tauri/src/portal/webview2.rs`).
+- `portal_hide` moves focus to the main webview when it hides an app on screen, so menus and dialogs get the keyboard.
+- Showing the window (hotkey, tray) focuses the app on screen, or the main webview.
+- Tauri's `Window::is_focused` turns false while a child webview has focus, so the toggle hotkey checks the foreground window instead (`window::is_foreground`).
 - The webview is placed on an inner element inset 8px from the frame edge, so its square corners clear the frame's rounded ring.
 
 ### Main window type

@@ -25,6 +25,11 @@ export interface PortalTitleEvent {
 
 export const PORTAL_TITLE_EVENT = "portal://title";
 
+/** A tab shortcut pressed while an app page had keyboard focus. */
+export type PortalShortcut = "next" | "previous" | "close" | "reload";
+
+export const PORTAL_SHORTCUT_EVENT = "portal://shortcut";
+
 let tauriCore: Promise<typeof import("@tauri-apps/api/core")> | undefined;
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -50,14 +55,37 @@ function inOrder<T>(run: () => Promise<T>): Promise<T> {
   return next;
 }
 
-/** Shows `app` at `bounds`, loading it on first use, and hides the others. */
-export function showPortalApp(app: PortalApp, bounds: PortalBounds) {
-  return inOrder(() => invoke<void>("portal_show", { id: app.id, url: app.url, bounds }));
+/**
+ * Shows `app` at `bounds`, loading it on first use, and hides the others.
+ * Pass `fade: false` when a snapshot of the page is already on screen.
+ */
+export function showPortalApp(app: PortalApp, bounds: PortalBounds, fade = true) {
+  return inOrder(() => invoke<void>("portal_show", { id: app.id, url: app.url, bounds, fade }));
 }
 
 /** Hides every app webview. They keep running in the background. */
 export function hidePortal() {
   return inOrder(() => invoke<void>("portal_hide"));
+}
+
+/**
+ * Captures the app on screen, then hides every app webview. Resolves to an
+ * object URL of the picture (the caller revokes it), or null when there was
+ * nothing to capture. Used when a menu or dialog opens over the Portal, so
+ * the page stays visible behind it.
+ */
+export function snapshotAndHidePortal() {
+  return inOrder(async () => {
+    let url: string | null = null;
+    try {
+      const image = await invoke<ArrayBuffer>("portal_snapshot");
+      if (image.byteLength > 0) url = URL.createObjectURL(new Blob([image], { type: "image/jpeg" }));
+    } catch (err) {
+      console.warn("[portal] snapshot failed", err);
+    }
+    await invoke<void>("portal_hide");
+    return url;
+  });
 }
 
 /** How long `fadeOutPortal` takes. The next app is shown after this. */
@@ -94,10 +122,19 @@ export function prunePortal(keep: string[]) {
 
 /** Subscribes to title changes from every app webview. */
 export function onPortalEvent(cb: (event: PortalTitleEvent) => void): () => void {
+  return listenTo(PORTAL_TITLE_EVENT, cb);
+}
+
+/** Subscribes to tab shortcuts pressed inside app pages (Windows). */
+export function onPortalShortcut(cb: (shortcut: PortalShortcut) => void): () => void {
+  return listenTo(PORTAL_SHORTCUT_EVENT, cb);
+}
+
+function listenTo<T>(event: string, cb: (payload: T) => void): () => void {
   let cancelled = false;
   let unlisten: (() => void) | undefined;
   import("@tauri-apps/api/event")
-    .then(({ listen }) => listen<PortalTitleEvent>(PORTAL_TITLE_EVENT, ({ payload }) => cb(payload)))
+    .then(({ listen }) => listen<T>(event, ({ payload }) => cb(payload)))
     .then((fn) => {
       if (cancelled) fn();
       else unlisten = fn;

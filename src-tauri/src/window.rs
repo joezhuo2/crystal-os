@@ -29,6 +29,26 @@ pub fn show<R: Runtime>(app: &AppHandle<R>) {
   }
   let _ = window.show();
   let _ = window.set_focus();
+  // The window alone taking focus leaves keys going nowhere until a click, so
+  // hand focus to the Portal app on screen or the main webview.
+  crate::portal::focus_content(app);
+}
+
+/// True when the window is the one the user is working in. `is_focused` is not
+/// enough: it turns false once a Portal app page takes keyboard focus, even
+/// though the window is still in front.
+#[cfg(windows)]
+pub fn is_foreground<R: Runtime>(window: &Window<R>) -> bool {
+  use windows::Win32::UI::WindowsAndMessaging::{GetAncestor, GetForegroundWindow, GA_ROOT};
+
+  let Ok(hwnd) = window.hwnd() else { return false };
+  let foreground = unsafe { GetForegroundWindow() };
+  !foreground.is_invalid() && (foreground == hwnd || unsafe { GetAncestor(foreground, GA_ROOT) } == hwnd)
+}
+
+#[cfg(not(windows))]
+pub fn is_foreground<R: Runtime>(window: &Window<R>) -> bool {
+  window.is_focused().unwrap_or(false)
 }
 
 pub fn hide<R: Runtime>(app: &AppHandle<R>) {

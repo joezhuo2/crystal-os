@@ -1,5 +1,4 @@
 # Planned Features
-- [v0.6.0] Nebula Update - deepseek harness + claude code connections
 - [v0.7.0] banking update - use plaid to connect to banks (store api keys and t okens in secure env variables)
 
 # Additions
@@ -24,22 +23,6 @@
 
 - in the bottom of the settings menu, add a place to download the latest exe installer or build the latest one (for latest released version), and add option for user to choose which version they want to download
 
-- update the obsidian section to have its own theme
-    - should have a dark purple/ambient crystallized theme
-    - have crystal images (choose between svg shapes or css polygons or glassmorphism shapes) with different opacity levels (0.3 to 0.9)
-    - add random sparkles in the background and some layered on top of the crystals
-    - track cursor movement in the obsidian overlay using a custom css property and avoid react re-renders
-    - implement a glowing cursor aura via a radial gradient overlay bound to the mouse location (opacity: 0.5-0.8)
-    - the crystals should reflect the light of the cursor if it hovers over the crystal (boost brightness, border contrast, and backdrop-filter glass reflection relative to the cursor light overlay)
-    - implement using pure css + tailwind + native DOM, DO NOT USE external 3D or canvas libraries
-    - ensure high performance (60 fps) using css transform and opacity hardware acceleration
-
-# Bug Fixes
-
-- when i right click a tab in the portal, instead of showing an overlay with the options it gives me, it hides the entire current screen and makes it only show the logo rather than the content in the website
-
-- when i type something in a text box or select something, or perform a click in a portal app, eg. discord/instagram, i have to switch to another desktop app (eg. using alt tab twice or clicking into another app) and then switch tab back in before i can use the global hoteky
-
 # Cleanup
 - remove old project files created by `npm run build:desktop` or `npm run build`
 
@@ -52,11 +35,8 @@
 - [ ] **Add React.lazy + Suspense to all tab views** — all 8 views are statically imported in `Index.tsx`, so every tab pays recharts + framer-motion + xterm cost at first paint. Lazy-load each view like `TerminalPage` already does with xterm. (`src/pages/Index.tsx:8-16,102-112`)
 
 - [ ] **Memoize CalendarPage per-row components + precompute day counts** — `EventRow` is plain function, not memoized, rendered with inline closures `onEdit={() => onEdit(event)}`. `MonthGrid` re-filters entire events array for every day cell on every render (O(days × events)). Precompute per-day counts via `useMemo` keyed on `[events, year, month]`. (`src/components/views/CalendarPage.tsx:182-246,271-282,403-409`)
-
 - [ ] **Memoize HomePage widgets** — `EngineWidget` derives `openTasks`/`topTasks` (filter + sort) on every render, not memoized. Same pattern in `SmartSummary` and `VaultWidget`. All six widgets re-render together on any AppContext change. Add `React.memo` + `useMemo` for derived lists. (`src/components/views/HomePage.tsx:322-410`)
-
 - [ ] **Memoize TaskItem + KanbanBoard** — `TaskItem` is a `motion.div` with `layout` per task, not memoized; every row re-renders on any AppContext change. `layout` on many simultaneous motion items is expensive. `KanbanBoard` recomputes `categoryColumns`/`doneColumn`/`allColumns` every render. (`src/components/views/TasksPage.tsx:14-57,81-93`)
-
 - [ ] **Memoize ArchivePage row components** — `NoteRow`/`TagChip` not memoized; inline closures `onSelect={() => …}` at `:446`. Full list re-renders on `selectedNotePath` and any AppContext change. (`src/components/views/ArchivePage.tsx:59-88,35-57`)
 
 - [ ] **Gate CommandPalette heavy work on focus** — always mounted on non-terminal/portal tabs, consumes whole AppContext, re-runs `matchedTasks`/`matchedTransactions`/debounced vault filter on every app mutation even when closed. Memo derived matches; gate heavy work on `focused`. (`src/components/CommandPalette.tsx:121-151`)

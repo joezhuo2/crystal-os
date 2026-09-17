@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-187%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.5.6-6366F1)
+![Tests](https://img.shields.io/badge/tests-274%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.6.2-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.5.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.6.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -24,12 +24,13 @@ Current release: **v0.5.6** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | **🏠 Home widgets** | Clock, weather, AI smart summary, the Engine (top 3 tasks with quick-complete and add), today's calendar events, daily focus, and a vault widget — each with its own shimmer skeleton while loading |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations |
-| **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list |
+| **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list. Its own amethyst theme: glass crystals growing in from the screen edges, sparkles, and a cursor light the crystals reflect |
+| **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, per-model token counts, and a swirling three-colour nebula |
 | **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges, and three themes (desktop; the web build opens apps in new tabs) |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
 | **⏱️ Pomodoro** | Customizable focus/break intervals, session tracking, audio notifications, and tray controls (Tasks view) |
 | **🖥️ Desktop shell** | Native Tauri window with PowerShell terminal, tray (Pomodoro + Quick Add), always-on global hotkeys, and launch-at-login — the web build is unaffected |
-| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, vault folder, Portal theme |
+| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, vault folder, Nebula keys, models and look, Portal theme |
 | **⌨️ Command Palette** | Global search over tasks, transactions, and vault note bodies, plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
 | **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar |
@@ -132,9 +133,10 @@ src/
 ├── components/
 │   ├── layout/
 │   │   ├── AppSplash.tsx       # "Crystal OS / Loading…" splash while the session restores
-│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal restyle the sidebar)
+│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal/Nebula/Archive restyle the sidebar)
 │   │   ├── TerminalStatic.tsx  # Static-noise backdrop for the Terminal tab
-│   │   └── PortalBackdrop.tsx  # Themed backdrop for The Portal
+│   │   ├── PortalBackdrop.tsx  # Themed backdrop for The Portal
+│   │   └── ObsidianBackdrop.tsx # Crystal backdrop and cursor light for The Archive
 │   ├── portal/
 │   │   ├── PortalNavbar.tsx    # App pills (drag, right-click menu), browser controls
 │   │   ├── PortalSkeleton.tsx  # Themed placeholder shown while an app's page loads
@@ -174,6 +176,7 @@ src/
 │   ├── supabase.ts             # Supabase client + helpers
 │   ├── vaultCore.ts            # Shared vault logic: parsing, search, tags, quick-add formatting
 │   ├── vaultNative.ts          # Desktop vault client for src-tauri/src/vault.rs
+│   ├── obsidianScene.ts        # Archive backdrop: crystal shapes, edge layout, cursor light maths
 │   ├── terminalNative.ts       # Desktop terminal bridge (terminal_* commands, event routing per shell)
 │   ├── portalApps.ts           # Portal presets, URL/id validation, badge parsing
 │   ├── portalStore.ts          # Module-level Portal store: apps, active app, badges, theme
@@ -202,7 +205,8 @@ src-tauri/
 │   ├── settings.rs             # settings.json read/write (hotkeys, vaultPath, launchAtLogin)
 │   ├── vault.rs                # Native vault I/O: list/read/write/status/watch
 │   ├── terminal.rs             # ConPTY PowerShell shells (up to 5)
-│   └── portal.rs               # Portal child webviews: show/hide/fade, per-app data, sign-out
+│   ├── portal.rs               # Portal child webviews: show/hide/fade, snapshots, per-app data, sign-out
+│   └── portal/webview2.rs      # WebView2 page capture + tab-shortcut forwarding for Portal apps
 ├── capabilities/
 │   └── default.json            # App command allowlist by name
 └── tauri.conf.json             # Window, tray, bundle config
@@ -240,6 +244,17 @@ The middleware is mounted on both the dev server and `vite preview`. It is **not
 ### Layout
 
 The browser rail is a fixed-height column split into two halves that scroll independently: the tag cloud on top, the filtered note list below, with the note count between them as a divider and the search field pinned above both. Each half is `flex-1 basis-0 min-h-0`, so a vault with many tags cannot crowd the list out of view, and a vault with few tags leaves the extra space to the list.
+
+### Theme
+
+The Archive has its own dark amethyst look. The panels, tags, note list, buttons, and sidebar turn violet, and `ObsidianBackdrop` (`src/components/layout/ObsidianBackdrop.tsx`) draws the scene behind them with CSS, SVG, and DOM only (no canvas, WebGL, or 3D library):
+
+- **Crystals.** 32 glass crystals grow in from the four corners and edges, in five faceted shapes, at resting opacities between 0.3 and 0.9. Each one is tilted to point into the screen and pushed out along its own axis until its flat base sits past the edge, so no root is ever on screen. The layout is seeded, so it is the same on every visit (`src/lib/obsidianScene.ts`).
+- **Sparkles.** Four-point stars twinkle at random across the background, and one sits near the tip of each crystal, on top of the glass.
+- **Cursor light.** A soft violet aura follows the pointer and breathes between 0.5 and 0.8 opacity. It fades out when the pointer leaves the window.
+- **Reflections.** A crystal near the pointer lights up: a brighter rim, a halo, and a second glass layer with a stronger `backdrop-filter` (brightness, saturation, contrast) that carries a glint positioned where the pointer is. The light is worked out in the crystal's own rotated frame, so tilted crystals light along their length.
+
+The pointer never touches React state. One `pointermove` listener schedules at most one animation frame. That frame reads every crystal's position first, then writes `--obsidian-mx`/`--obsidian-my` on the backdrop and `--lit`/`--lx`/`--ly` on each crystal it lights, skipping crystals that stay dark. The CSS turns those properties into `transform` and `opacity`, which the compositor handles. The floating, twinkling, growing, and breathing animations use only transforms and opacity. The stronger reflection layer is `visibility: hidden` while its crystal is dark, so its filter only runs near the pointer. With reduced motion on, the animations stop and the cursor light still works.
 
 ### Safety
 
@@ -378,13 +393,13 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 - **Loading.** While an app's page loads (first open, **Reload**, **Back to home page**, **Sign out**), the frame shows a skeleton of a web app in the theme's colours with "Loading <app>…". The page appears, fading in, once it has finished loading, or after 20 seconds if it never reports that.
 - **Always on.** Apps load the first time you open The Portal after launching Crystal OS, then keep running while you use other tabs. Unread counts from their page titles show on each pill and on the sidebar's Portal icon.
 - **Themes.** Choose **Void swirl** (default), **Event horizon**, or **Stargate blue** under **Settings → The Portal**. The theme styles the backdrop, sidebar, navbar, and the animated ring around the app.
-- **Keyboard shortcuts (desktop).** While a Portal app is on screen: **Ctrl+Tab** cycles to the next app, **Ctrl+Shift+Tab** cycles to the previous one, **Ctrl+W** opens the Remove confirmation, and **Ctrl+R** reloads the active app. Shortcuts are disabled while a dialog is open or the focus is inside a text field. `Ctrl+R` prevents Tauri's default full-page reload, which would otherwise drop you to the Home tab.
+- **Keyboard shortcuts (desktop).** While a Portal app is on screen: **Ctrl+Tab** cycles to the next app, **Ctrl+Shift+Tab** cycles to the previous one, **Ctrl+W** opens the Remove confirmation, and **Ctrl+R** reloads the active app. They also work while you are typing inside an app page (Windows): the app's webview catches them before the page does. In Crystal OS's own UI they are disabled while a dialog is open or the focus is inside a text field. `Ctrl+R` prevents Tauri's default full-page reload, which would otherwise drop you to the Home tab.
 - **Web build.** Browsers refuse to embed these sites in another page, so there the Portal keeps your app list and opens each app in a new tab.
-- The app pages draw above Crystal OS's own UI, so the search bar is hidden on this tab and dialogs (such as tray **Quick Add**) hide the app while they are open. The pages get no access to Crystal OS commands. The view talks to Rust through the `portal_*` commands in `src/lib/portalNative.ts`.
+- The app pages draw above Crystal OS's own UI, so the search bar is hidden on this tab and menus and dialogs (such as the pill right-click menu or tray **Quick Add**) hide the app while they are open. A still picture of the page stays in its place behind them. The pages get no access to Crystal OS commands. The view talks to Rust through the `portal_*` commands in `src/lib/portalNative.ts`.
 
 **Global hotkeys.** Two combos work from any app:
 
-- `Alt+Space` shows Crystal OS; press it again while the app is focused to hide it. It does not touch the search bar. Saved as `globalShortcut`.
+- `Alt+Space` shows Crystal OS; press it again while the app is in front to hide it, including while you are typing in a Portal app. It does not touch the search bar. Saved as `globalShortcut`.
 - `Alt+Shift+Space` shows Crystal OS and focuses the search bar. Saved as `paletteShortcut`.
 
 Change either with **Change** in Settings. Both are saved in `%APPDATA%\com.crystalos.desktop\settings.json`, and the two cannot share a combo. If another app already owns one, Crystal OS still starts and shows a toast.
@@ -412,6 +427,51 @@ The Pomodoro timer lives in `src/lib/pomodoro.ts`, so it keeps running when you 
 - **When things go wrong.** A saved folder that is gone at startup (renamed, or on an unplugged drive) or unreadable shows a card with **Choose vault folder** and **Retry**; the watcher restarts once the folder is back. A note deleted while open shows **This note is gone** with **Close note**.
 
 Code that behaves differently on desktop goes through `src/lib/platform.ts` (`isDesktop()`, `apiUrl()`, `openExternal()`), so the web bundle never imports Tauri.
+
+---
+
+## 🌌 The Nebula (coding agent)
+
+The Nebula is a coding agent tab in the desktop app. It works inside project folders you choose, keeps a history of chats for each project, and runs on three model tiers. The design, and what the spike established about each engine, are in [ADR 0003](docs/adr/0003-nebula-deepseek-harness.md).
+
+### Setup
+
+1. Install **Node.js 22 or newer**. For the High tier, also install **Claude Code** and sign in: run `claude`, then `/login`.
+2. Open **The Nebula** and click **Install DeepSeek Harness**. This installs the pinned `@deepseek-ai/dsh` into `%APPDATA%\com.crystalos.desktop\dsh` once.
+3. In **Settings → The Nebula**, paste your **NVIDIA NIM** API key (used by Medium). For Low, make sure OmniRoute is running on `localhost:20128`, and add an **OmniRoute** key only if your OmniRoute needs one.
+4. Click **New project**, open or create a folder, and start chatting.
+
+### Tiers
+
+| Tier | Engine | Models |
+|------|--------|--------|
+| Low | DeepSeek Harness | OmniRoute `auto/coding` |
+| Medium | DeepSeek Harness | First available of NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 Ultra → OmniRoute `auto/coding` |
+| High | Claude Code | The model set in Settings (default `opus`), always on your Anthropic account |
+
+Model ids and endpoints can be edited in Settings. Effort (low to max) and mode (**Auto**, **Manual**, **Plan**) are set per chat in the toolbar. Tier and effort cannot be changed while the agent is working.
+
+### How it works
+
+- **Low and Medium** talk to one `dsh --profile acp` process per project folder over the Agent Client Protocol (`src/lib/harness/acpClient.ts`). Model and effort are set on every turn, and if a model fails before answering, the turn moves on to the next one.
+- **High** drives `claude -p` in stream-json mode (`src/lib/harness/claudeStream.ts`). In Manual mode, approval requests arrive as `can_use_tool` control requests and appear as Allow / Deny cards.
+- **Skills and MCP servers** are read from `~/.claude/skills`, enabled Claude Code plugins, Claude Desktop, and `~/.claude.json` (`src-tauri/src/harness/discovery.rs`). You can turn individual servers off in Settings.
+- **Storage.** Everything is under the app config folder:
+  - `harness/state.json`: projects, the chat index, and all-time token totals.
+  - `harness/chats/<id>.json`: one transcript per chat.
+  - `harness/logs/`: engine stderr.
+
+### Safety
+
+- API keys and MCP server environment values never reach the webview. Keys are write-only in Settings.
+- Claude Code is launched:
+  - without any `ANTHROPIC_*` or `CLAUDE*` variables inherited from Crystal OS;
+  - with an override that points it back at api.anthropic.com;
+  - with arguments built only from validated enums, ids, and paths.
+
+  `bypassPermissions` is never used.
+- Every agent process joins a kill-on-close Windows Job Object. Closing Crystal OS or reloading the page ends the agents and everything they started.
+- In Auto mode the agent runs tools inside the project folder without asking. Use Manual to approve each action, or Plan to explore without making changes.
 
 ---
 

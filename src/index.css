@@ -865,3 +865,528 @@
     }
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * The Nebula. Colours come from --nebula-a/b/c, set on the page root in
+ * Index.tsx from the user's theme (src/lib/harness/store.ts).
+ * ------------------------------------------------------------------ */
+@layer components {
+  .nebula-root {
+    background: #030209;
+    color: #f5f3ff;
+  }
+
+  .nebula-title {
+    background: linear-gradient(100deg, var(--nebula-c), var(--nebula-b) 45%, var(--nebula-a));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .nebula-panel {
+    border-radius: 1rem;
+    background: rgb(8 6 20 / 0.55);
+    border: 1px solid color-mix(in srgb, var(--nebula-a) 22%, rgb(255 255 255 / 0.06));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.04),
+      0 0 40px color-mix(in srgb, var(--nebula-a) 10%, transparent);
+    backdrop-filter: blur(14px) saturate(1.2);
+  }
+
+  .sidebar-nebula {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--nebula-a) 16%, rgb(5 3 14 / 0.9)) 0%,
+      rgb(5 3 14 / 0.78) 50%,
+      color-mix(in srgb, var(--nebula-b) 12%, rgb(5 3 14 / 0.9)) 100%
+    );
+    border-color: transparent;
+    box-shadow:
+      inset -1px 0 0 color-mix(in srgb, var(--nebula-c) 40%, transparent),
+      6px 0 28px color-mix(in srgb, var(--nebula-a) 18%, transparent);
+  }
+
+  .sidebar-nebula button svg {
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--nebula-c) 55%, transparent));
+  }
+
+  .nebula-segmented {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: 0.6rem;
+    background: rgb(255 255 255 / 0.04);
+    border: 1px solid rgb(255 255 255 / 0.08);
+  }
+
+  .nebula-segmented button {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.45rem;
+    color: rgb(255 255 255 / 0.55);
+    transition: background-color 150ms, color 150ms, box-shadow 150ms;
+  }
+
+  .nebula-segmented button:hover:not(:disabled) {
+    color: #fff;
+  }
+
+  .nebula-segmented button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .nebula-segmented button[data-active] {
+    color: #fff;
+    background: linear-gradient(120deg, color-mix(in srgb, var(--nebula-a) 55%, transparent), color-mix(in srgb, var(--nebula-b) 45%, transparent));
+    box-shadow: 0 0 14px color-mix(in srgb, var(--nebula-b) 35%, transparent);
+  }
+
+  .nebula-chip {
+    display: inline-flex;
+    height: 2rem;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0 0.6rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    color: rgb(255 255 255 / 0.75);
+    background: rgb(255 255 255 / 0.04);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    transition: border-color 150ms, color 150ms;
+  }
+
+  .nebula-chip:hover,
+  .nebula-chip[data-state="open"] {
+    color: #fff;
+    border-color: color-mix(in srgb, var(--nebula-c) 50%, transparent);
+  }
+
+  .nebula-active-chat {
+    background: color-mix(in srgb, var(--nebula-a) 22%, transparent);
+    box-shadow: inset 2px 0 0 var(--nebula-c);
+  }
+
+  .nebula-user-bubble {
+    border-radius: 1rem 1rem 0.3rem 1rem;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--nebula-a) 45%, rgb(20 14 40)), color-mix(in srgb, var(--nebula-b) 30%, rgb(20 14 40)));
+    border: 1px solid rgb(255 255 255 / 0.08);
+  }
+
+  .nebula-model-badge {
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    color: #fff;
+    background: color-mix(in srgb, var(--nebula-c) 22%, transparent);
+    border: 1px solid color-mix(in srgb, var(--nebula-c) 40%, transparent);
+  }
+
+  .nebula-block {
+    overflow: hidden;
+    border-radius: 0.6rem;
+    background: rgb(0 0 0 / 0.25);
+    border: 1px solid rgb(255 255 255 / 0.06);
+  }
+
+  .nebula-permission {
+    padding: 0.75rem;
+    border-radius: 0.7rem;
+    background: rgb(251 191 36 / 0.06);
+    border: 1px solid rgb(251 191 36 / 0.2);
+  }
+
+  .nebula-permission-pending {
+    animation: nebula-attention 2.4s ease-in-out infinite;
+  }
+
+  .nebula-composer {
+    border-radius: 0.9rem;
+    background: rgb(0 0 0 / 0.3);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+
+  .nebula-composer:focus-within {
+    border-color: color-mix(in srgb, var(--nebula-c) 55%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--nebula-c) 18%, transparent);
+  }
+
+  .nebula-send {
+    background: linear-gradient(135deg, var(--nebula-a), var(--nebula-b));
+    color: #fff;
+  }
+
+  .nebula-fallback {
+    background:
+      radial-gradient(ellipse 60% 50% at 30% 35%, color-mix(in srgb, var(--nebula-a) 55%, transparent), transparent 70%),
+      radial-gradient(ellipse 50% 45% at 70% 60%, color-mix(in srgb, var(--nebula-b) 45%, transparent), transparent 70%),
+      radial-gradient(ellipse 40% 35% at 50% 50%, color-mix(in srgb, var(--nebula-c) 35%, transparent), transparent 70%),
+      #030209;
+    animation: nebula-fallback-swirl 90s linear infinite;
+  }
+
+  .nebula-color-input::-webkit-color-swatch-wrapper {
+    padding: 3px;
+  }
+
+  .nebula-color-input::-webkit-color-swatch {
+    border: none;
+    border-radius: 0.4rem;
+  }
+
+  @keyframes nebula-attention {
+    0%,
+    100% {
+      box-shadow: 0 0 0 rgb(251 191 36 / 0);
+    }
+    50% {
+      box-shadow: 0 0 18px rgb(251 191 36 / 0.25);
+    }
+  }
+
+  @keyframes nebula-fallback-swirl {
+    to {
+      transform: rotate(360deg) scale(1.4);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nebula-permission-pending,
+    .nebula-fallback {
+      animation: none;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------
+ * The Archive (Obsidian). A dark amethyst cave: glass crystals, sparkles,
+ * and a cursor light that catches on the crystals. ObsidianBackdrop.tsx
+ * writes --obsidian-mx/--obsidian-my on .obsidian-backdrop and --lit (0–1),
+ * --lx/--ly (cursor relative to the crystal) on each .obsidian-crystal.
+ *
+ * Only transform and opacity change per frame. Nothing above a
+ * backdrop-filter element gets opacity < 1, filter, or clip-path, since any
+ * of those would cut the glass off from what sits behind it.
+ * ------------------------------------------------------------------ */
+@layer components {
+  .obsidian-root {
+    background: #06020d;
+    --background: 270 60% 5%;
+    --primary: 271 91% 72%;
+    --ring: 271 91% 65%;
+    --glow-indigo: 271 91% 65%;
+    --muted-foreground: 268 22% 66%;
+    --glass-border: 270 100% 90%;
+  }
+
+  .obsidian-title {
+    background: linear-gradient(100deg, #f5d0fe, #c084fc 45%, #818cf8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Page panels: tinted amethyst glass. */
+  .obsidian-root main .glass-card {
+    background: linear-gradient(160deg, rgb(46 16 84 / 0.42), rgb(14 6 28 / 0.55));
+    border-color: rgb(192 132 252 / 0.18);
+    box-shadow:
+      0 8px 32px rgb(3 0 10 / 0.55),
+      0 0 36px rgb(147 51 234 / 0.08),
+      inset 0 1px 0 rgb(245 208 254 / 0.08);
+  }
+
+  .obsidian-chip {
+    border-color: rgb(255 255 255 / 0.08);
+    background: rgb(255 255 255 / 0.04);
+  }
+
+  .obsidian-chip:hover {
+    border-color: rgb(192 132 252 / 0.3);
+  }
+
+  .obsidian-chip[data-active] {
+    color: #e9d5ff;
+    background: rgb(168 85 247 / 0.2);
+    border-color: rgb(192 132 252 / 0.45);
+    box-shadow: 0 0 12px rgb(168 85 247 / 0.25);
+  }
+
+  .obsidian-note {
+    border-color: transparent;
+  }
+
+  .obsidian-note:hover {
+    background: rgb(168 85 247 / 0.06);
+  }
+
+  .obsidian-note[data-active] {
+    background: rgb(168 85 247 / 0.14);
+    border-color: rgb(192 132 252 / 0.28);
+    box-shadow: inset 2px 0 0 #c084fc;
+  }
+
+  .obsidian-tag {
+    color: #e9d5ff;
+    background: rgb(168 85 247 / 0.16);
+  }
+
+  .obsidian-action {
+    color: #f3e8ff;
+    background: linear-gradient(135deg, rgb(147 51 234 / 0.3), rgb(192 38 211 / 0.18));
+    border-color: rgb(216 180 254 / 0.3);
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+
+  .obsidian-action:hover:not(:disabled) {
+    border-color: rgb(233 213 255 / 0.55);
+    box-shadow: 0 0 18px rgb(168 85 247 / 0.35);
+  }
+
+  .sidebar-obsidian {
+    background: linear-gradient(180deg, rgb(46 16 84 / 0.7) 0%, rgb(8 3 18 / 0.8) 50%, rgb(59 7 100 / 0.55) 100%);
+    border-color: transparent;
+    box-shadow:
+      inset -1px 0 0 rgb(192 132 252 / 0.35),
+      6px 0 28px rgb(147 51 234 / 0.18);
+  }
+
+  .sidebar-obsidian button svg {
+    filter: drop-shadow(0 0 4px rgb(216 180 254 / 0.55));
+  }
+
+  /* Backdrop */
+  .obsidian-backdrop {
+    background:
+      radial-gradient(120% 80% at 50% 115%, #2e0b52 0%, transparent 60%),
+      radial-gradient(70% 55% at 0% 0%, #1c0936 0%, transparent 70%),
+      linear-gradient(180deg, #07030f 0%, #0c0420 55%, #05020b 100%);
+  }
+
+  .obsidian-haze {
+    position: absolute;
+    inset: -20%;
+    background:
+      radial-gradient(34% 30% at 26% 32%, rgb(126 34 206 / 0.32), transparent 70%),
+      radial-gradient(30% 28% at 74% 64%, rgb(88 28 135 / 0.4), transparent 70%),
+      radial-gradient(24% 22% at 62% 20%, rgb(192 38 211 / 0.14), transparent 70%);
+    animation: obsidian-drift 50s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  /* Four-point star. Peak opacity is set inline; the twinkle animates ::before
+     with literal keyframes so it stays on the compositor. */
+  .obsidian-sparkle {
+    position: absolute;
+    translate: -50% -50%;
+  }
+
+  .obsidian-sparkle::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, #fff 0 14%, rgb(233 213 255 / 0.9) 28%, rgb(192 132 252 / 0) 70%);
+    clip-path: polygon(50% 0%, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0% 50%, 42% 42%);
+    opacity: 0;
+    animation: obsidian-twinkle var(--twinkle-duration, 4s) ease-in-out var(--twinkle-delay, 0s) infinite;
+    will-change: transform, opacity;
+  }
+
+  /* Crystals. left/top is the centre of the base; `rotate` (inline) tilts
+     each one about its base to point into the screen. `scale` grows it out of
+     the edge once, then `transform` bobs it along its own axis. */
+  .obsidian-crystal {
+    position: absolute;
+    translate: -50% -100%;
+    transform-origin: 50% 100%;
+    animation:
+      obsidian-emerge 900ms cubic-bezier(0.2, 0.9, 0.25, 1.12) var(--emerge-delay, 0ms) backwards,
+      obsidian-float var(--float-duration, 10s) ease-in-out var(--float-delay, 0s) infinite;
+    will-change: transform, scale;
+  }
+
+  .obsidian-crystal-halo {
+    position: absolute;
+    inset: -45%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(192 132 252 / 0.45), rgb(147 51 234 / 0.15) 55%, transparent);
+    opacity: calc(var(--lit, 0) * 0.9);
+    transition: opacity 160ms ease-out;
+    will-change: opacity;
+  }
+
+  /* Frosted glass with a diagonal sheen. The blur is small, since every
+     crystal under the moving aura re-blurs each frame. */
+  .obsidian-crystal-glass {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.14) 46%, transparent 54%),
+      linear-gradient(155deg, rgb(233 213 255 / 0.3), rgb(147 51 234 / 0.18) 38%, rgb(46 16 84 / 0.4) 72%, rgb(192 132 252 / 0.24));
+    backdrop-filter: blur(4px) saturate(1.4);
+    opacity: var(--o, 0.6);
+  }
+
+  /* The cursor's reflection: brighter, more saturated glass plus a glint
+     that tracks the cursor inside the crystal. Hidden when unlit so its
+     backdrop-filter only runs on the few crystals near the cursor. */
+  .obsidian-crystal-reflect {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: linear-gradient(155deg, rgb(255 255 255 / 0.2), rgb(216 180 254 / 0.08) 45%, transparent 70%);
+    backdrop-filter: blur(3px) brightness(1.9) saturate(1.8) contrast(1.1);
+    opacity: var(--lit, 0);
+    visibility: hidden;
+    transition: opacity 160ms ease-out, visibility 0s linear 160ms;
+    will-change: opacity;
+  }
+
+  .obsidian-crystal[data-lit] .obsidian-crystal-reflect {
+    visibility: visible;
+    transition: opacity 160ms ease-out, visibility 0s;
+  }
+
+  .obsidian-crystal-glint {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 28vmin;
+    height: 28vmin;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(255 255 255 / 0.9), rgb(245 208 254 / 0.5) 25%, rgb(192 132 252 / 0.18) 55%, transparent);
+    transform: translate3d(calc(var(--lx, -9999px) - 50%), calc(var(--ly, -9999px) - 50%), 0);
+    will-change: transform;
+  }
+
+  .obsidian-crystal-edges {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    fill: none;
+    opacity: var(--o, 0.6);
+  }
+
+  .obsidian-crystal-edges polygon {
+    stroke: rgb(216 180 254 / 0.65);
+    stroke-width: 1.2;
+    stroke-linejoin: miter;
+    stroke-miterlimit: 12;
+  }
+
+  .obsidian-crystal-edges path {
+    stroke: rgb(233 213 255 / 0.3);
+    stroke-width: 0.8;
+  }
+
+  /* Border contrast: a bright rim that fades in with the light. */
+  .obsidian-crystal-edges-lit {
+    opacity: var(--lit, 0);
+    filter: drop-shadow(0 0 4px rgb(216 180 254 / 0.9));
+    transition: opacity 160ms ease-out;
+    will-change: opacity;
+  }
+
+  .obsidian-crystal-edges-lit polygon {
+    stroke: #faf5ff;
+    stroke-width: 1.8;
+  }
+
+  .obsidian-crystal-edges-lit path {
+    stroke: rgb(245 208 254 / 0.7);
+    stroke-width: 1;
+  }
+
+  /* Cursor aura: a fixed-size gradient moved with transform, never repainted. */
+  .obsidian-aura-track {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 46vmax;
+    height: 46vmax;
+    transform: translate3d(calc(var(--obsidian-mx, 50vw) - 50%), calc(var(--obsidian-my, 50vh) - 50%), 0);
+    transition: opacity 400ms ease-out;
+    will-change: transform, opacity;
+  }
+
+  .obsidian-backdrop[data-cursor="away"] .obsidian-aura-track {
+    opacity: 0;
+  }
+
+  .obsidian-aura {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(
+      closest-side,
+      rgb(245 208 254 / 0.55) 0%,
+      rgb(192 132 252 / 0.32) 18%,
+      rgb(147 51 234 / 0.16) 42%,
+      rgb(88 28 135 / 0.06) 70%,
+      transparent 100%
+    );
+    opacity: 0.65;
+    animation: obsidian-breathe 5s ease-in-out infinite;
+    will-change: opacity;
+  }
+
+  @keyframes obsidian-drift {
+    to {
+      transform: translate3d(4%, -3%, 0) rotate(8deg) scale(1.08);
+    }
+  }
+
+  @keyframes obsidian-twinkle {
+    0%,
+    100% {
+      opacity: 0;
+      transform: scale(0.3) rotate(0deg);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1) rotate(45deg);
+    }
+  }
+
+  @keyframes obsidian-emerge {
+    from {
+      scale: 1 0;
+    }
+  }
+
+  /* Along the crystal's own axis: a slow push out of the edge and back. */
+  @keyframes obsidian-float {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(0, -6px, 0);
+    }
+  }
+
+  @keyframes obsidian-breathe {
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .obsidian-haze,
+    .obsidian-crystal,
+    .obsidian-sparkle::before,
+    .obsidian-aura {
+      animation: none;
+    }
+
+    .obsidian-sparkle::before {
+      opacity: 0.7;
+    }
+  }
+}
