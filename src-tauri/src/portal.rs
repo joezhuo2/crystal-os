@@ -60,9 +60,35 @@ const SNAPSHOT_TIMEOUT: Duration = Duration::from_millis(800);
 /// request cannot leave the skeleton up forever.
 const LOAD_TIMEOUT: Duration = Duration::from_secs(20);
 
+/// How long an app stays off screen before its caches are trimmed. Long enough
+/// that opening a menu, or switching to another app and back, never trims the
+/// one being used: those hide it for a moment and would otherwise make it drop
+/// caches it is about to need again.
+const IDLE_DELAY: Duration = Duration::from_secs(30);
+
 /// Webview background while a page is loading or faded out, so neither shows
 /// WebView2's default white.
 const BACKGROUND: Color = Color(5, 5, 10, 255);
+
+/// Browser arguments shared by every Portal app.
+///
+/// The three `ms*` features are wry's own defaults, repeated because passing
+/// arguments at all replaces them: `msWebOOUI` and `msPdfOOUI` are the "mini
+/// menu", `msSmartScreenProtection` is SmartScreen.
+///
+/// `BackForwardCache` is ours. It keeps whole rendered pages in memory so the
+/// back button can restore them instantly, which is worth little in an app
+/// whose pages are single-page sites, and costs tens of megabytes each. Going
+/// back re-renders instead.
+///
+/// The cache cap keeps a long-running app's data folder, and the index WebView2
+/// holds for it, from growing without limit.
+///
+/// Every app passes the same string on purpose: WebView2 groups webviews into
+/// one browser process only when their environments match, and the arguments
+/// are part of that match.
+const BROWSER_ARGS: &str =
+  "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,BackForwardCache --disk-cache-size=52428800";
 
 /// Fades the page in from transparent. Run just before a hidden webview is
 /// shown; the fade starts on its first frames once visible.
@@ -91,6 +117,11 @@ pub struct PortalState {
   /// of that load so an older load's timeout does not reveal a newer one.
   loading: Mutex<HashMap<String, u64>>,
   next_load: AtomicU64,
+  /// Labels waiting to have their caches trimmed, each with the id of that
+  /// wait, so an app shown again before `IDLE_DELAY` is up is not trimmed by
+  /// the timer its earlier hide started.
+  idle: Mutex<HashMap<String, u64>>,
+  next_idle: AtomicU64,
 }
 
 /// Mirrors `PortalBounds` in src/lib/portalNative.ts. Logical (CSS) pixels
@@ -203,6 +234,87 @@ fn rect(bounds: Bounds) -> Rect {
   }
 }
 
+/* ------------------------------------------------------------------ *
+ * Memory
+ * ------------------------------------------------------------------ *
+ *
+ * An app that is not on screen keeps running, but nothing it has painted is
+ * being looked at, so WebView2 is asked to trim its caches. That is where most
+ * of the Portal's memory sits: the pages themselves are small next to the
+ * render caches behind them.
+ *
+ * Trimming is delayed by `IDLE_DELAY` because hiding is also what happens for
+ * a moment when a menu opens or the user switches apps and comes straight
+ * back. Hiding the main window to the tray trims at once instead: nothing is
+ * on screen at all then, and the window staying hidden is the normal case. */
+
+/// Trims (or restores) one webview's caches. Does nothing off Windows, where
+/// WebView2 is not the engine.
+fn set_memory_saving<R: Runtime>(app: &AppHandle<R>, label: &str, saving: bool) {
+  let Some(webview) = app.get_webview(label) else { return };
+  #[cfg(windows)]
+  if let Err(err) = webview2::set_memory_saving(&webview, saving) {
+    log::warn!("[portal] could not set the memory level for {label}: {err}");
+  }
+  #[cfg(not(windows))]
+  let _ = (&webview, saving);
+}
+
+/// Puts a webview back to its normal memory level and cancels any pending
+/// trim, so an app being shown keeps the caches it is about to paint from.
+fn wake<R: Runtime>(app: &AppHandle<R>, state: &PortalState, label: &str) {
+  state.idle.lock().unwrap().remove(label);
+  set_memory_saving(app, label, false);
+}
+
+/// Trims a webview's caches once it has been off screen for `IDLE_DELAY`,
+/// unless it is shown again first.
+fn trim_when_idle<R: Runtime>(app: &AppHandle<R>, state: &PortalState, label: &str) {
+  let idle = state.next_idle.fetch_add(1, Ordering::Relaxed);
+  state.idle.lock().unwrap().insert(label.to_string(), idle);
+  let app = app.clone();
+  let label = label.to_string();
+  std::thread::spawn(move || {
+    std::thread::sleep(IDLE_DELAY);
+    let state = app.state::<PortalState>();
+    {
+      let mut waiting = state.idle.lock().unwrap();
+      // Shown again, or a later hide restarted the wait: leave it alone.
+      if waiting.get(&label) != Some(&idle) {
+        return;
+      }
+      waiting.remove(&label);
+    }
+    if state.shown.lock().unwrap().as_deref() == Some(label.as_str()) {
+      return;
+    }
+    set_memory_saving(&app, &label, true);
+  });
+}
+
+/// Trims every webview at once, or puts them back. Called when the main window
+/// is hidden to the tray and when it comes back: with the window gone there is
+/// nothing to paint, so the wait that `trim_when_idle` uses would only hold
+/// memory for no one.
+///
+/// This covers the main window's own webview too, not just the Portal apps.
+/// Crystal OS's own interface is the largest single page the app runs, and
+/// while the window is in the tray none of it is being looked at.
+pub fn set_all_memory_saving<R: Runtime>(app: &AppHandle<R>, saving: bool) {
+  let state = app.state::<PortalState>();
+  let shown = state.shown.lock().unwrap().clone();
+  for (label, _) in portal_webviews(app) {
+    // On the way back only the app on screen is restored; the rest stay
+    // trimmed until they are shown.
+    if !saving && shown.as_deref() != Some(label.as_str()) {
+      continue;
+    }
+    state.idle.lock().unwrap().remove(&label);
+    set_memory_saving(app, &label, saving);
+  }
+  set_memory_saving(app, MAIN, saving);
+}
+
 /// Records that `label` is loading a page and starts its timeout. The caller
 /// hides the webview (or creates it and then hides it).
 fn start_loading<R: Runtime>(app: &AppHandle<R>, state: &PortalState, label: &str) {
@@ -250,7 +362,7 @@ fn finish_loading<R: Runtime>(app: &AppHandle<R>, label: &str, load: Option<u64>
   }
 }
 
-fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds) -> Result<Webview<R>, String> {
+fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds, keep_live: bool) -> Result<Webview<R>, String> {
   let window = app.get_window(MAIN).ok_or("The main window is not available")?;
   let dir = data_dir(app, id)?;
   std::fs::create_dir_all(&dir).map_err(|e| format!("Could not create {}: {e}", dir.display()))?;
@@ -262,10 +374,19 @@ fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds) -
 
   let builder = WebviewBuilder::new(label_of(id), WebviewUrl::External(home))
     .data_directory(dir)
+    .additional_browser_args(BROWSER_ARGS)
     .background_color(BACKGROUND)
-    // Keeps hidden apps (calls, message sockets) running. Honoured on macOS;
-    // WebView2 has no switch for it but does not suspend hidden webviews.
-    .background_throttling(BackgroundThrottlingPolicy::Disabled)
+    // An app marked "keep live" runs at full speed while hidden, which is what
+    // a call or a message socket needs. The rest are throttled: timers and
+    // animations are slowed while off screen, but the page is not suspended,
+    // so sockets stay open and messages still arrive. Honoured on macOS;
+    // WebView2 has no switch for it, which is why hidden apps there are
+    // trimmed through `set_memory_saving` instead.
+    .background_throttling(if keep_live {
+      BackgroundThrottlingPolicy::Disabled
+    } else {
+      BackgroundThrottlingPolicy::Throttle
+    })
     .on_page_load(|webview, payload| {
       if payload.event() == PageLoadEvent::Finished {
         finish_loading(webview.app_handle(), webview.label(), None);
@@ -323,6 +444,7 @@ pub async fn portal_show<R: Runtime>(
   url: String,
   bounds: Bounds,
   fade: Option<bool>,
+  keep_live: Option<bool>,
 ) -> Result<(), String> {
   check_id(&id)?;
   let target = label_of(&id);
@@ -337,7 +459,9 @@ pub async fn portal_show<R: Runtime>(
       None => {
         let home = parse_home(&url)?;
         start_loading(&app, &state, &target);
-        match create(&app, &id, home, bounds) {
+        // Only read here: the policy is fixed when the webview is built, so
+        // changing it takes effect the next time the app is loaded.
+        match create(&app, &id, home, bounds, keep_live.unwrap_or(false)) {
           Ok(created) => {
             let _ = created.hide();
             created
@@ -351,6 +475,10 @@ pub async fn portal_show<R: Runtime>(
     }
   };
 
+  // Before anything is painted, so the page has its caches back by the time
+  // it is on screen.
+  wake(&app, &state, &target);
+
   let mut shown = state.shown.lock().unwrap();
   if shown.as_deref() == Some(target.as_str()) {
     return Ok(());
@@ -358,6 +486,7 @@ pub async fn portal_show<R: Runtime>(
   for (label, other) in portal_webviews(&app) {
     if label != target {
       let _ = other.hide();
+      trim_when_idle(&app, &state, &label);
     }
   }
   // A page still loading stays hidden; `finish_loading` shows it once this
@@ -382,6 +511,11 @@ pub async fn portal_hide<R: Runtime>(app: AppHandle<R>, state: tauri::State<'_, 
     }
     shown.take().is_some()
   };
+  // Waits out `IDLE_DELAY` first: this also runs for a menu opening over the
+  // Portal, which puts the same app back on screen a moment later.
+  for (label, _) in portal_webviews(&app) {
+    trim_when_idle(&app, &state, &label);
+  }
   if was_shown {
     if let Some(main) = app.get_webview(MAIN) {
       let _ = main.set_focus();
@@ -501,6 +635,7 @@ pub async fn portal_remove<R: Runtime>(app: AppHandle<R>, state: tauri::State<'_
     let _ = webview.clear_all_browsing_data();
     webview.close().map_err(|e| e.to_string())?;
     state.loading.lock().unwrap().remove(webview.label());
+    state.idle.lock().unwrap().remove(webview.label());
     let mut shown = state.shown.lock().unwrap();
     if shown.as_deref() == Some(webview.label()) {
       *shown = None;
@@ -508,6 +643,26 @@ pub async fn portal_remove<R: Runtime>(app: AppHandle<R>, state: tauri::State<'_
   }
   if let Err(err) = remove_dir(&data_dir(&app, &id)?) {
     log::warn!("[portal] {err}");
+  }
+  Ok(())
+}
+
+/// Closes an app's webview without touching its data folder, so the next
+/// `portal_show` builds a fresh one and the app stays signed in.
+///
+/// Needed for settings that WebView2 fixes when the webview is built and will
+/// not change afterwards — "keep live in background" is one. Reloading the page
+/// is not enough: that keeps the same webview.
+#[tauri::command]
+pub async fn portal_rebuild<R: Runtime>(app: AppHandle<R>, state: tauri::State<'_, PortalState>, id: String) -> Result<(), String> {
+  let Some(webview) = find(&app, &id)? else { return Ok(()) };
+  let label = webview.label().to_string();
+  webview.close().map_err(|e| e.to_string())?;
+  state.loading.lock().unwrap().remove(&label);
+  state.idle.lock().unwrap().remove(&label);
+  let mut shown = state.shown.lock().unwrap();
+  if shown.as_deref() == Some(label.as_str()) {
+    *shown = None;
   }
   Ok(())
 }

@@ -14,6 +14,7 @@ import {
   navigatePortalApp,
   onPortalShortcut,
   openPortalAppExternally,
+  rebuildPortalApp,
   removePortalApp,
   showPortalApp,
   signOutPortalApp,
@@ -247,6 +248,17 @@ export default function PortalPage() {
     if (desktop) removePortalApp(app.id).catch(fail(`Could not delete ${app.name}'s data`));
   };
 
+  const setKeepLive = (app: PortalApp, keepLive: boolean) => {
+    portal.setKeepLive(app.id, keepLive);
+    if (!desktop) return;
+    // WebView2 fixes the throttling policy when the webview is built, so the
+    // old one is thrown away; `attempt` then makes the effect above show the
+    // app again, which builds a new one under the new setting.
+    rebuildPortalApp(app.id)
+      .then(() => setAttempt((n) => n + 1))
+      .catch(fail(`Could not change how ${app.name} runs in the background`));
+  };
+
   /** Move to the next (−1) or previous (−1) connected app, wrapping around. */
   const cycle = (direction: -1 | 1) => {
     if (apps.length === 0 || !activeId) return;
@@ -379,6 +391,7 @@ export default function PortalPage() {
         onOpenExternal={openExternal}
         onSignOut={signOut}
         onRemove={remove}
+        onKeepLiveChange={setKeepLive}
       />
 
       <div className="portal-frame flex-1 min-h-0 mx-2 mb-2">

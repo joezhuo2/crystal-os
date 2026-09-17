@@ -108,6 +108,7 @@ pub fn run() {
       portal::portal_open_external,
       portal::portal_sign_out,
       portal::portal_remove,
+      portal::portal_rebuild,
       portal::portal_prune,
       harness::harness_env_status,
       harness::harness_install_runtime,

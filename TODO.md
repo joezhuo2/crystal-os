@@ -6,8 +6,8 @@
 - replace the default apps in the portal: 
     - whatsapp => linkedin
     - messenger => spotify
-    - slack => 
-    - telegram => 
+    - slack => gmail
+    - telegram => outlook
 
 - in the bottom of the settings menu, add a place to download the latest exe installer or build the latest one (for latest released version), and add option for user to choose which version they want to download
 

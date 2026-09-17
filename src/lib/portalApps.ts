@@ -9,6 +9,15 @@ export interface PortalApp {
   name: string;
   /** Home page. Always https. */
   url: string;
+  /**
+   * Run at full speed while off screen instead of being throttled. Worth it
+   * for an app whose calls or notifications have to stay live, and costs CPU
+   * for every app it is turned on for, so it is off by default.
+   *
+   * Read when the app's webview is built, so a change applies the next time
+   * the app loads.
+   */
+  keepLive?: boolean;
 }
 
 export interface PortalPreset extends PortalApp {
@@ -104,12 +113,16 @@ export function parseStoredApps(raw: string | null): PortalApp[] {
   const apps: PortalApp[] = [];
   for (const item of data) {
     if (!item || typeof item !== "object") continue;
-    const { id, name, url } = item as Record<string, unknown>;
+    const { id, name, url, keepLive } = item as Record<string, unknown>;
     if (typeof id !== "string" || typeof name !== "string" || typeof url !== "string") continue;
     const href = normalizeUrl(url);
     if (!isValidId(id) || seen.has(id) || !name.trim() || !href) continue;
     seen.add(id);
-    apps.push({ id, name: name.trim(), url: href });
+    // The flag is left off the app unless it is on, matching how it is stored,
+    // so apps saved before the setting existed parse exactly as they used to.
+    const app: PortalApp = { id, name: name.trim(), url: href };
+    if (keepLive === true) app.keepLive = true;
+    apps.push(app);
   }
   return apps;
 }

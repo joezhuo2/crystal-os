@@ -4,10 +4,12 @@ use std::sync::mpsc::{self, Receiver, Sender};
 
 use tauri::{Emitter, EventTarget, Manager, Runtime, Webview};
 use webview2_com::Microsoft::Web::WebView2::Win32::{
-  ICoreWebView2Controller, COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_JPEG, COREWEBVIEW2_KEY_EVENT_KIND,
-  COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN, COREWEBVIEW2_PHYSICAL_KEY_STATUS,
+  ICoreWebView2Controller, ICoreWebView2_19, COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_JPEG, COREWEBVIEW2_KEY_EVENT_KIND,
+  COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW,
+  COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL, COREWEBVIEW2_PHYSICAL_KEY_STATUS,
 };
 use webview2_com::{AcceleratorKeyPressedEventHandler, CapturePreviewCompletedHandler};
+use windows::core::Interface;
 use windows::Win32::Foundation::HGLOBAL;
 use windows::Win32::System::Com::StructuredStorage::CreateStreamOnHGlobal;
 use windows::Win32::System::Com::{IStream, STREAM_SEEK_SET};
@@ -55,6 +57,31 @@ unsafe fn read_stream(stream: &IStream) -> windows::core::Result<Vec<u8>> {
     }
     bytes.extend_from_slice(&chunk[..read as usize]);
   }
+}
+
+/// Asks WebView2 to trim what an off-screen page holds in memory: renderer
+/// caches, decoded images and GPU tiles. Sockets, timers and scripts keep
+/// running, so a message app still receives messages and its unread count
+/// stays current; only the caches go. The page is put back to `Normal` before
+/// it is shown again, and rebuilds them as it paints.
+///
+/// Needs WebView2 runtime 114 or newer (`ICoreWebView2_19`). On older runtimes
+/// the cast fails and the page simply stays at its normal level.
+pub fn set_memory_saving<R: Runtime>(webview: &Webview<R>, saving: bool) -> Result<(), String> {
+  let level = if saving {
+    COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW
+  } else {
+    COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL
+  };
+  webview
+    .with_webview(move |platform| unsafe {
+      let Ok(core) = platform.controller().CoreWebView2() else { return };
+      let Ok(core) = core.cast::<ICoreWebView2_19>() else { return };
+      if let Err(err) = core.SetMemoryUsageTargetLevel(level) {
+        log::warn!("[portal] could not set the memory level: {err}");
+      }
+    })
+    .map_err(|e| e.to_string())
 }
 
 fn held(key: VIRTUAL_KEY) -> bool {

@@ -45,6 +45,29 @@ describe("portal store", () => {
     expect(portal.getState().activeId).toBe("instagram");
   });
 
+  it("stores keepLive only while it is on, and survives a reload", () => {
+    portal.add(discord);
+    portal.add(insta);
+    // Off by default, and stored exactly as apps were before the setting.
+    expect(saved()).toEqual([discord, insta]);
+
+    portal.setKeepLive("discord", true);
+    expect(portal.getState().apps[0].keepLive).toBe(true);
+    expect(saved()).toEqual([{ ...discord, keepLive: true }, insta]);
+
+    portal._reset();
+    expect(portal.getState().apps[0].keepLive).toBe(true);
+
+    portal.setKeepLive("discord", false);
+    expect(saved()).toEqual([discord, insta]);
+  });
+
+  it("ignores keepLive for an app that is not connected", () => {
+    portal.add(discord);
+    portal.setKeepLive("nope", true);
+    expect(saved()).toEqual([discord]);
+  });
+
   it("moves the active app to a neighbour on remove", () => {
     [discord, insta, x].forEach((app) => portal.add(app));
     portal.setActive("instagram");

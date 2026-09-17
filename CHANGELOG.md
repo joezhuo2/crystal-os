@@ -5,6 +5,30 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.5] - 2026-09-18 - Quieter in the Background
+
+Crystal OS sitting in the tray with Discord and Instagram connected used about 2.0-2.5 GB across three separate WebView2 process trees, and 8–12% CPU. This release goes after both.
+
+### Performance
+
+- **Off-screen Portal apps now drop their render caches.** A Portal app that has been hidden for 30 seconds is put into WebView2's low memory mode, which frees renderer caches, decoded images, and GPU tiles while leaving its sockets, timers, and scripts running — so messages still arrive and unread badges stay current. It is restored before the app is shown again. The 30-second wait means opening a menu, or switching apps and coming straight back, never makes an app drop caches it is about to need (`src-tauri/src/portal/webview2.rs`, `src-tauri/src/portal.rs`).
+- **Hiding the window to the tray trims everything at once,** including Crystal OS's own interface, which is the single largest page the app runs. With the window hidden there is nothing on screen to paint, so the 30-second wait is skipped (`src-tauri/src/window.rs`).
+- **Portal apps are no longer exempt from background throttling by default.** Every app previously ran at full speed while hidden, which is where most of the idle CPU went. Apps are now throttled when off screen — slowed, but not suspended, so sockets stay open — unless you turn on the new keep-live setting.
+- **Back/forward cache is off for Portal apps and the main window.** It keeps whole rendered pages in memory so the back button can restore them instantly, which is worth little for single-page sites and costs tens of megabytes each. Going back re-renders instead. The Portal's disk cache is also capped at 50 MB (`BROWSER_ARGS` in `src-tauri/src/portal.rs`, `additionalBrowserArgs` in `src-tauri/tauri.conf.json`).
+
+### Added
+
+- **"Keep live in background" per Portal app.** Right-click an app in the Portal navbar to toggle it. On, the app runs at full speed while hidden, which is what a voice call or a live notification stream needs; off (the default) it is throttled. WebView2 fixes this policy when a webview is built, so changing it rebuilds that app's webview — the app's data folder is untouched, so it stays signed in.
+- **`portal_rebuild` command.** Closes a Portal app's webview without touching its data folder, so the next show builds a fresh one. Reloading the page is not enough for settings WebView2 only reads at build time.
+
+### Fixed
+
+- `src-tauri/Cargo.toml` had drifted to `0.6.3` while `package.json` and `tauri.conf.json` were at `0.6.4`. All three now agree.
+
+### Known limitation
+
+Each Portal app still uses its own WebView2 data folder, so each one runs a full browser process tree of its own — a separate GPU process, manager, and network, storage, and audio utilities. Measured across Crystal OS, Discord, and Instagram, those duplicated GPU processes alone accounted for roughly 1.2 GB of the 2.0 GB total. Collapsing them into one shared process tree needs per-app WebView2 profiles, which neither wry 0.55 nor Tauri 2.11 currently exposes; the alternative of simply sharing one data folder would break signing out of, or removing, a single app without affecting the others. This is not addressed in this release.
+
 ## [v0.6.4] - 2026-09-18 - Self-Hosted Fonts & Clean Builds
 
 ### Changed

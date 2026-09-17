@@ -3,6 +3,7 @@ import { Reorder } from "framer-motion";
 import { ArrowLeft, ArrowRight, ExternalLink, LogOut, Plus, RotateCw, Trash2 } from "lucide-react";
 import {
   ContextMenu,
+  ContextMenuCheckboxItem,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
@@ -105,6 +106,7 @@ interface PortalNavbarProps {
   onOpenExternal: (app: PortalApp) => void;
   onSignOut: (app: PortalApp) => void;
   onRemove: (app: PortalApp) => void;
+  onKeepLiveChange: (app: PortalApp, keepLive: boolean) => void;
 }
 
 /**
@@ -126,6 +128,7 @@ export default function PortalNavbar({
   onOpenExternal,
   onSignOut,
   onRemove,
+  onKeepLiveChange,
 }: PortalNavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   usePortalOcclusion(menuOpen || confirm !== null);
@@ -190,6 +193,13 @@ export default function PortalNavbar({
                     <ContextMenuItem onSelect={() => onOpenExternal(app)}>
                       <ExternalLink className="w-4 h-4 mr-2" /> Open in browser
                     </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuCheckboxItem
+                      checked={app.keepLive === true}
+                      onCheckedChange={(checked) => onKeepLiveChange(app, checked === true)}
+                    >
+                      Keep live in background
+                    </ContextMenuCheckboxItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem onSelect={() => onConfirmChange({ kind: "signout", app })}>
                       <LogOut className="w-4 h-4 mr-2" /> Sign out…

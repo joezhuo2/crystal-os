@@ -29,6 +29,9 @@ pub fn show<R: Runtime>(app: &AppHandle<R>) {
   }
   let _ = window.show();
   let _ = window.set_focus();
+  // Gives the Portal app on screen its caches back before it is painted; the
+  // others stay trimmed until they are shown.
+  crate::portal::set_all_memory_saving(app, false);
   // The window alone taking focus leaves keys going nowhere until a click, so
   // hand focus to the Portal app on screen or the main webview.
   crate::portal::focus_content(app);
@@ -54,5 +57,9 @@ pub fn is_foreground<R: Runtime>(window: &Window<R>) -> bool {
 pub fn hide<R: Runtime>(app: &AppHandle<R>) {
   if let Some(window) = main_window(app) {
     let _ = window.hide();
+    // Nothing is on screen once the window is in the tray, so every Portal app
+    // drops its caches at once rather than waiting out the idle delay. This is
+    // where the Portal spends most of its time.
+    crate::portal::set_all_memory_saving(app, true);
   }
 }

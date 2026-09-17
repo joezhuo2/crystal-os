@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-292%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.6.4-6366F1)
+![Tests](https://img.shields.io/badge/tests-295%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.6.5-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.6.4** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.6.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -49,7 +49,7 @@ Current release: **v0.6.4** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | **Calendar** | Vite middleware plugin + `google-auth-library` OAuth2 and the Calendar v3 REST API (Node-only, server side) |
 | **Desktop** | Tauri 2 (Rust): global hotkeys, autostart, tray, native vault fs — plus a Node sidecar for the web APIs |
 | **Terminal** | xterm.js + ConPTY in Rust (PowerShell, desktop only) |
-| **The Portal** | Tauri child webviews (WebView2), one data directory per app (desktop only) |
+| **The Portal** | Tauri child webviews (WebView2), one data directory per app, throttled and cache-trimmed while off screen (desktop only) |
 | **Markdown** | react-markdown + remark-gfm + `@tailwindcss/typography` |
 | **Forms** | React Hook Form + Zod validation |
 | **Animation** | Framer Motion |
@@ -205,8 +205,8 @@ src-tauri/
 │   ├── settings.rs             # settings.json read/write (hotkeys, vaultPath, launchAtLogin)
 │   ├── vault.rs                # Native vault I/O: list/read/write/status/watch
 │   ├── terminal.rs             # ConPTY PowerShell shells (up to 5)
-│   ├── portal.rs               # Portal child webviews: show/hide/fade, snapshots, per-app data, sign-out
-│   └── portal/webview2.rs      # WebView2 page capture + tab-shortcut forwarding for Portal apps
+│   ├── portal.rs               # Portal child webviews: show/hide/fade, snapshots, per-app data, sign-out, background memory
+│   └── portal/webview2.rs      # WebView2 page capture, tab-shortcut forwarding, memory level for Portal apps
 ├── capabilities/
 │   └── default.json            # App command allowlist by name
 └── tauri.conf.json             # Window, tray, bundle config
@@ -388,10 +388,11 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 
 - **Connect an app** with **+** in the Portal's navbar: pick a preset (Discord, Instagram, WhatsApp, Messenger, X, Reddit, Slack, Telegram) or add any `https://` site by name and address. Google sites are not offered because Google refuses sign-in inside embedded webviews; Spotify is not offered because WebView2 cannot play its DRM-protected audio.
 - **Use it like a browser tab.** Click a pill to switch apps (the pages cross-fade). **Back**, **Forward**, **Reload**, and **Open in browser** act on the app on screen. Links to other sites open in your default browser.
-- **Organise.** Drag pills to reorder them. Right-click a pill to reload it, return to its home page, open it in the browser, **Sign out…**, or **Remove…**.
+- **Organise.** Drag pills to reorder them. Right-click a pill to reload it, return to its home page, open it in the browser, toggle **Keep live in background**, **Sign out…**, or **Remove…**.
 - **Sessions.** Each app keeps its cookies and storage in its own folder, `%APPDATA%\com.crystalos.desktop\portal\<app id>\`, so you stay signed in across restarts and apps never share a login. **Sign out** clears that app's cookies and storage; **Remove** deletes its folder too.
 - **Loading.** While an app's page loads (first open, **Reload**, **Back to home page**, **Sign out**), the frame shows a skeleton of a web app in the theme's colours with "Loading <app>…". The page appears, fading in, once it has finished loading, or after 20 seconds if it never reports that.
 - **Always on.** Apps load the first time you open The Portal after launching Crystal OS, then keep running while you use other tabs. Unread counts from their page titles show on each pill and on the sidebar's Portal icon.
+- **Background cost.** An app you are not looking at is throttled — its timers and animations are slowed, but it is not suspended, so its connection stays open and messages still arrive. After 30 seconds off screen it also drops its render caches, and picks them back up when you return to it. Hiding Crystal OS to the tray does both at once, for every app and for Crystal OS's own interface. If an app needs full speed while hidden, for a voice call or a live notification stream, right-click its pill and turn on **Keep live in background**; that costs CPU for as long as it is on, so it is off by default. Toggling it rebuilds that app's page, which does not sign you out.
 - **Themes.** Choose **Void swirl** (default), **Event horizon**, or **Stargate blue** under **Settings → The Portal**. The theme styles the backdrop, sidebar, navbar, and the animated ring around the app.
 - **Keyboard shortcuts (desktop).** While a Portal app is on screen: **Ctrl+Tab** cycles to the next app, **Ctrl+Shift+Tab** cycles to the previous one, **Ctrl+W** opens the Remove confirmation, and **Ctrl+R** reloads the active app. They also work while you are typing inside an app page (Windows): the app's webview catches them before the page does. In Crystal OS's own UI they are disabled while a dialog is open or the focus is inside a text field. `Ctrl+R` prevents Tauri's default full-page reload, which would otherwise drop you to the Home tab.
 - **Web build.** Browsers refuse to embed these sites in another page, so there the Portal keeps your app list and opens each app in a new tab.

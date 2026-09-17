@@ -69,6 +69,22 @@ describe("parseStoredApps", () => {
     expect(parseStoredApps('{"id":"x"}')).toEqual([]);
   });
 
+  it("reads keepLive only when it is stored as true", () => {
+    const raw = JSON.stringify([
+      { id: "discord", name: "Discord", url: "https://discord.com/app", keepLive: true },
+      { id: "insta", name: "Instagram", url: "https://www.instagram.com/", keepLive: false },
+      { id: "reddit", name: "Reddit", url: "https://www.reddit.com/" },
+      { id: "slack", name: "Slack", url: "https://app.slack.com/client", keepLive: "yes" },
+    ]);
+    const apps = parseStoredApps(raw);
+    expect(apps[0].keepLive).toBe(true);
+    // Off is absent rather than false, so apps stored before the setting
+    // existed parse to exactly the object they used to.
+    expect(apps[1]).toEqual({ id: "insta", name: "Instagram", url: "https://www.instagram.com/" });
+    expect(apps[2]).toEqual({ id: "reddit", name: "Reddit", url: "https://www.reddit.com/" });
+    expect(apps[3].keepLive).toBeUndefined();
+  });
+
   it("drops malformed, unsafe, and duplicate entries", () => {
     const raw = JSON.stringify([
       { id: "discord", name: "Discord", url: "https://discord.com/app" },

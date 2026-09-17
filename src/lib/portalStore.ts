@@ -112,7 +112,12 @@ function set(next: PortalState) {
 }
 
 function saveApps(apps: PortalApp[]) {
-  write(APPS_KEY, JSON.stringify(apps.map(({ id, name, url }) => ({ id, name, url }))));
+  // `keepLive` is left out when it is off, so apps that never turned it on are
+  // stored exactly as they were before the setting existed.
+  write(
+    APPS_KEY,
+    JSON.stringify(apps.map(({ id, name, url, keepLive }) => (keepLive ? { id, name, url, keepLive } : { id, name, url }))),
+  );
 }
 
 function saveActive(id: string | null) {
@@ -174,6 +179,19 @@ export const portal = {
     if (!isTheme(theme) || theme === state.theme) return;
     write(THEME_KEY, theme);
     set({ ...state, theme });
+  },
+
+  /**
+   * Turns "keep live in the background" on or off for one app. The webview
+   * reads this when it is built, so an app already loaded keeps its current
+   * behaviour until it is reloaded.
+   */
+  setKeepLive(id: string, keepLive: boolean) {
+    const app = state.apps.find((a) => a.id === id);
+    if (!app || (app.keepLive ?? false) === keepLive) return;
+    const apps = state.apps.map((a) => (a.id === id ? { ...a, keepLive } : a));
+    saveApps(apps);
+    set({ ...state, apps });
   },
 
   /** Records a page title change and updates that app's badge. */

@@ -60,7 +60,9 @@ function inOrder<T>(run: () => Promise<T>): Promise<T> {
  * Pass `fade: false` when a snapshot of the page is already on screen.
  */
 export function showPortalApp(app: PortalApp, bounds: PortalBounds, fade = true) {
-  return inOrder(() => invoke<void>("portal_show", { id: app.id, url: app.url, bounds, fade }));
+  return inOrder(() =>
+    invoke<void>("portal_show", { id: app.id, url: app.url, bounds, fade, keepLive: app.keepLive === true }),
+  );
 }
 
 /** Hides every app webview. They keep running in the background. */
@@ -113,6 +115,15 @@ export function signOutPortalApp(app: PortalApp) {
 /** Closes the app's webview and deletes its data folder. */
 export function removePortalApp(id: string) {
   return invoke<void>("portal_remove", { id });
+}
+
+/**
+ * Throws the app's webview away, keeping its data folder, so the next show
+ * builds a fresh one. Used for settings WebView2 only reads at build time,
+ * such as "keep live in background". The app stays signed in.
+ */
+export function rebuildPortalApp(id: string) {
+  return invoke<void>("portal_rebuild", { id });
 }
 
 /** Deletes data folders left behind by apps that are no longer connected. */
