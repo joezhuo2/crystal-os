@@ -24,6 +24,7 @@ import {
   CalendarPlus,
   Settings,
   SquareTerminal,
+  Sparkles,
   Orbit,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -484,6 +485,19 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
                         <span className="text-sm font-medium">Open The Portal</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">Discord, Instagram, web apps</span>
                       </CommandItem>
+                      {isDesktop() && (
+                        <CommandItem
+                          value="nebula-coding-agent-ai-chat-deepseek-claude-code-kimi-model"
+                          onSelect={() => handleNavigate("nebula")}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                        >
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-fuchsia-500/10">
+                            <Sparkles className="w-4 h-4 text-fuchsia-400" />
+                          </div>
+                          <span className="text-sm font-medium">Open The Nebula</span>
+                          <span className="ml-auto text-xs text-muted-foreground/50">coding agent</span>
+                        </CommandItem>
+                      )}
                       {isDesktop() && (
                         <CommandItem
                           value="terminal-powershell-shell-command-line-console"

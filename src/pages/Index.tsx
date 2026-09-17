@@ -14,9 +14,12 @@ import ArchivePage from "@/components/views/ArchivePage";
 import SettingsPage from "@/components/views/SettingsPage";
 import TerminalPage from "@/components/views/TerminalPage";
 import PortalPage from "@/components/views/PortalPage";
+import NebulaPage from "@/components/views/NebulaPage";
 import CommandPalette from "@/components/CommandPalette";
 import TerminalStatic from "@/components/layout/TerminalStatic";
 import PortalBackdrop from "@/components/layout/PortalBackdrop";
+import NebulaBackdrop from "@/components/layout/NebulaBackdrop";
+import { useHarness } from "@/hooks/useHarness";
 import { usePortal } from "@/hooks/usePortal";
 import { isDesktop } from "@/lib/platform";
 import { hidePortal } from "@/lib/portalNative";
@@ -37,6 +40,7 @@ const views: Record<TabId, React.ComponentType<ViewProps>> = {
   weather: WeatherPage,
   archive: ArchivePage,
   portal: PortalPage,
+  nebula: NebulaPage,
   terminal: TerminalPage,
   settings: SettingsPage,
 };
@@ -65,6 +69,7 @@ const Index = () => {
   const { session, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const { theme: portalTheme } = usePortal();
+  const { theme: nebulaTheme } = useHarness();
   const View = views[activeTab];
 
   // Hide the Portal's native webview as soon as another tab is picked. The
@@ -87,18 +92,27 @@ const Index = () => {
       ? "bg-black"
       : activeTab === "portal"
         ? `portal-root ${PORTAL_THEME_CLASS[portalTheme]}`
-        : "mesh-gradient-bg";
+        : activeTab === "nebula"
+          ? "nebula-root"
+          : "mesh-gradient-bg";
+  // The Nebula page, sidebar, and backdrop read their colours from these.
+  const rootStyle =
+    activeTab === "nebula"
+      ? ({ "--nebula-a": nebulaTheme.colors[0], "--nebula-b": nebulaTheme.colors[1], "--nebula-c": nebulaTheme.colors[2] } as React.CSSProperties)
+      : undefined;
 
   return (
     <AppProvider>
-      <div className={`h-screen flex isolate overflow-hidden ${rootClass}`}>
+      <div className={`h-screen flex isolate overflow-hidden ${rootClass}`} style={rootStyle}>
         {activeTab === "terminal" && <TerminalStatic />}
         {activeTab === "portal" && <PortalBackdrop theme={portalTheme} />}
+        {activeTab === "nebula" && <NebulaBackdrop theme={nebulaTheme} />}
         <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
         <main className="flex-1 min-h-0 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
-          {/* Unmounted on the Terminal and Portal tabs: hides the bar and drops
-              its shortcuts. On the Portal it would open under the app webview. */}
-          {activeTab !== "terminal" && activeTab !== "portal" && <CommandPalette onNavigate={setActiveTab} />}
+          {/* Unmounted on the Terminal, Portal, and Nebula tabs: hides the bar and
+              drops its shortcuts, including the global palette hotkey's focus. On the
+              Portal it would open under the app webview. */}
+          {activeTab !== "terminal" && activeTab !== "portal" && activeTab !== "nebula" && <CommandPalette onNavigate={setActiveTab} />}
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}

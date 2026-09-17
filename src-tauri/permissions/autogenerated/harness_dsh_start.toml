@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-harness-dsh-start"
+description = "Enables the harness_dsh_start command without any pre-configured scope."
+commands.allow = ["harness_dsh_start"]
+
+[[permission]]
+identifier = "deny-harness-dsh-start"
+description = "Denies the harness_dsh_start command without any pre-configured scope."
+commands.deny = ["harness_dsh_start"]

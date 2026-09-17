@@ -1,5 +1,4 @@
 # Planned Features
-- [v0.6.0] Nebula Update - deepseek harness + claude code connections
 - [v0.7.0] banking update - use plaid to connect to banks (store api keys and t okens in secure env variables)
 
 # Additions
@@ -37,6 +36,8 @@
 # Bug Fixes
 
 - when i right click a tab in the portal, instead of showing an overlay with the options it gives me, it hides the entire current screen and makes it only show the logo rather than the content in the website
+
+- in the portal: keyboard shortcuts can only be used after "focusing" on the tab (eg. clicking something on the tab)
 
 - when i type something in a text box or select something, or perform a click in a portal app, eg. discord/instagram, i have to switch to another desktop app (eg. using alt tab twice or clicking into another app) and then switch tab back in before i can use the global hoteky
 

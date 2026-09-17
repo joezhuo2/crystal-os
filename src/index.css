@@ -865,3 +865,195 @@
     }
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * The Nebula. Colours come from --nebula-a/b/c, set on the page root in
+ * Index.tsx from the user's theme (src/lib/harness/store.ts).
+ * ------------------------------------------------------------------ */
+@layer components {
+  .nebula-root {
+    background: #030209;
+    color: #f5f3ff;
+  }
+
+  .nebula-title {
+    background: linear-gradient(100deg, var(--nebula-c), var(--nebula-b) 45%, var(--nebula-a));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .nebula-panel {
+    border-radius: 1rem;
+    background: rgb(8 6 20 / 0.55);
+    border: 1px solid color-mix(in srgb, var(--nebula-a) 22%, rgb(255 255 255 / 0.06));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.04),
+      0 0 40px color-mix(in srgb, var(--nebula-a) 10%, transparent);
+    backdrop-filter: blur(14px) saturate(1.2);
+  }
+
+  .sidebar-nebula {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--nebula-a) 16%, rgb(5 3 14 / 0.9)) 0%,
+      rgb(5 3 14 / 0.78) 50%,
+      color-mix(in srgb, var(--nebula-b) 12%, rgb(5 3 14 / 0.9)) 100%
+    );
+    border-color: transparent;
+    box-shadow:
+      inset -1px 0 0 color-mix(in srgb, var(--nebula-c) 40%, transparent),
+      6px 0 28px color-mix(in srgb, var(--nebula-a) 18%, transparent);
+  }
+
+  .sidebar-nebula button svg {
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--nebula-c) 55%, transparent));
+  }
+
+  .nebula-segmented {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: 0.6rem;
+    background: rgb(255 255 255 / 0.04);
+    border: 1px solid rgb(255 255 255 / 0.08);
+  }
+
+  .nebula-segmented button {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.45rem;
+    color: rgb(255 255 255 / 0.55);
+    transition: background-color 150ms, color 150ms, box-shadow 150ms;
+  }
+
+  .nebula-segmented button:hover:not(:disabled) {
+    color: #fff;
+  }
+
+  .nebula-segmented button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .nebula-segmented button[data-active] {
+    color: #fff;
+    background: linear-gradient(120deg, color-mix(in srgb, var(--nebula-a) 55%, transparent), color-mix(in srgb, var(--nebula-b) 45%, transparent));
+    box-shadow: 0 0 14px color-mix(in srgb, var(--nebula-b) 35%, transparent);
+  }
+
+  .nebula-chip {
+    display: inline-flex;
+    height: 2rem;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0 0.6rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    color: rgb(255 255 255 / 0.75);
+    background: rgb(255 255 255 / 0.04);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    transition: border-color 150ms, color 150ms;
+  }
+
+  .nebula-chip:hover,
+  .nebula-chip[data-state="open"] {
+    color: #fff;
+    border-color: color-mix(in srgb, var(--nebula-c) 50%, transparent);
+  }
+
+  .nebula-active-chat {
+    background: color-mix(in srgb, var(--nebula-a) 22%, transparent);
+    box-shadow: inset 2px 0 0 var(--nebula-c);
+  }
+
+  .nebula-user-bubble {
+    border-radius: 1rem 1rem 0.3rem 1rem;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--nebula-a) 45%, rgb(20 14 40)), color-mix(in srgb, var(--nebula-b) 30%, rgb(20 14 40)));
+    border: 1px solid rgb(255 255 255 / 0.08);
+  }
+
+  .nebula-model-badge {
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    color: #fff;
+    background: color-mix(in srgb, var(--nebula-c) 22%, transparent);
+    border: 1px solid color-mix(in srgb, var(--nebula-c) 40%, transparent);
+  }
+
+  .nebula-block {
+    overflow: hidden;
+    border-radius: 0.6rem;
+    background: rgb(0 0 0 / 0.25);
+    border: 1px solid rgb(255 255 255 / 0.06);
+  }
+
+  .nebula-permission {
+    padding: 0.75rem;
+    border-radius: 0.7rem;
+    background: rgb(251 191 36 / 0.06);
+    border: 1px solid rgb(251 191 36 / 0.2);
+  }
+
+  .nebula-permission-pending {
+    animation: nebula-attention 2.4s ease-in-out infinite;
+  }
+
+  .nebula-composer {
+    border-radius: 0.9rem;
+    background: rgb(0 0 0 / 0.3);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+
+  .nebula-composer:focus-within {
+    border-color: color-mix(in srgb, var(--nebula-c) 55%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--nebula-c) 18%, transparent);
+  }
+
+  .nebula-send {
+    background: linear-gradient(135deg, var(--nebula-a), var(--nebula-b));
+    color: #fff;
+  }
+
+  .nebula-fallback {
+    background:
+      radial-gradient(ellipse 60% 50% at 30% 35%, color-mix(in srgb, var(--nebula-a) 55%, transparent), transparent 70%),
+      radial-gradient(ellipse 50% 45% at 70% 60%, color-mix(in srgb, var(--nebula-b) 45%, transparent), transparent 70%),
+      radial-gradient(ellipse 40% 35% at 50% 50%, color-mix(in srgb, var(--nebula-c) 35%, transparent), transparent 70%),
+      #030209;
+    animation: nebula-fallback-swirl 90s linear infinite;
+  }
+
+  .nebula-color-input::-webkit-color-swatch-wrapper {
+    padding: 3px;
+  }
+
+  .nebula-color-input::-webkit-color-swatch {
+    border: none;
+    border-radius: 0.4rem;
+  }
+
+  @keyframes nebula-attention {
+    0%,
+    100% {
+      box-shadow: 0 0 0 rgb(251 191 36 / 0);
+    }
+    50% {
+      box-shadow: 0 0 18px rgb(251 191 36 / 0.25);
+    }
+  }
+
+  @keyframes nebula-fallback-swirl {
+    to {
+      transform: rotate(360deg) scale(1.4);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nebula-permission-pending,
+    .nebula-fallback {
+      animation: none;
+    }
+  }
+}

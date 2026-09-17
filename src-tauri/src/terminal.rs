@@ -217,7 +217,7 @@ fn read_registry_env(root: winreg::HKEY, path: &str) -> Vec<RegVar> {
 }
 
 #[cfg(windows)]
-fn fresh_env() -> Vec<(String, String)> {
+pub(crate) fn fresh_env() -> Vec<(String, String)> {
   use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
   build_env(
     std::env::vars().collect(),
@@ -227,7 +227,7 @@ fn fresh_env() -> Vec<(String, String)> {
 }
 
 #[cfg(not(windows))]
-fn fresh_env() -> Vec<(String, String)> {
+pub(crate) fn fresh_env() -> Vec<(String, String)> {
   let mut env: Vec<(String, String)> = std::env::vars().filter(|(k, _)| k != "TERM").collect();
   env.push(("TERM".into(), "xterm-256color".into()));
   env

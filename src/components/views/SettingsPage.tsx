@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, FolderOpen, Keyboard, Orbit, Power, Settings } from "lucide-react";
+import { Check, FolderOpen, Keyboard, Orbit, Power, Settings, Sparkles } from "lucide-react";
+import NebulaSettingsSection from "@/components/nebula/NebulaSettingsSection";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import HotkeySettingsDialog from "@/components/HotkeySettingsDialog";
@@ -80,7 +81,7 @@ export default function SettingsPage() {
           <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
           <p className="text-sm text-muted-foreground">
             {desktop
-              ? "Hotkeys, startup, your vault folder, and The Portal's theme."
+              ? "Hotkeys, startup, your vault folder, The Nebula, and The Portal's theme."
               : "Global hotkeys, launch at login, and the vault folder are set in the desktop app."}
           </p>
         </div>
@@ -127,6 +128,14 @@ export default function SettingsPage() {
               {vaultPath ? "Change folder" : "Choose folder"}
             </Button>
           </Row>
+        </Section>
+      )}
+
+      {desktop && (
+        <Section icon={Sparkles} title="The Nebula">
+          <div className="py-3 first:pt-0 last:pb-0">
+            <NebulaSettingsSection />
+          </div>
         </Section>
       )}
 

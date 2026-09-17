@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-187%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.5.6-6366F1)
+![Version](https://img.shields.io/badge/version-0.6.0-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.5.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.6.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -25,11 +25,12 @@ Current release: **v0.5.6** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations |
 | **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list |
+| **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, per-model token counts, and a swirling three-colour nebula |
 | **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges, and three themes (desktop; the web build opens apps in new tabs) |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
 | **⏱️ Pomodoro** | Customizable focus/break intervals, session tracking, audio notifications, and tray controls (Tasks view) |
 | **🖥️ Desktop shell** | Native Tauri window with PowerShell terminal, tray (Pomodoro + Quick Add), always-on global hotkeys, and launch-at-login — the web build is unaffected |
-| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, vault folder, Portal theme |
+| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, vault folder, Nebula keys, models and look, Portal theme |
 | **⌨️ Command Palette** | Global search over tasks, transactions, and vault note bodies, plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
 | **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar |
@@ -412,6 +413,51 @@ The Pomodoro timer lives in `src/lib/pomodoro.ts`, so it keeps running when you 
 - **When things go wrong.** A saved folder that is gone at startup (renamed, or on an unplugged drive) or unreadable shows a card with **Choose vault folder** and **Retry**; the watcher restarts once the folder is back. A note deleted while open shows **This note is gone** with **Close note**.
 
 Code that behaves differently on desktop goes through `src/lib/platform.ts` (`isDesktop()`, `apiUrl()`, `openExternal()`), so the web bundle never imports Tauri.
+
+---
+
+## 🌌 The Nebula (coding agent)
+
+The Nebula is a coding agent tab in the desktop app. It works inside project folders you choose, keeps a history of chats for each project, and runs on three model tiers. The design, and what the spike established about each engine, are in [ADR 0003](docs/adr/0003-nebula-deepseek-harness.md).
+
+### Setup
+
+1. Install **Node.js 22 or newer**. For the High tier, also install **Claude Code** and sign in: run `claude`, then `/login`.
+2. Open **The Nebula** and click **Install DeepSeek Harness**. This installs the pinned `@deepseek-ai/dsh` into `%APPDATA%\com.crystalos.desktop\dsh` once.
+3. In **Settings → The Nebula**, paste your **NVIDIA NIM** API key (used by Medium). For Low, make sure OmniRoute is running on `localhost:20128`, and add an **OmniRoute** key only if your OmniRoute needs one.
+4. Click **New project**, open or create a folder, and start chatting.
+
+### Tiers
+
+| Tier | Engine | Models |
+|------|--------|--------|
+| Low | DeepSeek Harness | OmniRoute `auto/coding` |
+| Medium | DeepSeek Harness | First available of NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 Ultra → OmniRoute `auto/coding` |
+| High | Claude Code | The model set in Settings (default `opus`), always on your Anthropic account |
+
+Model ids and endpoints can be edited in Settings. Effort (low to max) and mode (**Auto**, **Manual**, **Plan**) are set per chat in the toolbar. Tier and effort cannot be changed while the agent is working.
+
+### How it works
+
+- **Low and Medium** talk to one `dsh --profile acp` process per project folder over the Agent Client Protocol (`src/lib/harness/acpClient.ts`). Model and effort are set on every turn, and if a model fails before answering, the turn moves on to the next one.
+- **High** drives `claude -p` in stream-json mode (`src/lib/harness/claudeStream.ts`). In Manual mode, approval requests arrive as `can_use_tool` control requests and appear as Allow / Deny cards.
+- **Skills and MCP servers** are read from `~/.claude/skills`, enabled Claude Code plugins, Claude Desktop, and `~/.claude.json` (`src-tauri/src/harness/discovery.rs`). You can turn individual servers off in Settings.
+- **Storage.** Everything is under the app config folder:
+  - `harness/state.json`: projects, the chat index, and all-time token totals.
+  - `harness/chats/<id>.json`: one transcript per chat.
+  - `harness/logs/`: engine stderr.
+
+### Safety
+
+- API keys and MCP server environment values never reach the webview. Keys are write-only in Settings.
+- Claude Code is launched:
+  - without any `ANTHROPIC_*` or `CLAUDE*` variables inherited from Crystal OS;
+  - with an override that points it back at api.anthropic.com;
+  - with arguments built only from validated enums, ids, and paths.
+
+  `bypassPermissions` is never used.
+- Every agent process joins a kill-on-close Windows Job Object. Closing Crystal OS or reloading the page ends the agents and everything they started.
+- In Auto mode the agent runs tools inside the project folder without asking. Use Manual to approve each action, or Plan to explore without making changes.
 
 ---
 
