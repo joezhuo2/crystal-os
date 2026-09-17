@@ -5,6 +5,19 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.3] - 2026-09-17 - Lighter Load
+
+### Fixed
+
+- **Tasks and transactions past the first 1000 now load.** The dashboard fetched each table in one query, and Supabase caps a response at 1000 rows, so anything past that never appeared. Both tables now load in pages of 500 until every row is in (`src/lib/pagedLoad.ts`).
+
+### Performance
+
+- **The dashboard renders after the first page.** `AppContext` shows the app once categories, settings, and the first page of tasks and transactions have arrived, and the remaining pages fill in behind it. Pages are fetched by id after the last row seen, not by offset, so a task added or deleted during loading cannot make a row get skipped or show up twice. Each page is merged in the same order the old query used: tasks earliest first, transactions newest first. If a page fails, the rows already loaded stay on screen and a toast says the list is incomplete. The full history still ends up in memory, because the Financials charts and the Home totals are calculated from every transaction.
+- **Desktop sidecar bundle: 13.5 MB to about 650 KB.** `googleapis` bundled a generated client for every Google API, and the calendar only uses Calendar v3 and OAuth2. It has been replaced with `google-auth-library` and direct REST calls through `OAuth2Client.request`, which still refreshes the access token and retries failed read and delete requests (`server/calendar/events.ts`, `server/calendar/oauth.ts`).
+- **The server vault cache drops deleted notes.** `listNotes` in `server/obsidian/vault.ts` cached every note it parsed but never removed any, so deleted and renamed notes stayed in memory until the process exited. Each listing now removes cache entries for files that are gone, and `readNote` removes a note it can no longer find. The desktop vault already did this.
+- **Dismissed toasts are removed after 1 second.** They used to stay in state for about 16 minutes (`TOAST_REMOVE_DELAY` in `src/hooks/use-toast.ts`). One second is enough for the close animation.
+
 ## [v0.6.2] - 2026-09-17 - Portal Focus
 
 ### Fixed

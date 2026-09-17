@@ -7,6 +7,7 @@ import {
   type CategoryClient,
   type CategoryTable,
 } from "@/lib/seedCategories";
+import { ascNullsLast, loadInPages, mergePage } from "@/lib/pagedLoad";
 
 export type Priority = "low" | "medium" | "high" | "urgent";
 export type TaskCategory = {
@@ -160,6 +161,22 @@ function mapCategoryToDb(cat: Omit<TaskCategory, "id">) {
   return { name: cat.name, color: cat.color };
 }
 
+// ── paged initial load ──
+
+type DbRow = { id: string } & Record<string, unknown>;
+
+/** One keyset page of a table: rows after `afterId`, in id order. */
+function fetchPage(table: "tasks" | "transactions", afterId: string | null, limit: number) {
+  const query = supabase.from(table).select("*");
+  return (afterId ? query.gt("id", afterId) : query).order("id").limit(limit);
+}
+
+// Pages arrive in id order, so each merge re-sorts into the order the single
+// query used to return: tasks earliest first, transactions newest first.
+const byStart = (a: Task, b: Task) =>
+  ascNullsLast(a.startDate, b.startDate) || ascNullsLast(a.startTime, b.startTime);
+const byDateDesc = (a: Transaction, b: Transaction) => b.date.localeCompare(a.date);
+
 /**
  * Reports a failed write instead of discarding it. Every mutation below used to
  * check `if (!error)` and do nothing when the write was rejected, which is how a
@@ -237,18 +254,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     async function load() {
       setLoading(true);
-      const [tasksRes, txRes, taskCatRes, finCatRes, settingsRes] = await Promise.all([
-        supabase.from("tasks").select("*").order("start_date").order("start_time"),
-        supabase.from("transactions").select("*").order("date", { ascending: false }),
+      setTasks([]);
+      setTransactions([]);
+
+      // Tasks and transactions arrive in pages rather than one query each, so
+      // the dashboard renders once the first page is in and fills in behind it.
+      const isActive = () => active;
+      const tasksLoad = loadInPages<DbRow>(
+        (afterId, limit) => fetchPage("tasks", afterId, limit),
+        (rows) => setTasks((prev) => mergePage(prev, rows.map(mapTaskFromDb), byStart)),
+        { isActive },
+      );
+      const txLoad = loadInPages<DbRow>(
+        (afterId, limit) => fetchPage("transactions", afterId, limit),
+        (rows) =>
+          setTransactions((prev) => mergePage(prev, rows.map(mapTransactionFromDb), byDateDesc)),
+        { isActive },
+      );
+
+      const [, , taskCatRes, finCatRes, settingsRes] = await Promise.all([
+        tasksLoad.firstPage,
+        txLoad.firstPage,
         supabase.from("task_categories").select("*").order("name"),
         supabase.from("financial_categories").select("*").order("name"),
         supabase.from("settings").select("*").eq("key", "daily_focus").maybeSingle(),
       ]);
 
       if (!active) return;
-
-      if (tasksRes.data) setTasks(tasksRes.data.map(mapTaskFromDb));
-      if (txRes.data) setTransactions(txRes.data.map(mapTransactionFromDb));
 
       // A category has to be a real row before a task can reference it: the
       // starter set below used to live only in memory with ids like "work",
@@ -268,6 +300,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (settingsRes.data) setDailyFocusState(settingsRes.data.value ?? "");
 
       setLoading(false);
+
+      // A failed page leaves the list short, which must not pass for "that's
+      // everything".
+      const [tasksError, txError] = await Promise.all([tasksLoad.done, txLoad.done]);
+      if (!active) return;
+      reportError("load all of your tasks", tasksError);
+      reportError("load all of your transactions", txError);
     }
 
     void load();

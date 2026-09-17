@@ -6,6 +6,7 @@ import {
   VaultError,
   appendToNote,
   assertQuickAddTags,
+  cachedNotePaths,
   deriveTitle,
   hasTrailingDayHeading,
   listNotes,
@@ -118,6 +119,30 @@ describe("listNotes", () => {
     await write("a/b/c.md", "# C\n");
     const notes = await listNotes(vault);
     expect(notes[0].path).toBe("a/b/c.md");
+  });
+
+  it("evicts deleted and renamed notes from the cache", async () => {
+    await write("Keep.md", "# Keep\n");
+    await write("Gone.md", "# Gone\n");
+    await write("Old.md", "# Old\n");
+    await listNotes(vault);
+    expect(cachedNotePaths(vault).sort()).toEqual(["Gone.md", "Keep.md", "Old.md"]);
+
+    await fs.rm(path.join(vault, "Gone.md"));
+    await fs.rename(path.join(vault, "Old.md"), path.join(vault, "New.md"));
+    await listNotes(vault);
+
+    expect(cachedNotePaths(vault).sort()).toEqual(["Keep.md", "New.md"]);
+  });
+
+  it("evicts a note that readNote finds missing", async () => {
+    await write("Brief.md", "# Brief\n");
+    await readNote(vault, "Brief.md");
+    expect(cachedNotePaths(vault)).toEqual(["Brief.md"]);
+
+    await fs.rm(path.join(vault, "Brief.md"));
+    await expect(readNote(vault, "Brief.md")).rejects.toThrow(VaultError);
+    expect(cachedNotePaths(vault)).toEqual([]);
   });
 });
 

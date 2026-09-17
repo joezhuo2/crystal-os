@@ -1,7 +1,45 @@
-import { google } from "googleapis";
-import type { calendar_v3 } from "googleapis";
 import type { OAuth2Client } from "google-auth-library";
 import { CalendarError } from "./errors";
+
+/*
+ * The slices of the Calendar API v3 resources this module reads and writes.
+ * Declared here rather than imported from `googleapis`, whose generated clients
+ * for every Google API made up nearly all of the 13.5 MB desktop sidecar.
+ * https://developers.google.com/calendar/api/v3/reference
+ */
+
+export interface GoogleEventDateTime {
+  date?: string | null;
+  dateTime?: string | null;
+  timeZone?: string | null;
+}
+
+export interface GoogleEvent {
+  id?: string | null;
+  status?: string | null;
+  summary?: string | null;
+  description?: string | null;
+  location?: string | null;
+  start?: GoogleEventDateTime;
+  end?: GoogleEventDateTime;
+  recurrence?: string[] | null;
+  recurringEventId?: string | null;
+  htmlLink?: string | null;
+}
+
+interface GoogleCalendarListEntry {
+  id?: string | null;
+  summary?: string | null;
+  summaryOverride?: string | null;
+  primary?: boolean | null;
+  backgroundColor?: string | null;
+  accessRole?: string | null;
+  timeZone?: string | null;
+}
+
+interface GoogleList<T> {
+  items?: T[];
+}
 
 /**
  * The event shape the client works with. Google's `start`/`end` union (a `date`
@@ -75,7 +113,7 @@ function splitDateTime(dateTime: string): { date: string; time: string } {
 }
 
 export function toAppEvent(
-  raw: calendar_v3.Schema$Event,
+  raw: GoogleEvent,
   calendarId: string,
 ): AppEvent {
   const allDay = Boolean(raw.start?.date);
@@ -119,14 +157,14 @@ export function toAppEvent(
   };
 }
 
-export function toGoogleEvent(input: EventInput): calendar_v3.Schema$Event {
+export function toGoogleEvent(input: EventInput): GoogleEvent {
   const summary = input.summary?.trim();
   if (!summary) throw new CalendarError("An event needs a title");
   if (!input.startDate || !input.endDate) {
     throw new CalendarError("An event needs a start and end date");
   }
 
-  const body: calendar_v3.Schema$Event = {
+  const body: GoogleEvent = {
     summary,
     description: input.description?.trim() || undefined,
     location: input.location?.trim() || undefined,
@@ -203,14 +241,45 @@ export function parseRecurrence(recurrence: string[] | null | undefined): {
 
 /* -- Google API calls -- */
 
-function api(auth: OAuth2Client): calendar_v3.Calendar {
-  return google.calendar({ version: "v3", auth });
+const API_BASE = "https://www.googleapis.com/calendar/v3";
+
+/**
+ * One authorized Calendar API request. OAuth2Client attaches the access token,
+ * refreshes it once expired, and throws a GaxiosError carrying Google's message
+ * on a non-2xx reply: the same transport googleapis used underneath. Gaxios only
+ * retries idempotent methods, so an insert is never sent twice.
+ */
+async function call<T>(
+  auth: OAuth2Client,
+  method: "GET" | "POST" | "PATCH" | "DELETE",
+  path: string,
+  options: { params?: Record<string, string | number | boolean>; data?: object } = {},
+): Promise<T> {
+  const { data } = await auth.request<T>({
+    url: `${API_BASE}${path}`,
+    method,
+    params: options.params,
+    data: options.data,
+    retry: true,
+  });
+  return data;
+}
+
+/** Ids such as "en.usa#holiday@group.v.calendar.google.com" must be escaped. */
+function eventsPath(calendarId: string, eventId?: string): string {
+  const base = `/calendars/${encodeURIComponent(calendarId)}/events`;
+  return eventId === undefined ? base : `${base}/${encodeURIComponent(eventId)}`;
 }
 
 export async function listCalendars(
   auth: OAuth2Client,
 ): Promise<AppCalendar[]> {
-  const { data } = await api(auth).calendarList.list({ maxResults: 250 });
+  const data = await call<GoogleList<GoogleCalendarListEntry>>(
+    auth,
+    "GET",
+    "/users/me/calendarList",
+    { params: { maxResults: 250 } },
+  );
   return (data.items ?? [])
     .filter((c) => c.id)
     .map((c) => ({
@@ -227,21 +296,42 @@ export async function listCalendars(
     });
 }
 
+/**
+ * The primary calendar's id, which is the account's email address. It labels
+ * the connection without requesting a userinfo scope just for that.
+ */
+export async function getPrimaryCalendarId(
+  auth: OAuth2Client,
+): Promise<string | null> {
+  const entry = await call<GoogleCalendarListEntry>(
+    auth,
+    "GET",
+    "/users/me/calendarList/primary",
+  );
+  return entry.id ?? null;
+}
+
 export async function listEvents(
   auth: OAuth2Client,
   calendarId: string,
   timeMin: string,
   timeMax: string,
 ): Promise<AppEvent[]> {
-  const { data } = await api(auth).events.list({
-    calendarId,
-    timeMin,
-    timeMax,
-    // Expands each series into its instances, which is what a grid needs.
-    singleEvents: true,
-    orderBy: "startTime",
-    maxResults: 2500,
-  });
+  const data = await call<GoogleList<GoogleEvent>>(
+    auth,
+    "GET",
+    eventsPath(calendarId),
+    {
+      params: {
+        timeMin,
+        timeMax,
+        // Expands each series into its instances, which is what a grid needs.
+        singleEvents: true,
+        orderBy: "startTime",
+        maxResults: 2500,
+      },
+    },
+  );
   return (data.items ?? [])
     .filter((e) => e.status !== "cancelled")
     .map((e) => toAppEvent(e, calendarId));
@@ -252,7 +342,11 @@ export async function getEvent(
   calendarId: string,
   eventId: string,
 ): Promise<AppEvent> {
-  const { data } = await api(auth).events.get({ calendarId, eventId });
+  const data = await call<GoogleEvent>(
+    auth,
+    "GET",
+    eventsPath(calendarId, eventId),
+  );
   return toAppEvent(data, calendarId);
 }
 
@@ -261,9 +355,8 @@ export async function createEvent(
   calendarId: string,
   input: EventInput,
 ): Promise<AppEvent> {
-  const { data } = await api(auth).events.insert({
-    calendarId,
-    requestBody: toGoogleEvent(input),
+  const data = await call<GoogleEvent>(auth, "POST", eventsPath(calendarId), {
+    data: toGoogleEvent(input),
   });
   return toAppEvent(data, calendarId);
 }
@@ -274,11 +367,12 @@ export async function updateEvent(
   eventId: string,
   input: EventInput,
 ): Promise<AppEvent> {
-  const { data } = await api(auth).events.patch({
-    calendarId,
-    eventId,
-    requestBody: toGoogleEvent(input),
-  });
+  const data = await call<GoogleEvent>(
+    auth,
+    "PATCH",
+    eventsPath(calendarId, eventId),
+    { data: toGoogleEvent(input) },
+  );
   return toAppEvent(data, calendarId);
 }
 
@@ -287,5 +381,5 @@ export async function deleteEvent(
   calendarId: string,
   eventId: string,
 ): Promise<void> {
-  await api(auth).events.delete({ calendarId, eventId });
+  await call<unknown>(auth, "DELETE", eventsPath(calendarId, eventId));
 }

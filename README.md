@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-274%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.6.2-6366F1)
+![Tests](https://img.shields.io/badge/tests-292%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.6.3-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.6.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.6.3** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -46,7 +46,7 @@ Current release: **v0.6.2** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | **State** | React Context + TanStack Query (React Query v5) |
 | **Backend** | Supabase (PostgreSQL, Auth, Realtime) |
 | **Vault** | Vite middleware plugin + `fast-glob` + `gray-matter` (Node-only, server side) |
-| **Calendar** | Vite middleware plugin + `googleapis` OAuth2 (Node-only, server side) |
+| **Calendar** | Vite middleware plugin + `google-auth-library` OAuth2 and the Calendar v3 REST API (Node-only, server side) |
 | **Desktop** | Tauri 2 (Rust): global hotkeys, autostart, tray, native vault fs — plus a Node sidecar for the web APIs |
 | **Terminal** | xterm.js + ConPTY in Rust (PowerShell, desktop only) |
 | **The Portal** | Tauri child webviews (WebView2), one data directory per app (desktop only) |
@@ -298,7 +298,7 @@ As with the vault, the middleware is mounted on the dev server and `vite preview
 
 ### Safety
 
-The consent flow carries a random `state` nonce that is verified on callback and expires after 10 minutes. Request bodies are capped at 64 KB. `googleapis` is Node-only and is never imported from `src/` — the client re-declares the event types it needs.
+The consent flow carries a random `state` nonce that is verified on callback and expires after 10 minutes. Request bodies are capped at 64 KB. `google-auth-library` is Node-only and is never imported from `src/` — the client re-declares the event types it needs. The server calls the Calendar REST endpoints directly through `OAuth2Client.request` rather than the full `googleapis` client, which kept the desktop sidecar bundle at 13.5 MB (now about 650 KB).
 
 ---
 

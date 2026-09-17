@@ -3,7 +3,12 @@ import * as React from "react";
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+/**
+ * How long a dismissed toast stays in state before removal: long enough for the
+ * ~150ms close animation to finish. The shadcn default of 1000000 (~16 min)
+ * kept every dismissed toast and its pending timer alive for that whole window.
+ */
+const TOAST_REMOVE_DELAY = 1000;
 
 type ToasterToast = ToastProps & {
   id: string;

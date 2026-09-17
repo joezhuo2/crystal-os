@@ -94,8 +94,10 @@ function TerminalPane({ tab, active, hub, onChange, onShortcut, register }: Pane
       const term = new Terminal({
         allowTransparency: true,
         cursorBlink: true,
+        // Matches the Windows Terminal defaults: Cascadia Mono at 12pt (16px).
         fontFamily: '"Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace',
-        fontSize: 13,
+        fontSize: 16,
+        fontWeight: "normal",
         scrollback: 5000,
         theme: {
           background: "#00000000",

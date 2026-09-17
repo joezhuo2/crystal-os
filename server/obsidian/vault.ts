@@ -79,17 +79,20 @@ export function toRelative(vaultRoot: string, absPath: string): string {
 /** Parsed notes keyed by path, invalidated on mtime change. */
 const noteCache = new Map<string, { mtimeMs: number; note: VaultNoteDetail }>();
 
+const cacheKey = (root: string, rel: string) => `${root}::${rel}`;
+
 async function loadNote(root: string, rel: string): Promise<VaultNoteDetail | null> {
   const abs = path.join(root, rel);
+  const key = cacheKey(root, rel);
 
   let stat;
   try {
     stat = await fs.stat(abs);
   } catch {
+    noteCache.delete(key);
     return null;
   }
 
-  const key = `${root}::${rel}`;
   const cached = noteCache.get(key);
   if (cached && cached.mtimeMs === stat.mtimeMs) return cached.note;
 
@@ -124,9 +127,28 @@ export async function listNotes(vaultRoot: string): Promise<VaultNoteDetail[]> {
     suppressErrors: true,
   });
 
+  // Drop entries for notes that no longer exist. Without this every path the
+  // vault has ever held, including deleted and renamed notes, stays cached for
+  // the life of the process.
+  const prefix = cacheKey(root, "");
+  const present = new Set(entries);
+  for (const key of noteCache.keys()) {
+    if (key.startsWith(prefix) && !present.has(key.slice(prefix.length))) {
+      noteCache.delete(key);
+    }
+  }
+
   const loaded = await Promise.all(entries.map((rel) => loadNote(root, rel)));
 
   return sortNotesByDate(loaded.filter((n): n is VaultNoteDetail => n !== null));
+}
+
+/** Vault-relative paths currently held in the parse cache. Exposed for tests. */
+export function cachedNotePaths(vaultRoot: string): string[] {
+  const prefix = cacheKey(path.resolve(vaultRoot), "");
+  return [...noteCache.keys()]
+    .filter((key) => key.startsWith(prefix))
+    .map((key) => key.slice(prefix.length));
 }
 
 /** One note, including its body. */
@@ -179,7 +201,7 @@ export async function appendToNote(
   // Explicit encoding keeps emoji and other non-ASCII characters intact.
   await fs.writeFile(abs, plan.content, { encoding: "utf-8" });
 
-  noteCache.delete(`${path.resolve(vaultRoot)}::${rel}`);
+  noteCache.delete(cacheKey(path.resolve(vaultRoot), rel));
 
   return {
     path: rel,

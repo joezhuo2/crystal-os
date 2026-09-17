@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
-import { google } from "googleapis";
-import type { OAuth2Client } from "google-auth-library";
+import { OAuth2Client } from "google-auth-library";
 import { CalendarError } from "./errors";
 import { removeEnvValue, upsertEnvValue } from "./envFile";
+import { getPrimaryCalendarId } from "./events";
 
 export const REFRESH_TOKEN_KEY = "GOOGLE_REFRESH_TOKEN";
 
@@ -38,7 +38,7 @@ export interface CalendarStatus {
 /**
  * Holds the refresh token for the life of the process and mirrors it into
  * .env.local. The access token stays inside the OAuth2Client's memory — it
- * lives an hour, googleapis refreshes it automatically, and neither token is
+ * lives an hour, OAuth2Client refreshes it automatically, and neither token is
  * ever sent to the browser.
  */
 export function createCalendarAuth(config: CalendarConfig) {
@@ -65,11 +65,11 @@ export function createCalendarAuth(config: CalendarConfig) {
 
   function newClient(): OAuth2Client {
     requireConfigured();
-    return new google.auth.OAuth2(
-      config.clientId,
-      config.clientSecret,
+    return new OAuth2Client({
+      clientId: config.clientId,
+      clientSecret: config.clientSecret,
       redirectUri,
-    );
+    });
   }
 
   /** An authorized client, or a 401 telling the UI to run the connect flow. */
@@ -162,15 +162,10 @@ export function createCalendarAuth(config: CalendarConfig) {
     await removeEnvValue(rootDir, REFRESH_TOKEN_KEY);
   }
 
-  /**
-   * The connected account's address. The primary calendar's id is the account
-   * email, which avoids requesting a userinfo scope just for a label.
-   */
+  /** The connected account's address, shown as the connection label. */
   async function getAccount(): Promise<string> {
     if (accountCache) return accountCache;
-    const calendar = google.calendar({ version: "v3", auth: getClient() });
-    const { data } = await calendar.calendarList.get({ calendarId: "primary" });
-    accountCache = data.id ?? "connected";
+    accountCache = (await getPrimaryCalendarId(getClient())) ?? "connected";
     return accountCache;
   }
 

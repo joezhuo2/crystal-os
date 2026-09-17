@@ -1,11 +1,115 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { OAuth2Client } from "google-auth-library";
 import {
   buildRecurrence,
+  deleteEvent,
+  getPrimaryCalendarId,
+  listCalendars,
+  listEvents,
   parseRecurrence,
   toAppEvent,
   toGoogleEvent,
+  updateEvent,
 } from "./events";
 import { CalendarError } from "./errors";
+
+/** An OAuth2Client whose `request` answers with `data` and records each call. */
+function fakeAuth(data: unknown = {}) {
+  const request = vi.fn().mockResolvedValue({ data });
+  return { auth: { request } as unknown as OAuth2Client, request };
+}
+
+describe("Calendar API requests", () => {
+  const holidays = "en.usa#holiday@group.v.calendar.google.com";
+
+  it("lists expanded instances with the calendar id escaped", async () => {
+    const { auth, request } = fakeAuth({
+      items: [
+        { id: "a", summary: "Kept", start: { date: "2026-09-07" }, end: { date: "2026-09-08" } },
+        { id: "b", status: "cancelled" },
+      ],
+    });
+
+    const events = await listEvents(auth, holidays, "2026-09-01T00:00:00Z", "2026-10-01T00:00:00Z");
+
+    expect(events.map((e) => e.id)).toEqual(["a"]);
+    expect(request).toHaveBeenCalledWith({
+      url: "https://www.googleapis.com/calendar/v3/calendars/en.usa%23holiday%40group.v.calendar.google.com/events",
+      method: "GET",
+      params: {
+        timeMin: "2026-09-01T00:00:00Z",
+        timeMax: "2026-10-01T00:00:00Z",
+        singleEvents: true,
+        orderBy: "startTime",
+        maxResults: 2500,
+      },
+      data: undefined,
+      retry: true,
+    });
+  });
+
+  it("patches an event with the Google-shaped body", async () => {
+    const { auth, request } = fakeAuth({ id: "evt_1", start: { date: "2026-09-07" } });
+
+    await updateEvent(auth, "primary", "evt_1", {
+      summary: "Holiday",
+      allDay: true,
+      startDate: "2026-09-07",
+      endDate: "2026-09-07",
+      recurrence: null,
+    });
+
+    const [opts] = request.mock.calls[0];
+    expect(opts.method).toBe("PATCH");
+    expect(opts.url).toBe("https://www.googleapis.com/calendar/v3/calendars/primary/events/evt_1");
+    // null has to survive into the body: it is what clears a series.
+    expect(opts.data).toMatchObject({
+      summary: "Holiday",
+      start: { date: "2026-09-07" },
+      end: { date: "2026-09-08" },
+      recurrence: null,
+    });
+  });
+
+  it("deletes by escaped event id", async () => {
+    const { auth, request } = fakeAuth("");
+
+    await deleteEvent(auth, "primary", "a/b");
+
+    expect(request.mock.calls[0][0]).toMatchObject({
+      method: "DELETE",
+      url: "https://www.googleapis.com/calendar/v3/calendars/primary/events/a%2Fb",
+    });
+  });
+
+  it("lists calendars primary first, then by name", async () => {
+    const { auth, request } = fakeAuth({
+      items: [
+        { id: "z@x", summary: "Zeta" },
+        { id: "me@x", summary: "Me", primary: true },
+        { id: "a@x", summary: "Ignored", summaryOverride: "Alpha" },
+        { summary: "No id" },
+      ],
+    });
+
+    const calendars = await listCalendars(auth);
+
+    expect(calendars.map((c) => c.summary)).toEqual(["Me", "Alpha", "Zeta"]);
+    expect(request.mock.calls[0][0]).toMatchObject({
+      url: "https://www.googleapis.com/calendar/v3/users/me/calendarList",
+      params: { maxResults: 250 },
+    });
+  });
+
+  it("reads the account address from the primary calendar", async () => {
+    const { auth, request } = fakeAuth({ id: "me@example.com" });
+
+    expect(await getPrimaryCalendarId(auth)).toBe("me@example.com");
+    expect(request.mock.calls[0][0].url).toBe(
+      "https://www.googleapis.com/calendar/v3/users/me/calendarList/primary",
+    );
+  });
+});
 
 describe("toAppEvent", () => {
   it("flattens a timed event to wall-clock strings", () => {

@@ -1,23 +1,11 @@
 # Planned Features
 - [v0.7.0] banking update - use plaid to connect to banks (store api keys and t okens in secure env variables)
 
-# Additions
-
-## Portal Icon Hover / Right-Click Enhancements
-
-### Hover Tooltip Info
-- **Badge count** — surface the unread count (e.g. `3 unread`) directly in the tooltip, not just the pill badge
-- **Connection status** — `Connected`, `Loading…`, `Error — click to retry` when webview fails
-- **Session uptime** — how long since the app was first connected / last reloaded (e.g. `Connected 2h ago`)
-
-### Right-Click Context Menu Items
-- **Clear site data** — wipe cookies/storage for this app without full sign-out (keeps the app connected but logged out)
-
 # QoL/Changes
 
 - replace the default apps in the portal: 
     - whatsapp => linkedin
-    - messenger => 
+    - messenger => spotify
     - slack => 
     - telegram => 
 
@@ -44,16 +32,6 @@
 - [ ] **Hoist constant arrays in FinancialsPage** — inline `options={[...]}` arrays recreated each keystroke in `TransactionDrawer`. (`src/components/views/FinancialsPage.tsx:162-231,213-221`)
 
 - [ ] **Cap `listNotes` I/O concurrency in server vault** — `Promise.all(entries.map(loadNote))` opens every `.md` file simultaneously with no bound. `vaultNative` caps at `READ_CONCURRENCY = 16`; server version does not. Large vaults spike file-descriptors and memory per request. (`server/obsidian/vault.ts:127`)
-
-## Memory Usage
-
-- [ ] **Prune `noteCache` on delete in server vault** — `noteCache` Map grows unbounded; `listNotes` re-populates but never removes entries for deleted/renamed files. Desktop path (`src/lib/vaultNative.ts:140-147`) prunes correctly. Process-lifetime leak for long-running sessions. (`server/obsidian/vault.ts:80,110`)
-
-- [ ] **Reduce toast retention time** — `TOAST_REMOVE_DELAY = 1000000` (~16 min) keeps dismissed toast Map entries alive. Under sustained toast spam the Map accumulates entries for that full window. Consider shorter delay or immediate cleanup on dismiss. (`src/hooks/use-toast.ts:53,66`)
-
-- [ ] **Paginate initial data load** — single `Promise.all` fetches all tasks, all transactions, and categories with no limit. Memory/CPU grows with data size; dashboard holds entire dataset in state. Consider pagination or streaming for large datasets. (`src/contexts/AppContext.tsx:240-246`)
-
-- [ ] **Shrink sidecar: replace `googleapis` with targeted REST** — `server-dist/crystal-api.cjs` is 13.5 MB, driven by full `googleapis` import. Only `calendar_v3` + `OAuth2` are used. Replace with `google-auth-library` + direct REST calls, or use esbuild `external` + lazy import. (`server/calendar/events.ts:1`, `server/calendar/oauth.ts:2`, `scripts/build-sidecar.mjs`)
 
 ## Other
 

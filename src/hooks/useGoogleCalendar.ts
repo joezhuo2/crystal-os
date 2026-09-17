@@ -5,8 +5,8 @@ const API_BASE = "/api/calendar";
 
 /**
  * Mirrors the server-side AppEvent in server/calendar/events.ts. Re-declared
- * here because that module pulls in `googleapis`, which is Node-only and must
- * never enter the client bundle.
+ * here because that module pulls in `google-auth-library`, which is Node-only
+ * and must never enter the client bundle.
  */
 export interface CalendarEvent {
   id: string;

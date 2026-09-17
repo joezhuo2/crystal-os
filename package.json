@@ -1,7 +1,7 @@
 {
   "name": "vite_react_shadcn_ts",
   "private": true,
-  "version": "0.6.2",
+  "version": "0.6.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -60,7 +60,7 @@
     "embla-carousel-react": "^8.6.0",
     "fast-glob": "^3.3.3",
     "framer-motion": "^12.34.3",
-    "googleapis": "^178.0.0",
+    "google-auth-library": "^10.9.1",
     "gray-matter": "^4.0.3",
     "input-otp": "^1.4.2",
     "js-yaml": "^4.3.2",
