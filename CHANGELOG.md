@@ -5,6 +5,15 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.2] - 2026-09-17 - Portal Focus
+
+### Fixed
+
+- **The Portal's right-click menu keeps the page visible.** Opening a pill's context menu (or any dialog over The Portal) used to swap the app's page for a large app icon, because the native webview has to be hidden before HTML can draw over it. The page is now captured first with WebView2's `CapturePreview` and shown as a still picture behind the menu. When the menu closes, the live page comes back without a fade. If the capture fails or takes over 800 ms, or the page is still loading, the old icon placeholder is used (`portal_snapshot` in `src-tauri/src/portal.rs`, `snapshotAndHidePortal` in `src/lib/portalNative.ts`).
+- **Portal shortcuts work while typing in an app.** Keys pressed inside Discord, Instagram, or another app page went to that page, so **Ctrl+Tab**, **Ctrl+Shift+Tab**, **Ctrl+W**, and **Ctrl+R** only worked after clicking Crystal OS's own UI. Each app webview now catches those combos with WebView2's `AcceleratorKeyPressed` event before the page sees them and sends them to The Portal as `portal://shortcut` events (`src-tauri/src/portal/webview2.rs`).
+- **The toggle hotkey hides the window after you click into a Portal app.** `Alt+Space` checked whether the window had focus, and a Portal app page taking keyboard focus made that check fail, so the hotkey kept trying to show a window that was already in front. You had to Alt+Tab away and back before it would hide. It now checks whether Crystal OS is the foreground window (`window::is_foreground` in `src-tauri/src/window.rs`).
+- **Keyboard focus lands somewhere useful.** Showing the window with a hotkey or the tray now focuses the Portal app on screen, or the main page when no app is shown, so typing and shortcuts work without a click. When a menu or dialog hides a Portal app, focus moves to the main page so the menu and dialog respond to the keyboard.
+
 ## [v0.6.1] - 2026-09-17 - Crystal Archive
 
 ### Added

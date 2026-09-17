@@ -631,7 +631,7 @@ dependencies = [
 
 [[package]]
 name = "crystal-os"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "log",
  "notify-debouncer-mini",
@@ -650,6 +650,8 @@ dependencies = [
  "tempfile",
  "ureq",
  "uuid",
+ "webview2-com",
+ "windows",
  "windows-sys 0.59.0",
  "winreg 0.56.0",
 ]

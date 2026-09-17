@@ -23,6 +23,7 @@ fn main() {
     "terminal_resize",
     "portal_show",
     "portal_hide",
+    "portal_snapshot",
     "portal_fade_out",
     "portal_nav",
     "portal_open_external",

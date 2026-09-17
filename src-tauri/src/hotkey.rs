@@ -137,11 +137,11 @@ fn unregister<R: Runtime>(app: &AppHandle<R>, action: HotkeyAction, accelerator:
   app.global_shortcut().unregister(accelerator).map_err(|e| e.to_string())
 }
 
-/// Show + focus the main window, or hide it if it already has focus.
+/// Show + focus the main window, or hide it if it is already in front.
 fn toggle_main_window<R: Runtime>(app: &AppHandle<R>) {
   let Some(window) = crate::window::main_window(app) else { return };
 
-  if crate::window::is_shown(&window) && window.is_focused().unwrap_or(false) {
+  if crate::window::is_shown(&window) && crate::window::is_foreground(&window) {
     crate::window::hide(app);
   } else {
     crate::window::show(app);

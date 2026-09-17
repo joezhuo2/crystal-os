@@ -23,14 +23,6 @@
 
 - in the bottom of the settings menu, add a place to download the latest exe installer or build the latest one (for latest released version), and add option for user to choose which version they want to download
 
-# Bug Fixes
-
-- when i right click a tab in the portal, instead of showing an overlay with the options it gives me, it hides the entire current screen and makes it only show the logo rather than the content in the website
-
-- in the portal: keyboard shortcuts can only be used after "focusing" on the tab (eg. clicking something on the tab)
-
-- when i type something in a text box or select something, or perform a click in a portal app, eg. discord/instagram, i have to switch to another desktop app (eg. using alt tab twice or clicking into another app) and then switch tab back in before i can use the global hoteky to open/close the app
-
 # Cleanup
 - remove old project files created by `npm run build:desktop` or `npm run build`
 

@@ -102,6 +102,7 @@ pub fn run() {
       terminal::terminal_resize,
       portal::portal_show,
       portal::portal_hide,
+      portal::portal_snapshot,
       portal::portal_fade_out,
       portal::portal_nav,
       portal::portal_open_external,

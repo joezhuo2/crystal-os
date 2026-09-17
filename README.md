@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-274%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.6.1-6366F1)
+![Version](https://img.shields.io/badge/version-0.6.2-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.6.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.6.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -205,7 +205,8 @@ src-tauri/
 │   ├── settings.rs             # settings.json read/write (hotkeys, vaultPath, launchAtLogin)
 │   ├── vault.rs                # Native vault I/O: list/read/write/status/watch
 │   ├── terminal.rs             # ConPTY PowerShell shells (up to 5)
-│   └── portal.rs               # Portal child webviews: show/hide/fade, per-app data, sign-out
+│   ├── portal.rs               # Portal child webviews: show/hide/fade, snapshots, per-app data, sign-out
+│   └── portal/webview2.rs      # WebView2 page capture + tab-shortcut forwarding for Portal apps
 ├── capabilities/
 │   └── default.json            # App command allowlist by name
 └── tauri.conf.json             # Window, tray, bundle config
@@ -392,13 +393,13 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 - **Loading.** While an app's page loads (first open, **Reload**, **Back to home page**, **Sign out**), the frame shows a skeleton of a web app in the theme's colours with "Loading <app>…". The page appears, fading in, once it has finished loading, or after 20 seconds if it never reports that.
 - **Always on.** Apps load the first time you open The Portal after launching Crystal OS, then keep running while you use other tabs. Unread counts from their page titles show on each pill and on the sidebar's Portal icon.
 - **Themes.** Choose **Void swirl** (default), **Event horizon**, or **Stargate blue** under **Settings → The Portal**. The theme styles the backdrop, sidebar, navbar, and the animated ring around the app.
-- **Keyboard shortcuts (desktop).** While a Portal app is on screen: **Ctrl+Tab** cycles to the next app, **Ctrl+Shift+Tab** cycles to the previous one, **Ctrl+W** opens the Remove confirmation, and **Ctrl+R** reloads the active app. Shortcuts are disabled while a dialog is open or the focus is inside a text field. `Ctrl+R` prevents Tauri's default full-page reload, which would otherwise drop you to the Home tab.
+- **Keyboard shortcuts (desktop).** While a Portal app is on screen: **Ctrl+Tab** cycles to the next app, **Ctrl+Shift+Tab** cycles to the previous one, **Ctrl+W** opens the Remove confirmation, and **Ctrl+R** reloads the active app. They also work while you are typing inside an app page (Windows): the app's webview catches them before the page does. In Crystal OS's own UI they are disabled while a dialog is open or the focus is inside a text field. `Ctrl+R` prevents Tauri's default full-page reload, which would otherwise drop you to the Home tab.
 - **Web build.** Browsers refuse to embed these sites in another page, so there the Portal keeps your app list and opens each app in a new tab.
-- The app pages draw above Crystal OS's own UI, so the search bar is hidden on this tab and dialogs (such as tray **Quick Add**) hide the app while they are open. The pages get no access to Crystal OS commands. The view talks to Rust through the `portal_*` commands in `src/lib/portalNative.ts`.
+- The app pages draw above Crystal OS's own UI, so the search bar is hidden on this tab and menus and dialogs (such as the pill right-click menu or tray **Quick Add**) hide the app while they are open. A still picture of the page stays in its place behind them. The pages get no access to Crystal OS commands. The view talks to Rust through the `portal_*` commands in `src/lib/portalNative.ts`.
 
 **Global hotkeys.** Two combos work from any app:
 
-- `Alt+Space` shows Crystal OS; press it again while the app is focused to hide it. It does not touch the search bar. Saved as `globalShortcut`.
+- `Alt+Space` shows Crystal OS; press it again while the app is in front to hide it, including while you are typing in a Portal app. It does not touch the search bar. Saved as `globalShortcut`.
 - `Alt+Shift+Space` shows Crystal OS and focuses the search bar. Saved as `paletteShortcut`.
 
 Change either with **Change** in Settings. Both are saved in `%APPDATA%\com.crystalos.desktop\settings.json`, and the two cannot share a combo. If another app already owns one, Crystal OS still starts and shows a toast.

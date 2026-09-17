@@ -30,6 +30,7 @@
     "allow-terminal-resize",
     "allow-portal-show",
     "allow-portal-hide",
+    "allow-portal-snapshot",
     "allow-portal-fade-out",
     "allow-portal-nav",
     "allow-portal-open-external",
