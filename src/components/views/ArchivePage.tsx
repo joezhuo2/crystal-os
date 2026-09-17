@@ -44,12 +44,8 @@ function TagChip({
   return (
     <button
       onClick={onClick}
-      className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border"
-      style={{
-        background: active ? "hsl(239 84% 67% / 0.18)" : "hsl(0 0% 100% / 0.04)",
-        borderColor: active ? "hsl(239 84% 67% / 0.4)" : "hsl(0 0% 100% / 0.08)",
-        color: active ? "hsl(239 84% 80%)" : undefined,
-      }}
+      data-active={active || undefined}
+      className="obsidian-chip px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border"
     >
       {tag}
     </button>
@@ -68,11 +64,8 @@ function NoteRow({
   return (
     <button
       onClick={onSelect}
-      className="w-full text-left px-3 py-2.5 rounded-lg transition-colors border"
-      style={{
-        background: active ? "hsl(239 84% 67% / 0.12)" : "transparent",
-        borderColor: active ? "hsl(239 84% 67% / 0.25)" : "transparent",
-      }}
+      data-active={active || undefined}
+      className="obsidian-note w-full text-left px-3 py-2.5 rounded-lg transition-colors border"
     >
       <p className="text-sm font-medium truncate">{note.title}</p>
       <p className="text-xs text-muted-foreground truncate mt-0.5">
@@ -186,8 +179,7 @@ function NoteReader({ notes }: { notes: VaultNote[] }) {
         {note.tags.map((tag) => (
           <span
             key={tag}
-            className="px-2 py-0.5 rounded-full text-[11px]"
-            style={{ background: "hsl(239 84% 67% / 0.12)", color: "hsl(239 84% 80%)" }}
+            className="obsidian-tag px-2 py-0.5 rounded-full text-[11px]"
           >
             {tag}
           </span>
@@ -291,12 +283,7 @@ function VaultUnavailable({ error }: { error: Error }) {
               <button
                 onClick={choose}
                 disabled={pickVault.isPending}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50"
-                style={{
-                  background: "hsl(239 84% 67% / 0.15)",
-                  borderColor: "hsl(239 84% 67% / 0.3)",
-                  color: "hsl(239 84% 80%)",
-                }}
+                className="obsidian-action flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border disabled:opacity-50"
               >
                 <FolderOpen className="w-3.5 h-3.5" />
                 Choose vault folder
@@ -345,18 +332,13 @@ export default function ArchivePage() {
     <div className="flex items-center justify-between gap-4 mb-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          <span className="text-gradient-indigo">The Archive</span>
+          <span className="obsidian-title">The Archive</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">Your Obsidian vault</p>
       </div>
       <button
         onClick={openQuickAdd}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border"
-        style={{
-          background: "hsl(160 84% 39% / 0.12)",
-          borderColor: "hsl(160 84% 39% / 0.25)",
-          color: "hsl(160 84% 55%)",
-        }}
+        className="obsidian-action flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border"
       >
         <NotebookPen className="w-4 h-4" />
         Quick Add

@@ -19,6 +19,7 @@ import CommandPalette from "@/components/CommandPalette";
 import TerminalStatic from "@/components/layout/TerminalStatic";
 import PortalBackdrop from "@/components/layout/PortalBackdrop";
 import NebulaBackdrop from "@/components/layout/NebulaBackdrop";
+import ObsidianBackdrop from "@/components/layout/ObsidianBackdrop";
 import { useHarness } from "@/hooks/useHarness";
 import { usePortal } from "@/hooks/usePortal";
 import { isDesktop } from "@/lib/platform";
@@ -94,7 +95,9 @@ const Index = () => {
         ? `portal-root ${PORTAL_THEME_CLASS[portalTheme]}`
         : activeTab === "nebula"
           ? "nebula-root"
-          : "mesh-gradient-bg";
+          : activeTab === "archive"
+            ? "obsidian-root"
+            : "mesh-gradient-bg";
   // The Nebula page, sidebar, and backdrop read their colours from these.
   const rootStyle =
     activeTab === "nebula"
@@ -107,6 +110,7 @@ const Index = () => {
         {activeTab === "terminal" && <TerminalStatic />}
         {activeTab === "portal" && <PortalBackdrop theme={portalTheme} />}
         {activeTab === "nebula" && <NebulaBackdrop theme={nebulaTheme} />}
+        {activeTab === "archive" && <ObsidianBackdrop />}
         <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
         <main className="flex-1 min-h-0 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
           {/* Unmounted on the Terminal, Portal, and Nebula tabs: hides the bar and

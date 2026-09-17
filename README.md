@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-187%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.6.0-6366F1)
+![Tests](https://img.shields.io/badge/tests-274%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.6.1-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.6.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.6.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -24,7 +24,7 @@ Current release: **v0.6.0** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | **🏠 Home widgets** | Clock, weather, AI smart summary, the Engine (top 3 tasks with quick-complete and add), today's calendar events, daily focus, and a vault widget — each with its own shimmer skeleton while loading |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations |
-| **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list |
+| **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list. Its own amethyst theme: glass crystals growing in from the screen edges, sparkles, and a cursor light the crystals reflect |
 | **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, per-model token counts, and a swirling three-colour nebula |
 | **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges, and three themes (desktop; the web build opens apps in new tabs) |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
@@ -133,9 +133,10 @@ src/
 ├── components/
 │   ├── layout/
 │   │   ├── AppSplash.tsx       # "Crystal OS / Loading…" splash while the session restores
-│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal restyle the sidebar)
+│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal/Nebula/Archive restyle the sidebar)
 │   │   ├── TerminalStatic.tsx  # Static-noise backdrop for the Terminal tab
-│   │   └── PortalBackdrop.tsx  # Themed backdrop for The Portal
+│   │   ├── PortalBackdrop.tsx  # Themed backdrop for The Portal
+│   │   └── ObsidianBackdrop.tsx # Crystal backdrop and cursor light for The Archive
 │   ├── portal/
 │   │   ├── PortalNavbar.tsx    # App pills (drag, right-click menu), browser controls
 │   │   ├── PortalSkeleton.tsx  # Themed placeholder shown while an app's page loads
@@ -175,6 +176,7 @@ src/
 │   ├── supabase.ts             # Supabase client + helpers
 │   ├── vaultCore.ts            # Shared vault logic: parsing, search, tags, quick-add formatting
 │   ├── vaultNative.ts          # Desktop vault client for src-tauri/src/vault.rs
+│   ├── obsidianScene.ts        # Archive backdrop: crystal shapes, edge layout, cursor light maths
 │   ├── terminalNative.ts       # Desktop terminal bridge (terminal_* commands, event routing per shell)
 │   ├── portalApps.ts           # Portal presets, URL/id validation, badge parsing
 │   ├── portalStore.ts          # Module-level Portal store: apps, active app, badges, theme
@@ -241,6 +243,17 @@ The middleware is mounted on both the dev server and `vite preview`. It is **not
 ### Layout
 
 The browser rail is a fixed-height column split into two halves that scroll independently: the tag cloud on top, the filtered note list below, with the note count between them as a divider and the search field pinned above both. Each half is `flex-1 basis-0 min-h-0`, so a vault with many tags cannot crowd the list out of view, and a vault with few tags leaves the extra space to the list.
+
+### Theme
+
+The Archive has its own dark amethyst look. The panels, tags, note list, buttons, and sidebar turn violet, and `ObsidianBackdrop` (`src/components/layout/ObsidianBackdrop.tsx`) draws the scene behind them with CSS, SVG, and DOM only (no canvas, WebGL, or 3D library):
+
+- **Crystals.** 32 glass crystals grow in from the four corners and edges, in five faceted shapes, at resting opacities between 0.3 and 0.9. Each one is tilted to point into the screen and pushed out along its own axis until its flat base sits past the edge, so no root is ever on screen. The layout is seeded, so it is the same on every visit (`src/lib/obsidianScene.ts`).
+- **Sparkles.** Four-point stars twinkle at random across the background, and one sits near the tip of each crystal, on top of the glass.
+- **Cursor light.** A soft violet aura follows the pointer and breathes between 0.5 and 0.8 opacity. It fades out when the pointer leaves the window.
+- **Reflections.** A crystal near the pointer lights up: a brighter rim, a halo, and a second glass layer with a stronger `backdrop-filter` (brightness, saturation, contrast) that carries a glint positioned where the pointer is. The light is worked out in the crystal's own rotated frame, so tilted crystals light along their length.
+
+The pointer never touches React state. One `pointermove` listener schedules at most one animation frame. That frame reads every crystal's position first, then writes `--obsidian-mx`/`--obsidian-my` on the backdrop and `--lit`/`--lx`/`--ly` on each crystal it lights, skipping crystals that stay dark. The CSS turns those properties into `transform` and `opacity`, which the compositor handles. The floating, twinkling, growing, and breathing animations use only transforms and opacity. The stronger reflection layer is `visibility: hidden` while its crystal is dark, so its filter only runs near the pointer. With reduced motion on, the animations stop and the cursor light still works.
 
 ### Safety
 

@@ -5,6 +5,22 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.1] - 2026-09-17 - Crystal Archive
+
+### Added
+
+- **The Archive has its own crystal theme.** The tab now looks like a dark amethyst cave instead of the default indigo glass (`src/components/layout/ObsidianBackdrop.tsx`, `src/index.css`).
+  - **Crystals from the edges.** 32 glass crystals in five faceted shapes grow in from the four corners and edges when the tab opens, then drift slowly along their own axis. Each has a resting opacity between 0.3 and 0.9. Every crystal points into the screen, and its flat base always sits past the edge, at any window size. The layout is seeded, so it is the same on every visit (`src/lib/obsidianScene.ts`).
+  - **Sparkles.** Four-point stars twinkle at random positions in the background, and one sits near the tip of each crystal, on top of the glass.
+  - **Cursor light.** A violet aura follows the pointer, breathing between 0.5 and 0.8 opacity, and fades out when the pointer leaves the window.
+  - **Crystals reflect the light.** A crystal near the pointer gets a brighter rim, a halo, and a stronger glass `backdrop-filter` (brightness, saturation, contrast) with a glint that sits where the pointer is. The effect grows as the pointer gets closer, and is measured along each crystal's own tilt.
+  - **Themed page and sidebar.** Panels, tag chips, the note list, the note reader's tags, the Quick Add and vault buttons, the page title, and the sidebar all switch to violet on this tab.
+
+### Performance
+
+- **Pointer tracking without React renders.** One `pointermove` listener schedules at most one animation frame. The frame reads every crystal's position first and then writes CSS custom properties (`--obsidian-mx`/`--obsidian-my` on the backdrop, `--lit`/`--lx`/`--ly` on each crystal), skipping crystals that stay dark. The CSS maps those properties to `transform` and `opacity`, and every animation (float, twinkle, grow, breathe, haze drift) uses only those two, so the compositor does the work. The stronger reflection layer is hidden while its crystal is dark, so its filter only runs near the pointer. No canvas, WebGL, or 3D library is used.
+- **Reduced motion.** With reduced motion on, the crystals, sparkles, haze, and aura stop animating. The cursor light and reflections still follow the pointer.
+
 ## [v0.6.0] - 2026-09-17 - The Nebula
 
 ### Added
