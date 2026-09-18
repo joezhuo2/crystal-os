@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Crystal OS",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "identifier": "com.crystalos.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -27,6 +27,7 @@
       }
     ],
     "security": {
+      "dangerousDisableAssetCspModification": ["style-src"],
       "csp": {
         "default-src": "'self'",
         "connect-src": "'self' ipc: http://ipc.localhost http://127.0.0.1:8787 https://*.supabase.co wss://*.supabase.co https://api.weather.gc.ca",

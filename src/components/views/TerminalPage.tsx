@@ -25,6 +25,33 @@ const RESET = "\x1b[0m";
 const DEFAULT_COLS = 80;
 const DEFAULT_ROWS = 24;
 
+/** Windows Terminal's defaults: Cascadia Mono at 12pt (16px). */
+const FONT_FAMILY = '"Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace';
+const FONT_SIZE = 16;
+
+/**
+ * Cascadia Mono is bundled as a webfont (src/main.tsx), so it is not
+ * guaranteed to be ready the moment a pane mounts. xterm measures the
+ * character cell once, inside `open()`, and keeps those metrics for the life
+ * of the terminal: opening early measures the fallback face and the whole grid
+ * stays in it. Under `dev:desktop` the font is already warm by the time anyone
+ * reaches the tab, which is why only packaged builds showed the wrong
+ * typeface. Awaiting the face removes the race in both.
+ *
+ * Shared across panes, and never rejects — a font that will not load should
+ * leave the terminal usable in the fallback rather than blank.
+ */
+let fontReady: Promise<unknown> | null = null;
+function loadTerminalFont(): Promise<unknown> {
+  if (!fontReady) {
+    const fonts = typeof document === "undefined" ? undefined : document.fonts;
+    fontReady = fonts
+      ? Promise.all([fonts.load(`${FONT_SIZE}px ${FONT_FAMILY}`), fonts.load(`bold ${FONT_SIZE}px ${FONT_FAMILY}`)]).catch(() => undefined)
+      : Promise.resolve(undefined);
+  }
+  return fontReady;
+}
+
 function errorText(err: unknown) {
   return err instanceof Error ? err.message : String(err);
 }
@@ -91,12 +118,14 @@ function TerminalPane({ tab, active, hub, onChange, onShortcut, register }: Pane
       ]);
       if (disposed) return;
 
+      await loadTerminalFont();
+      if (disposed) return;
+
       const term = new Terminal({
         allowTransparency: true,
         cursorBlink: true,
-        // Matches the Windows Terminal defaults: Cascadia Mono at 12pt (16px).
-        fontFamily: '"Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace',
-        fontSize: 16,
+        fontFamily: FONT_FAMILY,
+        fontSize: FONT_SIZE,
         fontWeight: "normal",
         scrollback: 5000,
         theme: {

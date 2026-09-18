@@ -101,7 +101,7 @@ describe("parseStoredApps", () => {
 describe("parseBadge", () => {
   it("reads counts", () => {
     expect(parseBadge("(3) Discord | #general")).toBe(3);
-    expect(parseBadge("(12) WhatsApp")).toBe(12);
+    expect(parseBadge("(12) Outlook")).toBe(12);
     expect(parseBadge("(99+) Inbox")).toBe(99);
   });
 

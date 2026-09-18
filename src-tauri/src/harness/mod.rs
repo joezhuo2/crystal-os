@@ -8,7 +8,7 @@
 mod claude;
 mod config;
 mod discovery;
-mod job;
+pub(crate) mod job;
 mod process;
 
 use std::path::{Path, PathBuf};

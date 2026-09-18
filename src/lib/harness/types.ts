@@ -65,6 +65,16 @@ export interface TokenCounts {
 /** Totals keyed by display model id. */
 export type Ledger = Record<string, TokenCounts>;
 
+/** How full the model's context window was after the latest step of a chat. */
+export interface ContextUsage {
+  /** Tokens in the context at that step. */
+  used: number;
+  /** The model's context window, or null when the engine does not say and the model is unknown. */
+  size: number | null;
+  /** Display model id the snapshot came from. */
+  model: string;
+}
+
 export interface ProjectRecord {
   id: string;
   name: string;
@@ -93,6 +103,8 @@ export interface ChatFile {
   id: string;
   messages: ChatMessage[];
   tokens: Ledger;
+  /** Missing in files written before v0.6.6. */
+  context?: ContextUsage;
 }
 
 export interface StateFile {

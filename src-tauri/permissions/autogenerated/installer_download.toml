@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-installer-download"
+description = "Enables the installer_download command without any pre-configured scope."
+commands.allow = ["installer_download"]
+
+[[permission]]
+identifier = "deny-installer-download"
+description = "Denies the installer_download command without any pre-configured scope."
+commands.deny = ["installer_download"]

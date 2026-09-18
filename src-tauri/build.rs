@@ -29,6 +29,7 @@ fn main() {
     "portal_open_external",
     "portal_sign_out",
     "portal_remove",
+    "portal_rebuild",
     "portal_prune",
     "harness_env_status",
     "harness_install_runtime",
@@ -50,6 +51,13 @@ fn main() {
     "harness_chat_load",
     "harness_chat_save",
     "harness_chat_delete",
+    "installer_status",
+    "installer_releases",
+    "installer_download",
+    "installer_pick_source",
+    "installer_build",
+    "installer_cancel_build",
+    "installer_reveal",
   ]);
   tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))
     .expect("failed to run tauri-build");

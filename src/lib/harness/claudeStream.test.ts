@@ -47,6 +47,26 @@ describe("parseClaudeLine", () => {
   });
 });
 
+describe("parseClaudeLine usage", () => {
+  const withUsage = (parent: string | null) =>
+    JSON.stringify({
+      type: "assistant",
+      parent_tool_use_id: parent,
+      message: { model: "claude-opus-5", content: [{ type: "text", text: "hi" }], usage: { input_tokens: 3, cache_read_input_tokens: 1000, cache_creation_input_tokens: 200, output_tokens: 50 } },
+    });
+
+  it("reports the main thread's context size before its content", () => {
+    expect(parseClaudeLine(withUsage(null))).toEqual([
+      { type: "usage", model: "claude-opus-5", used: 1253 },
+      { type: "text", text: "hi", model: "claude-opus-5" },
+    ]);
+  });
+
+  it("ignores subagent usage", () => {
+    expect(parseClaudeLine(withUsage("toolu_9"))).toEqual([{ type: "text", text: "hi", model: "claude-opus-5" }]);
+  });
+});
+
 describe("stdin messages", () => {
   it("builds the shapes the CLI accepted in the spike", () => {
     expect(JSON.parse(userMessage("hi"))).toEqual({ type: "user", message: { role: "user", content: [{ type: "text", text: "hi" }] } });

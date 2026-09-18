@@ -39,6 +39,36 @@ export interface ClaudeModelUsage {
   outputTokens?: number;
   cacheReadInputTokens?: number;
   cacheCreationInputTokens?: number;
+  /** The model's context window, when Claude Code reports it. */
+  contextWindow?: number;
+}
+
+/** An assistant message's Anthropic `usage` block. */
+export interface ClaudeStepUsage {
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_read_input_tokens?: number;
+  cache_creation_input_tokens?: number;
+}
+
+/**
+ * Context size after one Claude step: everything sent in (fresh, cached and
+ * newly cached) plus what the step wrote, which the next step re-reads.
+ */
+export function claudeContextUsed(usage: ClaudeStepUsage): number {
+  const n = (v: unknown) => (typeof v === "number" && v > 0 ? v : 0);
+  return n(usage.input_tokens) + n(usage.cache_read_input_tokens) + n(usage.cache_creation_input_tokens) + n(usage.output_tokens);
+}
+
+/**
+ * A model's context window: what the engine reported if anything, else the
+ * known Claude sizes (1M for `[1m]` ids, 200k otherwise), else null.
+ */
+export function contextWindowFor(model: string, reported?: number): number | null {
+  if (typeof reported === "number" && reported > 0) return reported;
+  if (/\[1m\]/i.test(model)) return 1_000_000;
+  if (/claude|opus|sonnet|haiku|fable/i.test(model)) return 200_000;
+  return null;
 }
 
 /**

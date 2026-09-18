@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addCounts, claudeUsageDelta, estimateDshTurn, formatTokens, mergeLedgers, totalOf } from "./tokenLedger";
+import { addCounts, claudeContextUsed, claudeUsageDelta, contextWindowFor, estimateDshTurn, formatTokens, mergeLedgers, totalOf } from "./tokenLedger";
 
 describe("token ledger", () => {
   it("adds counts per model and keeps the estimate flag sticky", () => {
@@ -43,5 +43,20 @@ describe("token ledger", () => {
     expect(formatTokens(1_500)).toBe("1.5k");
     expect(formatTokens(250_000)).toBe("250k");
     expect(formatTokens(3_210_000)).toBe("3.21M");
+  });
+});
+
+describe("context window", () => {
+  it("sums everything the step read and wrote", () => {
+    expect(claudeContextUsed({ input_tokens: 5, cache_read_input_tokens: 40_000, cache_creation_input_tokens: 1_200, output_tokens: 300 })).toBe(41_505);
+    expect(claudeContextUsed({})).toBe(0);
+  });
+
+  it("prefers the reported window, then known Claude sizes", () => {
+    expect(contextWindowFor("anything", 128_000)).toBe(128_000);
+    expect(contextWindowFor("claude-opus-5[1m]")).toBe(1_000_000);
+    expect(contextWindowFor("claude-sonnet-5")).toBe(200_000);
+    expect(contextWindowFor("DeepSeek V4 Flash")).toBeNull();
+    expect(contextWindowFor("DeepSeek V4 Flash", 0)).toBeNull();
   });
 });

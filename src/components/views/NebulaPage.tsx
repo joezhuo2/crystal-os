@@ -66,6 +66,7 @@ export default function NebulaPage() {
                   chatTokens={runtime?.tokens ?? {}}
                   projectTokens={selectProjectTokens(state, project.id)}
                   allTime={state.allTime}
+                  context={runtime?.context ?? null}
                   claudeModel={state.config!.claudeModel}
                   mediumChain={candidates("medium", state.config!).map((c) => c.label).join(" → ")}
                 />

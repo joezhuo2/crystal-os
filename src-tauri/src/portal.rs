@@ -167,7 +167,7 @@ fn parse_home(url: &str) -> Result<Url, String> {
   Ok(parsed)
 }
 
-/// The last two labels of a host: `web.whatsapp.com` gives `whatsapp.com`.
+/// The last two labels of a host: `mail.google.com` gives `google.com`.
 /// Good enough to keep a site's own popups in-app; a two-part public suffix
 /// such as `co.uk` just means those popups open in the browser instead.
 fn site_of(host: &str) -> &str {
@@ -730,7 +730,7 @@ mod tests {
 
   #[test]
   fn site_is_last_two_host_labels() {
-    assert_eq!(site_of("web.whatsapp.com"), "whatsapp.com");
+    assert_eq!(site_of("mail.google.com"), "google.com");
     assert_eq!(site_of("discord.com"), "discord.com");
     assert_eq!(site_of("localhost"), "localhost");
     assert_eq!(site_of("a.b.c.example.org."), "example.org");

@@ -5,6 +5,25 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.6] - 2026-09-17 - Installers, New Portal Apps, Context Meter & A Readable Terminal
+
+### Added
+
+- **Settings → Install & update.** A new panel at the bottom of Settings lists every published release from `joezhuo2/crystal-os`, defaults to the newest stable one that has an installer attached, and saves that installer to your Downloads folder with a progress bar and a **Show in folder** button. A version picker lets you take any other release instead, including pre-releases and older versions; a release with no Windows asset is listed but cannot be downloaded. Releases are fetched and written in Rust (`src-tauri/src/installer.rs`) because `api.github.com` is deliberately absent from the webview's `connect-src`, and the webview cannot write to Downloads.
+- **Build an installer from source, from inside the app.** The same panel runs `npm run build:desktop` in a Crystal OS checkout and streams the build log into a scrollable pane, with **Stop** to kill the whole process tree. Use it when a release has no attached installer, or to build ahead of the next release. The packaged app has no source of its own, so **Choose folder** points it at a checkout; the path is saved as `installerSourceDir` in `settings.json`, and a folder without a `build:desktop` script is rejected. Needs Node.js and the Rust toolchain on the machine.
+
+- **Context meter in The Nebula.** The chat toolbar now shows how full the model's context window is: tokens in context after the latest step, the window size, and a fill bar that turns amber at 70% and red at 90%. Hover it for the exact count and model. High reads each main-thread step's `usage` from Claude Code's stream (input + cache read + cache write + output) and takes the window size from `result.modelUsage[model].contextWindow`, falling back to 1M for `[1m]` model ids and 200k for other Claude models; subagent steps are ignored because they run in their own context. Low and Medium take ACP `usage_update` (`used`, and `size` when dsh reports it); a model with no reported size shows the count without a fraction. The last reading is saved with the chat (`context` in `harness/chats/<id>.json`, optional, so older chat files still load).
+
+### Changed
+
+- **The Portal's preset apps are now LinkedIn, Spotify, Gmail, and Outlook** in place of WhatsApp, Messenger, Slack, and Telegram. Discord, Instagram, X, and Reddit are unchanged, and apps you had already connected are untouched — presets only seed the connect screen. Two of the new presets carry WebView2 limits worth knowing: Google blocks sign-in from embedded webviews, so Gmail may send you to a real browser for the password step, and Spotify's web player needs Widevine DRM that WebView2 does not ship, so it browses but does not play.
+
+### Fixed
+
+- **The Terminal rendered in the app's sans-serif font in packaged builds.** The root cause was the CSP, not the font. `index.html` carries an inline `<style>` for the boot splash, so at build time Tauri adds that block's hash to `style-src`. A CSP source list that contains a hash makes browsers ignore `'unsafe-inline'`, so the `<style>` element xterm injects at runtime (which holds the terminal's `font-family` and cell sizes) was blocked, and the grid inherited the body font. `dev:desktop` loads the page from Vite with no CSP at all, which is why only builds showed it. `app.security.dangerousDisableAssetCspModification` is now `["style-src"]`, so Tauri leaves `style-src` as written (`'self' 'unsafe-inline'`); `script-src` is still hashed as before.
+- **Terminal font loading.** Cascadia Mono is now bundled with the app (`@fontsource/cascadia-mono`, latin + latin-ext + the box-drawing subset, regular and bold) rather than taken from the machine, and `TerminalPage` waits for the face to load before opening xterm. xterm measures the character cell once, inside `open()`, and keeps those metrics for the life of the terminal — opening before the font was ready measured the fallback and the whole grid stayed in it. Under `dev:desktop` the font was already warm by the time anyone reached the tab, which is why only builds showed it.
+- **`portal_rebuild` was unreachable from the webview.** It was added in v0.6.5 and registered in `generate_handler!`, but never declared in `src-tauri/build.rs` or allowlisted in `capabilities/default.json`, so every call was rejected — which meant toggling **Keep live in background** never actually applied. Both lists now include it.
+
 ## [v0.6.5] - 2026-09-18 - Quieter in the Background
 
 Crystal OS sitting in the tray with Discord and Instagram connected used about 2.0-2.5 GB across three separate WebView2 process trees, and 8–12% CPU. This release goes after both.

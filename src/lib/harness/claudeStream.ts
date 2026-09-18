@@ -4,10 +4,11 @@
  * captured in the ADR 0003 spike.
  */
 import type { Mode } from "./types";
-import type { ClaudeModelUsage } from "./tokenLedger";
+import { claudeContextUsed, type ClaudeModelUsage, type ClaudeStepUsage } from "./tokenLedger";
 
 export type ClaudeEvent =
   | { type: "init"; sessionId: string; model: string }
+  | { type: "usage"; model?: string; used: number }
   | { type: "text"; text: string; model?: string }
   | { type: "thinking"; text: string }
   | { type: "tool_use"; id: string; name: string; input: unknown }
@@ -48,12 +49,18 @@ export function parseClaudeLine(line: string): ClaudeEvent[] {
     case "assistant": {
       const message = obj(msg.message);
       const model = str(message.model);
-      return list(message.content).flatMap((block): ClaudeEvent[] => {
+      // Subagent steps run in their own context, so only the main thread's
+      // usage describes this chat's window.
+      const usage: ClaudeEvent[] =
+        message.usage && typeof message.usage === "object" && msg.parent_tool_use_id == null
+          ? [{ type: "usage", model, used: claudeContextUsed(message.usage as ClaudeStepUsage) }]
+          : [];
+      return usage.concat(list(message.content).flatMap((block): ClaudeEvent[] => {
         if (block.type === "text" && str(block.text)) return [{ type: "text", text: block.text as string, model }];
         if (block.type === "thinking" && str(block.thinking)) return [{ type: "thinking", text: block.thinking as string }];
         if (block.type === "tool_use") return [{ type: "tool_use", id: str(block.id) ?? "", name: str(block.name) ?? "tool", input: block.input }];
         return [];
-      });
+      }));
     }
     case "user":
       return list(obj(msg.message).content)

@@ -3,6 +3,7 @@ use tauri::{Manager, RunEvent, WindowEvent};
 mod autostart;
 mod harness;
 mod hotkey;
+mod installer;
 mod portal;
 mod settings;
 mod terminal;
@@ -80,6 +81,7 @@ pub fn run() {
     .manage(terminal::TerminalState::default())
     .manage(portal::PortalState::default())
     .manage(harness::HarnessState::default())
+    .manage(installer::InstallerState::default())
     .invoke_handler(tauri::generate_handler![
       hotkey::get_global_shortcut,
       hotkey::set_global_shortcut,
@@ -130,6 +132,13 @@ pub fn run() {
       harness::harness_chat_load,
       harness::harness_chat_save,
       harness::harness_chat_delete,
+      installer::installer_status,
+      installer::installer_releases,
+      installer::installer_download,
+      installer::installer_pick_source,
+      installer::installer_build,
+      installer::installer_cancel_build,
+      installer::installer_reveal,
     ])
     .setup(|_app| {
       hotkey::init(_app.handle());

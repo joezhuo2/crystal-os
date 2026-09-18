@@ -26,19 +26,24 @@ export interface PortalPreset extends PortalApp {
 }
 
 /**
- * Sites known to work in an embedded WebView2. Google services are left out
- * because Google blocks sign-in from embedded webviews, and Spotify because
- * WebView2 has no Widevine DRM for playback.
+ * The apps offered on the Portal's connect screen.
+ *
+ * Two carry known WebView2 limits. Google blocks sign-in from embedded
+ * webviews, so Gmail may refuse the password step and ask you to sign in
+ * through a real browser; an account already signed in elsewhere on the
+ * machine is unaffected. Spotify's web player needs Widevine DRM, which
+ * WebView2 does not ship, so browsing and playlists work but tracks will not
+ * play.
  */
 export const PRESETS: PortalPreset[] = [
   { id: "discord", name: "Discord", url: "https://discord.com/app", color: "#5865F2" },
   { id: "instagram", name: "Instagram", url: "https://www.instagram.com/", color: "#E1306C" },
-  { id: "whatsapp", name: "WhatsApp", url: "https://web.whatsapp.com/", color: "#25D366" },
-  { id: "messenger", name: "Messenger", url: "https://www.messenger.com/", color: "#0084FF" },
+  { id: "linkedin", name: "LinkedIn", url: "https://www.linkedin.com/feed/", color: "#0A66C2" },
+  { id: "spotify", name: "Spotify", url: "https://open.spotify.com/", color: "#1DB954" },
   { id: "x", name: "X", url: "https://x.com/", color: "#E7E9EA" },
   { id: "reddit", name: "Reddit", url: "https://www.reddit.com/", color: "#FF4500" },
-  { id: "slack", name: "Slack", url: "https://app.slack.com/client", color: "#E01E5A" },
-  { id: "telegram", name: "Telegram", url: "https://web.telegram.org/", color: "#26A5E4" },
+  { id: "gmail", name: "Gmail", url: "https://mail.google.com/mail/u/0/", color: "#EA4335" },
+  { id: "outlook", name: "Outlook", url: "https://outlook.live.com/mail/0/", color: "#0F6CBD" },
 ];
 
 /** Unread count from a page title, or a dot when the site only flags "unread". */
@@ -129,8 +134,8 @@ export function parseStoredApps(raw: string | null): PortalApp[] {
 
 /**
  * Reads an unread badge from a document title:
- * - `(3) Discord` gives 3 (Discord, Instagram, WhatsApp, Messenger, X, Reddit)
- * - `• Discord`, `* Slack`, `! Slack` give a dot
+ * - `(3) Discord` gives 3 (Discord, Instagram, Gmail, Outlook, X, Reddit)
+ * - `• Discord`, `* LinkedIn`, `! LinkedIn` give a dot
  */
 export function parseBadge(title: string): PortalBadge | null {
   const count = /^\s*\((\d+)\+?\)/.exec(title);

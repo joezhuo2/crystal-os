@@ -30,7 +30,7 @@ import { decideDshPermission, PLAN_MODE_PREFIX, userChoice, type AcpPermissionOp
 import { isRouteFailure, modelOptionValue, Router, type Candidate } from "./modelRouter";
 import type { ExitEvent, HarnessNative, LineEvent } from "./native";
 import { harness, newId } from "./store";
-import { claudeUsageDelta, estimateDshTurn, type ClaudeModelUsage } from "./tokenLedger";
+import { claudeUsageDelta, contextWindowFor, estimateDshTurn, type ClaudeModelUsage } from "./tokenLedger";
 import type { Block, ChatMessage, ChatMeta, Effort, Engine, Mode, ToolStatus } from "./types";
 import { engineFor } from "./types";
 
@@ -459,6 +459,7 @@ export class HarnessSession {
             if (update.status === "completed" || update.status === "failed") harness.persistChat(chat.id);
           } else if (kind === "usage_update" && typeof update.used === "number") {
             steps.push(update.used);
+            harness.setContext(chat.id, { used: update.used, size: contextWindowFor(candidate.label, typeof update.size === "number" ? update.size : undefined), model: candidate.label });
           }
         },
         onPermission: (params, respond) => this.dshPermission(chat.id, messageId, params, respond),
@@ -622,9 +623,18 @@ export class HarnessSession {
         case "permission_denied":
           if (turn) this.editMessage(chatId, turn.messageId, (b) => [...b, { kind: "notice", tone: "warning", text: event.message }]);
           break;
+        case "usage": {
+          const model = event.model ?? proc.model;
+          harness.setContext(chatId, { used: event.used, size: contextWindowFor(model, proc.usage[model]?.contextWindow), model });
+          break;
+        }
         case "result": {
           const delta = claudeUsageDelta(proc.usage, event.modelUsage);
           proc.usage = event.modelUsage;
+          // The first result is the first time Claude Code names the window size.
+          const context = harness.getState().runtime[chatId]?.context;
+          const reported = context && event.modelUsage[context.model]?.contextWindow;
+          if (context && reported && reported !== context.size) harness.setContext(chatId, { ...context, size: reported });
           harness.addTokens(chatId, delta);
           if (turn) turn.resolve({ isError: event.isError, text: event.text });
           break;

@@ -9,6 +9,7 @@ import type {
   ChatFile,
   ChatMessage,
   ChatMeta,
+  ContextUsage,
   Effort,
   Ledger,
   Mode,
@@ -34,6 +35,8 @@ export interface ChatRuntime {
   stopping: boolean;
   /** Dismissible warning shown above the transcript (e.g. MCP servers dropped). */
   banner: string | null;
+  /** Context window fill after the latest model step; null until one reports. */
+  context: ContextUsage | null;
 }
 
 export interface Prefs {
@@ -152,11 +155,21 @@ export function parseStateFile(raw: string | null): ParsedState {
   }
 }
 
-export function parseChatFile(raw: string | null): Pick<ChatFile, "messages" | "tokens"> {
+function parseContext(value: unknown): ContextUsage | undefined {
+  const c = value as Partial<ContextUsage> | null;
+  if (!c || typeof c !== "object" || typeof c.used !== "number" || typeof c.model !== "string") return undefined;
+  return { used: c.used, size: typeof c.size === "number" ? c.size : null, model: c.model };
+}
+
+export function parseChatFile(raw: string | null): Pick<ChatFile, "messages" | "tokens" | "context"> {
   try {
     const doc = raw ? JSON.parse(raw) : null;
     if (!doc || doc.version !== 1) return { messages: [], tokens: {} };
-    return { messages: Array.isArray(doc.messages) ? doc.messages : [], tokens: doc.tokens && typeof doc.tokens === "object" ? doc.tokens : {} };
+    return {
+      messages: Array.isArray(doc.messages) ? doc.messages : [],
+      tokens: doc.tokens && typeof doc.tokens === "object" ? doc.tokens : {},
+      context: parseContext(doc.context),
+    };
   } catch {
     return { messages: [], tokens: {} };
   }
@@ -193,7 +206,7 @@ function set(next: HarnessState) {
 }
 
 function patchRuntime(id: string, fn: (rt: ChatRuntime) => ChatRuntime) {
-  const current = state.runtime[id] ?? { loaded: false, messages: [], tokens: {}, running: false, stopping: false, banner: null };
+  const current = state.runtime[id] ?? { loaded: false, messages: [], tokens: {}, running: false, stopping: false, banner: null, context: null };
   set({ ...state, runtime: { ...state.runtime, [id]: fn(current) } });
 }
 
@@ -306,7 +319,7 @@ export const harness = {
       ...state,
       chats: [...state.chats, chat],
       activeChatId: chat.id,
-      runtime: { ...state.runtime, [chat.id]: { loaded: true, messages: [], tokens: {}, running: false, stopping: false, banner: null } },
+      runtime: { ...state.runtime, [chat.id]: { loaded: true, messages: [], tokens: {}, running: false, stopping: false, banner: null, context: null } },
     });
     write(ACTIVE_KEY, chat.id);
     saveState();
@@ -328,7 +341,7 @@ export const harness = {
 
   loadChat(id: string, raw: string | null) {
     const parsed = parseChatFile(raw);
-    patchRuntime(id, (rt) => (rt.loaded ? rt : { ...rt, loaded: true, messages: parsed.messages, tokens: parsed.tokens }));
+    patchRuntime(id, (rt) => (rt.loaded ? rt : { ...rt, loaded: true, messages: parsed.messages, tokens: parsed.tokens, context: rt.context ?? parsed.context ?? null }));
   },
 
   updateChat(id: string, patch: Partial<Omit<ChatMeta, "id" | "projectId" | "createdAt">>) {
@@ -417,6 +430,11 @@ export const harness = {
     saveState();
   },
 
+  /** Records how full the context window is after a model step. */
+  setContext(id: string, context: ContextUsage) {
+    patchRuntime(id, (rt) => ({ ...rt, context }));
+  },
+
   resetAllTime() {
     set({ ...state, allTime: {} });
     saveState();
@@ -426,7 +444,7 @@ export const harness = {
   persistChat(id: string) {
     const rt = state.runtime[id];
     if (!persistence || !rt?.loaded) return;
-    const doc: ChatFile = { version: 1, id, messages: rt.messages, tokens: rt.tokens };
+    const doc: ChatFile = { version: 1, id, messages: rt.messages, tokens: rt.tokens, ...(rt.context ? { context: rt.context } : {}) };
     persistence.saveChat(id, JSON.stringify(doc)).catch((err) => console.warn("[nebula] could not save chat", err));
   },
 

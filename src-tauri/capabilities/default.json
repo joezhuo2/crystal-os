@@ -37,6 +37,7 @@
     "allow-portal-sign-out",
     "allow-portal-remove",
     "allow-portal-prune",
+    "allow-portal-rebuild",
     "allow-harness-env-status",
     "allow-harness-install-runtime",
     "allow-harness-get-config",
@@ -56,6 +57,13 @@
     "allow-harness-state-save",
     "allow-harness-chat-load",
     "allow-harness-chat-save",
-    "allow-harness-chat-delete"
+    "allow-harness-chat-delete",
+    "allow-installer-status",
+    "allow-installer-releases",
+    "allow-installer-download",
+    "allow-installer-pick-source",
+    "allow-installer-build",
+    "allow-installer-cancel-build",
+    "allow-installer-reveal"
   ]
 }

@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-295%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.6.5-6366F1)
+![Tests](https://img.shields.io/badge/tests-301%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.6.6-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.6.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.6.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -25,12 +25,12 @@ Current release: **v0.6.5** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations |
 | **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list. Its own amethyst theme: glass crystals growing in from the screen edges, sparkles, and a cursor light the crystals reflect |
-| **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, per-model token counts, and a swirling three-colour nebula |
+| **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, a context-window meter, per-model token counts, and a swirling three-colour nebula |
 | **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges, and three themes (desktop; the web build opens apps in new tabs) |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
 | **⏱️ Pomodoro** | Customizable focus/break intervals, session tracking, audio notifications, and tray controls (Tasks view) |
 | **🖥️ Desktop shell** | Native Tauri window with PowerShell terminal, tray (Pomodoro + Quick Add), always-on global hotkeys, and launch-at-login — the web build is unaffected |
-| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, vault folder, Nebula keys, models and look, Portal theme |
+| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, vault folder, Nebula keys, models and look, Portal theme, and downloading or building an installer |
 | **⌨️ Command Palette** | Global search over tasks, transactions, and vault note bodies, plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
 | **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar |
@@ -153,7 +153,8 @@ src/
 │   │   ├── ArchivePage.tsx     # Vault browser: search, tags, markdown reader
 │   │   ├── TerminalPage.tsx    # Up to 5 PowerShell terminals in tabs (xterm.js, desktop only)
 │   │   ├── PortalPage.tsx      # The Portal: places the active app's webview over its frame
-│   │   ├── SettingsPage.tsx    # Hotkeys, launch at login, vault folder, Portal theme
+│   │   ├── SettingsPage.tsx    # Hotkeys, launch at login, vault folder, Portal theme, Install & update
+│   │   ├── InstallerSection.tsx # Release picker, installer download, build-from-source log
 │   │   ├── PomodoroTimer.tsx   # Focus timer component
 │   │   └── CategoryManager.tsx # Category CRUD for tasks/finances
 │   ├── CommandPalette.tsx      # Search, NL commands, vault note results
@@ -181,6 +182,7 @@ src/
 │   ├── portalApps.ts           # Portal presets, URL/id validation, badge parsing
 │   ├── portalStore.ts          # Module-level Portal store: apps, active app, badges, theme
 │   ├── portalNative.ts         # Desktop Portal bridge (portal_* commands)
+│   ├── installerNative.ts      # Desktop installer bridge (installer_* commands, version helpers)
 │   ├── pomodoro.ts             # Module-level Pomodoro store (page + tray agree)
 │   ├── tray.ts                 # Tauri tray events → app, app state → tray menu
 │   ├── hotkey.ts               # Hotkey parsing + combo validation
@@ -202,11 +204,12 @@ src-tauri/
 │   ├── tray.rs                 # System tray menu + Pomodoro status updates
 │   ├── hotkey.rs               # RegisterHotKey bindings (Alt+Space, Alt+Shift+Space)
 │   ├── autostart.rs            # Launch-at-login (--hidden) registration
-│   ├── settings.rs             # settings.json read/write (hotkeys, vaultPath, launchAtLogin)
+│   ├── settings.rs             # settings.json read/write (hotkeys, vaultPath, launchAtLogin, installerSourceDir)
 │   ├── vault.rs                # Native vault I/O: list/read/write/status/watch
 │   ├── terminal.rs             # ConPTY PowerShell shells (up to 5)
 │   ├── portal.rs               # Portal child webviews: show/hide/fade, snapshots, per-app data, sign-out, background memory
-│   └── portal/webview2.rs      # WebView2 page capture, tab-shortcut forwarding, memory level for Portal apps
+│   ├── portal/webview2.rs      # WebView2 page capture, tab-shortcut forwarding, memory level for Portal apps
+│   └── installer.rs            # GitHub releases, installer download, build:desktop from a checkout
 ├── capabilities/
 │   └── default.json            # App command allowlist by name
 └── tauri.conf.json             # Window, tray, bundle config
@@ -373,7 +376,14 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 2. Add `http://127.0.0.1:8787/api/calendar/auth/callback` as a second authorized redirect URI on your Google OAuth client, and set `GOOGLE_REDIRECT_URI` to it in that copy.
 3. Launch Crystal OS. **Connect** in The Horizon opens Google in your default browser. Once it reports success, switch back to the app.
 
-**Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: both global hotkeys, **Launch at login**, the vault folder, and The Portal's theme. The palette's **Open Settings** row goes there too. Click the Crystal OS mark at the top of the sidebar to return to **The Pulse** (home) from any page.
+**Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: both global hotkeys, **Launch at login**, the vault folder, The Portal's theme, and **Install & update**. The palette's **Open Settings** row goes there too. Click the Crystal OS mark at the top of the sidebar to return to **The Pulse** (home) from any page.
+
+**Install & update.** The last panel in Settings keeps Crystal OS current without leaving the app.
+
+- **Download an installer.** The panel lists every published release of `joezhuo2/crystal-os` and pre-selects the newest stable one that has a Windows installer attached. **Download** saves it to your Downloads folder with a progress bar, then offers **Show in folder**. Run the installer yourself when you are ready; Crystal OS never installs over itself.
+- **Choose a different version.** The dropdown holds every release, each labelled where it matters — `installed`, `newer`, `pre-release`, or `no installer`. Pick an older version to roll back, or a pre-release to try one early. A release with no Windows asset can be selected but not downloaded; build it from source instead.
+- **Build the latest from source.** Runs `npm run build:desktop` in a Crystal OS checkout and streams the build log into the panel, with **Stop** to end the whole process tree. It needs Node.js and the Rust toolchain, and takes several minutes. The packaged app ships no source, so **Choose folder** points it at a checkout; the path is saved as `installerSourceDir` in `settings.json` and is rejected if the folder has no `build:desktop` script. Under `dev:desktop` the checkout the binary was compiled in is used automatically.
+- **Why it runs in Rust.** `api.github.com` is deliberately absent from the webview's `connect-src`, the webview cannot write to Downloads, and a build has to spawn a process. `installer_reveal` only opens files under the Downloads folder or the checkout's `target` directory, so it cannot be used to browse the disk.
 
 **Terminal.** The terminal icon above Settings opens a PowerShell terminal (PowerShell 7 if installed, otherwise Windows PowerShell) running on a real pseudoconsole, so colours, tab completion, and interactive prompts work. Shells keep running while you switch tabs and are killed when Crystal OS quits.
 
@@ -382,11 +392,12 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 - **Refresh** restarts the selected shell with PATH and the other environment variables read again from the registry. Use it after installing something (`winget`, `npm -g`, an installer) that the terminal does not find yet: a running app keeps the environment it started with, so a plain restart of the shell would not see the change.
 - Ctrl+C copies when text is selected and interrupts otherwise; Ctrl+V pastes.
 - The shells run in Rust (`src-tauri/src/terminal.rs`) and the view talks to them through `terminal_list`, `terminal_open`, `terminal_attach`, `terminal_restart`, `terminal_close`, `terminal_write`, and `terminal_resize` (`src/lib/terminalNative.ts`). Every command after `terminal_open` takes the shell's `id`; the Rust side enforces the limit of 5.
+- **Cascadia Mono is bundled with the app** (`@fontsource/cascadia-mono`), not read from the machine, so the terminal looks the same whether or not Windows Terminal is installed. Only the subsets a shell draws ship: latin, latin-ext, and the box-drawing block TUIs use for borders, in regular and bold. The view waits for the face to load before opening xterm, because xterm measures the character cell once and keeps those metrics for the life of the terminal.
 - While the tab is open the window switches to a black, glitching monochrome look, and the search bar is hidden.
 
 **The Portal.** The orbit icon above Terminal opens **The Portal**, where web apps such as Discord and Instagram run as real pages that you sign in to once. See [ADR 0002](docs/adr/0002-portal-child-webviews.md) for how it works.
 
-- **Connect an app** with **+** in the Portal's navbar: pick a preset (Discord, Instagram, WhatsApp, Messenger, X, Reddit, Slack, Telegram) or add any `https://` site by name and address. Google sites are not offered because Google refuses sign-in inside embedded webviews; Spotify is not offered because WebView2 cannot play its DRM-protected audio.
+- **Connect an app** with **+** in the Portal's navbar: pick a preset (Discord, Instagram, LinkedIn, Spotify, X, Reddit, Gmail, Outlook) or add any `https://` site by name and address. Two presets carry WebView2 limits: Google blocks sign-in from embedded webviews, so Gmail may send you to a real browser for the password step, and Spotify's web player needs Widevine DRM that WebView2 does not ship, so it browses but does not play.
 - **Use it like a browser tab.** Click a pill to switch apps (the pages cross-fade). **Back**, **Forward**, **Reload**, and **Open in browser** act on the app on screen. Links to other sites open in your default browser.
 - **Organise.** Drag pills to reorder them. Right-click a pill to reload it, return to its home page, open it in the browser, toggle **Keep live in background**, **Sign out…**, or **Remove…**.
 - **Sessions.** Each app keeps its cookies and storage in its own folder, `%APPDATA%\com.crystalos.desktop\portal\<app id>\`, so you stay signed in across restarts and apps never share a login. **Sign out** clears that app's cookies and storage; **Remove** deletes its folder too.
@@ -452,6 +463,8 @@ The Nebula is a coding agent tab in the desktop app. It works inside project fol
 
 Model ids and endpoints can be edited in Settings. Effort (low to max) and mode (**Auto**, **Manual**, **Plan**) are set per chat in the toolbar. Tier and effort cannot be changed while the agent is working.
 
+The toolbar's **Context** chip shows how full the current model's context window is after its latest step (amber from 70%, red from 90%); hover it for the exact count. Claude Code reports the window size; for DeepSeek Harness models that do not, it shows the token count alone.
+
 ### How it works
 
 - **Low and Medium** talk to one `dsh --profile acp` process per project folder over the Agent Client Protocol (`src/lib/harness/acpClient.ts`). Model and effort are set on every turn, and if a model fails before answering, the turn moves on to the next one.
@@ -459,7 +472,7 @@ Model ids and endpoints can be edited in Settings. Effort (low to max) and mode 
 - **Skills and MCP servers** are read from `~/.claude/skills`, enabled Claude Code plugins, Claude Desktop, and `~/.claude.json` (`src-tauri/src/harness/discovery.rs`). You can turn individual servers off in Settings.
 - **Storage.** Everything is under the app config folder:
   - `harness/state.json`: projects, the chat index, and all-time token totals.
-  - `harness/chats/<id>.json`: one transcript per chat.
+  - `harness/chats/<id>.json`: one transcript per chat, with its token counts and last context reading.
   - `harness/logs/`: engine stderr.
 
 ### Safety

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ACTIVE_KEY, harness, parseStateFile, parseTheme, PREFS_KEY, selectProjectChats, selectProjectTokens, THEME_KEY } from "./store";
+import { ACTIVE_KEY, harness, parseChatFile, parseStateFile, parseTheme, PREFS_KEY, selectProjectChats, selectProjectTokens, THEME_KEY } from "./store";
 import { DEFAULT_THEME } from "./types";
 
 const persistence = { saveState: vi.fn(async () => undefined), saveChat: vi.fn(async () => undefined), deleteChat: vi.fn(async () => undefined) };
@@ -154,6 +154,23 @@ describe("parsing", () => {
     expect(parsed.chats.map((c) => c.id)).toEqual(["a"]);
     expect(parsed.chats[0].tier).toBe("medium");
     expect(parseStateFile("{broken").projects).toEqual([]);
+  });
+
+  it("reads a chat's saved context and tolerates files without one", () => {
+    const ctx = { used: 1200, size: 200_000, model: "claude-opus-5" };
+    expect(parseChatFile(JSON.stringify({ version: 1, id: "c", messages: [], tokens: {}, context: ctx })).context).toEqual(ctx);
+    expect(parseChatFile(JSON.stringify({ version: 1, id: "c", messages: [], tokens: {}, context: { used: 5, model: "dsh" } })).context).toEqual({ used: 5, size: null, model: "dsh" });
+    expect(parseChatFile(JSON.stringify({ version: 1, id: "c", messages: [], tokens: {} })).context).toBeUndefined();
+    expect(parseChatFile(JSON.stringify({ version: 1, id: "c", messages: [], tokens: {}, context: { used: "x" } })).context).toBeUndefined();
+  });
+
+  it("keeps the latest context per chat and saves it with the transcript", () => {
+    harness.loadChat("c", null);
+    harness.setContext("c", { used: 10, size: 100, model: "m" });
+    harness.setContext("c", { used: 40, size: 100, model: "m" });
+    expect(harness.getState().runtime.c.context).toEqual({ used: 40, size: 100, model: "m" });
+    harness.persistChat("c");
+    expect(JSON.parse((persistence.saveChat.mock.calls.at(-1) as unknown as [string, string])[1]).context).toEqual({ used: 40, size: 100, model: "m" });
   });
 
   it("validates the theme", () => {
