@@ -68,6 +68,37 @@ describe("portal store", () => {
     expect(saved()).toEqual([discord]);
   });
 
+  it("stores keepLoaded only while it is off, and survives a reload", () => {
+    portal.add(discord);
+    portal.add(insta);
+    expect(portal.getState().apps[0].keepLoaded).toBeUndefined();
+
+    portal.setKeepLoaded("discord", false);
+    expect(portal.getState().apps[0].keepLoaded).toBe(false);
+    expect(saved()).toEqual([{ ...discord, keepLoaded: false }, insta]);
+
+    portal._reset();
+    expect(portal.getState().apps[0].keepLoaded).toBe(false);
+
+    portal.setKeepLoaded("discord", true);
+    expect(portal.getState().apps[0]).toEqual(discord);
+    expect(saved()).toEqual([discord, insta]);
+  });
+
+  it("stores keepLive and keepLoaded side by side", () => {
+    portal.add(discord);
+    portal.setKeepLive("discord", true);
+    portal.setKeepLoaded("discord", false);
+    expect(saved()).toEqual([{ ...discord, keepLive: true, keepLoaded: false }]);
+  });
+
+  it("clears one app's badge", () => {
+    portal.add(discord);
+    portal.setTitle("discord", "(3) Discord");
+    portal.clearBadge("discord");
+    expect(portal.getState().badges).toEqual({});
+  });
+
   it("moves the active app to a neighbour on remove", () => {
     [discord, insta, x].forEach((app) => portal.add(app));
     portal.setActive("instagram");

@@ -1390,3 +1390,22 @@
     }
   }
 }
+
+/* Nobody can see the window (tray, minimised): freeze every CSS animation
+   where it is, so it resumes from the same frame. Set by src/lib/appActivity.ts. */
+html.app-hidden *,
+html.app-hidden *::before,
+html.app-hidden *::after {
+  animation-play-state: paused !important;
+}
+
+/* Performance mode: animations jump to their end state and transitions are
+   instant. Loading indicators (spin, pulse, the Portal's spinners) keep
+   moving so progress stays visible. */
+html.perf-still *:not(.animate-spin):not(.animate-pulse):not([class*="-spin"]):not([class*="spinner"]),
+html.perf-still *::before,
+html.perf-still *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}

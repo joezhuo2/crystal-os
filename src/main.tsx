@@ -15,8 +15,11 @@ import "@fontsource/cascadia-mono/symbols2-400.css";
 import "@fontsource/cascadia-mono/symbols2-700.css";
 import "./index.css";
 import { initTrayBridge } from "./lib/tray";
+import { startAppActivity } from "./lib/appActivity";
 
 // Outside React: the Pomodoro store and tray outlive every view and sign-in.
 initTrayBridge();
+// Pauses animation and polling while the window is hidden.
+startAppActivity();
 
 createRoot(document.getElementById("root")!).render(<App />);

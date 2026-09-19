@@ -85,6 +85,19 @@ describe("parseStoredApps", () => {
     expect(apps[3].keepLive).toBeUndefined();
   });
 
+  it("reads keepLoaded only when it is stored as false", () => {
+    const raw = JSON.stringify([
+      { id: "discord", name: "Discord", url: "https://discord.com/app", keepLoaded: false },
+      { id: "insta", name: "Instagram", url: "https://www.instagram.com/", keepLoaded: true },
+      { id: "slack", name: "Slack", url: "https://app.slack.com/client", keepLoaded: "no" },
+    ]);
+    const apps = parseStoredApps(raw);
+    expect(apps[0].keepLoaded).toBe(false);
+    // On is the default and is absent.
+    expect(apps[1]).toEqual({ id: "insta", name: "Instagram", url: "https://www.instagram.com/" });
+    expect(apps[2].keepLoaded).toBeUndefined();
+  });
+
   it("drops malformed, unsafe, and duplicate entries", () => {
     const raw = JSON.stringify([
       { id: "discord", name: "Discord", url: "https://discord.com/app" },

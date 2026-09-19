@@ -72,7 +72,13 @@ pub fn run() {
     .on_window_event(|window, event| {
       if let WindowEvent::CloseRequested { api, .. } = event {
         api.prevent_close();
-        let _ = window.hide();
+        // Same path as the tray and hotkey, so caches are trimmed and the page
+        // hears it went hidden.
+        if window.label() == "main" {
+          window::hide(window.app_handle());
+        } else {
+          let _ = window.hide();
+        }
       }
     })
     .manage(Sidecar::default())
@@ -111,6 +117,7 @@ pub fn run() {
       portal::portal_sign_out,
       portal::portal_remove,
       portal::portal_rebuild,
+      portal::portal_unload,
       portal::portal_prune,
       harness::harness_env_status,
       harness::harness_install_runtime,

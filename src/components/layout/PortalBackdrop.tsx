@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { appActivity, useAppActivity } from "@/lib/appActivity";
 import type { PortalTheme } from "@/lib/portalStore";
 
 const STAR_FPS = 12;
@@ -7,12 +8,12 @@ const STARS_PER_PIXEL = 1 / 4500;
 /** Faint twinkling star specks for the Stargate theme. */
 function Stars() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { still } = useAppActivity();
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let stars: { x: number; y: number; r: number; phase: number; speed: number }[] = [];
     const resize = () => {
@@ -57,12 +58,19 @@ function Stars() {
       last = now;
       draw(now);
     };
-    frame = requestAnimationFrame(tick);
+    // The loop only runs while the window can be seen.
+    const run = () => {
+      cancelAnimationFrame(frame);
+      if (appActivity.getState().visible) frame = requestAnimationFrame(tick);
+    };
+    run();
+    const unsubscribe = appActivity.subscribe(run);
     return () => {
+      unsubscribe();
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", onResize);
     };
-  }, []);
+  }, [still]);
 
   return <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />;
 }

@@ -4,7 +4,11 @@
 //! child webviews to "main", Tauri stops treating it as a webview window and
 //! `get_webview_window("main")` returns `None`.
 
-use tauri::{AppHandle, Manager, Runtime, Window};
+use tauri::{AppHandle, Emitter, Manager, Runtime, Window};
+
+/// Tells the main webview whether the window is on screen, so it can pause
+/// animation and polling while hidden (src/lib/appActivity.ts).
+const VISIBILITY_EVENT: &str = "app://visibility";
 
 pub fn main_window<R: Runtime>(app: &AppHandle<R>) -> Option<Window<R>> {
   app.get_window("main")
@@ -29,6 +33,7 @@ pub fn show<R: Runtime>(app: &AppHandle<R>) {
   }
   let _ = window.show();
   let _ = window.set_focus();
+  let _ = app.emit(VISIBILITY_EVENT, true);
   // Gives the Portal app on screen its caches back before it is painted; the
   // others stay trimmed until they are shown.
   crate::portal::set_all_memory_saving(app, false);
@@ -57,6 +62,7 @@ pub fn is_foreground<R: Runtime>(window: &Window<R>) -> bool {
 pub fn hide<R: Runtime>(app: &AppHandle<R>) {
   if let Some(window) = main_window(app) {
     let _ = window.hide();
+    let _ = app.emit(VISIBILITY_EVENT, false);
     // Nothing is on screen once the window is in the tray, so every Portal app
     // drops its caches at once rather than waiting out the idle delay. This is
     // where the Portal spends most of its time.

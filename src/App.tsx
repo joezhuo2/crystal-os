@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { shouldRetry } from "@/lib/apiRequest";
+import { perfSettings } from "@/lib/perfSettings";
+import { retimeCachedQueries } from "@/lib/queryCacheTime";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -13,6 +15,20 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: shouldRetry } },
 });
+
+// Performance mode drops data no view is using after a minute instead of the
+// default five. Each query keeps its own staleTime, so a view reopened within
+// that minute still shows cached data without refetching.
+let cacheTime: number | null = null;
+const applyCacheTime = () => {
+  const gcTime = perfSettings.getState().performanceMode ? 60_000 : 5 * 60_000;
+  if (gcTime === cacheTime) return;
+  cacheTime = gcTime;
+  queryClient.setDefaultOptions({ queries: { retry: shouldRetry, gcTime } });
+  retimeCachedQueries(queryClient, gcTime);
+};
+applyCacheTime();
+perfSettings.subscribe(applyCacheTime);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

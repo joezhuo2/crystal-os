@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-301%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.6.6-6366F1)
+![Version](https://img.shields.io/badge/version-0.6.7-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.6.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.6.7** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -399,15 +399,23 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 
 - **Connect an app** with **+** in the Portal's navbar: pick a preset (Discord, Instagram, LinkedIn, Spotify, X, Reddit, Gmail, Outlook) or add any `https://` site by name and address. Two presets carry WebView2 limits: Google blocks sign-in from embedded webviews, so Gmail may send you to a real browser for the password step, and Spotify's web player needs Widevine DRM that WebView2 does not ship, so it browses but does not play.
 - **Use it like a browser tab.** Click a pill to switch apps (the pages cross-fade). **Back**, **Forward**, **Reload**, and **Open in browser** act on the app on screen. Links to other sites open in your default browser.
-- **Organise.** Drag pills to reorder them. Right-click a pill to reload it, return to its home page, open it in the browser, toggle **Keep live in background**, **Sign out…**, or **Remove…**.
+- **Organise.** Drag pills to reorder them. Right-click a pill to reload it, return to its home page, open it in the browser, toggle **Keep loaded in background** or **Keep live in background**, **Sign out…**, or **Remove…**.
 - **Sessions.** Each app keeps its cookies and storage in its own folder, `%APPDATA%\com.crystalos.desktop\portal\<app id>\`, so you stay signed in across restarts and apps never share a login. **Sign out** clears that app's cookies and storage; **Remove** deletes its folder too.
 - **Loading.** While an app's page loads (first open, **Reload**, **Back to home page**, **Sign out**), the frame shows a skeleton of a web app in the theme's colours with "Loading <app>…". The page appears, fading in, once it has finished loading, or after 20 seconds if it never reports that.
 - **Always on.** Apps load the first time you open The Portal after launching Crystal OS, then keep running while you use other tabs. Unread counts from their page titles show on each pill and on the sidebar's Portal icon.
 - **Background cost.** An app you are not looking at is throttled — its timers and animations are slowed, but it is not suspended, so its connection stays open and messages still arrive. After 30 seconds off screen it also drops its render caches, and picks them back up when you return to it. Hiding Crystal OS to the tray does both at once, for every app and for Crystal OS's own interface. If an app needs full speed while hidden, for a voice call or a live notification stream, right-click its pill and turn on **Keep live in background**; that costs CPU for as long as it is on, so it is off by default. Toggling it rebuilds that app's page, which does not sign you out.
+- **Keep loaded in background** (on by default). Turn it off for an app you only check now and then, and its page is closed once it has been off screen for the **Portal unload delay** (**Settings → Performance**, 60 seconds by default, 0 closes it as soon as you switch away). That frees the app's whole WebView2 process. Reopening it loads it again, still signed in, but anything that lived only in the page is gone: unsent drafts, scroll position, open threads. Its unread badge disappears while it is closed, because a closed page reports no title. Menus and dialogs opened over the Portal never start the countdown, and turning the setting off for an app that is already in the background starts it at once. **Keep live** is greyed out while **Keep loaded** is off.
 - **Themes.** Choose **Void swirl** (default), **Event horizon**, or **Stargate blue** under **Settings → The Portal**. The theme styles the backdrop, sidebar, navbar, and the animated ring around the app.
 - **Keyboard shortcuts (desktop).** While a Portal app is on screen: **Ctrl+Tab** cycles to the next app, **Ctrl+Shift+Tab** cycles to the previous one, **Ctrl+W** opens the Remove confirmation, and **Ctrl+R** reloads the active app. They also work while you are typing inside an app page (Windows): the app's webview catches them before the page does. In Crystal OS's own UI they are disabled while a dialog is open or the focus is inside a text field. `Ctrl+R` prevents Tauri's default full-page reload, which would otherwise drop you to the Home tab.
 - **Web build.** Browsers refuse to embed these sites in another page, so there the Portal keeps your app list and opens each app in a new tab.
 - The app pages draw above Crystal OS's own UI, so the search bar is hidden on this tab and menus and dialogs (such as the pill right-click menu or tray **Quick Add**) hide the app while they are open. A still picture of the page stays in its place behind them. The pages get no access to Crystal OS commands. The view talks to Rust through the `portal_*` commands in `src/lib/portalNative.ts`.
+
+**Performance.** **Settings → Performance** has two controls.
+
+- **Performance mode** (off by default, applies at once). Pulse, Engine, Horizon, Vault, Atmosphere, Archive and Settings load only the first time you open them, instead of in the background after launch. Data those views fetched is dropped after one minute unused instead of five; each query keeps its own `staleTime`, so a view reopened within the minute shows its data without refetching. Page transitions, CSS animations and the canvas backdrops are turned off (loading spinners keep turning). The Nebula, Terminal and Portal load with the app as before, because they keep work running in the background.
+- **Portal unload delay** (desktop), in seconds: see **Keep loaded in background** above.
+
+Whether or not performance mode is on, hiding the window to the tray or minimising it now stops the backdrop animation loops, freezes CSS animations, and pauses polling (weather refresh, calendar and vault refetches); stale data refetches when the window comes back. Closing the window with its **×** now goes through the same path as the tray and hotkey, so it also trims memory.
 
 **Global hotkeys.** Two combos work from any app:
 
@@ -521,7 +529,7 @@ Native `<select>`, date, and time inputs are replaced app-wide by `src/component
 ### Adding New Views
 1. Create the component in `src/components/views/`
 2. Add its id to `TabId` and the `tabs` array in `src/components/layout/Navigation.tsx`
-3. Register it in the `views` record in `src/pages/Index.tsx`
+3. Add a lazy loader for it in `src/lib/viewLoader.ts` (so performance mode can defer it), or, if it must keep running in the background, import it directly and register it in the `views` record in `src/pages/Index.tsx`
 
 Write Tailwind-scanned class names out in full. A class built at runtime, such as `` `portal-theme-${theme}` ``, is purged from the CSS; map values to literal class strings instead (see `PORTAL_THEME_CLASS` in `src/lib/portalStore.ts`).
 

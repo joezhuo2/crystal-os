@@ -667,6 +667,29 @@ pub async fn portal_rebuild<R: Runtime>(app: AppHandle<R>, state: tauri::State<'
   Ok(())
 }
 
+/// Closes a hidden app's webview to free its memory, keeping its data folder
+/// so it stays signed in. Used for apps with "keep loaded in background" off.
+///
+/// Returns false, and leaves the webview alone, when the app is on screen or
+/// not loaded. Holding `create` for the whole check means a `portal_show`
+/// for the same app runs entirely before or after this, never halfway: either
+/// the app is already shown and survives, or it is closed first and the show
+/// builds a new one.
+#[tauri::command]
+pub async fn portal_unload<R: Runtime>(app: AppHandle<R>, state: tauri::State<'_, PortalState>, id: String) -> Result<bool, String> {
+  check_id(&id)?;
+  let label = label_of(&id);
+  let _guard = state.create.lock().unwrap();
+  if state.shown.lock().unwrap().as_deref() == Some(label.as_str()) {
+    return Ok(false);
+  }
+  let Some(webview) = app.get_webview(&label) else { return Ok(false) };
+  webview.close().map_err(|e| e.to_string())?;
+  state.loading.lock().unwrap().remove(&label);
+  state.idle.lock().unwrap().remove(&label);
+  Ok(true)
+}
+
 /// Deletes data folders of apps that are no longer connected and not loaded.
 #[tauri::command]
 pub async fn portal_prune<R: Runtime>(app: AppHandle<R>, keep: Vec<String>) -> Result<(), String> {

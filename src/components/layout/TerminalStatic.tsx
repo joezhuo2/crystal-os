@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { appActivity, useAppActivity } from "@/lib/appActivity";
 
 const FPS = 20;
 const PIXEL = 4;
@@ -10,12 +11,13 @@ const PIXEL = 4;
  */
 export default function TerminalStatic() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { still } = useAppActivity();
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (still) return;
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -46,13 +48,20 @@ export default function TerminalStatic() {
         ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, size, size);
       }
     };
-    frame = requestAnimationFrame(tick);
+    // The loop only runs while the window can be seen.
+    const run = () => {
+      cancelAnimationFrame(frame);
+      if (appActivity.getState().visible) frame = requestAnimationFrame(tick);
+    };
+    run();
+    const unsubscribe = appActivity.subscribe(run);
 
     return () => {
+      unsubscribe();
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
     };
-  }, []);
+  }, [still]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className="fixed inset-0 -z-10 h-full w-full pointer-events-none bg-black" />;
 }

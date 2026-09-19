@@ -38,6 +38,7 @@
     "allow-portal-remove",
     "allow-portal-prune",
     "allow-portal-rebuild",
+    "allow-portal-unload",
     "allow-harness-env-status",
     "allow-harness-install-runtime",
     "allow-harness-get-config",

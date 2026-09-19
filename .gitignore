@@ -190,3 +190,4 @@ scratch/
 
 # Personal / career material kept alongside the repo but never part of it
 Claude outputs/
+/graphify-out/*

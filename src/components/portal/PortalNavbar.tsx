@@ -107,6 +107,7 @@ interface PortalNavbarProps {
   onSignOut: (app: PortalApp) => void;
   onRemove: (app: PortalApp) => void;
   onKeepLiveChange: (app: PortalApp, keepLive: boolean) => void;
+  onKeepLoadedChange: (app: PortalApp, keepLoaded: boolean) => void;
 }
 
 /**
@@ -129,6 +130,7 @@ export default function PortalNavbar({
   onSignOut,
   onRemove,
   onKeepLiveChange,
+  onKeepLoadedChange,
 }: PortalNavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   usePortalOcclusion(menuOpen || confirm !== null);
@@ -181,7 +183,7 @@ export default function PortalNavbar({
                   </PortalTip>
                 </Reorder.Item>
               </ContextMenuTrigger>
-              <ContextMenuContent className="w-48">
+              <ContextMenuContent className="w-64">
                 {desktop && (
                   <>
                     <ContextMenuItem onSelect={() => onNavigate(app, "reload")}>
@@ -195,7 +197,22 @@ export default function PortalNavbar({
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuCheckboxItem
+                      checked={app.keepLoaded !== false}
+                      onCheckedChange={(checked) => onKeepLoadedChange(app, checked === true)}
+                      className="items-start"
+                    >
+                      <span className="flex flex-col gap-0.5">
+                        <span>Keep loaded in background</span>
+                        <span className="text-[11px] leading-snug text-muted-foreground">
+                          {app.keepLoaded === false
+                            ? "Closes after being hidden a while. Reopening reloads it; drafts and scroll position are lost."
+                            : "Turn off to free memory. Unsent drafts, scroll position and unread badges are lost when it closes."}
+                        </span>
+                      </span>
+                    </ContextMenuCheckboxItem>
+                    <ContextMenuCheckboxItem
                       checked={app.keepLive === true}
+                      disabled={app.keepLoaded === false}
                       onCheckedChange={(checked) => onKeepLiveChange(app, checked === true)}
                     >
                       Keep live in background

@@ -5,6 +5,32 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.7] - 2026-09-18 - Unload What You're Not Using
+
+### Added
+
+- **"Keep loaded in background" per Portal app** (on by default). Right-click an app's pill to turn it off, and once that app has been off screen for the unload delay its webview is closed, freeing its whole WebView2 process. Reopening it loads it again from its data folder, so it stays signed in. The menu item explains what is lost when an app closes (unsent drafts, scroll position, in-page state, the unread badge). "Keep live in background" is greyed out while an app is set to unload. Stored as `keepLoaded: false` in `crystal-os-portal-apps`, written only when off, so existing app lists load unchanged.
+- **Settings → Performance.**
+  - **Performance mode** (off by default, applies at once): Pulse, Engine, Horizon, Vault, Atmosphere, Archive and Settings load only when first opened; React Query drops unused data after 1 minute instead of 5 (per-query `staleTime` is unchanged, so a quick return does not refetch); page transitions, CSS animations and canvas backdrops are turned off, with loading spinners still turning. The Nebula, Terminal and Portal keep loading with the app and keep running in the background.
+  - **Portal unload delay**, in seconds (default 60, 0 = as soon as you switch away, max 3600).
+- **`portal_unload` command** (`src-tauri/src/portal.rs`). It holds the same lock as `portal_show` and refuses to close the app on screen, so an app reopened just as its timer fires is either kept or cleanly rebuilt, never left blank. The countdowns live in `src/lib/portalLifecycle.ts`.
+
+### Performance
+
+- **Views are code-split** (`src/lib/viewLoader.ts`). Outside performance mode every chunk is fetched while the app is idle after launch, so switching tabs still does not wait.
+- **Hidden window, idle app.** Minimising the window or hiding it to the tray stops every backdrop's `requestAnimationFrame` loop (Nebula, Portal stars, Terminal static), freezes CSS animations (`html.app-hidden`), and marks React Query unfocused, which pauses `refetchInterval` polling such as the 10-minute weather refresh. Rust now emits `app://visibility` on show and hide (`src-tauri/src/window.rs`), because a window hidden with `hide()` does not reliably mark its document hidden. `src/lib/appActivity.ts` also checks the window's visibility at startup, for launches straight into the tray.
+- **OS "reduce motion" now also skips the page slide** between tabs, not just the backdrops.
+- **The Pomodoro timer polls once a second while the window is hidden** instead of four times; only the tray title shows the time then. It returns to four times a second when the window is shown.
+- **The Home clock re-renders once a minute**, at the start of each minute, instead of every second.
+
+### Fixed
+
+- **Closing the window with × skipped the tray's memory trim.** `CloseRequested` called `window.hide()` directly instead of `window::hide`, so Portal apps kept their caches until the 30-second idle timer. It now takes the same path as the tray and hotkey.
+- **`portal_rebuild` could race a show.** It ran outside the show/hide queue in `portalNative.ts`, so toggling **Keep live** during an app switch could close a webview between `portal_show` finding it and putting it on screen. It is now queued in order with show and hide, like the new unload.
+- **Performance mode's 1-minute cache now covers data already loaded.** `setDefaultOptions` only reaches new queries and React Query never lowers a cached query's `gcTime`, so data loaded before the switch kept the 5-minute window. `src/lib/queryCacheTime.ts` retimes cached queries on every switch.
+- **ESLint no longer scans build output** (`src-tauri/target`, `server-dist`), and the 8 remaining lint errors are fixed: typed Supabase rows in `AppContext.tsx`, no `any` in the Tasks drag handler, and type aliases for the empty `CommandDialogProps` and `TextareaProps` interfaces. The Home calendar range now derives from `today`, so its `useMemo` dependency is real.
+- **CHANGELOG dates:** v0.6.4 and v0.6.5 are dated 2026-09-17, when they were released.
+
 ## [v0.6.6] - 2026-09-17 - Installers, New Portal Apps, Context Meter & A Readable Terminal
 
 ### Added
@@ -24,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Terminal font loading.** Cascadia Mono is now bundled with the app (`@fontsource/cascadia-mono`, latin + latin-ext + the box-drawing subset, regular and bold) rather than taken from the machine, and `TerminalPage` waits for the face to load before opening xterm. xterm measures the character cell once, inside `open()`, and keeps those metrics for the life of the terminal — opening before the font was ready measured the fallback and the whole grid stayed in it. Under `dev:desktop` the font was already warm by the time anyone reached the tab, which is why only builds showed it.
 - **`portal_rebuild` was unreachable from the webview.** It was added in v0.6.5 and registered in `generate_handler!`, but never declared in `src-tauri/build.rs` or allowlisted in `capabilities/default.json`, so every call was rejected — which meant toggling **Keep live in background** never actually applied. Both lists now include it.
 
-## [v0.6.5] - 2026-09-18 - Quieter in the Background
+## [v0.6.5] - 2026-09-17 - Quieter in the Background
 
 Crystal OS sitting in the tray with Discord and Instagram connected used about 2.0-2.5 GB across three separate WebView2 process trees, and 8–12% CPU. This release goes after both.
 
@@ -48,7 +74,7 @@ Crystal OS sitting in the tray with Discord and Instagram connected used about 2
 
 Each Portal app still uses its own WebView2 data folder, so each one runs a full browser process tree of its own — a separate GPU process, manager, and network, storage, and audio utilities. Measured across Crystal OS, Discord, and Instagram, those duplicated GPU processes alone accounted for roughly 1.2 GB of the 2.0 GB total. Collapsing them into one shared process tree needs per-app WebView2 profiles, which neither wry 0.55 nor Tauri 2.11 currently exposes; the alternative of simply sharing one data folder would break signing out of, or removing, a single app without affecting the others. This is not addressed in this release.
 
-## [v0.6.4] - 2026-09-18 - Self-Hosted Fonts & Clean Builds
+## [v0.6.4] - 2026-09-17 - Self-Hosted Fonts & Clean Builds
 
 ### Changed
 

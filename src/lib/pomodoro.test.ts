@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_BREAK, DEFAULT_WORK, formatClock, pomodoro } from "./pomodoro";
+import { appActivity } from "./appActivity";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -7,6 +8,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  appActivity._setWindowShown(true);
   pomodoro._reset();
   vi.useRealTimers();
 });
@@ -64,6 +66,21 @@ describe("pomodoro store", () => {
     vi.advanceTimersByTime(3_000);
     expect(listener).toHaveBeenCalledTimes(3);
     unsubscribe();
+  });
+
+  it("polls once a second while the window is hidden, and 4x a second once shown", () => {
+    pomodoro.start();
+    appActivity._setWindowShown(false);
+    expect(vi.getTimerCount()).toBe(1);
+    const tick = vi.spyOn(Date, "now");
+    vi.advanceTimersByTime(3_000);
+    const hiddenPolls = tick.mock.calls.length;
+    expect(hiddenPolls).toBe(3);
+    appActivity._setWindowShown(true);
+    vi.advanceTimersByTime(1_000);
+    expect(tick.mock.calls.length - hiddenPolls).toBe(4);
+    expect(pomodoro.getState().remaining).toBe(DEFAULT_WORK - 4);
+    tick.mockRestore();
   });
 });
 

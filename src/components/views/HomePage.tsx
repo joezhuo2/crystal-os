@@ -22,9 +22,16 @@ import {
 
 function Clock() {
   const [time, setTime] = useState(new Date());
+  // The clock shows minutes, so wake once at the start of each minute.
   useEffect(() => {
-    const interval = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(interval);
+    let timeout: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const now = new Date();
+      setTime(now);
+      timeout = setTimeout(schedule, 60_000 - (now.getSeconds() * 1000 + now.getMilliseconds()));
+    };
+    schedule();
+    return () => clearTimeout(timeout);
   }, []);
 
   const hours = time.getHours();
@@ -221,8 +228,7 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
 
   // Local midnight today through local midnight tomorrow.
   const range = useMemo(() => {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    const startOfDay = new Date(`${today}T00:00:00`);
     return {
       timeMin: startOfDay.toISOString(),
       timeMax: new Date(startOfDay.getTime() + 86400000).toISOString(),

@@ -30,6 +30,7 @@ fn main() {
     "portal_sign_out",
     "portal_remove",
     "portal_rebuild",
+    "portal_unload",
     "portal_prune",
     "harness_env_status",
     "harness_install_runtime",

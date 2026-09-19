@@ -1,9 +1,19 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { isDesktop } from "@/lib/platform";
-import { onPortalEvent, prunePortal } from "@/lib/portalNative";
+import { createPortalUnloader } from "@/lib/portalLifecycle";
+import { onPortalEvent, prunePortal, unloadPortalApp } from "@/lib/portalNative";
 import { portal } from "@/lib/portalStore";
+import { perfSettings } from "@/lib/perfSettings";
 
 let sessionStarted = false;
+
+/** Closes hidden apps that have "Keep loaded in background" off. */
+export const portalUnloader = createPortalUnloader({
+  getApps: () => portal.getState().apps,
+  getDelay: () => perfSettings.getState().unloadDelay,
+  unload: unloadPortalApp,
+  onUnloaded: (id) => portal.clearBadge(id),
+});
 
 /**
  * Runs once per app session, on the first Portal visit (desktop only): starts
@@ -14,6 +24,15 @@ export function startPortalSession() {
   if (sessionStarted || !isDesktop()) return;
   sessionStarted = true;
   onPortalEvent((event) => portal.setTitle(event.id, event.title));
+  // Toggling "Keep loaded" (even for an app already in the background) or
+  // removing an app takes effect at once; a new delay restarts the countdowns.
+  portal.subscribe(portalUnloader.sync);
+  let delay = perfSettings.getState().unloadDelay;
+  perfSettings.subscribe(() => {
+    if (perfSettings.getState().unloadDelay === delay) return;
+    delay = perfSettings.getState().unloadDelay;
+    portalUnloader.restart();
+  });
   prunePortal(portal.getState().apps.map((a) => a.id)).catch((err) => console.warn("[portal] prune failed", err));
 }
 

@@ -103,7 +103,11 @@ const AppContext = createContext<AppState | null>(null);
 
 // ── helpers to map between Supabase snake_case and app camelCase ──
 
-function mapTaskFromDb(row: any): Task {
+type TaskRow = ReturnType<typeof mapTaskToDb> & { id: string };
+type TransactionRow = ReturnType<typeof mapTransactionToDb> & { id: string };
+type CategoryRow = ReturnType<typeof mapCategoryToDb> & { id: string };
+
+function mapTaskFromDb(row: TaskRow): Task {
   return {
     id: row.id,
     name: row.name,
@@ -132,7 +136,7 @@ function mapTaskToDb(task: Omit<Task, "id">) {
   };
 }
 
-function mapTransactionFromDb(row: any): Transaction {
+function mapTransactionFromDb(row: TransactionRow): Transaction {
   return {
     id: row.id,
     name: row.name,
@@ -153,7 +157,7 @@ function mapTransactionToDb(tx: Omit<Transaction, "id">) {
   };
 }
 
-function mapCategoryFromDb(row: any): TaskCategory | FinancialCategory {
+function mapCategoryFromDb(row: CategoryRow): TaskCategory | FinancialCategory {
   return { id: row.id, name: row.name, color: row.color };
 }
 
@@ -327,7 +331,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
-    const dbUpdates: Record<string, any> = {};
+    const dbUpdates: Partial<TaskRow> = {};
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.startDate !== undefined) dbUpdates.start_date = updates.startDate;
     if (updates.startTime !== undefined) dbUpdates.start_time = updates.startTime;
@@ -357,7 +361,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const updateTransaction = useCallback(async (id: string, updates: Partial<Transaction>) => {
-    const dbUpdates: Record<string, any> = {};
+    const dbUpdates: Partial<TransactionRow> = {};
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
     if (updates.type !== undefined) dbUpdates.type = updates.type;

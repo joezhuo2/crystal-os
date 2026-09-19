@@ -123,7 +123,19 @@ export function removePortalApp(id: string) {
  * such as "keep live in background". The app stays signed in.
  */
 export function rebuildPortalApp(id: string) {
-  return invoke<void>("portal_rebuild", { id });
+  // Queued with show and hide so a rebuild never lands between a show
+  // finding the webview and putting it on screen.
+  return inOrder(() => invoke<void>("portal_rebuild", { id }));
+}
+
+/**
+ * Closes a hidden app's webview to free its memory; the next show loads it
+ * again, still signed in. Resolves to false when Rust left it alone because
+ * the app was on screen (or not loaded) by the time the call ran. Queued
+ * with show and hide, so a show issued after this always sees its result.
+ */
+export function unloadPortalApp(id: string) {
+  return inOrder(() => invoke<boolean>("portal_unload", { id }));
 }
 
 /** Deletes data folders left behind by apps that are no longer connected. */

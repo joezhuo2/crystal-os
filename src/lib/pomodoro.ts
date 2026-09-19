@@ -6,6 +6,8 @@
  * per interval, so a throttled background webview does not drift.
  */
 
+import { appActivity } from "@/lib/appActivity";
+
 export const DEFAULT_WORK = 25 * 60;
 export const DEFAULT_BREAK = 5 * 60;
 
@@ -32,6 +34,19 @@ let state: PomodoroState = INITIAL;
 let endsAt: number | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 const listeners = new Set<() => void>();
+
+// Sub-second polling while visible so the display never skips a second. While
+// hidden only the tray title shows the time, so once a second is enough.
+const tickInterval = () => (appActivity.getState().visible ? 250 : 1000);
+
+function startTicking() {
+  if (timer !== null) clearInterval(timer);
+  timer = setInterval(tick, tickInterval());
+}
+
+appActivity.subscribe(() => {
+  if (timer !== null) startTicking();
+});
 
 function set(next: PomodoroState) {
   state = next;
@@ -78,8 +93,7 @@ export const pomodoro = {
   start() {
     if (state.running || state.remaining <= 0) return;
     endsAt = Date.now() + state.remaining * 1000;
-    // Sub-second polling so the display never skips a second.
-    timer = setInterval(tick, 250);
+    startTicking();
     set({ ...state, running: true });
   },
 

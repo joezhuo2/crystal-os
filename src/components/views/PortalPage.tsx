@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import PortalNavbar, { AppIcon, type Confirm } from "@/components/portal/PortalNavbar";
 import AddPortalAppDialog from "@/components/portal/AddPortalAppDialog";
 import PortalSkeleton from "@/components/portal/PortalSkeleton";
-import { startPortalSession, usePortal, usePortalOcclusion } from "@/hooks/usePortal";
+import { portalUnloader, startPortalSession, usePortal, usePortalOcclusion } from "@/hooks/usePortal";
 import { isDesktop } from "@/lib/platform";
 import { PRESETS, type PortalApp } from "@/lib/portalApps";
 import {
@@ -159,6 +159,7 @@ export default function PortalPage() {
       const resuming = snapshotRef.current?.id === active.id;
       showPortalApp(active, bounds, !resuming)
         .then(() => {
+          portalUnloader.markLoaded(active.id);
           if (cancelled) return;
           setError((prev) => (prev ? null : prev));
           if (snapshotRef.current) replaceSnapshot(null);
@@ -200,6 +201,15 @@ export default function PortalPage() {
       hidePortal().catch(() => undefined);
     };
   }, [desktop]);
+
+  // The active app counts as on screen for as long as this page is open, even
+  // while a menu hides it, so only the others count down to being unloaded.
+  const activeAppId = active?.id ?? null;
+  useEffect(() => {
+    if (!desktop) return;
+    portalUnloader.setViewing(activeAppId);
+    return () => portalUnloader.setViewing(null);
+  }, [desktop, activeAppId]);
 
   const fail = (what: string) => (err: unknown) => toast.error(what, { description: errorText(err) });
 
@@ -258,6 +268,10 @@ export default function PortalPage() {
       .then(() => setAttempt((n) => n + 1))
       .catch(fail(`Could not change how ${app.name} runs in the background`));
   };
+
+  // Takes effect through the unloader, which is subscribed to the store: an
+  // app already in the background starts counting down straight away.
+  const setKeepLoaded = (app: PortalApp, keepLoaded: boolean) => portal.setKeepLoaded(app.id, keepLoaded);
 
   /** Move to the next (−1) or previous (−1) connected app, wrapping around. */
   const cycle = (direction: -1 | 1) => {
@@ -392,6 +406,7 @@ export default function PortalPage() {
         onSignOut={signOut}
         onRemove={remove}
         onKeepLiveChange={setKeepLive}
+        onKeepLoadedChange={setKeepLoaded}
       />
 
       <div className="portal-frame flex-1 min-h-0 mx-2 mb-2">

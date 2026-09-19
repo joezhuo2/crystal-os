@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, Download, FolderOpen, Keyboard, Orbit, Power, Settings, Sparkles } from "lucide-react";
+import { Check, Download, FolderOpen, Gauge, Keyboard, Orbit, Power, Settings, Sparkles } from "lucide-react";
 import NebulaSettingsSection from "@/components/nebula/NebulaSettingsSection";
 import InstallerSection from "@/components/views/InstallerSection";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import HotkeySettingsDialog from "@/components/HotkeySettingsDialog";
 import { useGlobalHotkeys } from "@/hooks/useGlobalHotkey";
@@ -12,6 +13,7 @@ import { HOTKEY_COPY, formatAccelerator, paletteShortcutLabel, type HotkeyAction
 import { isDesktop } from "@/lib/platform";
 import { usePortal } from "@/hooks/usePortal";
 import { PORTAL_THEMES, portal } from "@/lib/portalStore";
+import { MAX_UNLOAD_DELAY, perfSettings, usePerfSettings } from "@/lib/perfSettings";
 
 function Section({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
   return (
@@ -49,12 +51,47 @@ function Combo({ children, error }: { children: React.ReactNode; error?: boolean
   );
 }
 
+/**
+ * Seconds before a Portal app with "Keep loaded" off is closed. Typed freely
+ * and saved (clamped) on blur or Enter, so a half-typed number is not cut
+ * short.
+ */
+function UnloadDelayInput({ value }: { value: number }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft !== null) perfSettings.setUnloadDelay(draft);
+    setDraft(null);
+  };
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        max={MAX_UNLOAD_DELAY}
+        step={1}
+        value={draft ?? String(value)}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setDraft(null);
+        }}
+        className="h-8 w-24 text-right"
+        aria-label="Unload delay in seconds"
+      />
+      <span className="text-xs text-muted-foreground">seconds</span>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const desktop = isDesktop();
   const hotkeys = useGlobalHotkeys();
   const [editing, setEditing] = useState<HotkeyAction>("toggle");
   const [dialogOpen, setDialogOpen] = useState(false);
   const { theme: portalTheme } = usePortal();
+  const perf = usePerfSettings();
 
   const vaultStatus = useVaultStatus();
   const pickVault = usePickVault();
@@ -183,6 +220,23 @@ export default function SettingsPage() {
             })}
           </div>
         </div>
+      </Section>
+
+      <Section icon={Gauge} title="Performance">
+        <Row
+          title="Performance mode"
+          description="Loads Pulse, Engine, Horizon, Vault, Atmosphere, Archive and Settings only when you first open them, frees their cached data after a minute unused, and turns off transitions and backdrop animation. The Nebula, Terminal and Portal keep running in the background as usual."
+        >
+          <Switch checked={perf.performanceMode} onCheckedChange={perfSettings.setPerformanceMode} />
+        </Row>
+        {desktop && (
+          <Row
+            title="Portal unload delay"
+            description={`How long a Portal app with "Keep loaded in background" turned off (right-click its tab) can stay hidden before it is closed to free memory. 0 closes it as soon as you switch away. Up to ${MAX_UNLOAD_DELAY} seconds.`}
+          >
+            <UnloadDelayInput value={perf.unloadDelay} />
+          </Row>
+        )}
       </Section>
 
       {desktop && (

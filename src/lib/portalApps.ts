@@ -18,6 +18,15 @@ export interface PortalApp {
    * the app loads.
    */
   keepLive?: boolean;
+  /**
+   * False when the app's webview should be thrown away once it has been off
+   * screen for the unload delay, freeing its memory. Reopening the app loads
+   * it again from scratch: it stays signed in, but unsent drafts, scroll
+   * position and in-page state are lost, and its unread badge stops updating.
+   *
+   * Left out (meaning on) unless it is off.
+   */
+  keepLoaded?: false;
 }
 
 export interface PortalPreset extends PortalApp {
@@ -118,7 +127,7 @@ export function parseStoredApps(raw: string | null): PortalApp[] {
   const apps: PortalApp[] = [];
   for (const item of data) {
     if (!item || typeof item !== "object") continue;
-    const { id, name, url, keepLive } = item as Record<string, unknown>;
+    const { id, name, url, keepLive, keepLoaded } = item as Record<string, unknown>;
     if (typeof id !== "string" || typeof name !== "string" || typeof url !== "string") continue;
     const href = normalizeUrl(url);
     if (!isValidId(id) || seen.has(id) || !name.trim() || !href) continue;
@@ -127,6 +136,7 @@ export function parseStoredApps(raw: string | null): PortalApp[] {
     // so apps saved before the setting existed parse exactly as they used to.
     const app: PortalApp = { id, name: name.trim(), url: href };
     if (keepLive === true) app.keepLive = true;
+    if (keepLoaded === false) app.keepLoaded = false;
     apps.push(app);
   }
   return apps;

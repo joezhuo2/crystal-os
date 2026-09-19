@@ -112,11 +112,19 @@ function set(next: PortalState) {
 }
 
 function saveApps(apps: PortalApp[]) {
-  // `keepLive` is left out when it is off, so apps that never turned it on are
-  // stored exactly as they were before the setting existed.
+  // Both flags are left out at their defaults, so apps that never changed them
+  // are stored exactly as they were before the settings existed.
   write(
     APPS_KEY,
-    JSON.stringify(apps.map(({ id, name, url, keepLive }) => (keepLive ? { id, name, url, keepLive } : { id, name, url }))),
+    JSON.stringify(
+      apps.map(({ id, name, url, keepLive, keepLoaded }) => ({
+        id,
+        name,
+        url,
+        ...(keepLive ? { keepLive } : {}),
+        ...(keepLoaded === false ? { keepLoaded } : {}),
+      })),
+    ),
   );
 }
 
@@ -192,6 +200,33 @@ export const portal = {
     const apps = state.apps.map((a) => (a.id === id ? { ...a, keepLive } : a));
     saveApps(apps);
     set({ ...state, apps });
+  },
+
+  /**
+   * Turns "keep loaded in background" on or off for one app. Off means the
+   * app's webview is thrown away once it has been off screen for the unload
+   * delay (see portalLifecycle.ts).
+   */
+  setKeepLoaded(id: string, keepLoaded: boolean) {
+    const app = state.apps.find((a) => a.id === id);
+    if (!app || (app.keepLoaded ?? true) === keepLoaded) return;
+    const apps = state.apps.map((a) => {
+      if (a.id !== id) return a;
+      const next = { ...a };
+      if (keepLoaded) delete next.keepLoaded;
+      else next.keepLoaded = false;
+      return next;
+    });
+    saveApps(apps);
+    set({ ...state, apps });
+  },
+
+  /** Drops an app's badge, for when its webview is unloaded and stops reporting titles. */
+  clearBadge(id: string) {
+    if (!(id in state.badges)) return;
+    const badges = { ...state.badges };
+    delete badges[id];
+    set({ ...state, badges });
   },
 
   /** Records a page title change and updates that app's badge. */

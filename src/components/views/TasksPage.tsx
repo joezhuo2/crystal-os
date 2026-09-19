@@ -21,8 +21,8 @@ function TaskItem({ task, draggable }: { task: Task; draggable?: boolean }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
       draggable={draggable}
-      onDragStart={(e: any) => {
-        e.dataTransfer?.setData("text/plain", task.id);
+      onDragStart={(e: Event) => {
+        (e as DragEvent).dataTransfer?.setData("text/plain", task.id);
       }}
       className={`glass-card-hover p-4 flex items-center gap-3 group ${task.completed ? "opacity-50" : ""} ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
     >

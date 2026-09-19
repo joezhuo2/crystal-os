@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { appActivity, useAppActivity } from "@/lib/appActivity";
 import type { NebulaTheme } from "@/lib/harness/types";
 
 const MAX_FPS = 30;
@@ -57,9 +58,9 @@ function hexToRgb(hex: string): [number, number, number] {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
-const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
+  const { still } = useAppActivity();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const themeRef = useRef(theme);
   themeRef.current = theme;
@@ -78,7 +79,6 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
     // Time advances by the swirl speed, so changing speed never jumps.
     let clock = 0;
     let lastNow = performance.now();
-    const still = reducedMotion();
 
     const initGl = () => {
       gl = canvas.getContext("webgl", { antialias: false, premultipliedAlpha: false });
@@ -155,7 +155,7 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
       resize();
       clock = clock || 40;
       draw();
-      if (!still) {
+      if (!still && appActivity.getState().visible) {
         lastNow = performance.now();
         frame = requestAnimationFrame(tick);
       }
@@ -195,10 +195,21 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
       else onFail();
     };
     document.addEventListener("visibilitychange", onVisibility);
+    // Stop the loop entirely while the window is hidden (tray or minimised),
+    // instead of waking every frame to skip drawing.
+    const onActivity = () => {
+      cancelAnimationFrame(frame);
+      if (!still && appActivity.getState().visible) {
+        lastNow = performance.now();
+        frame = requestAnimationFrame(tick);
+      }
+    };
+    const unsubscribe = appActivity.subscribe(onActivity);
     canvas.addEventListener("webglcontextlost", onLost);
     canvas.addEventListener("webglcontextrestored", onRestored);
 
     return () => {
+      unsubscribe();
       cancelAnimationFrame(frame);
       observer.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
@@ -208,7 +219,7 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
       // Release the GPU context now instead of waiting for garbage collection.
       (gl as WebGLRenderingContext | null)?.getExtension("WEBGL_lose_context")?.loseContext();
     };
-  }, [onFail]);
+  }, [onFail, still]);
 
   // Without animation (reduced motion) the frame must be redrawn when the colours change.
   useEffect(() => {
@@ -221,12 +232,12 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
 /** Twinkling four-point stars over the nebula. */
 function Stars({ density }: { density: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { still } = useAppActivity();
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    const still = reducedMotion();
     let stars: { x: number; y: number; size: number; phase: number; speed: number; hue: number }[] = [];
 
     const resize = () => {
@@ -288,12 +299,19 @@ function Stars({ density }: { density: number }) {
       last = now;
       draw(now);
     };
-    frame = requestAnimationFrame(tick);
+    // The loop only runs while the window can be seen.
+    const run = () => {
+      cancelAnimationFrame(frame);
+      if (appActivity.getState().visible) frame = requestAnimationFrame(tick);
+    };
+    run();
+    const unsubscribe = appActivity.subscribe(run);
     return () => {
+      unsubscribe();
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [density]);
+  }, [density, still]);
 
   return <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />;
 }
