@@ -5,6 +5,18 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.8] - 2026-09-23 - Every Space on One Screen
+
+### Changed
+
+- **Home is a 3×3 grid.** Row one: clock, weather, and a **Vault** card (this month's net, money in and out, top spending category) that replaces the AI smart summary and opens The Vault. Row two: the Engine, today's events, and the Archive. Row three: **Nebula**, **Portal** and **Terminal** boxes, which replace Daily Focus. Each of those boxes, and the space around it, wears its page's look: the Nebula box uses your palette (and stars, if on), the Portal box your Portal theme with its spinning ring, the Terminal box black scanlines and the glitch frame.
+  - **Nebula** shows chats, projects, the latest chat and running agents. Before the first Nebula visit it reads the saved chat index without starting any agents.
+  - **Portal** shows connected apps with unread badges; click an app to open it in the Portal.
+  - **Terminal** lists the running shells (desktop).
+- **The Engine shows upcoming tasks when today is clear**: the next 14 days' open tasks, soonest first, labelled "Tomorrow", a weekday, or a date.
+- **The whole Archive card opens The Archive**, not only its notes and "Browse all".
+- **Styled tooltips** on Home's quick-add, add-task and complete-task buttons and the Portal app icons, in place of the browser's plain `title` box (`src/components/ui/glass-tooltip.tsx`).
+
 ## [v0.6.7] - 2026-09-18 - Unload What You're Not Using
 
 ### Added

@@ -1391,6 +1391,229 @@
   }
 }
 
+/* ------------------------------------------------------------------
+ * Glass tooltip (components/ui/glass-tooltip.tsx): replaces the browser's
+ * `title` box. `[data-side]` lifts it over the default TooltipContent
+ * utilities (bg-popover, border, shadow-md, text-sm, ...).
+ * ------------------------------------------------------------------ */
+@layer components {
+  .glass-tooltip-indigo {
+    --tip-a: hsl(239 84% 67%);
+    --tip-b: hsl(270 80% 72%);
+  }
+
+  .glass-tooltip-emerald {
+    --tip-a: hsl(160 84% 45%);
+    --tip-b: hsl(188 86% 53%);
+  }
+
+  .glass-tooltip[data-side] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 0.65rem;
+    font-size: 0.6875rem;
+    color: hsl(var(--muted-foreground));
+    border: 1px solid transparent;
+    background:
+      linear-gradient(color-mix(in srgb, var(--tip-a) 16%, hsl(222 47% 9%)), color-mix(in srgb, var(--tip-b) 9%, hsl(222 47% 9%))) padding-box,
+      linear-gradient(100deg, var(--tip-a), var(--tip-b)) border-box;
+    box-shadow:
+      0 0 18px color-mix(in srgb, var(--tip-a) 30%, transparent),
+      0 8px 24px rgb(0 0 0 / 0.45);
+  }
+
+  .glass-tooltip-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 0 10px color-mix(in srgb, var(--tip-b) 55%, transparent);
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Home spaces (views/HomeSpaces.tsx): the Nebula, Portal and Terminal boxes
+ * on the Home tab. `.home-space` paints the page's backdrop behind its box
+ * and 8px past it, half the grid gap, so the box and the space around it
+ * both wear the page's look. Colours come from --nebula-a/b/c (inline, the
+ * user's palette) and the portal-theme-* class (the Portal theme).
+ * ------------------------------------------------------------------ */
+@layer components {
+  .home-space {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .home-space::before,
+  .home-space::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    z-index: -1;
+    border-radius: 1.25rem;
+    pointer-events: none;
+  }
+
+  .home-space::after {
+    display: none;
+  }
+
+  /* Nebula: the user's three colours swirled over near-black, plus stars. */
+  .home-space-nebula::before {
+    background:
+      radial-gradient(60% 70% at 18% 20%, color-mix(in srgb, var(--nebula-a) 50%, transparent), transparent 70%),
+      radial-gradient(55% 65% at 88% 82%, color-mix(in srgb, var(--nebula-b) 42%, transparent), transparent 70%),
+      radial-gradient(40% 45% at 62% 30%, color-mix(in srgb, var(--nebula-c) 30%, transparent), transparent 70%),
+      #030209;
+    box-shadow: 0 0 32px color-mix(in srgb, var(--nebula-a) 24%, transparent);
+  }
+
+  .home-space-nebula[data-stars]::after {
+    display: block;
+    background-image:
+      radial-gradient(1px 1px at 7% 14%, #fff, transparent),
+      radial-gradient(1px 1px at 23% 78%, rgb(255 255 255 / 0.8), transparent),
+      radial-gradient(1.5px 1.5px at 41% 9%, #fff, transparent),
+      radial-gradient(1px 1px at 56% 91%, rgb(255 255 255 / 0.7), transparent),
+      radial-gradient(1px 1px at 71% 22%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 93% 38%, rgb(255 255 255 / 0.9), transparent),
+      radial-gradient(1px 1px at 84% 67%, #fff, transparent),
+      radial-gradient(1px 1px at 3% 58%, rgb(255 255 255 / 0.8), transparent),
+      radial-gradient(1px 1px at 97% 94%, #fff, transparent);
+    animation: home-twinkle 5s ease-in-out infinite alternate;
+  }
+
+  .home-card-nebula {
+    border-radius: 1rem;
+    color: #f5f3ff;
+    background: rgb(8 6 20 / 0.5);
+    border: 1px solid color-mix(in srgb, var(--nebula-a) 30%, rgb(255 255 255 / 0.06));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.05),
+      0 0 30px color-mix(in srgb, var(--nebula-a) 12%, transparent);
+    backdrop-filter: blur(10px) saturate(1.2);
+    transition: border-color 300ms, box-shadow 300ms;
+  }
+
+  .home-card-nebula:hover {
+    border-color: color-mix(in srgb, var(--nebula-c) 55%, transparent);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.08),
+      0 0 34px color-mix(in srgb, var(--nebula-b) 32%, transparent);
+  }
+
+  .home-nebula-icon {
+    color: var(--nebula-c);
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--nebula-c) 70%, transparent));
+  }
+
+  .home-nebula-pulse {
+    color: var(--nebula-c);
+    animation: portal-shimmer 1.6s ease-in-out infinite;
+  }
+
+  /* Portal: the theme's glow over its background, and a spinning ring. */
+  .home-space-portal::before {
+    background:
+      radial-gradient(70% 80% at 12% 0%, color-mix(in srgb, var(--portal-a) 42%, transparent), transparent 70%),
+      radial-gradient(60% 70% at 100% 100%, color-mix(in srgb, var(--portal-b) 34%, transparent), transparent 70%),
+      var(--portal-bg);
+    box-shadow: 0 0 32px color-mix(in srgb, var(--portal-a) 22%, transparent);
+  }
+
+  .home-card-portal {
+    border-radius: 1rem;
+    border: 1.5px solid transparent;
+    background:
+      linear-gradient(color-mix(in srgb, var(--portal-surface) 86%, transparent), color-mix(in srgb, var(--portal-surface) 86%, transparent)) padding-box,
+      conic-gradient(from var(--portal-angle), var(--portal-a), var(--portal-b), #ffffff 12%, var(--portal-b) 16%, var(--portal-a) 40%, var(--portal-b) 60%, var(--portal-a)) border-box;
+    animation: portal-spin 8s linear infinite;
+    transition: box-shadow 300ms;
+  }
+
+  .home-card-portal:hover {
+    box-shadow: 0 0 30px color-mix(in srgb, var(--portal-a) 40%, transparent);
+  }
+
+  .home-portal-app {
+    position: relative;
+    display: inline-flex;
+    width: 2.25rem;
+    height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.65rem;
+    background: rgb(255 255 255 / 0.04);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    transition: background-color 200ms, border-color 200ms, box-shadow 200ms, transform 200ms;
+  }
+
+  button.home-portal-app:hover {
+    background: color-mix(in srgb, var(--portal-a) 14%, transparent);
+    border-color: color-mix(in srgb, var(--portal-a) 55%, transparent);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--portal-a) 32%, transparent);
+    transform: translateY(-1px);
+  }
+
+  button.home-portal-app:focus-visible {
+    outline: 2px solid var(--portal-b);
+    outline-offset: 2px;
+  }
+
+  .home-portal-app .sidebar-badge {
+    top: -0.35rem;
+    right: -0.4rem;
+  }
+
+  /* Terminal: black scanlines around a glitching frame. */
+  .home-space-terminal::before {
+    border-radius: 0.6rem;
+    background-color: #000;
+    background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgb(255 255 255 / 0.035) 3px);
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.06),
+      0 0 30px rgb(0 0 0 / 0.6);
+  }
+
+  .home-card-terminal {
+    color: #e5e5e5;
+  }
+
+  .home-card-terminal:hover {
+    box-shadow: 0 0 0 2px #000, 0 0 0 3px rgb(255 255 255 / 0.3), 0 0 24px rgb(255 255 255 / 0.08);
+  }
+
+  .home-terminal-cursor {
+    margin-left: 0.15rem;
+    animation: home-blink 1s steps(1, end) infinite;
+  }
+
+  @keyframes home-blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes home-twinkle {
+    from {
+      opacity: 0.45;
+    }
+    to {
+      opacity: 0.95;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .home-space-nebula[data-stars]::after,
+    .home-nebula-pulse,
+    .home-card-portal,
+    .home-terminal-cursor {
+      animation: none;
+    }
+  }
+}
+
 /* Nobody can see the window (tray, minimised): freeze every CSS animation
    where it is, so it resumes from the same frame. Set by src/lib/appActivity.ts. */
 html.app-hidden *,

@@ -80,21 +80,12 @@ export function WeatherWidgetSkeleton() {
   );
 }
 
-export function SmartSummarySkeleton() {
+export function VaultStickerSkeleton() {
   return (
-    <SkeletonCard label="Loading your smart summary">
+    <SkeletonCard label="Loading the vault">
       <SkeletonLabel />
-      <SkeletonLines className="mt-4" count={3} />
-    </SkeletonCard>
-  );
-}
-
-export function DailyFocusSkeleton() {
-  return (
-    <SkeletonCard label="Loading your daily focus" className="col-span-full lg:col-span-2">
-      <SkeletonLabel />
-      <Skeleton className="mt-3 h-7 w-3/5 rounded" />
-      <Skeleton className="mt-3 h-3 w-56 rounded" />
+      <Skeleton className="mt-4 h-8 w-32 rounded" />
+      <SkeletonLines className="mt-3" count={2} widths={["w-3/5", "w-2/5"]} />
     </SkeletonCard>
   );
 }

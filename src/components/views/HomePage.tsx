@@ -10,15 +10,16 @@ import {
   useCalendarStatus,
   type CalendarEvent,
 } from "@/hooks/useGoogleCalendar";
-import { BookOpen, NotebookPen, CalendarClock, ChevronRight, Plus, Check } from "lucide-react";
+import { BookOpen, NotebookPen, CalendarClock, ChevronRight, Plus, Check, Wallet } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
-  DailyFocusSkeleton,
-  SmartSummarySkeleton,
   TodayHorizonContentSkeleton,
   VaultContentSkeleton,
+  VaultStickerSkeleton,
   WeatherWidgetSkeleton,
 } from "@/components/ui/dashboard-skeletons";
+import { GlassTip } from "@/components/ui/glass-tooltip";
+import { NebulaSpace, PortalSpace, TerminalSpace } from "./HomeSpaces";
 
 function Clock() {
   const [time, setTime] = useState(new Date());
@@ -104,7 +105,8 @@ function WeatherWidget({ onClick }: { onClick?: () => void }) {
   );
 }
 
-function VaultWidget({ onClick }: { onClick?: () => void }) {
+/** Notes from the Obsidian vault. The whole card opens The Archive. */
+function ArchiveWidget({ onClick }: { onClick?: () => void }) {
   const { setSelectedNotePath, setShowQuickAdd, setQuickAddDraft } = useApp();
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const { data, isLoading, error } = useVaultNotes({
@@ -119,16 +121,18 @@ function VaultWidget({ onClick }: { onClick?: () => void }) {
   };
 
   return (
-    <div className="glass-card-hover p-6 col-span-full lg:col-span-1">
+    <div onClick={onClick} className="glass-card-hover p-6 cursor-pointer group">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs text-muted-foreground uppercase tracking-widest">The Archive</p>
-        <button
-          onClick={openQuickAdd}
-          title="Quick add to vault"
-          className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-        >
-          <NotebookPen className="w-4 h-4" />
-        </button>
+        <GlassTip label="Quick add to vault" hint="Capture a note without leaving home" tone="emerald">
+          <button
+            onClick={openQuickAdd}
+            aria-label="Quick add to vault"
+            className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+          >
+            <NotebookPen className="w-4 h-4" />
+          </button>
+        </GlassTip>
       </div>
 
       {error && <p className="text-xs text-muted-foreground">Vault unavailable.</p>}
@@ -169,14 +173,15 @@ function VaultWidget({ onClick }: { onClick?: () => void }) {
                 initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setSelectedNotePath(note.path);
                   onClick?.();
                 }}
-                className="w-full flex items-center gap-2 text-left group"
+                className="w-full flex items-center gap-2 text-left group/note"
               >
                 <BookOpen className="w-3.5 h-3.5 text-sky-400/60 shrink-0" />
-                <span className="text-sm truncate group-hover:text-primary transition-colors">
+                <span className="text-sm truncate group-hover/note:text-primary transition-colors">
                   {note.title}
                 </span>
                 <span className="ml-auto text-[10px] text-muted-foreground/50 shrink-0">
@@ -188,12 +193,9 @@ function VaultWidget({ onClick }: { onClick?: () => void }) {
             ))}
           </div>
 
-          <button
-            onClick={onClick}
-            className="text-xs text-muted-foreground hover:text-primary transition-colors mt-3"
-          >
+          <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors mt-3">
             Browse all {data.total} notes →
-          </button>
+          </p>
         </>
       )}
     </div>
@@ -325,6 +327,30 @@ const PRIORITY_CLASS: Record<Priority, string> = {
   urgent: "priority-urgent",
 };
 
+/** How far ahead the Engine looks for upcoming tasks once today is clear. */
+const UPCOMING_DAYS = 14;
+
+/** The dates after `today`, up to UPCOMING_DAYS out. */
+function upcomingDates(today: string): string[] {
+  const base = new Date(`${today}T12:00:00`);
+  return Array.from({ length: UPCOMING_DAYS }, (_, i) => {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i + 1);
+    return toLocalDateStr(d);
+  });
+}
+
+/** "Tomorrow", a weekday within the week, then a short date. */
+function formatUpcomingDay(date: string, today: string): string {
+  const days = Math.round((Date.parse(`${date}T12:00:00`) - Date.parse(`${today}T12:00:00`)) / 86400000);
+  const d = new Date(`${date}T12:00:00`);
+  if (days === 1) return "Tomorrow";
+  if (days < 7) return d.toLocaleDateString("en-US", { weekday: "short" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+type TaskRow = { task: Task; label: string };
+
 function EngineWidget({ onClick }: { onClick?: () => void }) {
   const { tasks, updateTask, setEditingTask, setShowTaskForm, loading } = useApp();
   const today = toLocalDateStr();
@@ -340,8 +366,37 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
       if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
       return a.startTime.localeCompare(b.startTime);
     });
-  const topTasks = openTasks.slice(0, 3);
-  const remaining = openTasks.length - topTasks.length;
+
+  // Once today is clear, show what comes next: each open task's next date
+  // within UPCOMING_DAYS, soonest first.
+  const upcoming = useMemo(() => {
+    if (openTasks.length > 0) return [];
+    const dates = upcomingDates(today);
+    return tasks
+      .filter((t) => !t.completed)
+      .flatMap((task) => {
+        const date = dates.find((d) => taskFallsOnDate(task, d));
+        return date ? [{ task, date }] : [];
+      })
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        if (a.task.priority !== b.task.priority) return PRIORITY_RANK[a.task.priority] - PRIORITY_RANK[b.task.priority];
+        return a.task.startTime.localeCompare(b.task.startTime);
+      });
+  }, [tasks, today, openTasks.length]);
+
+  const showingUpcoming = openTasks.length === 0 && upcoming.length > 0;
+  const rows: TaskRow[] = showingUpcoming
+    ? upcoming.map(({ task, date }) => ({
+        task,
+        label: [formatUpcomingDay(date, today), task.startTime && formatEventTime(task.startTime)].filter(Boolean).join(" · "),
+      }))
+    : openTasks.map((task) => ({
+        task,
+        label: isOverdue(task) ? "Overdue" : task.startTime ? formatEventTime(task.startTime) : "",
+      }));
+  const topRows = rows.slice(0, 3);
+  const remaining = rows.length - topRows.length;
 
   const openNewTask = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -353,13 +408,15 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
     <div onClick={onClick} className="glass-card-hover p-6 cursor-pointer group">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs text-muted-foreground uppercase tracking-widest">The Engine</p>
-        <button
-          onClick={openNewTask}
-          title="Add task"
-          className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
+        <GlassTip label="Add task" hint="New task in The Engine">
+          <button
+            onClick={openNewTask}
+            aria-label="Add task"
+            className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </GlassTip>
       </div>
 
       {loading ? (
@@ -367,17 +424,19 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
       ) : (
         <>
           <div className="flex items-baseline gap-2 mb-4">
-            <span className="text-3xl font-bold tabular-nums">{openTasks.length}</span>
+            <span className="text-3xl font-bold tabular-nums">{showingUpcoming ? upcoming.length : openTasks.length}</span>
             <span className="text-sm text-muted-foreground">
-              open task{openTasks.length !== 1 ? "s" : ""} today
+              {showingUpcoming
+                ? `upcoming task${upcoming.length !== 1 ? "s" : ""} · today is clear`
+                : `open task${openTasks.length !== 1 ? "s" : ""} today`}
             </span>
           </div>
 
-          {topTasks.length === 0 ? (
+          {topRows.length === 0 ? (
             <p className="text-sm text-muted-foreground">All clear. Nothing left to run.</p>
           ) : (
             <div className="space-y-1.5">
-              {topTasks.map((task, i) => (
+              {topRows.map(({ task, label }, i) => (
                 <motion.div
                   key={task.id}
                   initial={{ opacity: 0, x: -6 }}
@@ -385,19 +444,21 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
                   transition={{ delay: i * 0.04 }}
                   className="flex items-center gap-3"
                 >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateTask(task.id, { completed: true });
-                    }}
-                    title="Complete task"
-                    className="w-4 h-4 rounded-full border-2 border-muted-foreground/40 hover:border-accent hover:bg-accent/20 flex items-center justify-center shrink-0 transition-colors group/check"
-                  >
-                    <Check className="w-2.5 h-2.5 text-accent opacity-0 group-hover/check:opacity-100" />
-                  </button>
+                  <GlassTip label="Complete task" tone="emerald" side="left">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateTask(task.id, { completed: true });
+                      }}
+                      aria-label="Complete task"
+                      className="w-4 h-4 rounded-full border-2 border-muted-foreground/40 hover:border-accent hover:bg-accent/20 flex items-center justify-center shrink-0 transition-colors group/check"
+                    >
+                      <Check className="w-2.5 h-2.5 text-accent opacity-0 group-hover/check:opacity-100" />
+                    </button>
+                  </GlassTip>
                   <span className="text-sm truncate">{task.name}</span>
                   <span className={`ml-auto text-[10px] font-semibold shrink-0 ${PRIORITY_CLASS[task.priority]}`}>
-                    {isOverdue(task) ? "Overdue" : task.startTime ? formatEventTime(task.startTime) : ""}
+                    {label}
                   </span>
                 </motion.div>
               ))}
@@ -406,7 +467,7 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
 
           {remaining > 0 && (
             <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors mt-3">
-              +{remaining} more task{remaining !== 1 ? "s" : ""} →
+              +{remaining} more {showingUpcoming ? "upcoming " : ""}task{remaining !== 1 ? "s" : ""} →
             </p>
           )}
         </>
@@ -415,88 +476,63 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
   );
 }
 
-function DailyFocus() {
-  const { dailyFocus, setDailyFocus, loading } = useApp();
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(dailyFocus);
+/** This month at a glance from The Vault (financials). The whole card opens it. */
+function VaultSticker({ onClick }: { onClick?: () => void }) {
+  const { transactions, financialCategories, loading } = useApp();
+  const month = toLocalDateStr().slice(0, 7);
 
-  // The stored focus arrives with the rest of the app data, so seed the input once it lands.
-  useEffect(() => {
-    if (!editing) setValue(dailyFocus);
-  }, [dailyFocus, editing]);
+  const summary = useMemo(() => {
+    const monthTx = transactions.filter((t) => t.date.startsWith(month));
+    const income = monthTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+    const spent = monthTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    const byCategory = new Map<string, number>();
+    for (const t of monthTx) {
+      if (t.type === "expense") byCategory.set(t.categoryId, (byCategory.get(t.categoryId) ?? 0) + t.amount);
+    }
+    const [topId, topAmount] = [...byCategory].sort((a, b) => b[1] - a[1])[0] ?? [];
+    const top = topId ? { name: financialCategories.find((c) => c.id === topId)?.name ?? "Other", amount: topAmount } : null;
+    return { count: monthTx.length, income, spent, net: income - spent, top };
+  }, [transactions, financialCategories, month]);
 
-  const save = () => {
-    setDailyFocus(value);
-    setEditing(false);
-  };
+  if (loading) return <VaultStickerSkeleton />;
 
-  if (loading) return <DailyFocusSkeleton />;
-
-  return (
-    <div className="glass-card-hover p-6 col-span-full lg:col-span-2">
-      <p className="text-xs text-muted-foreground uppercase tracking-widest mb-3">Daily Focus</p>
-      {editing ? (
-        <input
-          autoFocus
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={save}
-          onKeyDown={(e) => e.key === "Enter" && save()}
-          className="w-full bg-transparent text-xl font-semibold outline-none border-b border-primary/30 pb-1"
-        />
-      ) : (
-        <button
-          onClick={() => setEditing(true)}
-          className="text-xl font-semibold text-left w-full hover:text-primary transition-colors"
-        >
-          {dailyFocus || "Click to set your focus..."}
-        </button>
-      )}
-      <p className="text-xs text-muted-foreground mt-2">Click to edit your primary objective</p>
-    </div>
-  );
-}
-
-function SmartSummary() {
-  const { tasks, transactions, loading } = useApp();
-  const today = toLocalDateStr();
-  const todayTasks = tasks.filter((t) => taskFallsOnDate(t, today));
-  const dueTasks = todayTasks.filter((t) => !t.completed);
-  const completedTasks = todayTasks.filter((t) => t.completed);
-
-  const totalExpenses = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + t.amount, 0);
-
-  const coffeeSpend = transactions
-    .filter((t) => t.categoryId === "coffee" && t.type === "expense")
-    .reduce((s, t) => s + t.amount, 0);
-
-  const insights: string[] = [
-    `You have ${dueTasks.length} task${dueTasks.length !== 1 ? "s" : ""} due today.`,
-    completedTasks.length > 0 ? `${completedTasks.length} already completed — nice work!` : "",
-    totalExpenses > 0 ? `Total spending tracked: $${totalExpenses.toFixed(2)}.` : "",
-    coffeeSpend > 5 ? `You've spent $${coffeeSpend.toFixed(2)} on coffee recently.` : "",
-  ].filter(Boolean);
-
-  if (loading) return <SmartSummarySkeleton />;
+  const monthName = new Date().toLocaleDateString("en-US", { month: "long" });
+  const money = (n: number) => `$${Math.abs(n).toFixed(2)}`;
 
   return (
-    <div className="glass-card-hover glass-card-emerald p-6">
-      <p className="text-xs uppercase tracking-widest mb-3 text-accent">AI Smart Summary</p>
-      <div className="space-y-2">
-        {insights.map((line, i) => (
-          <motion.p
-            key={i}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="text-sm text-foreground/80"
-          >
-            {line}
-          </motion.p>
-        ))}
+    <div onClick={onClick} className="glass-card-hover glass-card-emerald p-6 cursor-pointer group">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs uppercase tracking-widest text-accent">The Vault</p>
+        <span className="p-1.5 rounded-lg" style={{ background: "hsl(160 84% 39% / 0.12)" }}>
+          <Wallet className="w-4 h-4 text-accent" />
+        </span>
       </div>
+
+      {summary.count === 0 ? (
+        <p className="text-sm text-muted-foreground">No transactions in {monthName} yet.</p>
+      ) : (
+        <>
+          <div className="flex items-baseline gap-2 mb-2">
+            <span className={`text-3xl font-bold tabular-nums ${summary.net >= 0 ? "text-accent" : "text-red-400"}`}>
+              {summary.net >= 0 ? "+" : "−"}
+              {money(summary.net)}
+            </span>
+            <span className="text-sm text-muted-foreground">net in {monthName}</span>
+          </div>
+          <p className="text-xs text-muted-foreground tabular-nums">
+            {money(summary.income)} in · {money(summary.spent)} out
+          </p>
+          {summary.top && (
+            <p className="text-xs text-muted-foreground mt-1 truncate">
+              Top spend: <span className="text-foreground/80">{summary.top.name}</span> {money(summary.top.amount)}
+            </p>
+          )}
+        </>
+      )}
+
+      <p className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-accent transition-colors mt-3">
+        Open the Vault <ChevronRight className="w-3.5 h-3.5" />
+      </p>
     </div>
   );
 }
@@ -510,13 +546,13 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
     >
       <Clock />
       <WeatherWidget onClick={() => onNavigate?.("weather")} />
-      <SmartSummary />
-      <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4">
-        <EngineWidget onClick={() => onNavigate?.("tasks")} />
-        <TodayHorizon onClick={() => onNavigate?.("calendar")} />
-      </div>
-      <DailyFocus />
-      <VaultWidget onClick={() => onNavigate?.("archive")} />
+      <VaultSticker onClick={() => onNavigate?.("financials")} />
+      <EngineWidget onClick={() => onNavigate?.("tasks")} />
+      <TodayHorizon onClick={() => onNavigate?.("calendar")} />
+      <ArchiveWidget onClick={() => onNavigate?.("archive")} />
+      <NebulaSpace onClick={() => onNavigate?.("nebula")} />
+      <PortalSpace onClick={() => onNavigate?.("portal")} />
+      <TerminalSpace onClick={() => onNavigate?.("terminal")} />
     </motion.div>
   );
 }
