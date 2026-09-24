@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Cloud,
@@ -29,6 +28,7 @@ import {
   type HourlyForecast,
 } from "@/hooks/useWeather";
 import { ThemedSelect } from "@/components/ui/field-controls";
+import { atmosphere, useAtmosphere } from "@/lib/atmosphereStore";
 
 // ── Weather icon mapping ──
 
@@ -392,25 +392,9 @@ function DetailCards({ data }: { data: ReturnType<typeof useWeather>["data"] }) 
 
 // ── Main Weather Page ──
 
-const CITY_STORAGE_KEY = "crystal-os-weather-city";
-
 export default function WeatherPage() {
-  const [cityId, setCityId] = useState(() => {
-    try {
-      return localStorage.getItem(CITY_STORAGE_KEY) ?? "on-85";
-    } catch {
-      return "on-85";
-    }
-  });
-
+  const { cityId } = useAtmosphere();
   const { data, isLoading, error } = useWeather(cityId);
-
-  const handleCityChange = (id: string) => {
-    setCityId(id);
-    try {
-      localStorage.setItem(CITY_STORAGE_KEY, id);
-    } catch { /* ignore localStorage errors */ }
-  };
 
   if (isLoading) {
     return (
@@ -451,7 +435,7 @@ export default function WeatherPage() {
       animate={{ opacity: 1, y: 0 }}
       className="grid gap-4"
     >
-      <CurrentConditions data={data} cityId={cityId} onCityChange={handleCityChange} />
+      <CurrentConditions data={data} cityId={cityId} onCityChange={atmosphere.setCity} />
       {data && <HourlyForecastSection hourly={data.hourly} />}
       {data && <SevenDayForecast forecasts={data.dailyForecasts} />}
       {data && <DetailCards data={data} />}

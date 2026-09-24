@@ -83,18 +83,18 @@ describe("edgeCrystals", () => {
   });
 
   it("roots every crystal at a corner or screen edge", () => {
-    expect(CRYSTALS.length).toBeGreaterThanOrEqual(30);
+    expect(CRYSTALS.length).toBeGreaterThanOrEqual(44);
     for (const c of CRYSTALS) {
       expect([c.x, c.y].some((v) => v === 0 || v === 100)).toBe(true);
     }
   });
 
-  it("has at least four crystals growing from each border", () => {
+  it("lines every border with crystals", () => {
     const count = (test: (c: (typeof CRYSTALS)[number]) => boolean) => CRYSTALS.filter(test).length;
-    expect(count((c) => c.y === 0)).toBeGreaterThanOrEqual(4);
-    expect(count((c) => c.y === 100)).toBeGreaterThanOrEqual(4);
-    expect(count((c) => c.x === 0)).toBeGreaterThanOrEqual(4);
-    expect(count((c) => c.x === 100)).toBeGreaterThanOrEqual(4);
+    expect(count((c) => c.y === 0)).toBeGreaterThanOrEqual(10);
+    expect(count((c) => c.y === 100)).toBeGreaterThanOrEqual(10);
+    expect(count((c) => c.x === 0)).toBeGreaterThanOrEqual(10);
+    expect(count((c) => c.x === 100)).toBeGreaterThanOrEqual(10);
   });
 
   it.each([

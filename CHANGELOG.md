@@ -5,6 +5,49 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.7.0] - 2026-09-24 - The Living Sky (Release Summary)
+
+*This release gives The Atmosphere a world of its own, the Living Sky: a sky that follows the sun, weather you can see, an aurora that leans toward your cursor, and your own photo under frosted glass if you want one. Around it, the rest of the shell gets tidier: The Archive moves to the sidebar's bottom group and drops the search bar, its crystal cave fills the whole border, Settings sections fold away, every switch and slider glides, and the Terminal's title stays black and white.*
+
+It also caps the development arc from `v0.6.0` through `v0.6.9`. Over that period Crystal OS gained a coding agent in its own tab, themed caves and skies for pages that used to share one indigo glass, a Home screen that shows every space at once, an installer that updates the app from inside it, and a run of passes that cut the idle memory and CPU of the Portal and the app around it.
+
+### Highlights
+
+- **The Nebula (`v0.6.0`, `v0.6.6`)**: a coding agent that reads, changes and runs things in a project folder, on three model tiers (OmniRoute, NVIDIA NIM, or Claude Code on your own account), with Claude Code's effort levels and Auto / Manual / Plan modes. Your Claude skills and local MCP servers come along, chats are saved and resume after a restart, and a WebGL nebula in your colours swirls behind it. `v0.6.6` added a context meter that shows how full the model's window is
+- **Themed spaces (`v0.6.1`, `v0.6.9`, `v0.7.0`)**: The Archive became a dark amethyst cave with glass crystals growing in from the edges, sparkles, and a cursor light the crystals reflect, and its Home box took the same look. The Atmosphere now has the Living Sky, detailed below. Every themed page restyles the sidebar, panels and title to match
+- **Home on one screen (`v0.6.8`, `v0.6.9`)**: a 3×3 grid with a Vault money card, upcoming tasks ordered by priority once today is clear, and Nebula, Portal, Terminal and Archive boxes that each wear their page's look. Styled tooltips render above the page, so neighbouring cards no longer cut them off, and the Vault's three charts draw in together
+- **A Portal that costs less in the background (`v0.6.2`, `v0.6.5`, `v0.6.7`)**: hidden apps drop their render caches after 30 seconds and are throttled unless set to **Keep live**, hiding to the tray trims everything at once, and **Keep loaded in background** can close an app's whole WebView2 process after a delay you choose. Shortcuts and focus now work while typing inside an app
+- **Performance mode and lighter loads (`v0.6.3`, `v0.6.7`)**: views are code-split and, in performance mode, load only when first opened, with cached data dropped after a minute and animations turned off. Tasks and transactions past Supabase's 1000-row cap now load, the desktop sidecar shrank from 13.5 MB to about 650 KB, and a hidden window stops every backdrop loop and pauses polling
+- **Install & update from inside the app (`v0.6.6`)**: Settings lists every GitHub release and downloads its installer to your Downloads folder, or builds one from a source checkout with a live log
+- **Builds that look like dev (`v0.6.4`, `v0.6.6`)**: Inter and Cascadia Mono are bundled, since the desktop CSP blocked the Google Fonts CDN, and a CSP fix lets xterm's injected styles through, so the Terminal no longer renders in the sans-serif font in packaged builds. `npm run build:desktop` also prunes old installers first
+- **The Living Sky (`v0.7.0`)**: sky phases from the city's sunrise and sunset, weather effects, the aurora, a custom background image with adjustable blur, and a matching weather box on Home, detailed below
+- **A calmer shell (`v0.7.0`)**: The Archive in the bottom group without the search bar, a fuller crystal border with brighter sparkles, collapsible Settings sections, gliding switches and sliders, and a monochrome Terminal title, detailed below
+
+### Added
+
+- **The Atmosphere has its own look: the Living Sky.** A sky gradient for the time of day, from the chosen city's sunrise and sunset (dawn and dusk run 45 minutes either side). It has a glowing sun, the moon in its current phase, and twinkling stars at night. The panels and sidebar switch to deep night glass, and the page title and sidebar pill take teal and sky blue.
+- **Weather effects** (Settings → The Atmosphere, on by default). Cloud bands, overcast, fog, rain, snow, sleet and lightning follow the current conditions. Lightning flashes the sky, draws a bolt, and lights up the clouds and aurora for a moment.
+- **Aurora** (on by default). Soft ribbons of northern lights over a pine treeline. They sway on their own, bend toward the cursor, sit behind the clouds and rain, and are brightest at night and faint by day. It combines freely with weather effects; with both off you get the plain sky.
+- **Custom background image.** Pick a PNG or JPEG (up to 25 MB) in Settings. It is scaled to at most 2560 px, stored in IndexedDB on this device, and shown under frosted glass behind the page and the Home box. The sky becomes a light tint over it, and all effects, the aurora included, draw on top. Remove it with the bin button.
+- **Image blur** (Settings → The Atmosphere, shown once an image is set). Sets how much the glass frosts the image, from sharp (0%) to heavy (100%, a 40 px blur); the default is 50%. The blurred copy is baked once on a canvas when you let go of the slider, not blurred live. A live full-screen CSS blur under the aurora's moving layers could make the desktop app drop the photo and show the plain sky.
+- **The weather box on Home wears the Living Sky**: the phase's sky (or your image), the aurora band and pines, clouds, rain or snow streaks, fog and lightning flicker, all in CSS.
+- **Settings sections fold away.** Click a section's header (Keyboard shortcuts, Startup, Vault, The Nebula, The Portal, The Atmosphere, Performance, Install & update) to collapse or expand it. The body eases between heights over 360 ms (a CSS grid row moving between `0fr` and `1fr`, so nothing is measured in script) while it fades, and the chevron turns. A folded section leaves the tab order, and which sections are folded is remembered on this device (`crystal-os-settings-collapsed` in `localStorage`).
+
+### Changed
+
+- The chosen weather city lives in a shared store (`src/lib/atmosphereStore.ts`) so the page, backdrop and Home box stay in step. It uses the same `crystal-os-weather-city` key, so your saved city carries over.
+- The Portal's Stargate stars now come from a shared `StarCanvas` component, which the Atmosphere's night sky also uses. They look and behave the same.
+- **The Archive moved to the sidebar's bottom group,** at its top, above The Nebula. On desktop the group now reads Archive, Nebula, Portal, Terminal, Settings. The phone bar keeps The Archive in its row, since it has no bottom group.
+- **The global search bar is hidden on The Archive,** as on the Terminal, Portal and Nebula tabs, along with its shortcuts. The Archive has its own vault search, and its note rail now runs down to the bottom of the window in the space the bar used.
+- **The Archive's border is lined with crystals.** There are 53 crystals instead of 32: each corner grows three, and clusters now sit every 12–16% along each edge instead of every 22–26%, so the edges read as one continuous band. They grow in slightly faster one after another, so the extra crystals do not stretch the opening.
+- **The Archive's sparkles are easier to see.** There are 80 background stars instead of 44, at 6–16 px instead of 3–11 px, and the stars on the crystal tips are 10–20 px instead of 8–16 px. Each star has a larger white core, thinner and longer rays, and a soft violet glow behind it that twinkles in step.
+- **Switches and sliders glide.** Switches slide over 300 ms with a slight overshoot and a soft glow when on, instead of a 150 ms snap. Sliders (swirl speed, star density, image blur) ease the thumb and the filled bar to each new step over 180 ms instead of jumping, and the thumb grows a little on hover and shrinks while held. These controls and the Settings fold keep their short transitions in performance mode (they carry `data-smooth`, which the `perf-still` rule skips), since they cost next to nothing.
+- **The Terminal title glitches in black and white.** The ghost copies behind the Terminal page title, the Home Terminal box title and the sidebar's Crystal OS mark on the Terminal tab are now bright white and dim grey instead of red and cyan, matching the tab's monochrome look.
+
+### Fixed
+
+- **The Terminal title and sidebar mark turned aqua in performance mode.** The red and cyan ghost copies were only hidden by their animation's keyframes. Performance mode jumps animations to their end state, and these keyframes had no 100% frame, so the end state was the unclipped copy and the cyan one covered the white text. The copies are now clipped away in their base style and in a closing keyframe, so they stay hidden whenever the animation is not running: performance mode, reduced motion, or a paused window.
+
 ## [v0.6.9] - 2026-09-23 - The Archive Joins the Grid
 
 ### Changed

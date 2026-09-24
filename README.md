@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-301%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.6.9-6366F1)
+![Version](https://img.shields.io/badge/version-0.7.0-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.6.9** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.7.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -21,16 +21,16 @@ Current release: **v0.6.9** — see [CHANGELOG.md](CHANGELOG.md) for release his
 |---------|-------------|
 | **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking |
 | **📅 The Horizon** | Google Calendar, live: month and agenda views, create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid |
-| **🏠 Home widgets** | A 3×3 grid: clock, weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The Archive, Nebula, Portal and Terminal boxes are each themed like their page (the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton |
+| **🏠 Home widgets** | A 3×3 grid: clock, weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
-| **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations |
-| **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list. Its own amethyst theme: glass crystals growing in from the screen edges, sparkles, and a cursor light the crystals reflect |
+| **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations, over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
+| **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and hides the global search bar, since it has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
 | **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, a context-window meter, per-model token counts, and a swirling three-colour nebula |
 | **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges, and three themes (desktop; the web build opens apps in new tabs) |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
 | **⏱️ Pomodoro** | Customizable focus/break intervals, session tracking, audio notifications, and tray controls (Tasks view) |
 | **🖥️ Desktop shell** | Native Tauri window with PowerShell terminal, tray (Pomodoro + Quick Add), always-on global hotkeys, and launch-at-login — the web build is unaffected |
-| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, vault folder, Nebula keys, models and look, Portal theme, and downloading or building an installer |
+| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, vault folder, Nebula keys, models and look, Portal theme, and downloading or building an installer. Click a section's header to fold it away (remembered on this device); switches and sliders glide instead of snapping |
 | **⌨️ Command Palette** | Global search over tasks, transactions, and vault note bodies, plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
 | **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar |
@@ -133,9 +133,11 @@ src/
 ├── components/
 │   ├── layout/
 │   │   ├── AppSplash.tsx       # "Crystal OS / Loading…" splash while the session restores
-│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal/Nebula/Archive restyle the sidebar)
+│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal/Nebula/Atmosphere/Archive restyle the sidebar)
 │   │   ├── TerminalStatic.tsx  # Static-noise backdrop for the Terminal tab
 │   │   ├── PortalBackdrop.tsx  # Themed backdrop for The Portal
+│   │   ├── AtmosphereBackdrop.tsx # Living Sky for The Atmosphere: sky, sun/moon, aurora, clouds, rain/snow/lightning
+│   │   ├── StarCanvas.tsx      # Twinkling star canvas (Portal Stargate theme, Atmosphere night sky)
 │   │   └── ObsidianBackdrop.tsx # Crystal backdrop and cursor light for The Archive
 │   ├── portal/
 │   │   ├── PortalNavbar.tsx    # App pills (drag, right-click menu), browser controls
@@ -146,7 +148,7 @@ src/
 │   │   ├── glass-tooltip.tsx   # GlassTip: gradient-bordered tooltip used in place of `title`, drawn above the page
 │   │   └── dashboard-skeletons.tsx # Per-widget loading skeletons for the home page
 │   ├── views/                  # Page-level components
-│   │   ├── HomePage.tsx        # Clock, weather, Vault, Engine, today's events, themed Archive widgets
+│   │   ├── HomePage.tsx        # Clock, weather, Vault, Engine, today's events, themed weather and Archive widgets
 │   │   ├── HomeSpaces.tsx      # Home's themed Nebula, Portal and Terminal boxes
 │   │   ├── TasksPage.tsx       # Task list, form, filtering, Pomodoro
 │   │   ├── CalendarPage.tsx    # Google Calendar: month + agenda, event CRUD
@@ -155,7 +157,7 @@ src/
 │   │   ├── ArchivePage.tsx     # Vault browser: search, tags, markdown reader
 │   │   ├── TerminalPage.tsx    # Up to 5 PowerShell terminals in tabs (xterm.js, desktop only)
 │   │   ├── PortalPage.tsx      # The Portal: places the active app's webview over its frame
-│   │   ├── SettingsPage.tsx    # Hotkeys, launch at login, vault folder, Portal theme, Install & update
+│   │   ├── SettingsPage.tsx    # Hotkeys, launch at login, vault folder, Portal theme, Atmosphere effects and image, Install & update
 │   │   ├── InstallerSection.tsx # Release picker, installer download, build-from-source log
 │   │   ├── PomodoroTimer.tsx   # Focus timer component
 │   │   └── CategoryManager.tsx # Category CRUD for tasks/finances
@@ -173,6 +175,7 @@ src/
 │   ├── useTrayQuickAdd.ts      # Tray Quick Add events
 │   ├── useEscapeKey.ts         # Stacked Escape-to-close for overlays (topmost closes first)
 │   ├── useWeather.ts           # Weather API integration
+│   ├── useSkyScene.ts          # Living Sky state: phase of day, weather look, moon, for the chosen city
 │   ├── use-toast.ts            # Toast notifications (Sonner)
 │   └── use-mobile.tsx          # Responsive breakpoint hook
 ├── lib/
@@ -186,6 +189,9 @@ src/
 │   ├── portalNative.ts         # Desktop Portal bridge (portal_* commands)
 │   ├── installerNative.ts      # Desktop installer bridge (installer_* commands, version helpers)
 │   ├── homeTasks.ts            # Home Engine ordering: priority ranks, upcoming tasks
+│   ├── atmosphereScene.ts      # Living Sky maths: sky phase, weather codes → effects, aurora/star strength, moon, pine ridge
+│   ├── atmosphereStore.ts      # Atmosphere settings: city, weather effects, aurora, background image and its blur
+│   ├── atmosphereImage.ts      # Background image: checks, scaling, baked blur, IndexedDB storage
 │   ├── pomodoro.ts             # Module-level Pomodoro store (page + tray agree)
 │   ├── tray.ts                 # Tauri tray events → app, app state → tray menu
 │   ├── hotkey.ts               # Hotkey parsing + combo validation
@@ -249,14 +255,14 @@ The middleware is mounted on both the dev server and `vite preview`. It is **not
 
 ### Layout
 
-The browser rail is a fixed-height column split into two halves that scroll independently: the tag cloud on top, the filtered note list below, with the note count between them as a divider and the search field pinned above both. Each half is `flex-1 basis-0 min-h-0`, so a vault with many tags cannot crowd the list out of view, and a vault with few tags leaves the extra space to the list.
+The Archive has no global search bar (like the Terminal, Portal and Nebula), so the rail runs down to the bottom of the window. It is a fixed-height column split into two halves that scroll independently: the tag cloud on top, the filtered note list below, with the note count between them as a divider and the search field pinned above both. Each half is `flex-1 basis-0 min-h-0`, so a vault with many tags cannot crowd the list out of view, and a vault with few tags leaves the extra space to the list.
 
 ### Theme
 
 The Archive has its own dark amethyst look. The panels, tags, note list, buttons, and sidebar turn violet, and `ObsidianBackdrop` (`src/components/layout/ObsidianBackdrop.tsx`) draws the scene behind them with CSS, SVG, and DOM only (no canvas, WebGL, or 3D library):
 
-- **Crystals.** 32 glass crystals grow in from the four corners and edges, in five faceted shapes, at resting opacities between 0.3 and 0.9. Each one is tilted to point into the screen and pushed out along its own axis until its flat base sits past the edge, so no root is ever on screen. The layout is seeded, so it is the same on every visit (`src/lib/obsidianScene.ts`).
-- **Sparkles.** Four-point stars twinkle at random across the background, and one sits near the tip of each crystal, on top of the glass.
+- **Crystals.** 53 glass crystals grow in from the four corners and edges, in five faceted shapes. Clusters sit every 12–16% along each edge, so the border reads as one continuous band of crystal, at resting opacities between 0.3 and 0.9. Each one is tilted to point into the screen and pushed out along its own axis until its flat base sits past the edge, so no root is ever on screen. The layout is seeded, so it is the same on every visit (`src/lib/obsidianScene.ts`).
+- **Sparkles.** 80 four-point stars (6–16 px) twinkle at random across the background, and one (10–20 px) sits near the tip of each crystal, on top of the glass. Each star has a bright white core and a soft violet glow that twinkles with it.
 - **Cursor light.** A soft violet aura follows the pointer and breathes between 0.5 and 0.8 opacity. It fades out when the pointer leaves the window.
 - **Reflections.** A crystal near the pointer lights up: a brighter rim, a halo, and a second glass layer with a stronger `backdrop-filter` (brightness, saturation, contrast) that carries a glint positioned where the pointer is. The light is worked out in the crystal's own rotated frame, so tilted crystals light along their length.
 
@@ -265,6 +271,20 @@ The pointer never touches React state. One `pointermove` listener schedules at m
 ### Safety
 
 On the web, every filesystem access goes through `resolveVaultPath`, which rejects absolute paths, drive letters, and any traversal escaping the vault root. On desktop, `vault.rs` does the same and also refuses `..`, NTFS stream names, and symlinks or junctions that lead out of the vault. Request bodies are capped at 64 KB, capture text at 10,000 characters, and tags at 12 per request / 60 characters each, validated against the Obsidian tag charset.
+
+---
+
+## 🌌 The Atmosphere (Living Sky)
+
+The weather tab draws a Living Sky behind its panels (`src/components/layout/AtmosphereBackdrop.tsx`), and the weather box on Home wears a small CSS-only version of it. The panels and sidebar switch to deep night glass so text stays readable over a bright sky.
+
+- **The sky, always on.** The gradient follows the time of day for the chosen city: dawn and dusk run 45 minutes either side of that day's sunrise and sunset, with day between them and night outside. Phases cross-fade over four seconds. The sun glows high by day and low on the horizon at dawn and dusk; the moon is drawn in its current phase and illumination; stars twinkle at night and faintly at twilight. Without usable sunrise and sunset times, 6:30 and 19:30 are used.
+- **Weather effects** (Settings → The Atmosphere, on by default). The current Environment Canada icon code sets cloud cover, rain, snow, sleet, fog and lightning (`skyWeather` in `src/lib/atmosphereScene.ts`). Two tiled cloud bands drift across the sky, an overcast layer darkens it, and one canvas draws rain, snow and lightning at 30 fps. A strike flashes the sky, draws a bolt, and briefly lights up the clouds and the aurora.
+- **Aurora** (on by default). Three ribbons of northern lights sway on their own and bend toward the cursor over a pine treeline. They sit behind the clouds and rain, at full strength at night and faint by day. As with the Archive light, the cursor never touches React state: one frame per move writes `--bend-x` on the field and CSS does the rest.
+- **Background image.** Choose a PNG or JPEG (up to 25 MB) in Settings. It is checked, scaled down to 2560 px on its longest side, and stored in IndexedDB on this device (`src/lib/atmosphereImage.ts`). The image is shown under frosted glass behind the page and the Home box; the sky becomes a light tint of the current phase over it, and the sun, moon, stars, aurora and weather draw on top.
+- **Image blur** (0–100%, default 50%). How much the glass frosts the image, up to a 40 px blur. The store bakes a blurred 1600 px copy on a canvas whenever the image or the setting changes (the slider commits on release), and the page shows that copy as a plain image. There is no live CSS blur and no blend mode on the aurora: together with the aurora's large moving layers, they could make the desktop WebView drop the photo on high-DPI screens.
+
+Both switches work together or apart; with both off you get the plain sky for the time of day. The city picked on the page is shared with the Home box and the backdrop (`src/lib/atmosphereStore.ts`, same `crystal-os-weather-city` key as before). Every canvas pauses while the window is hidden, and performance mode or reduced motion shows a still frame with no lightning.
 
 ---
 
@@ -379,7 +399,7 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 2. Add `http://127.0.0.1:8787/api/calendar/auth/callback` as a second authorized redirect URI on your Google OAuth client, and set `GOOGLE_REDIRECT_URI` to it in that copy.
 3. Launch Crystal OS. **Connect** in The Horizon opens Google in your default browser. Once it reports success, switch back to the app.
 
-**Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: both global hotkeys, **Launch at login**, the vault folder, The Portal's theme, and **Install & update**. The palette's **Open Settings** row goes there too. Click the Crystal OS mark at the top of the sidebar to return to **The Pulse** (home) from any page.
+**Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: both global hotkeys, **Launch at login**, the vault folder, The Portal's theme, and **Install & update**. Each section's header folds it open and closed with a short height animation; which sections are folded is saved in `localStorage` (`crystal-os-settings-collapsed`). Switches, sliders and the fold animation are marked `data-smooth` and keep their short transitions in performance mode, which otherwise makes transitions instant. The palette's **Open Settings** row goes there too. Click the Crystal OS mark at the top of the sidebar to return to **The Pulse** (home) from any page.
 
 **Install & update.** The last panel in Settings keeps Crystal OS current without leaving the app.
 
@@ -396,7 +416,7 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 - Ctrl+C copies when text is selected and interrupts otherwise; Ctrl+V pastes.
 - The shells run in Rust (`src-tauri/src/terminal.rs`) and the view talks to them through `terminal_list`, `terminal_open`, `terminal_attach`, `terminal_restart`, `terminal_close`, `terminal_write`, and `terminal_resize` (`src/lib/terminalNative.ts`). Every command after `terminal_open` takes the shell's `id`; the Rust side enforces the limit of 5.
 - **Cascadia Mono is bundled with the app** (`@fontsource/cascadia-mono`), not read from the machine, so the terminal looks the same whether or not Windows Terminal is installed. Only the subsets a shell draws ship: latin, latin-ext, and the box-drawing block TUIs use for borders, in regular and bold. The view waits for the face to load before opening xterm, because xterm measures the character cell once and keeps those metrics for the life of the terminal.
-- While the tab is open the window switches to a black, glitching monochrome look, and the search bar is hidden.
+- While the tab is open the window switches to a black, glitching monochrome look, and the search bar is hidden. The page title and the sidebar's Crystal OS mark glitch with white and grey ghost copies that are clipped away at rest, so the title stays white when animations are stopped (performance mode, reduced motion, hidden window).
 
 **The Portal.** The orbit icon above Terminal opens **The Portal**, where web apps such as Discord and Instagram run as real pages that you sign in to once. See [ADR 0002](docs/adr/0002-portal-child-webviews.md) for how it works.
 

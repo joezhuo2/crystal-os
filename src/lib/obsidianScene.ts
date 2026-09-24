@@ -93,24 +93,37 @@ interface Cluster {
   reach: number;
 }
 
-/** Corners grow the biggest clusters; each edge gets three smaller ones. */
+/**
+ * Corners grow the biggest clusters; each edge is lined with smaller ones
+ * spaced closely enough that the border reads as one band of crystal.
+ */
 const CLUSTERS: readonly Cluster[] = [
   { x: 0, y: 100, edges: ["left", "bottom"], angle: 45, count: 3, reach: 44 },
   { x: 100, y: 100, edges: ["right", "bottom"], angle: -45, count: 3, reach: 42 },
-  { x: 0, y: 0, edges: ["left", "top"], angle: 135, count: 2, reach: 34 },
+  { x: 0, y: 0, edges: ["left", "top"], angle: 135, count: 3, reach: 36 },
   { x: 100, y: 0, edges: ["right", "top"], angle: -135, count: 3, reach: 38 },
-  { x: 22, y: 100, edges: ["bottom"], angle: 0, count: 2, reach: 22 },
-  { x: 46, y: 100, edges: ["bottom"], angle: 0, count: 2, reach: 26 },
+  { x: 12, y: 100, edges: ["bottom"], angle: 0, count: 2, reach: 22 },
+  { x: 24, y: 100, edges: ["bottom"], angle: 0, count: 2, reach: 24 },
+  { x: 36, y: 100, edges: ["bottom"], angle: 0, count: 2, reach: 22 },
+  { x: 48, y: 100, edges: ["bottom"], angle: 0, count: 3, reach: 26 },
+  { x: 60, y: 100, edges: ["bottom"], angle: 0, count: 3, reach: 24 },
   { x: 72, y: 100, edges: ["bottom"], angle: 0, count: 2, reach: 24 },
-  { x: 28, y: 0, edges: ["top"], angle: 180, count: 1, reach: 20 },
-  { x: 50, y: 0, edges: ["top"], angle: 180, count: 2, reach: 20 },
-  { x: 76, y: 0, edges: ["top"], angle: 180, count: 2, reach: 22 },
-  { x: 100, y: 26, edges: ["right"], angle: -90, count: 2, reach: 24 },
-  { x: 100, y: 50, edges: ["right"], angle: -90, count: 2, reach: 26 },
-  { x: 100, y: 74, edges: ["right"], angle: -90, count: 1, reach: 22 },
-  { x: 0, y: 24, edges: ["left"], angle: 90, count: 1, reach: 22 },
-  { x: 0, y: 46, edges: ["left"], angle: 90, count: 2, reach: 28 },
-  { x: 0, y: 70, edges: ["left"], angle: 90, count: 2, reach: 24 },
+  { x: 84, y: 100, edges: ["bottom"], angle: 0, count: 1, reach: 20 },
+  { x: 12, y: 0, edges: ["top"], angle: 180, count: 1, reach: 20 },
+  { x: 24, y: 0, edges: ["top"], angle: 180, count: 2, reach: 22 },
+  { x: 36, y: 0, edges: ["top"], angle: 180, count: 2, reach: 20 },
+  { x: 48, y: 0, edges: ["top"], angle: 180, count: 2, reach: 24 },
+  { x: 60, y: 0, edges: ["top"], angle: 180, count: 2, reach: 20 },
+  { x: 72, y: 0, edges: ["top"], angle: 180, count: 2, reach: 24 },
+  { x: 86, y: 0, edges: ["top"], angle: 180, count: 1, reach: 20 },
+  { x: 100, y: 20, edges: ["right"], angle: -90, count: 1, reach: 20 },
+  { x: 100, y: 36, edges: ["right"], angle: -90, count: 2, reach: 24 },
+  { x: 100, y: 52, edges: ["right"], angle: -90, count: 2, reach: 26 },
+  { x: 100, y: 68, edges: ["right"], angle: -90, count: 2, reach: 22 },
+  { x: 0, y: 20, edges: ["left"], angle: 90, count: 1, reach: 20 },
+  { x: 0, y: 36, edges: ["left"], angle: 90, count: 2, reach: 24 },
+  { x: 0, y: 52, edges: ["left"], angle: 90, count: 2, reach: 28 },
+  { x: 0, y: 68, edges: ["left"], angle: 90, count: 2, reach: 24 },
 ];
 
 /** How far past the edge the base sits, in vmin. Covers the float and the rim stroke. */
@@ -195,7 +208,7 @@ export function edgeCrystals(seed = 0x0b5d1a): CrystalSpec[] {
         opacity: round(0.3 + rng() * 0.6, 2),
         float: round(7 + rng() * 7),
         delay: -round(rng() * 10),
-        emerge: c * 50 + i * 60,
+        emerge: c * 35 + i * 60,
       });
     }
   });

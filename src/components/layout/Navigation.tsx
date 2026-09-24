@@ -20,7 +20,6 @@ const tabs: Tab[] = [
   { id: "calendar", label: "The Horizon", icon: Calendar },
   { id: "financials", label: "The Vault", icon: Wallet },
   { id: "weather", label: "The Atmosphere", icon: CloudSun },
-  { id: "archive", label: "The Archive", icon: BookOpen },
 ];
 
 /** Pinned to the bottom of the sidebar, apart from the views above. */
@@ -38,8 +37,14 @@ const portalTab: Tab = { id: "portal", label: "The Portal", icon: Orbit };
 /** Desktop only, above The Portal. Agents run in Rust (src-tauri/src/harness/). */
 const nebulaTab: Tab = { id: "nebula", label: "The Nebula", icon: Sparkles };
 
-/** The Terminal, Portal, Nebula, and Archive tabs restyle the sidebar to match their pages. */
-type SidebarMode = "default" | "terminal" | "portal" | "nebula" | "obsidian";
+/** Top of the bottom group, above The Nebula. */
+const archiveTab: Tab = { id: "archive", label: "The Archive", icon: BookOpen };
+
+/** The phone bar has no bottom group, so The Archive stays in its row. */
+const bottomTabs: Tab[] = [...tabs, archiveTab];
+
+/** The Terminal, Portal, Nebula, Atmosphere, and Archive tabs restyle the sidebar to match their pages. */
+type SidebarMode = "default" | "terminal" | "portal" | "nebula" | "atmosphere" | "obsidian";
 
 interface SidebarNavProps {
   activeTab: TabId;
@@ -60,6 +65,11 @@ const activePillStyle: Record<SidebarMode, React.CSSProperties> = {
     background: "color-mix(in srgb, var(--nebula-a) 22%, transparent)",
     border: "1px solid color-mix(in srgb, var(--nebula-c) 40%, transparent)",
     boxShadow: "0 0 18px color-mix(in srgb, var(--nebula-b) 30%, transparent)",
+  },
+  atmosphere: {
+    background: "rgb(45 212 191 / 0.16)",
+    border: "1px solid rgb(125 211 252 / 0.38)",
+    boxShadow: "0 0 18px rgb(52 211 153 / 0.28)",
   },
   obsidian: {
     background: "rgb(168 85 247 / 0.22)",
@@ -88,7 +98,7 @@ function SidebarButton({
       ? active
         ? "text-neutral-50"
         : "text-neutral-500 hover:text-neutral-100 hover:bg-white/5"
-      : mode === "portal" || mode === "nebula" || mode === "obsidian"
+      : mode === "portal" || mode === "nebula" || mode === "atmosphere" || mode === "obsidian"
         ? active
           ? "text-white"
           : "text-white/45 hover:text-white hover:bg-white/5"
@@ -147,9 +157,11 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
         ? "portal"
         : activeTab === "nebula"
           ? "nebula"
-          : activeTab === "archive"
-            ? "obsidian"
-            : "default";
+          : activeTab === "weather"
+            ? "atmosphere"
+            : activeTab === "archive"
+              ? "obsidian"
+              : "default";
   const terminal = mode === "terminal";
   const sidebarClass = terminal
     ? "sidebar-terminal"
@@ -157,11 +169,21 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
       ? "sidebar-portal"
       : mode === "nebula"
         ? "sidebar-nebula"
-        : mode === "obsidian"
-          ? "sidebar-obsidian"
-          : "";
+        : mode === "atmosphere"
+          ? "sidebar-atmosphere"
+          : mode === "obsidian"
+            ? "sidebar-obsidian"
+            : "";
   const gradientClass =
-    mode === "portal" ? "portal-gradient-text" : mode === "nebula" ? "nebula-title" : mode === "obsidian" ? "obsidian-title" : "text-gradient-indigo";
+    mode === "portal"
+      ? "portal-gradient-text"
+      : mode === "nebula"
+        ? "nebula-title"
+        : mode === "atmosphere"
+          ? "atmosphere-title"
+          : mode === "obsidian"
+            ? "obsidian-title"
+            : "text-gradient-indigo";
 
   const button = (tab: Tab, badge?: PortalBadge | null) => (
     <SidebarButton
@@ -223,6 +245,7 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
       </button>
       <nav className="flex flex-col gap-1">{tabs.map((tab) => button(tab))}</nav>
       <div className="mt-auto flex flex-col gap-1">
+        {button(archiveTab)}
         {isDesktop() && button(nebulaTab)}
         {button(portalTab, portalBadge)}
         {isDesktop() && button(terminalTab)}
@@ -235,7 +258,7 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
 export function BottomNav({ activeTab, onTabChange }: SidebarNavProps) {
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass-card rounded-none border-l-0 border-r-0 border-b-0 px-2 py-1 flex justify-around">
-      {tabs.map((tab) => {
+      {bottomTabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
           <button

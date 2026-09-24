@@ -9,7 +9,7 @@ import {
   type Sparkle,
 } from "@/lib/obsidianScene";
 
-const BACK_SPARKLES = 44;
+const BACK_SPARKLES = 80;
 
 function sparkleStyle(s: Sparkle): React.CSSProperties {
   return {
@@ -39,10 +39,10 @@ export default function ObsidianBackdrop() {
   const rootRef = useRef<HTMLDivElement>(null);
   // Random once per visit; later renders reuse them.
   const [sparkles] = useState(() => ({
-    back: makeSparkles(BACK_SPARKLES, Math.random, [3, 11]),
+    back: makeSparkles(BACK_SPARKLES, Math.random, [6, 16]),
     // One near each crystal's tip, so it sits on top of the glass.
     front: CRYSTALS.map(
-      () => makeSparkles(1, Math.random, [8, 16], { x: [35, 65], y: [4, 30] })[0],
+      () => makeSparkles(1, Math.random, [10, 20], { x: [35, 65], y: [4, 30] })[0],
     ),
   }));
 

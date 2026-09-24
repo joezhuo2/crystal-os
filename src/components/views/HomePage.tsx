@@ -3,7 +3,10 @@ import { Cloud, Sun, Moon, CloudRain, CloudSun, CloudSnow, CloudLightning, Cloud
 import { useApp, type Priority, type Task } from "@/contexts/AppContext";
 import { motion } from "framer-motion";
 import { taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
-import { useWeather, AVAILABLE_CITIES } from "@/hooks/useWeather";
+import { AVAILABLE_CITIES } from "@/hooks/useWeather";
+import { useSkyScene } from "@/hooks/useSkyScene";
+import { useAtmosphere } from "@/lib/atmosphereStore";
+import { auroraStrength, pineRidge } from "@/lib/atmosphereScene";
 import { useVaultNotes } from "@/hooks/useVault";
 import {
   useCalendarEvents,
@@ -52,8 +55,6 @@ function Clock() {
   );
 }
 
-const CITY_STORAGE_KEY = "crystal-os-weather-city";
-
 function HomeWeatherIcon({ code, className = "w-6 h-6" }: { code: number; className?: string }) {
   const props = { className };
   if (code === 0 || code === 1) return <Sun {...props} />;
@@ -71,36 +72,71 @@ function HomeWeatherIcon({ code, className = "w-6 h-6" }: { code: number; classN
   return <Cloud {...props} />;
 }
 
+const HOME_RIDGE = pineRidge(5, 1000, 36);
+
+/**
+ * Current weather, wearing a small Living Sky like The Atmosphere page: the
+ * sky for the time of day (or the custom background, blurred and tinted),
+ * plus the aurora and weather effects when they are on in Settings. The
+ * layers are CSS only (index.css, "Home spaces"), so Home stays light.
+ */
 function WeatherWidget({ onClick }: { onClick?: () => void }) {
-  const cityId = (() => {
-    try { return localStorage.getItem(CITY_STORAGE_KEY) ?? "on-85"; } catch { return "on-85"; }
-  })();
-  const { data, isLoading } = useWeather(cityId);
+  const { cityId, weatherEffects, aurora, backdropUrl } = useAtmosphere();
+  const { data, phase, weather } = useSkyScene();
   const cityName = AVAILABLE_CITIES.find((c) => c.id === cityId)?.name ?? "Markham";
 
   // Find today's high/low from daily forecasts
   const todayHigh = data?.dailyForecasts?.[0]?.high ?? data?.dailyForecasts?.[1]?.high ?? null;
   const todayLow = data?.dailyForecasts?.[0]?.low ?? data?.dailyForecasts?.[1]?.low ?? null;
 
-  if (isLoading || !data) {
+  if (!data) {
     return <WeatherWidgetSkeleton />;
   }
 
+  const effects = weatherEffects;
+  const rain = effects && (weather.precip === "rain" || weather.precip === "sleet");
+  const snow = effects && (weather.precip === "snow" || weather.precip === "sleet");
+
   return (
-    <div className="glass-card-hover p-6 flex items-center gap-4 cursor-pointer" onClick={onClick}>
-      <div className="p-3 rounded-xl" style={{ background: "hsl(239 84% 67% / 0.12)" }}>
-        <HomeWeatherIcon code={data.current.iconCode} className="w-6 h-6 text-primary" />
-      </div>
-      <div>
-        <div className="flex items-baseline gap-2">
-          <p className="text-2xl font-semibold">{Math.round(data.current.temperature)}°C</p>
-          {todayHigh !== null && todayLow !== null && (
-            <p className="text-xs text-muted-foreground">
-              H:{todayHigh}° L:{todayLow}°
-            </p>
-          )}
+    <div
+      className="home-space home-space-atmosphere"
+      data-phase={phase}
+      style={{ "--aurora": auroraStrength(phase), "--cloud": effects ? weather.cloud : 0 } as React.CSSProperties}
+    >
+      <span aria-hidden="true" className="home-atmo-scene">
+        {backdropUrl && (
+          <>
+            <span className="home-atmo-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />
+            <span className="home-atmo-tint" />
+          </>
+        )}
+        {aurora && <span className="home-atmo-aurora" />}
+        {effects && weather.cloud > 0 && <span className="home-atmo-clouds" />}
+        {aurora && (
+          <svg className="home-atmo-pines" viewBox="0 0 1000 100" preserveAspectRatio="none">
+            <path d={HOME_RIDGE} />
+          </svg>
+        )}
+        {effects && weather.fog && <span className="home-atmo-fog" />}
+        {rain && <span className="home-atmo-precip" data-kind="rain" />}
+        {snow && <span className="home-atmo-precip" data-kind="snow" />}
+        {effects && weather.lightning && <span className="home-atmo-flash" />}
+      </span>
+      <div className="home-card-atmosphere h-full p-6 flex items-center gap-4 cursor-pointer" onClick={onClick}>
+        <div className="p-3 rounded-xl bg-white/[0.08]">
+          <HomeWeatherIcon code={data.current.iconCode} className="w-6 h-6 text-primary" />
         </div>
-        <p className="text-xs text-muted-foreground">{data.current.condition} · {cityName}</p>
+        <div>
+          <div className="flex items-baseline gap-2">
+            <p className="text-2xl font-semibold">{Math.round(data.current.temperature)}°C</p>
+            {todayHigh !== null && todayLow !== null && (
+              <p className="text-xs text-muted-foreground">
+                H:{todayHigh}° L:{todayLow}°
+              </p>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">{data.current.condition} · {cityName}</p>
+        </div>
       </div>
     </div>
   );

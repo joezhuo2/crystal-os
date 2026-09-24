@@ -361,7 +361,8 @@ export default function ArchivePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] gap-4">
         {/* ── Left rail: search, tags, note list ── */}
-        <div className="glass-card p-4 flex flex-col gap-3 h-[70vh] lg:h-[calc(100vh-13rem)]">
+        {/* The search bar is hidden on this tab (see Index), so the rail takes its space. */}
+        <div className="glass-card p-4 flex flex-col gap-3 h-[70vh] lg:h-[calc(100vh-8.5rem)]">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background/30">
             <Search className="w-4 h-4 text-muted-foreground/50 shrink-0" />
             <input

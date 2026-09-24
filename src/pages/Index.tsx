@@ -13,6 +13,7 @@ import TerminalStatic from "@/components/layout/TerminalStatic";
 import PortalBackdrop from "@/components/layout/PortalBackdrop";
 import NebulaBackdrop from "@/components/layout/NebulaBackdrop";
 import ObsidianBackdrop from "@/components/layout/ObsidianBackdrop";
+import AtmosphereBackdrop from "@/components/layout/AtmosphereBackdrop";
 import { useHarness } from "@/hooks/useHarness";
 import { usePortal } from "@/hooks/usePortal";
 import { isDesktop } from "@/lib/platform";
@@ -32,6 +33,9 @@ const views: Record<TabId, React.ComponentType<ViewProps>> = {
   nebula: NebulaPage,
   terminal: TerminalPage,
 };
+
+/** Tabs without the global search bar. */
+const PALETTE_HIDDEN: ReadonlySet<TabId> = new Set(["terminal", "portal", "nebula", "archive"]);
 
 /** Shown for the moment a view's chunk is still loading. */
 function ViewFallback() {
@@ -98,9 +102,11 @@ const Index = () => {
         ? `portal-root ${PORTAL_THEME_CLASS[portalTheme]}`
         : activeTab === "nebula"
           ? "nebula-root"
-          : activeTab === "archive"
-            ? "obsidian-root"
-            : "mesh-gradient-bg";
+          : activeTab === "weather"
+            ? "atmosphere-root"
+            : activeTab === "archive"
+              ? "obsidian-root"
+              : "mesh-gradient-bg";
   // The Nebula page, sidebar, and backdrop read their colours from these.
   const rootStyle =
     activeTab === "nebula"
@@ -113,13 +119,15 @@ const Index = () => {
         {activeTab === "terminal" && <TerminalStatic />}
         {activeTab === "portal" && <PortalBackdrop theme={portalTheme} />}
         {activeTab === "nebula" && <NebulaBackdrop theme={nebulaTheme} />}
+        {activeTab === "weather" && <AtmosphereBackdrop />}
         {activeTab === "archive" && <ObsidianBackdrop />}
         <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
         <main className="flex-1 min-h-0 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
-          {/* Unmounted on the Terminal, Portal, and Nebula tabs: hides the bar and
-              drops its shortcuts, including the global palette hotkey's focus. On the
-              Portal it would open under the app webview. */}
-          {activeTab !== "terminal" && activeTab !== "portal" && activeTab !== "nebula" && <CommandPalette onNavigate={setActiveTab} />}
+          {/* Unmounted on the Terminal, Portal, Nebula, and Archive tabs: hides the
+              bar and drops its shortcuts, including the global palette hotkey's focus.
+              On the Portal it would open under the app webview. The Archive has its
+              own vault search. */}
+          {!PALETTE_HIDDEN.has(activeTab) && <CommandPalette onNavigate={setActiveTab} />}
           {/* Reduced motion (OS setting or performance mode) swaps views
               without the slide, so the next view is not held back 200 ms. */}
           <AnimatePresence mode="wait">

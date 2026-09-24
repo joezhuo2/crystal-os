@@ -262,7 +262,10 @@
     81%  { opacity: 0; }
   }
 
-  /* Title with red/cyan split copies that slice in and out. */
+  /* Title with monochrome split copies (bright and dim ghosts) that slice in
+     and out. The copies are clipped away at rest, so they stay hidden
+     whenever the animation is not running: performance mode (which jumps
+     animations to their end), reduced motion, or a paused window. */
   .terminal-glitch-text {
     position: relative;
     display: inline-block;
@@ -275,15 +278,17 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
+    clip-path: inset(0 0 100% 0);
   }
 
   .terminal-glitch-text::before {
-    color: rgb(255 0 60 / 0.8);
+    color: rgb(255 255 255 / 0.9);
+    text-shadow: 0 0 6px rgb(255 255 255 / 0.35);
     animation: terminal-glitch-text-a 3.1s steps(1, end) infinite;
   }
 
   .terminal-glitch-text::after {
-    color: rgb(0 240 255 / 0.8);
+    color: rgb(115 115 115 / 0.9);
     animation: terminal-glitch-text-b 2.3s steps(1, end) infinite;
   }
 
@@ -292,7 +297,7 @@
     12%  { clip-path: inset(15% 0 55% 0); transform: translate(-2px, 0); }
     15%  { clip-path: inset(0 0 100% 0); }
     58%  { clip-path: inset(60% 0 10% 0); transform: translate(2px, 0); }
-    61%  { clip-path: inset(0 0 100% 0); }
+    61%, 100% { clip-path: inset(0 0 100% 0); }
   }
 
   @keyframes terminal-glitch-text-b {
@@ -300,7 +305,7 @@
     31%  { clip-path: inset(50% 0 25% 0); transform: translate(2px, 0); }
     34%  { clip-path: inset(0 0 100% 0); }
     83%  { clip-path: inset(5% 0 70% 0);  transform: translate(-2px, 0); }
-    86%  { clip-path: inset(0 0 100% 0); }
+    86%, 100% { clip-path: inset(0 0 100% 0); }
   }
 
   .terminal-btn {
@@ -1174,22 +1179,34 @@
     will-change: transform;
   }
 
-  /* Four-point star. Peak opacity is set inline; the twinkle animates ::before
-     with literal keyframes so it stays on the compositor. */
+  /* Four-point star with a soft violet glow behind it. Peak opacity is set
+     inline; the twinkle animates ::before (star) and ::after (glow) with
+     literal keyframes so it stays on the compositor. */
   .obsidian-sparkle {
     position: absolute;
     translate: -50% -50%;
   }
 
-  .obsidian-sparkle::before {
+  .obsidian-sparkle::before,
+  .obsidian-sparkle::after {
     content: "";
     position: absolute;
-    inset: 0;
-    background: radial-gradient(circle, #fff 0 14%, rgb(233 213 255 / 0.9) 28%, rgb(192 132 252 / 0) 70%);
-    clip-path: polygon(50% 0%, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0% 50%, 42% 42%);
     opacity: 0;
     animation: obsidian-twinkle var(--twinkle-duration, 4s) ease-in-out var(--twinkle-delay, 0s) infinite;
     will-change: transform, opacity;
+  }
+
+  .obsidian-sparkle::before {
+    z-index: 1;
+    inset: 0;
+    background: radial-gradient(circle, #fff 0 20%, rgb(250 245 255 / 0.95) 34%, rgb(216 180 254 / 0.6) 50%, rgb(192 132 252 / 0) 72%);
+    clip-path: polygon(50% 0%, 56% 44%, 100% 50%, 56% 56%, 50% 100%, 44% 56%, 0% 50%, 44% 44%);
+  }
+
+  .obsidian-sparkle::after {
+    inset: -60%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(250 245 255 / 0.7), rgb(216 180 254 / 0.35) 30%, rgb(168 85 247 / 0.12) 60%, transparent);
   }
 
   /* Crystals. left/top is the centre of the base; `rotate` (inline) tilts
@@ -1381,12 +1398,402 @@
     .obsidian-haze,
     .obsidian-crystal,
     .obsidian-sparkle::before,
+    .obsidian-sparkle::after,
     .obsidian-aura {
       animation: none;
     }
 
-    .obsidian-sparkle::before {
-      opacity: 0.7;
+    .obsidian-sparkle::before,
+    .obsidian-sparkle::after {
+      opacity: 0.8;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------
+ * The Atmosphere (Weather). The Living Sky: AtmosphereBackdrop.tsx sets
+ * data-phase (dawn, day, dusk, night), --cloud (0–1, 0 with weather effects
+ * off) and --aurora (0–1, by phase) on .atmo-backdrop; the aurora field gets
+ * --bend-x (-1 to 1) from the cursor, and a lightning strike sets
+ * data-flash. The Home box (.home-space-atmosphere) reuses the sky colours.
+ *
+ * Only transform and opacity animate. Blurred layers are rasterised once and
+ * moved on the compositor.
+ * ------------------------------------------------------------------ */
+@layer components {
+  .atmosphere-root {
+    background: #030712;
+    --background: 222 60% 5%;
+    --primary: 190 90% 68%;
+    --ring: 190 90% 60%;
+    --glow-indigo: 172 70% 55%;
+    --muted-foreground: 212 24% 74%;
+    --glass-border: 195 100% 90%;
+  }
+
+  .atmosphere-title {
+    background: linear-gradient(100deg, #a7f3d0, #7dd3fc 45%, #c4b5fd);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Page panels: deep night glass, so text reads over a bright sky or rain. */
+  .atmosphere-root main .glass-card {
+    background: linear-gradient(160deg, rgb(15 23 42 / 0.58), rgb(2 6 23 / 0.66));
+    border-color: rgb(125 211 252 / 0.16);
+    box-shadow:
+      0 8px 32px rgb(0 4 16 / 0.5),
+      0 0 36px rgb(45 212 191 / 0.06),
+      inset 0 1px 0 rgb(224 242 254 / 0.07);
+    backdrop-filter: blur(14px) saturate(1.2);
+  }
+
+  .sidebar-atmosphere {
+    background: linear-gradient(180deg, rgb(8 22 44 / 0.75) 0%, rgb(3 7 18 / 0.82) 50%, rgb(4 38 38 / 0.62) 100%);
+    border-color: transparent;
+    box-shadow:
+      inset -1px 0 0 rgb(125 211 252 / 0.32),
+      6px 0 28px rgb(45 212 191 / 0.14);
+  }
+
+  .sidebar-atmosphere button svg {
+    filter: drop-shadow(0 0 4px rgb(125 211 252 / 0.5));
+  }
+
+  /* Phase palettes, shared by the backdrop and the Home box. */
+  .atmo-backdrop,
+  .home-space-atmosphere {
+    --overcast: #0b0f1a;
+    --cloud-color: 76 86 120;
+    --fog-color: 100 116 139;
+    --ridge-back: #0b1226;
+    --ridge-front: #03060f;
+  }
+
+  .atmo-backdrop[data-phase="dawn"],
+  .home-space-atmosphere[data-phase="dawn"] {
+    --overcast: #3b3450;
+    --cloud-color: 244 196 192;
+    --fog-color: 214 180 196;
+    --ridge-back: #2a2140;
+    --ridge-front: #0e0a18;
+  }
+
+  .atmo-backdrop[data-phase="day"],
+  .home-space-atmosphere[data-phase="day"] {
+    --overcast: #334155;
+    --cloud-color: 232 240 250;
+    --fog-color: 203 213 225;
+    --ridge-back: #1d3a4f;
+    --ridge-front: #0b1a24;
+  }
+
+  .atmo-backdrop[data-phase="dusk"],
+  .home-space-atmosphere[data-phase="dusk"] {
+    --overcast: #3a2c48;
+    --cloud-color: 236 168 150;
+    --fog-color: 196 150 170;
+    --ridge-back: #2b1d3a;
+    --ridge-front: #0d0814;
+  }
+
+  /* Sky gradients: each layer of the backdrop keeps its own so phases
+     cross-fade; --sky is the current one, for the Home box and the tint over
+     a custom image. */
+  .atmo-backdrop,
+  .home-space-atmosphere {
+    --sky-night: linear-gradient(180deg, #020617 0%, #0a1030 45%, #111a44 80%, #1a2350 100%);
+    --sky-dawn: linear-gradient(180deg, #1e1b4b 0%, #4c3a7a 35%, #c26d86 72%, #f5a97a 100%);
+    --sky-day: linear-gradient(180deg, #0b3a6e 0%, #1f6aa8 45%, #4f94c9 80%, #86bde0 100%);
+    --sky-dusk: linear-gradient(180deg, #0f1238 0%, #3b2a66 35%, #a8506b 70%, #f08a4b 100%);
+    --sky: var(--sky-night);
+  }
+
+  .atmo-backdrop[data-phase="dawn"],
+  .home-space-atmosphere[data-phase="dawn"] {
+    --sky: var(--sky-dawn);
+  }
+
+  .atmo-backdrop[data-phase="day"],
+  .home-space-atmosphere[data-phase="day"] {
+    --sky: var(--sky-day);
+  }
+
+  .atmo-backdrop[data-phase="dusk"],
+  .home-space-atmosphere[data-phase="dusk"] {
+    --sky: var(--sky-dusk);
+  }
+
+  .atmo-sky-night {
+    background: var(--sky-night);
+  }
+
+  .atmo-sky-dawn {
+    background: var(--sky-dawn);
+  }
+
+  .atmo-sky-day {
+    background: var(--sky-day);
+  }
+
+  .atmo-sky-dusk {
+    background: var(--sky-dusk);
+  }
+
+  /* A custom background, already blurred (atmosphereStore bakes the copy
+     on a canvas). No CSS filter here: a live full-screen blur under the
+     aurora's moving layers could make the desktop WebView drop the photo.
+     The sky above it becomes a light tint of the phase. */
+  .atmo-image {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+  }
+
+  /* Backdrop */
+  .atmo-backdrop {
+    background: #020617;
+  }
+
+  .atmo-sky {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 4s ease;
+  }
+
+  .atmo-backdrop[data-phase="night"] .atmo-sky-night,
+  .atmo-backdrop[data-phase="dawn"] .atmo-sky-dawn,
+  .atmo-backdrop[data-phase="day"] .atmo-sky-day,
+  .atmo-backdrop[data-phase="dusk"] .atmo-sky-dusk {
+    opacity: 1;
+  }
+
+  .atmo-backdrop[data-image][data-phase="night"] .atmo-sky-night,
+  .atmo-backdrop[data-image][data-phase="dawn"] .atmo-sky-dawn,
+  .atmo-backdrop[data-image][data-phase="day"] .atmo-sky-day,
+  .atmo-backdrop[data-image][data-phase="dusk"] .atmo-sky-dusk {
+    opacity: 0.3;
+  }
+
+  .atmo-sun {
+    position: absolute;
+    width: 70vmin;
+    height: 70vmin;
+    left: 60%;
+    top: -22vmin;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(255 251 235 / 0.75), rgb(254 240 138 / 0.28) 30%, rgb(253 224 71 / 0.08) 60%, transparent);
+    opacity: 0;
+    transition: opacity 4s ease, left 4s ease, top 4s ease;
+  }
+
+  .atmo-backdrop[data-phase="day"] .atmo-sun {
+    opacity: 1;
+  }
+
+  .atmo-backdrop[data-phase="dawn"] .atmo-sun {
+    left: 4%;
+    top: 62%;
+    opacity: 0.9;
+    background: radial-gradient(closest-side, rgb(255 237 213 / 0.8), rgb(251 146 60 / 0.35) 32%, rgb(244 114 182 / 0.1) 62%, transparent);
+  }
+
+  .atmo-backdrop[data-phase="dusk"] .atmo-sun {
+    left: 66%;
+    top: 62%;
+    opacity: 0.9;
+    background: radial-gradient(closest-side, rgb(255 237 213 / 0.8), rgb(249 115 22 / 0.4) 32%, rgb(225 29 72 / 0.12) 62%, transparent);
+  }
+
+  .atmo-moon {
+    position: absolute;
+    right: 11%;
+    top: 9%;
+    width: 9vmin;
+    height: 9vmin;
+    opacity: 0;
+    filter: drop-shadow(0 0 14px rgb(224 231 255 / 0.55));
+    transition: opacity 4s ease;
+  }
+
+  .atmo-backdrop[data-phase="night"] .atmo-moon {
+    opacity: 1;
+  }
+
+  .atmo-backdrop[data-phase="dawn"] .atmo-moon,
+  .atmo-backdrop[data-phase="dusk"] .atmo-moon {
+    opacity: 0.5;
+  }
+
+  .atmo-moon-dark {
+    fill: rgb(148 163 184 / 0.14);
+  }
+
+  .atmo-moon-lit {
+    fill: #f1f5f9;
+  }
+
+  /* Aurora: ribbons stretched past both edges so swaying never shows an end.
+     The track takes the cursor bend; the ribbon inside it sways on its own. */
+  .atmo-aurora-field {
+    position: absolute;
+    inset: 0;
+    opacity: var(--aurora, 1);
+    transition: opacity 3s ease;
+  }
+
+  .atmo-backdrop[data-flash] .atmo-aurora-field {
+    opacity: 1;
+    transition: opacity 80ms ease-out;
+  }
+
+  .atmo-ribbon-track {
+    position: absolute;
+    left: -20%;
+    width: 140%;
+    transform: translate3d(calc(var(--bend-x, 0) * var(--bend, 1) * 1.2vw), 0, 0)
+      skewX(calc(var(--bend-x, 0) * var(--bend, 1) * -2deg));
+    transition: transform 1.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+    will-change: transform;
+  }
+
+  /* The blur sits on the ribbon, outside the masked SVG, so it softens the
+     rays too: a mask applies after its own element's filter and would stay
+     sharp. */
+  .atmo-ribbon {
+    width: 100%;
+    height: 100%;
+    transform-origin: 50% 100%;
+    filter: blur(8px);
+    animation: atmo-sway var(--sway, 40s) ease-in-out var(--sway-delay, 0s) infinite alternate;
+    will-change: transform;
+  }
+
+  /* Faint vertical rays through the curtain: smooth, uneven, low contrast. */
+  .atmo-ribbon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    -webkit-mask-image: repeating-linear-gradient(90deg, #000 0, rgb(0 0 0 / 0.72) 7px, #000 15px, rgb(0 0 0 / 0.82) 26px, #000 34px, rgb(0 0 0 / 0.66) 47px, #000 58px);
+    mask-image: repeating-linear-gradient(90deg, #000 0, rgb(0 0 0 / 0.72) 7px, #000 15px, rgb(0 0 0 / 0.82) 26px, #000 34px, rgb(0 0 0 / 0.66) 47px, #000 58px);
+  }
+
+  /* Clouds: two tiled bands, twice the screen wide, each sliding one tile. */
+  .atmo-overcast {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, var(--overcast) 0%, transparent 115%);
+    opacity: calc(var(--cloud, 0) * 0.6);
+    transition: opacity 3s ease;
+  }
+
+  .atmo-clouds {
+    position: absolute;
+    inset: 0;
+    opacity: calc(0.25 + var(--cloud, 0) * 0.65);
+    transition: opacity 3s ease, filter 80ms ease-out;
+  }
+
+  .atmo-backdrop[data-flash] .atmo-clouds {
+    filter: brightness(1.9);
+  }
+
+  .atmo-cloud-band {
+    position: absolute;
+    left: 0;
+    width: 200%;
+    background-repeat: repeat-x;
+    background-size: 50% 100%;
+    filter: blur(22px);
+    animation: atmo-clouds linear infinite;
+    will-change: transform;
+  }
+
+  .atmo-cloud-band-high {
+    top: -4%;
+    height: 38%;
+    background-image:
+      radial-gradient(22% 38% at 12% 46%, rgb(var(--cloud-color) / 0.55), transparent 70%),
+      radial-gradient(18% 30% at 34% 30%, rgb(var(--cloud-color) / 0.45), transparent 70%),
+      radial-gradient(26% 40% at 61% 52%, rgb(var(--cloud-color) / 0.5), transparent 70%),
+      radial-gradient(16% 28% at 86% 34%, rgb(var(--cloud-color) / 0.4), transparent 70%);
+    animation-duration: 240s;
+  }
+
+  .atmo-cloud-band-low {
+    top: 26%;
+    height: 34%;
+    background-image:
+      radial-gradient(24% 36% at 20% 55%, rgb(var(--cloud-color) / 0.38), transparent 70%),
+      radial-gradient(20% 30% at 48% 40%, rgb(var(--cloud-color) / 0.32), transparent 70%),
+      radial-gradient(28% 40% at 78% 58%, rgb(var(--cloud-color) / 0.36), transparent 70%);
+    animation-duration: 170s;
+    animation-direction: reverse;
+  }
+
+  .atmo-ridge {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    transition: fill 4s ease;
+  }
+
+  .atmo-ridge-back {
+    height: 30vh;
+    fill: var(--ridge-back);
+    opacity: 0.85;
+  }
+
+  .atmo-ridge-front {
+    height: 21vh;
+    fill: var(--ridge-front);
+  }
+
+  .atmo-fog {
+    position: absolute;
+    inset: 30% -20% 0;
+    background:
+      radial-gradient(60% 40% at 30% 70%, rgb(var(--fog-color) / 0.35), transparent 70%),
+      radial-gradient(55% 35% at 75% 80%, rgb(var(--fog-color) / 0.3), transparent 70%),
+      linear-gradient(180deg, transparent, rgb(var(--fog-color) / 0.4) 70%);
+    filter: blur(18px);
+    animation: atmo-fog 40s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  @keyframes atmo-sway {
+    0% {
+      transform: translate3d(-3%, 0, 0) scaleY(0.9) skewX(-3deg);
+    }
+    50% {
+      transform: translate3d(1%, -1.5%, 0) scaleY(1.06) skewX(2deg);
+    }
+    100% {
+      transform: translate3d(3%, 0.5%, 0) scaleY(0.96) skewX(4deg);
+    }
+  }
+
+  @keyframes atmo-clouds {
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  @keyframes atmo-fog {
+    to {
+      transform: translate3d(8%, 0, 0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .atmo-ribbon,
+    .atmo-cloud-band,
+    .atmo-fog {
+      animation: none;
     }
   }
 }
@@ -1438,8 +1845,9 @@
 }
 
 /* ------------------------------------------------------------------
- * Home spaces (views/HomeSpaces.tsx, and the Archive box in HomePage.tsx):
- * the Nebula, Portal, Terminal and Archive boxes on the Home tab. `.home-space` paints the page's backdrop behind its box
+ * Home spaces (views/HomeSpaces.tsx, and the Atmosphere and Archive boxes
+ * in HomePage.tsx): the Nebula, Portal, Terminal, Atmosphere and Archive
+ * boxes on the Home tab. `.home-space` paints the page's backdrop behind its box
  * and 8px past it, half the grid gap, so the box and the space around it
  * both wear the page's look. Colours come from --nebula-a/b/c (inline, the
  * user's palette) and the portal-theme-* class (the Portal theme).
@@ -1626,6 +2034,189 @@
     filter: drop-shadow(0 0 6px rgb(192 132 252 / 0.75));
   }
 
+  /* Atmosphere: a small Living Sky. The sky and palette follow data-phase
+     (see "The Atmosphere" above); --aurora and --cloud come from the box's
+     inline style. The scene layers sit in .home-atmo-scene, which clips them
+     to the rounded space. */
+  .home-space-atmosphere {
+    --primary: 190 90% 68%;
+    --muted-foreground: 212 24% 76%;
+  }
+
+  .home-space-atmosphere::before {
+    background: var(--sky);
+    box-shadow: 0 0 32px rgb(56 189 248 / 0.16);
+  }
+
+  .home-space-atmosphere:not([data-phase="day"])::after {
+    display: block;
+    background-image:
+      radial-gradient(1px 1px at 8% 12%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 31% 22%, rgb(255 255 255 / 0.85), transparent),
+      radial-gradient(1px 1px at 52% 8%, #fff, transparent),
+      radial-gradient(1px 1px at 74% 18%, rgb(255 255 255 / 0.8), transparent),
+      radial-gradient(1.5px 1.5px at 92% 30%, #fff, transparent),
+      radial-gradient(1px 1px at 18% 38%, rgb(255 255 255 / 0.7), transparent);
+    animation: home-twinkle 5s ease-in-out infinite alternate;
+  }
+
+  .home-space-atmosphere[data-phase="dawn"]::after,
+  .home-space-atmosphere[data-phase="dusk"]::after {
+    opacity: 0.4;
+    animation: none;
+  }
+
+  .home-atmo-scene {
+    position: absolute;
+    inset: -8px;
+    z-index: -1;
+    overflow: hidden;
+    border-radius: 1.25rem;
+    pointer-events: none;
+  }
+
+  .home-atmo-scene > * {
+    position: absolute;
+  }
+
+  .home-atmo-image {
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+  }
+
+  .home-atmo-tint {
+    inset: 0;
+    background: var(--sky);
+    opacity: 0.3;
+  }
+
+  .home-atmo-aurora {
+    left: -15%;
+    right: -15%;
+    top: -12%;
+    height: 80%;
+    background:
+      radial-gradient(40% 36% at 22% 72%, rgb(52 211 153 / 0.75), transparent 70%),
+      radial-gradient(34% 30% at 55% 62%, rgb(45 212 191 / 0.6), transparent 70%),
+      radial-gradient(36% 34% at 82% 50%, rgb(192 132 252 / 0.5), transparent 70%);
+    filter: blur(10px);
+    opacity: var(--aurora, 1);
+    animation: home-aurora 14s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  .home-atmo-clouds {
+    left: -10%;
+    right: -10%;
+    top: 0;
+    height: 60%;
+    background:
+      radial-gradient(30% 40% at 20% 40%, rgb(var(--cloud-color) / 0.55), transparent 70%),
+      radial-gradient(34% 44% at 62% 30%, rgb(var(--cloud-color) / 0.5), transparent 70%),
+      radial-gradient(26% 36% at 90% 55%, rgb(var(--cloud-color) / 0.45), transparent 70%);
+    filter: blur(10px);
+    opacity: calc(0.2 + var(--cloud, 0) * 0.7);
+  }
+
+  .home-atmo-pines {
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 30%;
+    fill: var(--ridge-front);
+  }
+
+  .home-atmo-fog {
+    inset: 40% 0 0;
+    background: linear-gradient(180deg, transparent, rgb(var(--fog-color) / 0.45));
+  }
+
+  /* Falling streaks or flakes: tiles whose heights all divide 120px, on a
+     layer 120px taller than the box that slides down exactly 120px. */
+  .home-atmo-precip {
+    inset: -120px 0 0;
+    animation: home-precip 0.7s linear infinite;
+    will-change: transform;
+  }
+
+  .home-atmo-precip[data-kind="rain"] {
+    background-image:
+      radial-gradient(0.6px 7px at 50% 50%, rgb(191 219 254 / 0.6), transparent),
+      radial-gradient(0.6px 6px at 30% 20%, rgb(191 219 254 / 0.45), transparent),
+      radial-gradient(0.6px 8px at 70% 80%, rgb(191 219 254 / 0.5), transparent);
+    background-size: 23px 24px, 31px 30px, 37px 40px;
+    rotate: 10deg;
+  }
+
+  .home-atmo-precip[data-kind="snow"] {
+    background-image:
+      radial-gradient(1.5px 1.5px at 50% 50%, #fff, transparent),
+      radial-gradient(1px 1px at 20% 30%, rgb(255 255 255 / 0.85), transparent),
+      radial-gradient(2px 2px at 75% 70%, rgb(255 255 255 / 0.75), transparent);
+    background-size: 29px 24px, 41px 30px, 53px 40px;
+    animation-duration: 6s;
+  }
+
+  .home-atmo-flash {
+    inset: 0;
+    background: rgb(224 231 255);
+    opacity: 0;
+    animation: home-flash 7s linear infinite;
+  }
+
+  .home-card-atmosphere {
+    border-radius: 1rem;
+    color: #f8fafc;
+    background: linear-gradient(160deg, rgb(15 23 42 / 0.12), rgb(2 6 23 / 0.32));
+    border: 1px solid rgb(186 230 253 / 0.18);
+    text-shadow: 0 1px 8px rgb(2 6 23 / 0.6);
+    box-shadow:
+      0 8px 32px rgb(0 4 16 / 0.45),
+      inset 0 1px 0 rgb(224 242 254 / 0.08);
+    backdrop-filter: blur(10px) saturate(1.2);
+    transition: border-color 300ms, box-shadow 300ms;
+  }
+
+  .home-card-atmosphere:hover {
+    border-color: rgb(125 211 252 / 0.45);
+    box-shadow:
+      0 8px 32px rgb(0 4 16 / 0.45),
+      0 0 30px rgb(45 212 191 / 0.22),
+      inset 0 1px 0 rgb(224 242 254 / 0.12);
+  }
+
+  @keyframes home-aurora {
+    from {
+      transform: translate3d(-4%, 0, 0) skewX(-6deg) scaleY(0.92);
+    }
+    to {
+      transform: translate3d(4%, -3%, 0) skewX(6deg) scaleY(1.06);
+    }
+  }
+
+  @keyframes home-precip {
+    to {
+      transform: translate3d(0, 120px, 0);
+    }
+  }
+
+  @keyframes home-flash {
+    0%,
+    90%,
+    91.5%,
+    93%,
+    100% {
+      opacity: 0;
+    }
+    90.6% {
+      opacity: 0.45;
+    }
+    92.2% {
+      opacity: 0.3;
+    }
+  }
+
   /* Terminal: black scanlines around a glitching frame. */
   .home-space-terminal::before {
     border-radius: 0.6rem;
@@ -1667,11 +2258,69 @@
   @media (prefers-reduced-motion: reduce) {
     .home-space-nebula[data-stars]::after,
     .home-space-archive::after,
+    .home-space-atmosphere::after,
+    .home-atmo-aurora,
+    .home-atmo-precip,
+    .home-atmo-flash,
     .home-nebula-pulse,
     .home-card-portal,
     .home-terminal-cursor {
       animation: none;
     }
+  }
+}
+
+/* Sliders glide between steps instead of jumping: the thumb's positioning
+   wrapper (Radix sets its `left`) and the filled range ease to each new value,
+   on drag, click and arrow keys alike. */
+.smooth-slider > span:has(> [role="slider"]) {
+  transition: left 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.smooth-slider-range {
+  transition:
+    left 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    right 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Collapsible Settings sections: the grid row eases between 0fr and 1fr, so
+   the height animates without measuring the content. The clip is lifted once
+   the section has finished opening, so focus rings are not cut off. */
+.settings-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 360ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 260ms ease-out;
+}
+
+.settings-collapse[data-open] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.settings-collapse > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Once folded away, the body leaves the tab order (visibility flips after the
+   close finishes, and back at once on open). */
+.settings-collapse:not([data-open]) > * {
+  visibility: hidden;
+  transition: visibility 0s linear 360ms;
+}
+
+.settings-collapse[data-settled] > * {
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .smooth-slider > span:has(> [role="slider"]),
+  .smooth-slider-range,
+  .settings-collapse {
+    transition: none;
   }
 }
 
@@ -1685,8 +2334,10 @@ html.app-hidden *::after {
 
 /* Performance mode: animations jump to their end state and transitions are
    instant. Loading indicators (spin, pulse, the Portal's spinners) keep
-   moving so progress stays visible. */
-html.perf-still *:not(.animate-spin):not(.animate-pulse):not([class*="-spin"]):not([class*="spinner"]),
+   moving so progress stays visible, and so do the small controls marked
+   data-smooth (switches, sliders, collapsing Settings sections) and their
+   direct children, whose short transitions cost next to nothing. */
+html.perf-still *:not(.animate-spin):not(.animate-pulse):not([class*="-spin"]):not([class*="spinner"]):not([data-smooth], [data-smooth] > *),
 html.perf-still *::before,
 html.perf-still *::after {
   animation-duration: 0.01ms !important;
