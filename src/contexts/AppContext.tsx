@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo, useEf
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeRepeatDays } from "@/lib/utils";
 import {
   seedDefaultCategories,
   type CategoryClient,
@@ -118,7 +119,7 @@ function mapTaskFromDb(row: TaskRow): Task {
     priority: row.priority,
     categoryId: row.category_id,
     completed: row.completed,
-    repeatDays: row.repeat_days ?? undefined,
+    repeatDays: normalizeRepeatDays(row.repeat_days),
   };
 }
 
@@ -132,7 +133,7 @@ function mapTaskToDb(task: Omit<Task, "id">) {
     priority: task.priority,
     category_id: task.categoryId,
     completed: task.completed,
-    repeat_days: task.repeatDays ?? null,
+    repeat_days: normalizeRepeatDays(task.repeatDays) ?? null,
   };
 }
 
@@ -340,11 +341,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
     if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
     if (updates.completed !== undefined) dbUpdates.completed = updates.completed;
-    if (updates.repeatDays !== undefined) dbUpdates.repeat_days = updates.repeatDays;
+    // Unlike the other fields, an explicit `repeatDays` key is written even
+    // when it is undefined or 0: that is how a repeat is turned off, and the
+    // column has to be cleared to null for it to stay off after a reload.
+    const repeatChanged = "repeatDays" in updates;
+    const repeatDays = normalizeRepeatDays(updates.repeatDays);
+    if (repeatChanged) dbUpdates.repeat_days = repeatDays ?? null;
 
     const { error } = await supabase.from("tasks").update(dbUpdates).eq("id", id);
     if (reportError("update the task", error)) return;
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updates, ...(repeatChanged ? { repeatDays } : {}) } : t)),
+    );
   }, []);
 
   const deleteTask = useCallback(async (id: string) => {

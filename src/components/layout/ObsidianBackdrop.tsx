@@ -39,10 +39,11 @@ export default function ObsidianBackdrop() {
   const rootRef = useRef<HTMLDivElement>(null);
   // Random once per visit; later renders reuse them.
   const [sparkles] = useState(() => ({
-    back: makeSparkles(BACK_SPARKLES, Math.random, [6, 16]),
-    // One near each crystal's tip, so it sits on top of the glass.
+    back: makeSparkles(BACK_SPARKLES, Math.random, [10, 22]),
+    // One near each crystal's tip, so it sits on top of the glass. Larger
+    // than the background ones so the rays read as a glint, not a dot.
     front: CRYSTALS.map(
-      () => makeSparkles(1, Math.random, [10, 20], { x: [35, 65], y: [4, 30] })[0],
+      () => makeSparkles(1, Math.random, [24, 40], { x: [35, 65], y: [4, 30] })[0],
     ),
   }));
 
@@ -158,6 +159,7 @@ export default function ObsidianBackdrop() {
           <div
             key={i}
             data-crystal
+            data-still={i % 3 === 2 ? "" : undefined}
             className="obsidian-crystal"
             style={
               {

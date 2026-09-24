@@ -142,7 +142,8 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
   const submit = () => {
     if (!form.name.trim()) return;
     if (editingTask) {
-      updateTask(editingTask.id, { ...form, completed: editingTask.completed, repeatDays: form.repeatDays || undefined });
+      // Always send repeatDays, 0 included: updateTask clears the repeat for 0.
+      updateTask(editingTask.id, { ...form, completed: editingTask.completed });
     } else {
       addTask({ ...form, completed: false, repeatDays: form.repeatDays || undefined });
     }
@@ -220,7 +221,7 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-muted-foreground">Repeat every</label>
-          <input type="number" min={0} value={form.repeatDays} onChange={(e) => setForm((f) => ({ ...f, repeatDays: parseInt(e.target.value) || 0 }))}
+          <input type="number" min={0} value={form.repeatDays} onChange={(e) => setForm((f) => ({ ...f, repeatDays: Math.max(0, parseInt(e.target.value) || 0) }))}
             className="w-16 bg-secondary/50 rounded-lg px-2 py-1.5 text-sm outline-none" />
           <span className="text-xs text-muted-foreground">days</span>
         </div>

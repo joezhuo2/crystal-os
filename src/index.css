@@ -69,6 +69,16 @@
     overflow: hidden;
   }
 
+  /* No rubber-band overscroll anywhere. WebView2 stretches a scroller past
+     its end when a touchpad gesture that was already moving reaches the edge,
+     and hands a fresh gesture on to the next scroller out. `none` stops both,
+     so every panel stops dead at its bounds. */
+  *,
+  ::before,
+  ::after {
+    overscroll-behavior: none;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
@@ -1179,9 +1189,10 @@
     will-change: transform;
   }
 
-  /* Four-point star with a soft violet glow behind it. Peak opacity is set
-     inline; the twinkle animates ::before (star) and ::after (glow) with
-     literal keyframes so it stays on the compositor. */
+  /* Four-point star: a bright core with two thin rays (plain gradients, so
+     the rays stay crisp at any size), plus a soft violet glow behind it. Peak
+     opacity is set inline; the twinkle animates ::before (star) and ::after
+     (glow) with literal keyframes so it stays on the compositor. */
   .obsidian-sparkle {
     position: absolute;
     translate: -50% -50%;
@@ -1193,20 +1204,21 @@
     position: absolute;
     opacity: 0;
     animation: obsidian-twinkle var(--twinkle-duration, 4s) ease-in-out var(--twinkle-delay, 0s) infinite;
-    will-change: transform, opacity;
   }
 
   .obsidian-sparkle::before {
     z-index: 1;
     inset: 0;
-    background: radial-gradient(circle, #fff 0 20%, rgb(250 245 255 / 0.95) 34%, rgb(216 180 254 / 0.6) 50%, rgb(192 132 252 / 0) 72%);
-    clip-path: polygon(50% 0%, 56% 44%, 100% 50%, 56% 56%, 50% 100%, 44% 56%, 0% 50%, 44% 44%);
+    background:
+      radial-gradient(circle, #fff 0 9%, rgb(250 245 255 / 0.9) 15%, rgb(233 213 255 / 0.35) 26%, transparent 38%),
+      linear-gradient(90deg, transparent, rgb(250 245 255 / 0.95) 50%, transparent) center / 100% max(1.5px, 7%) no-repeat,
+      linear-gradient(0deg, transparent, rgb(250 245 255 / 0.95) 50%, transparent) center / max(1.5px, 7%) 100% no-repeat;
   }
 
   .obsidian-sparkle::after {
-    inset: -60%;
+    inset: -35%;
     border-radius: 50%;
-    background: radial-gradient(closest-side, rgb(250 245 255 / 0.7), rgb(216 180 254 / 0.35) 30%, rgb(168 85 247 / 0.12) 60%, transparent);
+    background: radial-gradient(closest-side, rgb(250 245 255 / 0.55), rgb(216 180 254 / 0.3) 30%, rgb(168 85 247 / 0.1) 60%, transparent);
   }
 
   /* Crystals. left/top is the centre of the base; `rotate` (inline) tilts
@@ -1219,7 +1231,12 @@
     animation:
       obsidian-emerge 900ms cubic-bezier(0.2, 0.9, 0.25, 1.12) var(--emerge-delay, 0ms) backwards,
       obsidian-float var(--float-duration, 10s) ease-in-out var(--float-delay, 0s) infinite;
-    will-change: transform, scale;
+  }
+
+  /* Every third crystal holds still: fewer layers moving each frame, and the
+     border still reads as alive. */
+  .obsidian-crystal[data-still] {
+    animation: obsidian-emerge 900ms cubic-bezier(0.2, 0.9, 0.25, 1.12) var(--emerge-delay, 0ms) backwards;
   }
 
   .obsidian-crystal-halo {
@@ -1228,19 +1245,26 @@
     border-radius: 50%;
     background: radial-gradient(closest-side, rgb(192 132 252 / 0.45), rgb(147 51 234 / 0.15) 55%, transparent);
     opacity: calc(var(--lit, 0) * 0.9);
-    transition: opacity 160ms ease-out;
-    will-change: opacity;
+    visibility: hidden;
+    transition: opacity 160ms ease-out, visibility 0s linear 160ms;
   }
 
-  /* Frosted glass with a diagonal sheen. The blur is small, since every
-     crystal under the moving aura re-blurs each frame. */
+  .obsidian-crystal[data-lit] .obsidian-crystal-halo {
+    visibility: visible;
+    transition: opacity 160ms ease-out, visibility 0s;
+  }
+
+  /* Frosted glass with a diagonal sheen, painted with gradients only. A
+     backdrop-filter here re-blurs every crystal on every frame, because the
+     haze and the other crystals behind it never stop moving; only the few
+     lit crystals get a real blur (.obsidian-crystal-reflect). */
   .obsidian-crystal-glass {
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.14) 46%, transparent 54%),
-      linear-gradient(155deg, rgb(233 213 255 / 0.3), rgb(147 51 234 / 0.18) 38%, rgb(46 16 84 / 0.4) 72%, rgb(192 132 252 / 0.24));
-    backdrop-filter: blur(4px) saturate(1.4);
+      linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.16) 46%, transparent 54%),
+      radial-gradient(90% 60% at 40% 20%, rgb(243 232 255 / 0.18), transparent 70%),
+      linear-gradient(155deg, rgb(233 213 255 / 0.36), rgb(147 51 234 / 0.26) 38%, rgb(59 20 105 / 0.55) 72%, rgb(192 132 252 / 0.3));
     opacity: var(--o, 0.6);
   }
 
@@ -1273,7 +1297,6 @@
     border-radius: 50%;
     background: radial-gradient(closest-side, rgb(255 255 255 / 0.9), rgb(245 208 254 / 0.5) 25%, rgb(192 132 252 / 0.18) 55%, transparent);
     transform: translate3d(calc(var(--lx, -9999px) - 50%), calc(var(--ly, -9999px) - 50%), 0);
-    will-change: transform;
   }
 
   .obsidian-crystal-edges {
@@ -1302,8 +1325,13 @@
   .obsidian-crystal-edges-lit {
     opacity: var(--lit, 0);
     filter: drop-shadow(0 0 4px rgb(216 180 254 / 0.9));
-    transition: opacity 160ms ease-out;
-    will-change: opacity;
+    visibility: hidden;
+    transition: opacity 160ms ease-out, visibility 0s linear 160ms;
+  }
+
+  .obsidian-crystal[data-lit] .obsidian-crystal-edges-lit {
+    visibility: visible;
+    transition: opacity 160ms ease-out, visibility 0s;
   }
 
   .obsidian-crystal-edges-lit polygon {
@@ -1407,6 +1435,14 @@
     .obsidian-sparkle::after {
       opacity: 0.8;
     }
+  }
+
+  /* Performance mode ends every animation on its last frame, which for a
+     twinkle is invisible. Hold the sparkles lit instead. */
+  html.perf-still .obsidian-sparkle::before,
+  html.perf-still .obsidian-sparkle::after {
+    animation: none;
+    opacity: 0.8;
   }
 }
 
@@ -2343,4 +2379,40 @@ html.perf-still *::after {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
+}
+
+/* The Horizon's event dots. On the page's first load they pop in cell by
+   cell (--dot-delay, set inline); later they fade in with their month. The
+   cascade is decoration, so performance mode drops it; the fade is marked
+   data-smooth and stays. */
+.horizon-dot-cascade {
+  animation: horizon-dot-pop 360ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--dot-delay, 0ms) backwards;
+}
+
+.horizon-dot-fade {
+  animation: horizon-dot-fade 220ms ease-out backwards;
+}
+
+html.perf-still .horizon-dot-cascade {
+  animation: none;
+}
+
+@keyframes horizon-dot-pop {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+@keyframes horizon-dot-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .horizon-dot-cascade,
+  .horizon-dot-fade {
+    animation: none;
+  }
 }

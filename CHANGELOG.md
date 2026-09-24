@@ -5,6 +5,23 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.7.1] - 2026-09-24
+
+### Changed
+
+- **The Archive's sparkles can be seen.** The stars on the crystal tips are 24–40 px instead of 10–20 px, and the background stars 10–22 px instead of 6–16 px. Each star's rays are now two thin gradient lines instead of a clipped star shape, which shrank to a dot at small sizes.
+- **The Archive's crystals cost far less to draw.** The resting glass is painted with gradients and no longer carries a `backdrop-filter`. That blur ran on all 53 crystals and was recomputed every frame, because the drifting haze and floating crystals behind it never stop moving. Only a crystal lit by the pointer now gets a live blur, and its halo and bright rim are hidden while it is dark. Every third crystal holds still instead of floating, and the per-layer `will-change` hints on the sparkles, halos and glints are gone.
+- **The Horizon's dots cascade in when the page opens.** They pop in cell by cell from the top left, about 600 ms in all. Performance mode and reduced motion skip it.
+- **Paging months on the Horizon fades and slides.** The old month, dots included, fades out toward the side you left and the new one fades in from the other, in about 350 ms. It plays in performance mode too. The months either side of the one on screen are prefetched, so their dots usually arrive with the grid. When they do not, they fade in once loaded instead of popping in.
+
+### Fixed
+
+- **Scroll panels stretched past their ends.** A touchpad scroll that was already moving when it reached the end of a panel kept going and rubber-banded past the edge (WebView2's elastic overscroll), while a fresh scroll started at the edge did not. Every element now has `overscroll-behavior: none`, so scrolling stops dead at the bounds everywhere. A scroll that reaches the end of an inner panel also no longer hands on to the panel around it.
+- **Opening or closing a day on the Horizon flickered.** The day panel faded in as one layer with its glass card inside it. A layer below full opacity becomes the card's backdrop root, so the card's blur saw nothing until the fade ended and then snapped in. The dim scrim and the card now fade as separate siblings, and the event form works the same way.
+- **The Archive's sparkles vanished in performance mode.** Performance mode ends each animation on its last frame, and a twinkle ends invisible. The stars now hold at 80% there instead.
+- **A task's repeat could not be turned off.** Setting **Repeat every** back to 0 sent no value for the repeat, and saving a task skips fields with no value, so `repeat_days` stayed set in Supabase. The task looked fixed until the next reload, then repeated again. The form now always sends the interval, and a 0 clears the column to `null`.
+- **Negative repeat intervals were accepted.** `min={0}` only limits the spinner, so typing `-3` stored `-3`. The calendar treated that task as one-off, but Home's overdue check treated it as repeating, so it never showed as overdue. The field now clamps to 0 or more, and a new `normalizeRepeatDays` (`src/lib/utils.ts`, with tests) turns anything that is not a positive whole number into "no repeat" everywhere a task is read, saved or checked. Tasks already stored with a negative interval are read as one-off.
+
 ## [v0.7.0] - 2026-09-24 - The Living Sky (Release Summary)
 
 *This release gives The Atmosphere a world of its own, the Living Sky: a sky that follows the sun, weather you can see, an aurora that leans toward your cursor, and your own photo under frosted glass if you want one. Around it, the rest of the shell gets tidier: The Archive moves to the sidebar's bottom group and drops the search bar, its crystal cave fills the whole border, Settings sections fold away, every switch and slider glides, and the Terminal's title stays black and white.*

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/apiRequest";
 import { openExternal } from "@/lib/platform";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import {
   AlertTriangle,
   CalendarDays,
@@ -46,6 +46,7 @@ import {
   useCreateEvent,
   useDeleteEvent,
   useDisconnectCalendar,
+  usePrefetchCalendarEvents,
   useUpdateEvent,
 } from "@/hooks/useGoogleCalendar";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
@@ -247,8 +248,24 @@ function EventRow({
 
 /* ── month grid ── */
 
+/**
+ * Paging between months: the old month fades out toward the side you left
+ * and the new one fades in from the other, dots included. Framer Motion runs
+ * it in JS, so it plays in performance mode too.
+ */
+const monthSlide: Variants = {
+  enter: (dir: number) => ({ opacity: 0, x: dir * 24 }),
+  center: { opacity: 1, x: 0, transition: { duration: 0.2, ease: "easeOut" } },
+  exit: (dir: number) => ({ opacity: 0, x: dir * -24, transition: { duration: 0.15, ease: "easeIn" } }),
+};
+
+/** Milliseconds between one cell's dots and the next in the opening cascade. */
+const CASCADE_STEP_MS = 14;
+
 function MonthGrid({
   currentDate,
+  direction,
+  cascade,
   events,
   color,
   onPrev,
@@ -256,10 +273,96 @@ function MonthGrid({
   onSelectDay,
 }: {
   currentDate: Date;
+  /** 1 after paging forward, -1 after paging back. */
+  direction: number;
+  /** Pop the dots in cell by cell (the page's first load) instead of fading them. */
+  cascade: boolean;
   events: CalendarEvent[];
   color: string;
   onPrev: () => void;
   onNext: () => void;
+  onSelectDay: (dateStr: string) => void;
+}) {
+  const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+
+  return (
+    <div className="glass-card p-6">
+      <div className="flex items-center justify-between mb-6">
+        <AnimatePresence mode="wait" initial={false} custom={direction}>
+          <motion.h2
+            key={monthKey}
+            custom={direction}
+            variants={monthSlide}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            className="text-lg font-semibold"
+          >
+            {currentDate.toLocaleDateString("en-US", {
+              month: "long",
+              year: "numeric",
+            })}
+          </motion.h2>
+        </AnimatePresence>
+        <div className="flex gap-1">
+          <button
+            onClick={onPrev}
+            aria-label="Previous month"
+            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onNext}
+            aria-label="Next month"
+            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+          <p key={d} className="text-[10px] text-muted-foreground text-center py-1">
+            {d}
+          </p>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait" initial={false} custom={direction}>
+        <motion.div
+          key={monthKey}
+          custom={direction}
+          variants={monthSlide}
+          initial="enter"
+          animate="center"
+          exit="exit"
+        >
+          <MonthDays
+            currentDate={currentDate}
+            events={events}
+            color={color}
+            cascade={cascade}
+            onSelectDay={onSelectDay}
+          />
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function MonthDays({
+  currentDate,
+  events,
+  color,
+  cascade,
+  onSelectDay,
+}: {
+  currentDate: Date;
+  events: CalendarEvent[];
+  color: string;
+  cascade: boolean;
   onSelectDay: (dateStr: string) => void;
 }) {
   const year = currentDate.getFullYear();
@@ -282,76 +385,54 @@ function MonthGrid({
     events.filter((e) => eventFallsOnDate(e, getDateStr(day))).length;
 
   return (
-    <div className="glass-card p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold">
-          {currentDate.toLocaleDateString("en-US", {
-            month: "long",
-            year: "numeric",
-          })}
-        </h2>
-        <div className="flex gap-1">
+    <div className="grid grid-cols-7 gap-1">
+      {days.map((day, i) => {
+        if (day === null) return <div key={`empty-${i}`} />;
+        const dateStr = getDateStr(day);
+        const count = countFor(day);
+        const isToday = dateStr === today;
+
+        return (
           <button
-            onClick={onPrev}
-            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+            key={day}
+            onClick={() => onSelectDay(dateStr)}
+            className={`relative aspect-square flex flex-col items-center justify-center rounded-lg text-sm transition-colors hover:bg-secondary/50 ${
+              isToday ? "ring-1 ring-primary bg-primary/10 font-semibold" : ""
+            }`}
+            style={
+              count > 3
+                ? {
+                    boxShadow: `0 0 12px hsl(239 84% 67% / ${Math.min(count * 0.1, 0.5)})`,
+                  }
+                : undefined
+            }
           >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onNext}
-            className="p-2 rounded-lg hover:bg-secondary transition-colors"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1 mb-2">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-          <p key={d} className="text-[10px] text-muted-foreground text-center py-1">
-            {d}
-          </p>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((day, i) => {
-          if (day === null) return <div key={`empty-${i}`} />;
-          const dateStr = getDateStr(day);
-          const count = countFor(day);
-          const isToday = dateStr === today;
-
-          return (
-            <button
-              key={day}
-              onClick={() => onSelectDay(dateStr)}
-              className={`relative aspect-square flex flex-col items-center justify-center rounded-lg text-sm transition-all hover:bg-secondary/50 ${
-                isToday ? "ring-1 ring-primary bg-primary/10 font-semibold" : ""
-              }`}
-              style={
-                count > 3
-                  ? {
-                      boxShadow: `0 0 12px hsl(239 84% 67% / ${Math.min(count * 0.1, 0.5)})`,
+            {day}
+            {count > 0 && (
+              <div className="flex flex-wrap justify-center gap-1.5 mt-1 max-w-[64px]">
+                {Array.from({ length: Math.min(count, 15) }).map((_, j) => (
+                  <div
+                    key={j}
+                    // The fade is marked data-smooth so it survives performance
+                    // mode; the cascade is switched off there (index.css).
+                    data-smooth={cascade ? undefined : ""}
+                    className={`horizon-dot w-2 h-2 rounded-full ${
+                      cascade ? "horizon-dot-cascade" : "horizon-dot-fade"
+                    }`}
+                    style={
+                      {
+                        background: color,
+                        boxShadow: `0 0 4px ${color}`,
+                        "--dot-delay": `${i * CASCADE_STEP_MS + j * 20}ms`,
+                      } as React.CSSProperties
                     }
-                  : undefined
-              }
-            >
-              {day}
-              {count > 0 && (
-                <div className="flex flex-wrap justify-center gap-1.5 mt-1 max-w-[64px]">
-                  {Array.from({ length: Math.min(count, 15) }).map((_, j) => (
-                    <div
-                      key={j}
-                      className="w-2 h-2 rounded-full"
-                      style={{ background: color, boxShadow: `0 0 4px ${color}` }}
-                    />
-                  ))}
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
+                  />
+                ))}
+              </div>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -440,18 +521,24 @@ function DayPanel({
   useEscapeKey(onClose);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "hsl(222 47% 11% / 0.8)" }}
-      onClick={onClose}
-    >
+    // The scrim and the card fade as siblings. Fading a wrapper around both
+    // would make it the card's backdrop root, so the card's blur would show
+    // nothing until the fade ended and then snap in: a flicker on every open
+    // and close.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <motion.div
-        initial={{ scale: 0.95 }}
-        animate={{ scale: 1 }}
-        exit={{ scale: 0.95 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        className="absolute inset-0"
+        style={{ background: "hsl(222 47% 11% / 0.8)" }}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
         className="glass-card p-6 w-full max-w-md max-h-[80vh] overflow-y-auto scrollbar-thin"
         onClick={(e) => e.stopPropagation()}
       >
@@ -496,7 +583,7 @@ function DayPanel({
           New event on this day
         </button>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -598,13 +685,14 @@ function EventForm({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-    >
-      <div
+    // Scrim and card fade as siblings, as in DayPanel, so neither blur
+    // flickers on open or close.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={pending ? undefined : onClose}
       />
@@ -800,7 +888,7 @@ function EventForm({
           {editingEvent ? "Save Changes" : "Add Event"}
         </button>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -912,6 +1000,10 @@ export default function CalendarPage() {
 
   const [view, setView] = useState<"month" | "agenda">("month");
   const [currentDate, setCurrentDate] = useState(() => new Date());
+  // Paging direction for the month transition, and whether the dots still
+  // play their opening cascade (only until the first page turn).
+  const [direction, setDirection] = useState(1);
+  const [cascade, setCascade] = useState(true);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [formState, setFormState] = useState<{
     open: boolean;
@@ -958,6 +1050,23 @@ export default function CalendarPage() {
   }, [view, currentDate]);
 
   const eventsQuery = useCalendarEvents({ calendarId, ...range }, connected);
+
+  const neighbours = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    return [-1, 1].map((d) => ({
+      calendarId,
+      timeMin: new Date(year, month + d, 1).toISOString(),
+      timeMax: new Date(year, month + d + 1, 1).toISOString(),
+    }));
+  }, [calendarId, currentDate]);
+  usePrefetchCalendarEvents(neighbours, connected && view === "month");
+
+  const pageMonth = (dir: number) => {
+    setDirection(dir);
+    setCascade(false);
+    setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + dir, 1));
+  };
   const events = eventsQuery.data?.events ?? [];
 
   const activeCalendar = calendars.data?.calendars.find(
@@ -1087,18 +1196,12 @@ export default function CalendarPage() {
       {view === "month" ? (
         <MonthGrid
           currentDate={currentDate}
+          direction={direction}
+          cascade={cascade}
           events={events}
           color={color}
-          onPrev={() =>
-            setCurrentDate(
-              new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
-            )
-          }
-          onNext={() =>
-            setCurrentDate(
-              new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
-            )
-          }
+          onPrev={() => pageMonth(-1)}
+          onNext={() => pageMonth(1)}
           onSelectDay={setSelectedDay}
         />
       ) : (

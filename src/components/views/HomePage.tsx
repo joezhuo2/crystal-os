@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Cloud, Sun, Moon, CloudRain, CloudSun, CloudSnow, CloudLightning, CloudDrizzle, MoonStar } from "lucide-react";
 import { useApp, type Priority, type Task } from "@/contexts/AppContext";
 import { motion } from "framer-motion";
-import { taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
+import { normalizeRepeatDays, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 import { AVAILABLE_CITIES } from "@/hooks/useWeather";
 import { useSkyScene } from "@/hooks/useSkyScene";
 import { useAtmosphere } from "@/lib/atmosphereStore";
@@ -384,7 +384,7 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
   const today = toLocalDateStr();
 
   // Repeating tasks recur rather than lapse, so only one-off tasks count as overdue.
-  const isOverdue = (t: Task) => !t.repeatDays && t.endDate < today;
+  const isOverdue = (t: Task) => !normalizeRepeatDays(t.repeatDays) && t.endDate < today;
 
   // Open work for today plus anything overdue, most pressing first.
   const openTasks = tasks

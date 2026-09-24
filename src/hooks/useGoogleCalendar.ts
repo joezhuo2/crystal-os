@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, shouldRetry } from "@/lib/apiRequest";
 
@@ -146,9 +147,10 @@ export interface EventsQuery {
   timeMax: string;
 }
 
-export function useCalendarEvents(params: EventsQuery, enabled: boolean) {
-  return useQuery<{ events: CalendarEvent[] }>({
-    queryKey: ["gcal", "events", params],
+/** Query options for one range of events, shared by the hook and prefetching. */
+export function calendarEventsQuery(params: EventsQuery) {
+  return {
+    queryKey: ["gcal", "events", params] as const,
     queryFn: () => {
       const qs = new URLSearchParams({
         calendarId: params.calendarId,
@@ -159,8 +161,26 @@ export function useCalendarEvents(params: EventsQuery, enabled: boolean) {
     },
     staleTime: 30 * 1000,
     retry: shouldRetry,
-    enabled,
-  });
+  };
+}
+
+export function useCalendarEvents(params: EventsQuery, enabled: boolean) {
+  return useQuery<{ events: CalendarEvent[] }>({ ...calendarEventsQuery(params), enabled });
+}
+
+/**
+ * Loads the months either side of the one on screen, so paging to them has
+ * its events ready and the grid changes in one step.
+ */
+export function usePrefetchCalendarEvents(ranges: EventsQuery[], enabled: boolean) {
+  const queryClient = useQueryClient();
+  const key = JSON.stringify(ranges);
+  useEffect(() => {
+    if (!enabled) return;
+    for (const params of JSON.parse(key) as EventsQuery[]) {
+      void queryClient.prefetchQuery(calendarEventsQuery(params));
+    }
+  }, [queryClient, key, enabled]);
 }
 
 /* ── Mutations ── */
