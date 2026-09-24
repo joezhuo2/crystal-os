@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-301%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.6.8-6366F1)
+![Version](https://img.shields.io/badge/version-0.6.9-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.6.8** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.6.9** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -21,7 +21,7 @@ Current release: **v0.6.8** — see [CHANGELOG.md](CHANGELOG.md) for release his
 |---------|-------------|
 | **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking |
 | **📅 The Horizon** | Google Calendar, live: month and agenda views, create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid |
-| **🏠 Home widgets** | A 3×3 grid: clock, weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or the next 14 days' tasks once today is clear), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes, each themed like its page (your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton |
+| **🏠 Home widgets** | A 3×3 grid: clock, weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The Archive, Nebula, Portal and Terminal boxes are each themed like their page (the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations |
 | **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list. Its own amethyst theme: glass crystals growing in from the screen edges, sparkles, and a cursor light the crystals reflect |
@@ -143,10 +143,10 @@ src/
 │   │   └── AddPortalAppDialog.tsx # Presets + custom https app
 │   ├── ui/                     # shadcn/ui components (40+)
 │   │   ├── field-controls.tsx  # ThemedSelect, DateField, TimeField (portalled popups)
-│   │   ├── glass-tooltip.tsx   # GlassTip: gradient-bordered tooltip used in place of `title`
+│   │   ├── glass-tooltip.tsx   # GlassTip: gradient-bordered tooltip used in place of `title`, drawn above the page
 │   │   └── dashboard-skeletons.tsx # Per-widget loading skeletons for the home page
 │   ├── views/                  # Page-level components
-│   │   ├── HomePage.tsx        # Clock, weather, Vault, Engine, today's events, Archive widgets
+│   │   ├── HomePage.tsx        # Clock, weather, Vault, Engine, today's events, themed Archive widgets
 │   │   ├── HomeSpaces.tsx      # Home's themed Nebula, Portal and Terminal boxes
 │   │   ├── TasksPage.tsx       # Task list, form, filtering, Pomodoro
 │   │   ├── CalendarPage.tsx    # Google Calendar: month + agenda, event CRUD
@@ -185,6 +185,7 @@ src/
 │   ├── portalStore.ts          # Module-level Portal store: apps, active app, badges, theme
 │   ├── portalNative.ts         # Desktop Portal bridge (portal_* commands)
 │   ├── installerNative.ts      # Desktop installer bridge (installer_* commands, version helpers)
+│   ├── homeTasks.ts            # Home Engine ordering: priority ranks, upcoming tasks
 │   ├── pomodoro.ts             # Module-level Pomodoro store (page + tray agree)
 │   ├── tray.ts                 # Tauri tray events → app, app state → tray menu
 │   ├── hotkey.ts               # Hotkey parsing + combo validation

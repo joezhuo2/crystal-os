@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef, type ReactNode } from "react";
 import { useApp, type Transaction } from "@/contexts/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { toLocalDateStr } from "@/lib/utils";
@@ -6,10 +6,57 @@ import { Plus, Trash2, X, Settings, Pencil } from "lucide-react";
 import { CategoryManagerButton } from "./CategoryManager";
 import { DateField, ThemedSelect } from "@/components/ui/field-controls";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAppActivity } from "@/lib/appActivity";
 import {
   AreaChart, Area, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer,
+  XAxis, YAxis, Tooltip,
 } from "recharts";
+
+/** How long a chart's box must hold one width before the chart draws into it. */
+const SETTLE_MS = 120;
+
+/** One entrance for every chart on the page, so they draw in together. */
+const REVEAL = { animationBegin: 0, animationDuration: 900, animationEasing: "ease-out" } as const;
+
+/**
+ * Holds a chart back, behind a skeleton, until its box has kept one width for
+ * SETTLE_MS, then draws it at that width.
+ *
+ * Recharts plays its entrance only on the first render. A resize right after
+ * mount restarts it as a morph between two nearly identical shapes, which is
+ * how the Area and Line charts could pop in finished while the donut, whose
+ * sweep starts 400 ms in by default, still swept. Later resizes pass straight
+ * through. Performance mode and reduced motion skip the entrance.
+ */
+function ChartFrame({ height, children }: { height: number; children: (width: number, animate: boolean) => ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  const [settled, setSettled] = useState(false);
+  const { still } = useAppActivity();
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new ResizeObserver(([entry]) => {
+      setWidth(Math.round(entry.contentRect.width));
+      clearTimeout(timer);
+      timer = setTimeout(() => setSettled(true), SETTLE_MS);
+    });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} style={{ height }}>
+      {settled && width > 0 ? children(width, !still) : <Skeleton className="h-full w-full rounded-lg" />}
+    </div>
+  );
+}
 
 function CashFlowChart() {
   const { transactions } = useApp();
@@ -38,35 +85,37 @@ function CashFlowChart() {
   return (
     <div className="glass-card-hover p-5">
       <p className="text-xs text-muted-foreground uppercase tracking-widest mb-4">Cash Flow — Last 6 Months</p>
-      <ResponsiveContainer width="100%" height={200}>
-        <AreaChart data={data}>
-          <defs>
-            <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(160 84% 39%)" stopOpacity={0.4} />
-              <stop offset="100%" stopColor="hsl(160 84% 39%)" stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(0 72% 51%)" stopOpacity={0.4} />
-              <stop offset="100%" stopColor="hsl(0 72% 51%)" stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="netGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(239 84% 67%)" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="hsl(239 84% 67%)" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toFixed(2)} />
-          <Tooltip
-            contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12, color: "hsl(210 40% 96%)" }}
-            labelStyle={{ color: "hsl(210 40% 96%)", fontWeight: 600 }}
-            itemStyle={{ color: "hsl(215 20% 75%)" }}
-            formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name.charAt(0).toUpperCase() + name.slice(1)]}
-          />
-          <Area type="monotone" dataKey="income" stroke="hsl(160 84% 39%)" fill="url(#incomeGrad)" strokeWidth={2} />
-          <Area type="monotone" dataKey="expense" stroke="hsl(0 72% 51%)" fill="url(#expenseGrad)" strokeWidth={2} />
-          <Area type="monotone" dataKey="net" stroke="hsl(239 84% 67%)" fill="url(#netGrad)" strokeWidth={2} strokeDasharray="5 3" />
-        </AreaChart>
-      </ResponsiveContainer>
+      <ChartFrame height={200}>
+        {(width, animate) => (
+          <AreaChart width={width} height={200} data={data}>
+            <defs>
+              <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(160 84% 39%)" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="hsl(160 84% 39%)" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(0 72% 51%)" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="hsl(0 72% 51%)" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="netGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(239 84% 67%)" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="hsl(239 84% 67%)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toFixed(2)} />
+            <Tooltip
+              contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12, color: "hsl(210 40% 96%)" }}
+              labelStyle={{ color: "hsl(210 40% 96%)", fontWeight: 600 }}
+              itemStyle={{ color: "hsl(215 20% 75%)" }}
+              formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name.charAt(0).toUpperCase() + name.slice(1)]}
+            />
+            <Area type="monotone" dataKey="income" stroke="hsl(160 84% 39%)" fill="url(#incomeGrad)" strokeWidth={2} isAnimationActive={animate} {...REVEAL} />
+            <Area type="monotone" dataKey="expense" stroke="hsl(0 72% 51%)" fill="url(#expenseGrad)" strokeWidth={2} isAnimationActive={animate} {...REVEAL} />
+            <Area type="monotone" dataKey="net" stroke="hsl(239 84% 67%)" fill="url(#netGrad)" strokeWidth={2} strokeDasharray="5 3" isAnimationActive={animate} {...REVEAL} />
+          </AreaChart>
+        )}
+      </ChartFrame>
       <div className="flex flex-wrap gap-4 mt-3">
         <span className="flex items-center gap-1.5 text-xs font-medium text-foreground/70">
           <span className="w-3 h-0.5 rounded-full" style={{ background: "hsl(160 84% 39%)" }} /> Income
@@ -98,19 +147,21 @@ function CategoryDonut() {
   return (
     <div className="glass-card-hover p-5">
       <p className="text-xs text-muted-foreground uppercase tracking-widest mb-4">Spending Breakdown</p>
-      <ResponsiveContainer width="100%" height={200}>
-        <PieChart>
-          <Pie data={data} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="value" stroke="none">
-            {data.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-          </Pie>
-          <Tooltip
-            contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12, color: "hsl(210 40% 96%)" }}
-            labelStyle={{ color: "hsl(210 40% 96%)", fontWeight: 600 }}
-            itemStyle={{ color: "hsl(215 20% 75%)" }}
-            formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+      <ChartFrame height={200}>
+        {(width, animate) => (
+          <PieChart width={width} height={200}>
+            <Pie data={data} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="value" stroke="none" isAnimationActive={animate} {...REVEAL}>
+              {data.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+            </Pie>
+            <Tooltip
+              contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12, color: "hsl(210 40% 96%)" }}
+              labelStyle={{ color: "hsl(210 40% 96%)", fontWeight: 600 }}
+              itemStyle={{ color: "hsl(215 20% 75%)" }}
+              formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
+            />
+          </PieChart>
+        )}
+      </ChartFrame>
       <div className="flex flex-wrap gap-3 mt-3">
         {data.map((d) => (
           <span key={d.name} className="flex items-center gap-1.5 text-xs font-medium text-foreground/80">
@@ -142,19 +193,21 @@ function SavingsTrend() {
   return (
     <div className="glass-card-hover glass-card-emerald p-5">
       <p className="text-xs text-accent uppercase tracking-widest mb-4">Net Savings Trend</p>
-      <ResponsiveContainer width="100%" height={160}>
-        <LineChart data={data}>
-          <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toFixed(2)} />
-          <Tooltip
-            contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12, color: "hsl(210 40% 96%)" }}
-            labelStyle={{ color: "hsl(210 40% 96%)", fontWeight: 600 }}
-            itemStyle={{ color: "hsl(215 20% 75%)" }}
-            formatter={(value: number) => [`$${value.toFixed(2)}`, "Savings"]}
-          />
-          <Line type="monotone" dataKey="savings" stroke="hsl(160 84% 39%)" strokeWidth={2} dot={false} />
-        </LineChart>
-      </ResponsiveContainer>
+      <ChartFrame height={160}>
+        {(width, animate) => (
+          <LineChart width={width} height={160} data={data}>
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toFixed(2)} />
+            <Tooltip
+              contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12, color: "hsl(210 40% 96%)" }}
+              labelStyle={{ color: "hsl(210 40% 96%)", fontWeight: 600 }}
+              itemStyle={{ color: "hsl(215 20% 75%)" }}
+              formatter={(value: number) => [`$${value.toFixed(2)}`, "Savings"]}
+            />
+            <Line type="monotone" dataKey="savings" stroke="hsl(160 84% 39%)" strokeWidth={2} dot={false} isAnimationActive={animate} {...REVEAL} />
+          </LineChart>
+        )}
+      </ChartFrame>
     </div>
   );
 }

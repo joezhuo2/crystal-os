@@ -5,6 +5,18 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.9] - 2026-09-23 - The Archive Joins the Grid
+
+### Changed
+
+- **The Archive box on Home wears the Archive's look**: the amethyst cave behind and around the card with twinkling sparkles, violet glass, a gem icon, the gradient title, the Archive's tag chips, and an amethyst tooltip on quick add. It matches the Nebula, Portal and Terminal boxes.
+- **Upcoming tasks are ordered by priority first** (urgent, high, medium, low), then by earliest date, then by earliest start time. They were ordered by date first, so a low-priority task tomorrow sat above an urgent one next week. The ordering lives in `src/lib/homeTasks.ts`, with tests.
+
+### Fixed
+
+- **Home tooltips were cut off by neighbouring cards.** The tooltip was drawn inside its card, and every card is its own stacking context (backdrop blur, isolation), so any card later in the grid painted over the part that stuck out, such as the right corner of **Add task** under Today on the Horizon. Every `GlassTip` (quick add, add task, complete task, the Portal box's app icons) now renders above the page.
+- **The Vault's charts now all draw in together.** Entering the Vault, only Spending Breakdown played its entrance while Cash Flow and Net Savings Trend appeared already drawn. Recharts plays its entrance only on a chart's first render, and a resize right after mount replays it as a near-invisible morph. Each chart now waits behind a skeleton until its box has held one width for 120 ms, then all three draw in over the same 900 ms. Performance mode and reduced motion skip the entrance.
+
 ## [v0.6.8] - 2026-09-23 - Every Space on One Screen
 
 ### Changed

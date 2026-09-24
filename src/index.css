@@ -1407,6 +1407,11 @@
     --tip-b: hsl(188 86% 53%);
   }
 
+  .glass-tooltip-amethyst {
+    --tip-a: #a855f7;
+    --tip-b: #f0abfc;
+  }
+
   .glass-tooltip[data-side] {
     display: flex;
     flex-direction: column;
@@ -1433,8 +1438,8 @@
 }
 
 /* ------------------------------------------------------------------
- * Home spaces (views/HomeSpaces.tsx): the Nebula, Portal and Terminal boxes
- * on the Home tab. `.home-space` paints the page's backdrop behind its box
+ * Home spaces (views/HomeSpaces.tsx, and the Archive box in HomePage.tsx):
+ * the Nebula, Portal, Terminal and Archive boxes on the Home tab. `.home-space` paints the page's backdrop behind its box
  * and 8px past it, half the grid gap, so the box and the space around it
  * both wear the page's look. Colours come from --nebula-a/b/c (inline, the
  * user's palette) and the portal-theme-* class (the Portal theme).
@@ -1566,6 +1571,61 @@
     right: -0.4rem;
   }
 
+  /* Archive: the amethyst cave of The Archive page, with twinkling sparkles.
+     The palette overrides retint text-muted-foreground and text-primary. */
+  .home-space-archive {
+    --primary: 271 91% 72%;
+    --muted-foreground: 268 22% 66%;
+  }
+
+  .home-space-archive::before {
+    background:
+      radial-gradient(90% 70% at 50% 115%, #2e0b52 0%, transparent 65%),
+      radial-gradient(55% 60% at 8% 6%, rgb(126 34 206 / 0.4), transparent 70%),
+      radial-gradient(45% 50% at 92% 40%, rgb(192 38 211 / 0.16), transparent 70%),
+      linear-gradient(180deg, #07030f 0%, #0c0420 55%, #05020b 100%);
+    box-shadow: 0 0 32px rgb(147 51 234 / 0.2);
+  }
+
+  .home-space-archive::after {
+    display: block;
+    background-image:
+      radial-gradient(1.5px 1.5px at 9% 18%, #f5d0fe, transparent),
+      radial-gradient(1px 1px at 27% 86%, rgb(233 213 255 / 0.85), transparent),
+      radial-gradient(1.5px 1.5px at 48% 6%, #fff, transparent),
+      radial-gradient(1px 1px at 66% 94%, rgb(216 180 254 / 0.8), transparent),
+      radial-gradient(2px 2px at 95% 12%, #f0abfc, transparent),
+      radial-gradient(1px 1px at 88% 72%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 3% 64%, rgb(233 213 255 / 0.9), transparent);
+    animation: home-twinkle 4s ease-in-out infinite alternate;
+  }
+
+  .home-card-archive {
+    border-radius: 1rem;
+    color: #f5f3ff;
+    background: linear-gradient(160deg, rgb(46 16 84 / 0.42), rgb(14 6 28 / 0.55));
+    border: 1px solid rgb(192 132 252 / 0.2);
+    box-shadow:
+      0 8px 32px rgb(3 0 10 / 0.55),
+      0 0 36px rgb(147 51 234 / 0.1),
+      inset 0 1px 0 rgb(245 208 254 / 0.08);
+    backdrop-filter: blur(10px) saturate(1.2);
+    transition: border-color 300ms, box-shadow 300ms;
+  }
+
+  .home-card-archive:hover {
+    border-color: rgb(216 180 254 / 0.45);
+    box-shadow:
+      0 8px 32px rgb(3 0 10 / 0.55),
+      0 0 34px rgb(168 85 247 / 0.3),
+      inset 0 1px 0 rgb(245 208 254 / 0.12);
+  }
+
+  .home-archive-gem {
+    color: #d8b4fe;
+    filter: drop-shadow(0 0 6px rgb(192 132 252 / 0.75));
+  }
+
   /* Terminal: black scanlines around a glitching frame. */
   .home-space-terminal::before {
     border-radius: 0.6rem;
@@ -1606,6 +1666,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .home-space-nebula[data-stars]::after,
+    .home-space-archive::after,
     .home-nebula-pulse,
     .home-card-portal,
     .home-terminal-cursor {

@@ -10,7 +10,7 @@ import {
   useCalendarStatus,
   type CalendarEvent,
 } from "@/hooks/useGoogleCalendar";
-import { BookOpen, NotebookPen, CalendarClock, ChevronRight, Plus, Check, Wallet } from "lucide-react";
+import { BookOpen, NotebookPen, CalendarClock, ChevronRight, Gem, Plus, Check, Wallet } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   TodayHorizonContentSkeleton,
@@ -19,6 +19,7 @@ import {
   WeatherWidgetSkeleton,
 } from "@/components/ui/dashboard-skeletons";
 import { GlassTip } from "@/components/ui/glass-tooltip";
+import { PRIORITY_RANK, upcomingTasks } from "@/lib/homeTasks";
 import { NebulaSpace, PortalSpace, TerminalSpace } from "./HomeSpaces";
 
 function Clock() {
@@ -105,7 +106,10 @@ function WeatherWidget({ onClick }: { onClick?: () => void }) {
   );
 }
 
-/** Notes from the Obsidian vault. The whole card opens The Archive. */
+/**
+ * Notes from the Obsidian vault. The whole card opens The Archive, and wears
+ * its amethyst cave look (index.css, "Home spaces").
+ */
 function ArchiveWidget({ onClick }: { onClick?: () => void }) {
   const { setSelectedNotePath, setShowQuickAdd, setQuickAddDraft } = useApp();
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -121,83 +125,85 @@ function ArchiveWidget({ onClick }: { onClick?: () => void }) {
   };
 
   return (
-    <div onClick={onClick} className="glass-card-hover p-6 cursor-pointer group">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-muted-foreground uppercase tracking-widest">The Archive</p>
-        <GlassTip label="Quick add to vault" hint="Capture a note without leaving home" tone="emerald">
-          <button
-            onClick={openQuickAdd}
-            aria-label="Quick add to vault"
-            className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-          >
-            <NotebookPen className="w-4 h-4" />
-          </button>
-        </GlassTip>
-      </div>
+    <div className="home-space home-space-archive">
+      <div onClick={onClick} className="home-card-archive h-full p-6 cursor-pointer group">
+        <div className="flex items-center justify-between mb-3">
+          <p className="flex items-center gap-2 text-xs uppercase tracking-widest font-semibold">
+            <Gem className="w-3.5 h-3.5 home-archive-gem" />
+            <span className="obsidian-title">The Archive</span>
+          </p>
+          <GlassTip label="Quick add to vault" hint="Capture a note without leaving home" tone="amethyst">
+            <button
+              onClick={openQuickAdd}
+              aria-label="Quick add to vault"
+              className="p-1.5 rounded-lg text-purple-300 hover:bg-purple-500/15 transition-colors"
+            >
+              <NotebookPen className="w-4 h-4" />
+            </button>
+          </GlassTip>
+        </div>
 
-      {error && <p className="text-xs text-muted-foreground">Vault unavailable.</p>}
+        {error && <p className="text-xs text-muted-foreground">Vault unavailable.</p>}
 
-      {isLoading && <VaultContentSkeleton />}
+        {isLoading && <VaultContentSkeleton />}
 
-      {!isLoading && !error && data && (
-        <>
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {data.allTags.slice(0, 5).map((tag) => {
-              const active = activeTag === tag;
-              return (
-                <button
-                  key={tag}
+        {!isLoading && !error && data && (
+          <>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {data.allTags.slice(0, 5).map((tag) => {
+                const active = activeTag === tag;
+                return (
+                  <button
+                    key={tag}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTag(active ? null : tag);
+                    }}
+                    data-active={active || undefined}
+                    className="obsidian-chip px-2 py-0.5 rounded-full text-[10px] transition-colors border"
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="space-y-1.5">
+              {data.notes.length === 0 && (
+                <p className="text-xs text-muted-foreground">No notes for this tag.</p>
+              )}
+              {data.notes.map((note, i) => (
+                <motion.button
+                  key={note.path}
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setActiveTag(active ? null : tag);
+                    setSelectedNotePath(note.path);
+                    onClick?.();
                   }}
-                  className="px-2 py-0.5 rounded-full text-[10px] transition-colors border"
-                  style={{
-                    background: active ? "hsl(239 84% 67% / 0.18)" : "hsl(0 0% 100% / 0.04)",
-                    borderColor: active ? "hsl(239 84% 67% / 0.4)" : "hsl(0 0% 100% / 0.08)",
-                  }}
+                  className="w-full flex items-center gap-2 text-left group/note"
                 >
-                  {tag}
-                </button>
-              );
-            })}
-          </div>
+                  <BookOpen className="w-3.5 h-3.5 text-purple-300/60 shrink-0" />
+                  <span className="text-sm truncate group-hover/note:text-primary transition-colors">
+                    {note.title}
+                  </span>
+                  <span className="ml-auto text-[10px] text-muted-foreground/50 shrink-0">
+                    {formatDistanceToNow(new Date(note.date ? Date.parse(note.date) : note.mtime), {
+                      addSuffix: true,
+                    })}
+                  </span>
+                </motion.button>
+              ))}
+            </div>
 
-          <div className="space-y-1.5">
-            {data.notes.length === 0 && (
-              <p className="text-xs text-muted-foreground">No notes for this tag.</p>
-            )}
-            {data.notes.map((note, i) => (
-              <motion.button
-                key={note.path}
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedNotePath(note.path);
-                  onClick?.();
-                }}
-                className="w-full flex items-center gap-2 text-left group/note"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-sky-400/60 shrink-0" />
-                <span className="text-sm truncate group-hover/note:text-primary transition-colors">
-                  {note.title}
-                </span>
-                <span className="ml-auto text-[10px] text-muted-foreground/50 shrink-0">
-                  {formatDistanceToNow(new Date(note.date ? Date.parse(note.date) : note.mtime), {
-                    addSuffix: true,
-                  })}
-                </span>
-              </motion.button>
-            ))}
-          </div>
-
-          <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors mt-3">
-            Browse all {data.total} notes →
-          </p>
-        </>
-      )}
+            <p className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary transition-colors mt-3">
+              Browse all {data.total} notes <ChevronRight className="w-3.5 h-3.5" />
+            </p>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -319,26 +325,12 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
   );
 }
 
-const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 const PRIORITY_CLASS: Record<Priority, string> = {
   low: "priority-low",
   medium: "priority-medium",
   high: "priority-high",
   urgent: "priority-urgent",
 };
-
-/** How far ahead the Engine looks for upcoming tasks once today is clear. */
-const UPCOMING_DAYS = 14;
-
-/** The dates after `today`, up to UPCOMING_DAYS out. */
-function upcomingDates(today: string): string[] {
-  const base = new Date(`${today}T12:00:00`);
-  return Array.from({ length: UPCOMING_DAYS }, (_, i) => {
-    const d = new Date(base);
-    d.setDate(base.getDate() + i + 1);
-    return toLocalDateStr(d);
-  });
-}
 
 /** "Tomorrow", a weekday within the week, then a short date. */
 function formatUpcomingDay(date: string, today: string): string {
@@ -368,22 +360,11 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
     });
 
   // Once today is clear, show what comes next: each open task's next date
-  // within UPCOMING_DAYS, soonest first.
-  const upcoming = useMemo(() => {
-    if (openTasks.length > 0) return [];
-    const dates = upcomingDates(today);
-    return tasks
-      .filter((t) => !t.completed)
-      .flatMap((task) => {
-        const date = dates.find((d) => taskFallsOnDate(task, d));
-        return date ? [{ task, date }] : [];
-      })
-      .sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date);
-        if (a.task.priority !== b.task.priority) return PRIORITY_RANK[a.task.priority] - PRIORITY_RANK[b.task.priority];
-        return a.task.startTime.localeCompare(b.task.startTime);
-      });
-  }, [tasks, today, openTasks.length]);
+  // within UPCOMING_DAYS, highest priority first, then soonest.
+  const upcoming = useMemo(
+    () => (openTasks.length > 0 ? [] : upcomingTasks(tasks, today)),
+    [tasks, today, openTasks.length],
+  );
 
   const showingUpcoming = openTasks.length === 0 && upcoming.length > 0;
   const rows: TaskRow[] = showingUpcoming
