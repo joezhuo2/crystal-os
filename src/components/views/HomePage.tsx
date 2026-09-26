@@ -8,6 +8,7 @@ import { useSkyScene } from "@/hooks/useSkyScene";
 import { useAtmosphere } from "@/lib/atmosphereStore";
 import { auroraStrength, pineRidge } from "@/lib/atmosphereScene";
 import { useVaultNotes } from "@/hooks/useVault";
+import { HORIZON_CARD_BLUR, useHorizonBackdrop } from "@/lib/horizonBackdrop";
 import {
   useCalendarEvents,
   useCalendarStatus,
@@ -269,6 +270,7 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
 
   const status = useCalendarStatus();
   const connected = status.data?.connected === true;
+  const backdropUrl = useHorizonBackdrop(HORIZON_CARD_BLUR);
 
   // Local midnight today through local midnight tomorrow.
   const range = useMemo(() => {
@@ -301,62 +303,64 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
   };
 
   return (
-    <div
-      onClick={onClick}
-      className="glass-card-hover p-6 cursor-pointer group"
-    >
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-muted-foreground uppercase tracking-widest">Today on the Horizon</p>
-        <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary">
-          Open <ChevronRight className="w-3.5 h-3.5" />
-        </span>
-      </div>
+    <div className="home-space home-space-horizon">
+      <span aria-hidden="true" className="home-horizon-scene">
+        {backdropUrl && <span className="home-horizon-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />}
+      </span>
+      <div onClick={onClick} className="home-card-horizon h-full p-6 cursor-pointer group">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-widest">Today on the Horizon</p>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary">
+            Open <ChevronRight className="w-3.5 h-3.5" />
+          </span>
+        </div>
 
-      {loading ? (
-        <TodayHorizonContentSkeleton />
-      ) : !connected ? (
-        <p className="text-sm text-muted-foreground">
-          Google Calendar is not connected. Open the Horizon to connect it.
-        </p>
-      ) : eventsQuery.error ? (
-        <p className="text-sm text-muted-foreground">Could not load today's events.</p>
-      ) : (
-        <>
-          <div className="flex items-baseline gap-2 mb-4">
-            <span className="text-3xl font-bold tabular-nums">{todayEvents.length}</span>
-            <span className="text-sm text-muted-foreground">
-              event{todayEvents.length !== 1 ? "s" : ""} today
-            </span>
-          </div>
-
-          {todayEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nothing scheduled. The horizon is clear.</p>
-          ) : (
-            <div className="space-y-1.5">
-              {todayEvents.map((event, i) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                  className="flex items-center gap-3"
-                >
-                  <CalendarClock className="w-3.5 h-3.5 text-primary/60 shrink-0" />
-                  <span className="text-sm truncate">{event.summary || "(no title)"}</span>
-                  {event.location && (
-                    <span className="text-[10px] text-muted-foreground/60 truncate hidden sm:inline">
-                      {event.location}
-                    </span>
-                  )}
-                  <span className="ml-auto text-xs text-muted-foreground tabular-nums shrink-0">
-                    {timeLabel(event)}
-                  </span>
-                </motion.div>
-              ))}
+        {loading ? (
+          <TodayHorizonContentSkeleton />
+        ) : !connected ? (
+          <p className="text-sm text-muted-foreground">
+            Google Calendar is not connected. Open the Horizon to connect it.
+          </p>
+        ) : eventsQuery.error ? (
+          <p className="text-sm text-muted-foreground">Could not load today's events.</p>
+        ) : (
+          <>
+            <div className="flex items-baseline gap-2 mb-4">
+              <span className="text-3xl font-bold tabular-nums">{todayEvents.length}</span>
+              <span className="text-sm text-muted-foreground">
+                event{todayEvents.length !== 1 ? "s" : ""} today
+              </span>
             </div>
-          )}
-        </>
-      )}
+
+            {todayEvents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nothing scheduled. The horizon is clear.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {todayEvents.map((event, i) => (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    className="flex items-center gap-3"
+                  >
+                    <CalendarClock className="w-3.5 h-3.5 text-primary/60 shrink-0" />
+                    <span className="text-sm truncate">{event.summary || "(no title)"}</span>
+                    {event.location && (
+                      <span className="text-[10px] text-muted-foreground/60 truncate hidden sm:inline">
+                        {event.location}
+                      </span>
+                    )}
+                    <span className="ml-auto text-xs text-muted-foreground tabular-nums shrink-0">
+                      {timeLabel(event)}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -1593,6 +1593,81 @@
     background: #020617;
   }
 
+  /* The Horizon page: the black hole, pre-blurred at 15%
+     Image blur (horizonBackdrop.ts), so no live CSS filter here either. */
+  .horizon-root,
+  .horizon-backdrop {
+    background: #000;
+  }
+
+  /* The Horizon's palette: the accretion disk's electric blues over deep
+     navy. On <body> as well (Index.tsx) so portalled popups follow it. */
+  .horizon-root,
+  body.horizon-theme {
+    --background: 222 70% 4%;
+    --popover: 222 55% 9%;
+    --card: 220 50% 12%;
+    --secondary: 218 45% 18%;
+    --muted: 218 40% 15%;
+    --border: 214 45% 24%;
+    --input: 214 45% 24%;
+    --primary: 213 94% 58%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 205 95% 65%;
+    --accent: 199 89% 55%;
+    --glow-indigo: 210 95% 62%;
+    --muted-foreground: 213 30% 72%;
+    --glass-border: 210 100% 88%;
+  }
+
+  .horizon-title {
+    background: linear-gradient(100deg, #e0f2fe, #60a5fa 45%, #2563eb);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Page panels: dark blue glass, so text reads over the bright disk. */
+  .horizon-root main .glass-card {
+    background: linear-gradient(160deg, rgb(12 22 48 / 0.55), rgb(2 5 16 / 0.65));
+    border-color: rgb(147 197 253 / 0.16);
+    box-shadow:
+      0 8px 32px rgb(0 2 12 / 0.55),
+      0 0 36px rgb(59 130 246 / 0.07),
+      inset 0 1px 0 rgb(219 234 254 / 0.07);
+  }
+
+  .sidebar-horizon {
+    background: linear-gradient(180deg, rgb(10 22 52 / 0.75) 0%, rgb(2 4 14 / 0.85) 50%, rgb(12 30 72 / 0.6) 100%);
+    border-color: transparent;
+    box-shadow:
+      inset -1px 0 0 rgb(96 165 250 / 0.32),
+      6px 0 28px rgb(59 130 246 / 0.16);
+  }
+
+  .sidebar-horizon button svg {
+    filter: drop-shadow(0 0 4px rgb(96 165 250 / 0.5));
+  }
+
+  .horizon-image {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    animation: horizon-image-in 600ms ease-out;
+  }
+
+  @keyframes horizon-image-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .horizon-image {
+      animation: none;
+    }
+  }
+
   .atmo-sky {
     position: absolute;
     inset: 0;
@@ -2220,6 +2295,61 @@
       0 8px 32px rgb(0 4 16 / 0.45),
       0 0 30px rgb(45 212 191 / 0.22),
       inset 0 1px 0 rgb(224 242 254 / 0.12);
+  }
+
+  /* Horizon: the black hole behind the box, already blurred (horizonBackdrop.ts
+     bakes it at 25% Image blur), under a very light glass. */
+  .home-space-horizon {
+    --primary: 205 95% 70%;
+    --muted-foreground: 212 30% 78%;
+  }
+
+  .home-space-horizon::before {
+    background: #000;
+    box-shadow: 0 0 32px rgb(59 130 246 / 0.18);
+  }
+
+  .home-horizon-scene {
+    position: absolute;
+    inset: -8px;
+    z-index: -1;
+    overflow: hidden;
+    border-radius: 1.25rem;
+    pointer-events: none;
+  }
+
+  .home-horizon-image {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center 55%;
+    animation: horizon-image-in 600ms ease-out;
+  }
+
+  .home-card-horizon {
+    border-radius: 1rem;
+    color: #f8fafc;
+    background: linear-gradient(160deg, rgb(15 23 42 / 0.1), rgb(2 6 23 / 0.28));
+    border: 1px solid rgb(191 219 254 / 0.16);
+    text-shadow: 0 1px 8px rgb(2 6 23 / 0.7);
+    box-shadow:
+      0 8px 32px rgb(0 4 16 / 0.45),
+      inset 0 1px 0 rgb(224 242 254 / 0.08);
+    transition: border-color 300ms, box-shadow 300ms;
+  }
+
+  .home-card-horizon:hover {
+    border-color: rgb(96 165 250 / 0.45);
+    box-shadow:
+      0 8px 32px rgb(0 4 16 / 0.45),
+      0 0 30px rgb(59 130 246 / 0.25),
+      inset 0 1px 0 rgb(224 242 254 / 0.12);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .home-horizon-image {
+      animation: none;
+    }
   }
 
   @keyframes home-aurora {

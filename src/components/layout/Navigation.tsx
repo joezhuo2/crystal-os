@@ -44,7 +44,7 @@ const archiveTab: Tab = { id: "archive", label: "The Archive", icon: BookOpen };
 const bottomTabs: Tab[] = [...tabs, archiveTab];
 
 /** The Terminal, Portal, Nebula, Atmosphere, and Archive tabs restyle the sidebar to match their pages. */
-type SidebarMode = "default" | "terminal" | "portal" | "nebula" | "atmosphere" | "obsidian";
+type SidebarMode = "default" | "terminal" | "portal" | "nebula" | "atmosphere" | "obsidian" | "horizon";
 
 interface SidebarNavProps {
   activeTab: TabId;
@@ -76,6 +76,11 @@ const activePillStyle: Record<SidebarMode, React.CSSProperties> = {
     border: "1px solid rgb(216 180 254 / 0.4)",
     boxShadow: "0 0 18px rgb(168 85 247 / 0.35)",
   },
+  horizon: {
+    background: "rgb(59 130 246 / 0.2)",
+    border: "1px solid rgb(147 197 253 / 0.4)",
+    boxShadow: "0 0 18px rgb(59 130 246 / 0.35)",
+  },
 };
 
 function SidebarButton({
@@ -98,7 +103,7 @@ function SidebarButton({
       ? active
         ? "text-neutral-50"
         : "text-neutral-500 hover:text-neutral-100 hover:bg-white/5"
-      : mode === "portal" || mode === "nebula" || mode === "atmosphere" || mode === "obsidian"
+      : mode === "portal" || mode === "nebula" || mode === "atmosphere" || mode === "obsidian" || mode === "horizon"
         ? active
           ? "text-white"
           : "text-white/45 hover:text-white hover:bg-white/5"
@@ -161,7 +166,9 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
             ? "atmosphere"
             : activeTab === "archive"
               ? "obsidian"
-              : "default";
+              : activeTab === "calendar"
+                ? "horizon"
+                : "default";
   const terminal = mode === "terminal";
   const sidebarClass = terminal
     ? "sidebar-terminal"
@@ -173,7 +180,9 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
           ? "sidebar-atmosphere"
           : mode === "obsidian"
             ? "sidebar-obsidian"
-            : "";
+            : mode === "horizon"
+              ? "sidebar-horizon"
+              : "";
   const gradientClass =
     mode === "portal"
       ? "portal-gradient-text"
@@ -183,7 +192,9 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
           ? "atmosphere-title"
           : mode === "obsidian"
             ? "obsidian-title"
-            : "text-gradient-indigo";
+            : mode === "horizon"
+              ? "horizon-title"
+              : "text-gradient-indigo";
 
   const button = (tab: Tab, badge?: PortalBadge | null) => (
     <SidebarButton

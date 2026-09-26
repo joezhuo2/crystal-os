@@ -14,6 +14,7 @@ import PortalBackdrop from "@/components/layout/PortalBackdrop";
 import NebulaBackdrop from "@/components/layout/NebulaBackdrop";
 import ObsidianBackdrop from "@/components/layout/ObsidianBackdrop";
 import AtmosphereBackdrop from "@/components/layout/AtmosphereBackdrop";
+import HorizonBackdrop from "@/components/layout/HorizonBackdrop";
 import { useHarness } from "@/hooks/useHarness";
 import { usePortal } from "@/hooks/usePortal";
 import { isDesktop } from "@/lib/platform";
@@ -80,6 +81,12 @@ const Index = () => {
     preloadViews();
   }, []);
 
+  // Popups (dropdowns, pickers) portal to <body>, outside the page root, so
+  // the Horizon's palette goes on <body> too for them to pick it up.
+  useEffect(() => {
+    document.body.classList.toggle("horizon-theme", activeTab === "calendar");
+  }, [activeTab]);
+
   // Hide the Portal's native webview as soon as another tab is picked. The
   // page only unmounts after its exit animation, and the webview would sit
   // over everything until then.
@@ -106,7 +113,9 @@ const Index = () => {
             ? "atmosphere-root"
             : activeTab === "archive"
               ? "obsidian-root"
-              : "mesh-gradient-bg";
+              : activeTab === "calendar"
+                ? "horizon-root"
+                : "mesh-gradient-bg";
   // The Nebula page, sidebar, and backdrop read their colours from these.
   const rootStyle =
     activeTab === "nebula"
@@ -121,6 +130,7 @@ const Index = () => {
         {activeTab === "nebula" && <NebulaBackdrop theme={nebulaTheme} />}
         {activeTab === "weather" && <AtmosphereBackdrop />}
         {activeTab === "archive" && <ObsidianBackdrop />}
+        {activeTab === "calendar" && <HorizonBackdrop />}
         <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
         <main className="flex-1 min-h-0 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
           {/* Unmounted on the Terminal, Portal, Nebula, and Archive tabs: hides the

@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { toLocalDateStr } from "@/lib/utils";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
+import { GlassTip } from "@/components/ui/glass-tooltip";
 import { useApp } from "@/contexts/AppContext";
 import {
   AlertDialog,
@@ -52,7 +53,9 @@ import {
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const CALENDAR_STORAGE_KEY = "crystal-os-google-calendar";
-const DEFAULT_COLOR = "hsl(239 84% 67%)";
+const DEFAULT_COLOR = "hsl(var(--primary))";
+/** Tooltip border stops matching the Horizon's accretion-disk blues. */
+const HORIZON_TIP: [string, string] = ["#93c5fd", "#2563eb"];
 const AGENDA_DAYS = 30;
 const DAY_MS = 86400000;
 
@@ -402,7 +405,7 @@ function MonthDays({
             style={
               count > 3
                 ? {
-                    boxShadow: `0 0 12px hsl(239 84% 67% / ${Math.min(count * 0.1, 0.5)})`,
+                    boxShadow: `0 0 12px hsl(var(--primary) / ${Math.min(count * 0.1, 0.5)})`,
                   }
                 : undefined
             }
@@ -532,7 +535,7 @@ function DayPanel({
         exit={{ opacity: 0 }}
         transition={{ duration: 0.18 }}
         className="absolute inset-0"
-        style={{ background: "hsl(222 47% 11% / 0.8)" }}
+        style={{ background: "hsl(var(--background) / 0.8)" }}
       />
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
@@ -1169,18 +1172,20 @@ export default function CalendarPage() {
               {status.data.account}
             </span>
           )}
-          <button
-            onClick={() => {
-              disconnect.mutate(undefined, {
-                onSuccess: () => toast.success("Google Calendar disconnected"),
-              });
-            }}
-            disabled={disconnect.isPending}
-            title="Disconnect Google Calendar"
-            className="glass-card-hover px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-colors"
-          >
-            <Unplug className="w-3.5 h-3.5" />
-          </button>
+          <GlassTip label="Disconnect Google Calendar" side="bottom" colors={HORIZON_TIP}>
+            <button
+              onClick={() => {
+                disconnect.mutate(undefined, {
+                  onSuccess: () => toast.success("Google Calendar disconnected"),
+                });
+              }}
+              disabled={disconnect.isPending}
+              aria-label="Disconnect Google Calendar"
+              className="glass-card-hover px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <Unplug className="w-3.5 h-3.5" />
+            </button>
+          </GlassTip>
         </div>
       </div>
 

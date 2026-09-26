@@ -11,7 +11,7 @@
 ![Version](https://img.shields.io/badge/version-0.7.0-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.7.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.7.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -20,8 +20,8 @@ Current release: **v0.7.0** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | Feature | Description |
 |---------|-------------|
 | **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking |
-| **📅 The Horizon** | Google Calendar, live: month and agenda views, create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along |
-| **🏠 Home widgets** | A 3×3 grid: clock, weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton |
+| **📅 The Horizon** | Google Calendar, live: month and agenda views, create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along. The page has its own black hole backdrop and blue palette (see [The Horizon](#-the-horizon-google-calendar-integration)) |
+| **🏠 Home widgets** | A 3×3 grid: clock, weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations, over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
 | **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and hides the global search bar, since it has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
@@ -130,13 +130,16 @@ server/
 └── standalone.ts               # Both middlewares, shared by dev server, preview, and sidecar
 
 src/
+├── assets/
+│   └── horizon-backdrop.webp   # The Horizon's black hole background
 ├── components/
 │   ├── layout/
 │   │   ├── AppSplash.tsx       # "Crystal OS / Loading…" splash while the session restores
-│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal/Nebula/Atmosphere/Archive restyle the sidebar)
+│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal/Nebula/Atmosphere/Archive/Horizon restyle the sidebar)
 │   │   ├── TerminalStatic.tsx  # Static-noise backdrop for the Terminal tab
 │   │   ├── PortalBackdrop.tsx  # Themed backdrop for The Portal
 │   │   ├── AtmosphereBackdrop.tsx # Living Sky for The Atmosphere: sky, sun/moon, aurora, clouds, rain/snow/lightning
+│   │   ├── HorizonBackdrop.tsx # Blurred black hole behind The Horizon
 │   │   ├── StarCanvas.tsx      # Twinkling star canvas (Portal Stargate theme, Atmosphere night sky)
 │   │   └── ObsidianBackdrop.tsx # Crystal backdrop and cursor light for The Archive
 │   ├── portal/
@@ -148,7 +151,7 @@ src/
 │   │   ├── glass-tooltip.tsx   # GlassTip: gradient-bordered tooltip used in place of `title`, drawn above the page
 │   │   └── dashboard-skeletons.tsx # Per-widget loading skeletons for the home page
 │   ├── views/                  # Page-level components
-│   │   ├── HomePage.tsx        # Clock, weather, Vault, Engine, today's events, themed weather and Archive widgets
+│   │   ├── HomePage.tsx        # Clock, weather, Vault, Engine, today's events, themed weather, Horizon and Archive widgets
 │   │   ├── HomeSpaces.tsx      # Home's themed Nebula, Portal and Terminal boxes
 │   │   ├── TasksPage.tsx       # Task list, form, filtering, Pomodoro
 │   │   ├── CalendarPage.tsx    # Google Calendar: month + agenda, event CRUD
@@ -192,12 +195,13 @@ src/
 │   ├── atmosphereScene.ts      # Living Sky maths: sky phase, weather codes → effects, aurora/star strength, moon, pine ridge
 │   ├── atmosphereStore.ts      # Atmosphere settings: city, weather effects, aurora, background image and its blur
 │   ├── atmosphereImage.ts      # Background image: checks, scaling, baked blur, IndexedDB storage
+│   ├── horizonBackdrop.ts      # Horizon background: bakes the page (15%) and Home box (25%) blurs once per session
 │   ├── pomodoro.ts             # Module-level Pomodoro store (page + tray agree)
 │   ├── tray.ts                 # Tauri tray events → app, app state → tray menu
 │   ├── hotkey.ts               # Hotkey parsing + combo validation
 │   ├── platform.ts             # isDesktop(), apiUrl(), openExternal()
 │   ├── apiRequest.ts           # Authenticated fetch wrapper for server routes
-│   ├── seedCategories.ts       # Default task/finance category seeds
+│   ├── seedCategories.ts       # Default task/finance category seeds, only after a successful empty fetch
 │   └── utils.ts                # cn(), useDebouncedValue(), date helpers, formatters
 ├── pages/
 │   ├── Index.tsx               # Main layout, view registry, global overlays
@@ -291,6 +295,8 @@ Both switches work together or apart; with both off you get the plain sky for th
 ## 📅 The Horizon (Google Calendar integration)
 
 The calendar tab reads and writes your real Google Calendar. The client secret and refresh token must never reach the browser, so every Google call happens in a Vite middleware plugin and the bundle only ever sees JSON — the same shape as the Obsidian tier above.
+
+**Look.** A black hole with a blue accretion disk sits behind the page (`src/components/layout/HorizonBackdrop.tsx`), and the "Today on the Horizon" box on Home wears it too. The image ships in `src/assets/horizon-backdrop.webp` and is blurred with the Atmosphere's baked blur (`blurImage`), at 15% for the page and 25% for the Home box, once per session (`src/lib/horizonBackdrop.ts`), so neither runs a live CSS blur. The page's palette is electric blue over deep navy: logo, buttons, sidebar, event dots, dark blue glass panels, and the dropdowns and date pickers, which render into `<body>` and so read the palette from a `horizon-theme` class set there while the tab is open.
 
 ### Setup
 

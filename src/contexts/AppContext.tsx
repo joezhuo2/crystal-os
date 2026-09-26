@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { normalizeRepeatDays } from "@/lib/utils";
 import {
   seedDefaultCategories,
+  shouldSeedCategories,
   type CategoryClient,
   type CategoryTable,
 } from "@/lib/seedCategories";
@@ -196,16 +197,22 @@ function reportError(action: string, error: { message: string } | null): boolean
 
 /**
  * Returns the user's categories, creating the starter set the first time they
- * sign in. Falls back to the in-memory defaults only if seeding fails, so the
- * UI still renders — writes referencing them will fail loudly rather than
- * silently, which is the behaviour this replaced.
+ * sign in. Falls back to the in-memory defaults only if the fetch or seeding
+ * fails, so the UI still renders — writes referencing them will fail loudly
+ * rather than silently, which is the behaviour this replaced.
  */
 async function resolveCategories<T extends TaskCategory | FinancialCategory>(
-  rows: unknown[] | null,
+  res: { data: unknown[] | null; error: { message: string } | null },
   table: CategoryTable,
   defaults: T[],
 ): Promise<T[]> {
-  if (rows && rows.length > 0) return rows.map(mapCategoryFromDb) as T[];
+  if (!shouldSeedCategories(res)) {
+    if (res.data) return res.data.map(mapCategoryFromDb) as T[];
+    // A failed fetch is not an empty table: seeding here duplicated every
+    // category on each failed load.
+    reportError("load your categories", res.error);
+    return defaults;
+  }
 
   const seeded = await seedDefaultCategories(
     supabase as unknown as CategoryClient,
@@ -292,11 +299,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // which a uuid column rejects. On an empty table, create them and adopt
       // the ids the database assigns.
       setTaskCategories(
-        await resolveCategories(taskCatRes.data, "task_categories", defaultTaskCategories),
+        await resolveCategories(taskCatRes, "task_categories", defaultTaskCategories),
       );
       setFinancialCategories(
         await resolveCategories(
-          finCatRes.data,
+          finCatRes,
           "financial_categories",
           defaultFinancialCategories,
         ),

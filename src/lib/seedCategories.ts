@@ -33,6 +33,19 @@ export interface CategoryClient {
 }
 
 /**
+ * Whether a category fetch shows a user with no categories yet. Only a
+ * successful, empty result counts: a failed fetch (expired token, network
+ * drop) returns no data too, and seeding on it added another copy of every
+ * starter category each time a load failed.
+ */
+export function shouldSeedCategories(res: {
+  data: unknown[] | null;
+  error: { message: string } | null;
+}): boolean {
+  return !res.error && Array.isArray(res.data) && res.data.length === 0;
+}
+
+/**
  * Creates the starter categories for the signed-in user and returns them with
  * the ids the database assigned. Returns null if the insert fails, so the
  * caller can decide whether that is fatal.

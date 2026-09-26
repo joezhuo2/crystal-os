@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { seedDefaultCategories, type CategoryClient } from "./seedCategories";
+import { seedDefaultCategories, shouldSeedCategories, type CategoryClient } from "./seedCategories";
 
 const DEFAULTS = [
   { name: "Work", color: "hsl(239 84% 67%)" },
@@ -73,5 +73,25 @@ describe("seedDefaultCategories", () => {
     const { client } = clientReturning({ data: null, error: null });
 
     expect(await seedDefaultCategories(client, "task_categories", DEFAULTS)).toBeNull();
+  });
+});
+
+describe("shouldSeedCategories", () => {
+  it("seeds when the fetch succeeded and the table is empty", () => {
+    expect(shouldSeedCategories({ data: [], error: null })).toBe(true);
+  });
+
+  it("does not seed when the user already has categories", () => {
+    expect(shouldSeedCategories({ data: [{ id: "a" }], error: null })).toBe(false);
+  });
+
+  // A failed fetch says nothing about whether the table is empty. Seeding
+  // here added another copy of every starter category on each failed load.
+  it("does not seed when the fetch failed", () => {
+    expect(shouldSeedCategories({ data: null, error: { message: "JWT expired" } })).toBe(false);
+  });
+
+  it("does not seed when the fetch returned no data", () => {
+    expect(shouldSeedCategories({ data: null, error: null })).toBe(false);
   });
 });

@@ -5,6 +5,20 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.7.2] - 2026-09-26
+
+### Changed
+
+- **The Horizon has a look of its own.** A black hole with a blue accretion disk sits behind the page, blurred at 15% on the Atmosphere's Image blur scale (a 6 px blur on a 1600 px copy). The purple is gone: the logo, buttons, active sidebar item, event dots, dropdowns and date pickers are electric blue over deep navy, the panels are dark blue glass so text reads over the bright disk, and the sidebar gets a blue edge glow. Dropdowns and pickers render into `<body>`, outside the page, so the palette is also set on `<body>` while the Horizon is open.
+- **Home's "Today on the Horizon" box wears the same black hole,** blurred at 25% (10 px) under a very light glass with a blue hover glow, like the other themed boxes.
+- **The Disconnect Google Calendar tooltip is themed.** It uses the app's glass tooltip with a blue border instead of the browser's plain `title` box.
+
+Both blurred copies are baked once per session on a canvas with the same `blurImage` the Atmosphere uses (`src/lib/horizonBackdrop.ts`), so neither place runs a live CSS blur. The image fades in over 600 ms once baked; reduced motion skips the fade.
+
+### Fixed
+
+- **Categories duplicated themselves.** On every load the app fetched the categories and, if none came back, created the starter set. A failed fetch (an expired sign-in, a network drop, waking from sleep) also returns no rows, so each failed load added another copy of every category. Seeding now only runs when the fetch succeeded and the table is really empty (`shouldSeedCategories` in `src/lib/seedCategories.ts`, with tests). A failed fetch shows an error instead. Copies created before this fix stay in Supabase until removed.
+
 ## [v0.7.1] - 2026-09-24
 
 ### Changed
