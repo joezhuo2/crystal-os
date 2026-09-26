@@ -22,6 +22,7 @@ import { hidePortal } from "@/lib/portalNative";
 import { PORTAL_THEME_CLASS } from "@/lib/portalStore";
 import QuickAddDialog from "@/components/QuickAddDialog";
 import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
+import { useHomeHotkey } from "@/hooks/useGlobalHotkey";
 import { useVaultLiveUpdates } from "@/hooks/useVault";
 import { useAppActivity } from "@/lib/appActivity";
 import { LazyTaskForm, LazyTransactionDrawer, lazyViews, preloadViews, type ViewProps } from "@/lib/viewLoader";
@@ -76,6 +77,7 @@ const Index = () => {
   const { theme: nebulaTheme } = useHarness();
   const { still } = useAppActivity();
   const View = views[activeTab];
+  useHomeHotkey(() => setActiveTab("home"));
 
   useEffect(() => {
     preloadViews();

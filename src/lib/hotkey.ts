@@ -5,11 +5,12 @@
  */
 
 /** Mirrors `HotkeyAction` in src-tauri/src/hotkey.rs. */
-export type HotkeyAction = "toggle" | "palette";
+export type HotkeyAction = "toggle" | "palette" | "home";
 
 export const DEFAULT_ACCELERATORS: Record<HotkeyAction, string> = {
   toggle: "Alt+Space",
   palette: "Alt+Shift+Space",
+  home: "Alt+Shift+KeyH",
 };
 
 export const HOTKEY_COPY: Record<HotkeyAction, { title: string; description: string }> = {
@@ -20,6 +21,10 @@ export const HOTKEY_COPY: Record<HotkeyAction, { title: string; description: str
   palette: {
     title: "Open search bar",
     description: "Shows Crystal OS from any app and focuses the search bar.",
+  },
+  home: {
+    title: "Go to Home",
+    description: "Shows Crystal OS from any app and opens the Home page, from whichever tab you were on.",
   },
 };
 

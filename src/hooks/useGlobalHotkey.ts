@@ -16,6 +16,9 @@ export type HotkeyStatuses = Record<HotkeyAction, HotkeyStatus>;
 /** Emitted by Rust after the palette hotkey shows and focuses the window. */
 const OPEN_PALETTE_EVENT = "palette://open";
 
+/** Emitted by Rust after the Home hotkey shows and focuses the window. */
+const OPEN_HOME_EVENT = "home://open";
+
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   const core = await import("@tauri-apps/api/core");
   return core.invoke<T>(cmd, args);
@@ -53,6 +56,34 @@ export function usePaletteHotkey(onOpen: () => void) {
         }
       }
     });
+
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, []);
+}
+
+/**
+ * Desktop Home hotkey. Calls `onHome` whenever the global Home hotkey fires,
+ * whether the window was hidden or already open. Mount once, outside any view
+ * that unmounts. A no-op on the web.
+ */
+export function useHomeHotkey(onHome: () => void) {
+  const onHomeRef = useRef(onHome);
+  onHomeRef.current = onHome;
+
+  useEffect(() => {
+    if (!isDesktop()) return;
+    let cancelled = false;
+    let unlisten: (() => void) | undefined;
+
+    import("@tauri-apps/api/event").then(({ listen }) =>
+      listen(OPEN_HOME_EVENT, () => onHomeRef.current()).then((fn) => {
+        if (cancelled) fn();
+        else unlisten = fn;
+      }),
+    );
 
     return () => {
       cancelled = true;

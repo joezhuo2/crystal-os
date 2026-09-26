@@ -2,7 +2,6 @@
 - [v0.8.0] banking update - use plaid to connect to banks (store api keys and tokens in secure env variables)
 
 - performance on the archive page is still quite heavy
-- home global hotkey
 
 ## Bugs
 
@@ -10,6 +9,7 @@
 
 ## To Test
 
+- [ ] v0.7.3 Home hotkey. Hide Crystal OS to the tray and press `Alt+Shift+H` from another app: the window shows on Home. With the window open on another tab (try Terminal and Portal too), press it again: it switches to Home. Change the combo in Settings and check the new one works and the old one no longer does.
 - [ ] v0.7.2 Categories. Sign in with the network off (or let the session expire), then reconnect and reload: the Engine's categories stay one of each.
 - [ ] v0.7.1 Repeat off. Edit a repeating task, set **Repeat every** to 0, save, and reload the app: the task no longer repeats.
 - [ ] v0.7.0 Weather effects. On a rainy, snowy or stormy day the right effect shows (rain streaks, drifting snow, lightning flashes that also light the aurora). Turning **Weather effects** off in Settings removes clouds and precipitation at once, on the page and the Home box.

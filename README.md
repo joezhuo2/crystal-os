@@ -11,7 +11,7 @@
 ![Version](https://img.shields.io/badge/version-0.7.0-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.7.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.7.3** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -172,7 +172,7 @@ src/
 ├── hooks/
 │   ├── useVault.ts             # React Query bindings: /api/obsidian/* on web, Rust on desktop
 │   ├── useGoogleCalendar.ts    # React Query bindings for /api/calendar/*
-│   ├── useGlobalHotkey.ts      # useGlobalHotkeys (toggle window) + usePaletteHotkey (search)
+│   ├── useGlobalHotkey.ts      # useGlobalHotkeys (settings) + usePaletteHotkey (search) + useHomeHotkey (Home)
 │   ├── usePomodoro.ts          # Pomodoro store bindings (page + tray share src/lib/pomodoro.ts)
 │   ├── usePortal.ts            # Portal store bindings, overlay occlusion, session start
 │   ├── useTrayQuickAdd.ts      # Tray Quick Add events
@@ -215,7 +215,7 @@ src-tauri/
 │   ├── lib.rs                  # App setup: plugins, tray, hotkeys, command registration
 │   ├── window.rs               # Show/hide-to-tray close behaviour
 │   ├── tray.rs                 # System tray menu + Pomodoro status updates
-│   ├── hotkey.rs               # RegisterHotKey bindings (Alt+Space, Alt+Shift+Space)
+│   ├── hotkey.rs               # RegisterHotKey bindings (Alt+Space, Alt+Shift+Space, Alt+Shift+H)
 │   ├── autostart.rs            # Launch-at-login (--hidden) registration
 │   ├── settings.rs             # settings.json read/write (hotkeys, vaultPath, launchAtLogin, installerSourceDir)
 │   ├── vault.rs                # Native vault I/O: list/read/write/status/watch
@@ -405,7 +405,7 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 2. Add `http://127.0.0.1:8787/api/calendar/auth/callback` as a second authorized redirect URI on your Google OAuth client, and set `GOOGLE_REDIRECT_URI` to it in that copy.
 3. Launch Crystal OS. **Connect** in The Horizon opens Google in your default browser. Once it reports success, switch back to the app.
 
-**Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: both global hotkeys, **Launch at login**, the vault folder, The Portal's theme, and **Install & update**. Each section's header folds it open and closed with a short height animation; which sections are folded is saved in `localStorage` (`crystal-os-settings-collapsed`). Switches, sliders and the fold animation are marked `data-smooth` and keep their short transitions in performance mode, which otherwise makes transitions instant. The palette's **Open Settings** row goes there too. Click the Crystal OS mark at the top of the sidebar to return to **The Pulse** (home) from any page.
+**Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: all three global hotkeys, **Launch at login**, the vault folder, The Portal's theme, and **Install & update**. Each section's header folds it open and closed with a short height animation; which sections are folded is saved in `localStorage` (`crystal-os-settings-collapsed`). Switches, sliders and the fold animation are marked `data-smooth` and keep their short transitions in performance mode, which otherwise makes transitions instant. The palette's **Open Settings** row goes there too. Click the Crystal OS mark at the top of the sidebar to return to **The Pulse** (home) from any page.
 
 **Install & update.** The last panel in Settings keeps Crystal OS current without leaving the app.
 
@@ -446,12 +446,13 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 
 Whether or not performance mode is on, hiding the window to the tray or minimising it now stops the backdrop animation loops, freezes CSS animations, and pauses polling (weather refresh, calendar and vault refetches); stale data refetches when the window comes back. Closing the window with its **×** now goes through the same path as the tray and hotkey, so it also trims memory.
 
-**Global hotkeys.** Two combos work from any app:
+**Global hotkeys.** Three combos work from any app:
 
 - `Alt+Space` shows Crystal OS; press it again while the app is in front to hide it, including while you are typing in a Portal app. It does not touch the search bar. Saved as `globalShortcut`.
 - `Alt+Shift+Space` shows Crystal OS and focuses the search bar. Saved as `paletteShortcut`.
+- `Alt+Shift+H` shows Crystal OS if it is hidden and opens the Home page; if the window is already open it just switches to Home, from any tab. Saved as `homeShortcut`.
 
-Change either with **Change** in Settings. Both are saved in `%APPDATA%\com.crystalos.desktop\settings.json`, and the two cannot share a combo. If another app already owns one, Crystal OS still starts and shows a toast.
+Change any of them with **Change** in Settings. All are saved in `%APPDATA%\com.crystalos.desktop\settings.json`, and no two can share a combo. If another app already owns one, Crystal OS still starts and shows a toast.
 
 **Always ready.** The hotkeys only work while Crystal OS is running, so the app stays running in the tray:
 

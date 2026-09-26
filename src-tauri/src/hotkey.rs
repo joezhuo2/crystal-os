@@ -1,10 +1,11 @@
 //! Global hotkeys that work from any app.
 //!
-//! Two actions, each with its own combo:
+//! Three actions, each with its own combo:
 //! - [`HotkeyAction::Toggle`] shows and focuses the window, or hides it when
 //!   it already has focus.
 //! - [`HotkeyAction::Palette`] shows the window and focuses the command
 //!   palette's search bar.
+//! - [`HotkeyAction::Home`] shows the window and switches to the Home tab.
 //!
 //! The combos live in `settings.json` in the app config dir (next to
 //! `.env.local`), so they are registered in Rust at startup, before the webview
@@ -22,6 +23,9 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 /// Event the webview listens for to focus the `CommandPalette` search bar.
 const OPEN_PALETTE_EVENT: &str = "palette://open";
 
+/// Event the webview listens for to switch to the Home tab.
+const OPEN_HOME_EVENT: &str = "home://open";
+
 /// No shortcut registered for an action.
 const NO_ID: u32 = 0;
 
@@ -30,21 +34,24 @@ const NO_ID: u32 = 0;
 /// commands below (un)register while holding that lock.
 static TOGGLE_ID: AtomicU32 = AtomicU32::new(NO_ID);
 static PALETTE_ID: AtomicU32 = AtomicU32::new(NO_ID);
+static HOME_ID: AtomicU32 = AtomicU32::new(NO_ID);
 
 #[derive(Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum HotkeyAction {
   Toggle,
   Palette,
+  Home,
 }
 
 impl HotkeyAction {
-  const ALL: [HotkeyAction; 2] = [HotkeyAction::Toggle, HotkeyAction::Palette];
+  const ALL: [HotkeyAction; 3] = [HotkeyAction::Toggle, HotkeyAction::Palette, HotkeyAction::Home];
 
   fn default_accelerator(self) -> &'static str {
     match self {
       HotkeyAction::Toggle => "Alt+Space",
       HotkeyAction::Palette => "Alt+Shift+Space",
+      HotkeyAction::Home => "Alt+Shift+KeyH",
     }
   }
 
@@ -54,6 +61,7 @@ impl HotkeyAction {
     match self {
       HotkeyAction::Toggle => "globalShortcut",
       HotkeyAction::Palette => "paletteShortcut",
+      HotkeyAction::Home => "homeShortcut",
     }
   }
 
@@ -61,6 +69,7 @@ impl HotkeyAction {
     match self {
       HotkeyAction::Toggle => "show or hide Crystal OS",
       HotkeyAction::Palette => "open the search bar",
+      HotkeyAction::Home => "go to Home",
     }
   }
 
@@ -68,6 +77,7 @@ impl HotkeyAction {
     match self {
       HotkeyAction::Toggle => &TOGGLE_ID,
       HotkeyAction::Palette => &PALETTE_ID,
+      HotkeyAction::Home => &HOME_ID,
     }
   }
 }
@@ -91,6 +101,7 @@ impl HotkeyStatus {
 pub struct HotkeyStatuses {
   toggle: HotkeyStatus,
   palette: HotkeyStatus,
+  home: HotkeyStatus,
 }
 
 impl HotkeyStatuses {
@@ -98,6 +109,7 @@ impl HotkeyStatuses {
     match action {
       HotkeyAction::Toggle => &mut self.toggle,
       HotkeyAction::Palette => &mut self.palette,
+      HotkeyAction::Home => &mut self.home,
     }
   }
 }
@@ -109,6 +121,7 @@ impl Default for HotkeyState {
     Self(Mutex::new(HotkeyStatuses {
       toggle: HotkeyStatus::unregistered(HotkeyAction::Toggle),
       palette: HotkeyStatus::unregistered(HotkeyAction::Palette),
+      home: HotkeyStatus::unregistered(HotkeyAction::Home),
     }))
   }
 }
@@ -153,6 +166,12 @@ fn open_palette<R: Runtime>(app: &AppHandle<R>) {
   let _ = app.emit(OPEN_PALETTE_EVENT, ());
 }
 
+/// Show the window (if hidden) and switch to the Home tab either way.
+fn open_home<R: Runtime>(app: &AppHandle<R>) {
+  crate::window::show(app);
+  let _ = app.emit(OPEN_HOME_EVENT, ());
+}
+
 pub fn plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
   tauri_plugin_global_shortcut::Builder::new()
     .with_handler(|app, shortcut, event| {
@@ -164,6 +183,8 @@ pub fn plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
         toggle_main_window(app);
       } else if id == PALETTE_ID.load(Ordering::SeqCst) {
         open_palette(app);
+      } else if id == HOME_ID.load(Ordering::SeqCst) {
+        open_home(app);
       }
     })
     .build()

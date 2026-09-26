@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.7.3] - 2026-09-26
+
+### Added
+
+- **A global hotkey for Home.** `Alt+Shift+H` works from any app: it shows Crystal OS if it is hidden and switches to the Home page, or, if the window is already open, just switches to Home from whichever tab is on screen. It is registered in Rust like the other two hotkeys, emits `home://open` to the webview (`useHomeHotkey` in `src/hooks/useGlobalHotkey.ts`, mounted in `Index.tsx` so it works on every tab), and is saved as `homeShortcut` in `settings.json`. Change it in Settings under **Keyboard shortcuts** → **Go to Home**; it cannot share a combo with the other two, and a failed registration shows the same toast at startup.
+
 ## [v0.7.2] - 2026-09-26
 
 ### Changed

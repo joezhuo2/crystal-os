@@ -282,7 +282,7 @@ export default function SettingsPage() {
       </header>
 
       <Section id="shortcuts" icon={Keyboard} title="Keyboard shortcuts">
-        {(["toggle", "palette"] as const).map((action) => {
+        {(["toggle", "palette", "home"] as const).map((action) => {
           const status = hotkeys.statuses?.[action];
           if (!status) return null;
           return (
