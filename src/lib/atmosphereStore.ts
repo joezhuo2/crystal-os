@@ -7,7 +7,7 @@
  */
 
 import { useSyncExternalStore } from "react";
-import { AVAILABLE_CITIES } from "@/hooks/useWeather";
+import { isCityId } from "@/hooks/useWeather";
 import {
   DEFAULT_IMAGE_BLUR,
   blurImage,
@@ -65,14 +65,10 @@ function write(key: string, value: string) {
   }
 }
 
-function isCity(id: unknown): id is string {
-  return AVAILABLE_CITIES.some((c) => c.id === id);
-}
-
 function load(): AtmosphereSettings {
   const city = read(CITY_KEY);
   return {
-    cityId: isCity(city) ? city : DEFAULT_CITY,
+    cityId: isCityId(city) ? city : DEFAULT_CITY,
     // Both on unless turned off.
     weatherEffects: read(WEATHER_EFFECTS_KEY) !== "0",
     aurora: read(AURORA_KEY) !== "0",
@@ -149,7 +145,7 @@ export const atmosphere = {
   },
 
   setCity(cityId: string) {
-    if (!isCity(cityId) || cityId === state.cityId) return;
+    if (!isCityId(cityId) || cityId === state.cityId) return;
     write(CITY_KEY, cityId);
     set({ ...state, cityId });
   },

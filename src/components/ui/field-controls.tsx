@@ -9,6 +9,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -19,7 +20,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Search } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn, toLocalDateStr } from "@/lib/utils";
 
@@ -221,13 +222,19 @@ export function ThemedSelect({
   const dismissRefs = useMemo(() => [triggerRef, panelRef], []);
   useDismiss(open, close, dismissRefs);
 
-  useEffect(() => {
-    if (open) setActive(selectedIndex >= 0 ? selectedIndex : 0);
-  }, [open, selectedIndex]);
-
   // Keep the highlighted row visible while arrowing through a long list.
+  // Not on hover: the row under a still cursor changes as the list scrolls,
+  // and revealing it would pull the list back against the wheel.
+  const reveal = useRef(true);
+
   useEffect(() => {
     if (!open) return;
+    reveal.current = true;
+    setActive(selectedIndex >= 0 ? selectedIndex : 0);
+  }, [open, selectedIndex]);
+
+  useEffect(() => {
+    if (!open || !reveal.current) return;
     listRef.current
       ?.querySelector<HTMLElement>(`[data-index="${active}"]`)
       ?.scrollIntoView({ block: "nearest" });
@@ -242,6 +249,7 @@ export function ThemedSelect({
   };
 
   const onKeyDown = (e: ReactKeyboardEvent) => {
+    reveal.current = true;
     if (!open) {
       if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -314,7 +322,10 @@ export function ThemedSelect({
                 role="option"
                 aria-selected={isSelected}
                 data-index={index}
-                onMouseEnter={() => setActive(index)}
+                onMouseEnter={() => {
+                    reveal.current = false;
+                    setActive(index);
+                  }}
                 onClick={() => pick(index)}
                 className={cn(
                   ROW_CLASS,
@@ -340,6 +351,226 @@ export function ThemedSelect({
           {options.length === 0 && (
             <p className="px-3 py-2 text-sm text-muted-foreground">No options</p>
           )}
+        </div>
+      </Popup>
+    </>
+  );
+}
+
+/* ── searchable select ── */
+
+export interface ComboboxOption {
+  value: string;
+  label: string;
+  /** Secondary text shown after the label and searched with it, e.g. a region. */
+  hint?: string;
+}
+
+export interface ThemedComboboxProps {
+  value: string;
+  /** Trigger text when the current value is not among `options` (e.g. while they load). */
+  valueLabel?: string;
+  onChange: (value: string) => void;
+  /** Every option that can be searched. */
+  options: ComboboxOption[];
+  /** Shown before anything is typed; defaults to the first `limit` options. */
+  suggestions?: ComboboxOption[];
+  /** Most rows rendered at once, so a list of hundreds stays light. */
+  limit?: number;
+  loading?: boolean;
+  className?: string;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  "aria-label"?: string;
+}
+
+/** Lowercase with accents removed, so "montreal" finds "Montréal". */
+function fold(text: string): string {
+  return text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+}
+
+/** Label prefix matches first, then label matches, then hint matches. */
+function searchOptions(options: ComboboxOption[], query: string, limit: number): ComboboxOption[] {
+  const q = fold(query.trim());
+  const starts: ComboboxOption[] = [];
+  const contains: ComboboxOption[] = [];
+  const hinted: ComboboxOption[] = [];
+  for (const option of options) {
+    const label = fold(option.label);
+    if (label.startsWith(q)) starts.push(option);
+    else if (label.includes(q)) contains.push(option);
+    else if (option.hint && fold(option.hint).includes(q)) hinted.push(option);
+  }
+  return [...starts, ...contains, ...hinted].slice(0, limit);
+}
+
+export function ThemedCombobox({
+  value,
+  valueLabel,
+  onChange,
+  options,
+  suggestions,
+  limit = 50,
+  loading,
+  className,
+  placeholder = "Select…",
+  searchPlaceholder = "Search…",
+  emptyText = "No matches",
+  "aria-label": ariaLabel,
+}: ThemedComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const listId = useId();
+  const [active, setActive] = useState(0);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const selectedLabel = options.find((o) => o.value === value)?.label ?? valueLabel;
+
+  const results = useMemo(
+    () =>
+      query.trim()
+        ? searchOptions(options, query, limit)
+        : (suggestions ?? options).slice(0, limit),
+    [options, suggestions, query, limit],
+  );
+
+  const pos = usePopupPosition(open, triggerRef, panelRef, false);
+  const close = useCallback(() => setOpen(false), []);
+  const dismissRefs = useMemo(() => [triggerRef, panelRef], []);
+  useDismiss(open, close, dismissRefs);
+
+  // Revealed for the keyboard only, as in ThemedSelect.
+  const reveal = useRef(true);
+
+  useEffect(() => {
+    if (open) setQuery("");
+  }, [open]);
+
+  useEffect(() => {
+    reveal.current = true;
+    const selected = results.findIndex((o) => o.value === value);
+    setActive(selected >= 0 ? selected : 0);
+  }, [results, value]);
+
+  useEffect(() => {
+    if (!open || !reveal.current) return;
+    listRef.current
+      ?.querySelector<HTMLElement>(`[data-index="${active}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [open, active]);
+
+  const pick = (index: number) => {
+    const option = results[index];
+    if (!option) return;
+    onChange(option.value);
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  const onTriggerKeyDown = (e: ReactKeyboardEvent) => {
+    if (!open && (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      setOpen(true);
+    }
+  };
+
+  const onSearchKeyDown = (e: ReactKeyboardEvent) => {
+    reveal.current = true;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((i) => Math.min(results.length - 1, i + 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((i) => Math.max(0, i - 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      pick(active);
+    } else if (e.key === "Tab") {
+      setOpen(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        role="combobox"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={ariaLabel}
+        onClick={() => setOpen((o) => !o)}
+        onKeyDown={onTriggerKeyDown}
+        className={cn(TRIGGER_CLASS, className)}
+      >
+        <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
+          {selectedLabel ?? placeholder}
+        </span>
+        <ChevronDown
+          className={cn("h-3.5 w-3.5 shrink-0 opacity-60 transition-transform", open && "rotate-180")}
+        />
+      </button>
+
+      <Popup open={open} pos={pos} panelRef={panelRef}>
+        <div className="w-80 max-w-[calc(100vw-16px)]">
+          <div className="flex items-center gap-2 border-b border-border/50 px-3">
+            <Search className="h-3.5 w-3.5 shrink-0 opacity-50" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={onSearchKeyDown}
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
+              aria-controls={listId}
+              className="h-10 w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+          <div
+            ref={listRef}
+            id={listId}
+            role="listbox"
+            className="scrollbar-thin max-h-64 overflow-y-auto p-1"
+          >
+            {results.map((option, index) => {
+              const isSelected = option.value === value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  data-index={index}
+                  onMouseEnter={() => {
+                    reveal.current = false;
+                    setActive(index);
+                  }}
+                  onClick={() => pick(index)}
+                  className={cn(
+                    ROW_CLASS,
+                    "rounded-lg",
+                    index === active ? "bg-primary/20 text-foreground" : "text-foreground/80",
+                  )}
+                >
+                  <span className="min-w-0 flex-1 truncate">
+                    {option.label}
+                    {option.hint && (
+                      <span className="ml-2 text-xs text-muted-foreground">{option.hint}</span>
+                    )}
+                  </span>
+                  {isSelected && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
+                </button>
+              );
+            })}
+            {results.length === 0 && (
+              <p className="px-3 py-2 text-sm text-muted-foreground">
+                {loading ? "Loading…" : emptyText}
+              </p>
+            )}
+          </div>
         </div>
       </Popup>
     </>

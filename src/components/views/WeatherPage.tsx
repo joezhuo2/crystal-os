@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Cloud,
@@ -23,11 +24,13 @@ import {
 import {
   useWeather,
   getMoonPhase,
+  useCityList,
   AVAILABLE_CITIES,
+  type CityOption,
   type DayForecast,
   type HourlyForecast,
 } from "@/hooks/useWeather";
-import { ThemedSelect } from "@/components/ui/field-controls";
+import { ThemedCombobox, type ComboboxOption } from "@/components/ui/field-controls";
 import { atmosphere, useAtmosphere } from "@/lib/atmosphereStore";
 
 // ── Weather icon mapping ──
@@ -107,13 +110,7 @@ function CurrentConditions({
         </div>
 
         <div className="flex items-center gap-2">
-          <ThemedSelect
-            value={cityId}
-            aria-label="City"
-            onChange={onCityChange}
-            options={AVAILABLE_CITIES.map((c) => ({ value: c.id, label: c.name }))}
-            className="w-auto min-w-[8rem] border border-border/50 bg-background/50 px-3 py-1.5 hover:bg-background/70"
-          />
+          <CityPicker cityId={cityId} cityName={cityName} onChange={onCityChange} />
         </div>
       </div>
 
@@ -140,6 +137,42 @@ function CurrentConditions({
         </div>
       )}
     </div>
+  );
+}
+
+function toOption(city: CityOption): ComboboxOption {
+  const province = city.id.slice(0, 2).toUpperCase();
+  return { value: city.id, label: city.name, hint: city.region ? `${province} · ${city.region}` : province };
+}
+
+const SUGGESTED_OPTIONS = AVAILABLE_CITIES.map(toOption);
+
+/** Searches every city page location; the full list loads the first time it opens. */
+function CityPicker({
+  cityId,
+  cityName,
+  onChange,
+}: {
+  cityId: string;
+  cityName: string;
+  onChange: (id: string) => void;
+}) {
+  const { data: cities, isLoading } = useCityList();
+  const options = useMemo(() => (cities ?? AVAILABLE_CITIES).map(toOption), [cities]);
+
+  return (
+    <ThemedCombobox
+      value={cityId}
+      valueLabel={cityName}
+      aria-label="City"
+      onChange={onChange}
+      options={options}
+      suggestions={SUGGESTED_OPTIONS}
+      loading={isLoading}
+      searchPlaceholder="Search Canadian cities…"
+      emptyText="No matching city"
+      className="w-auto min-w-[8rem] max-w-[16rem] border border-border/50 bg-background/50 px-3 py-1.5 hover:bg-background/70"
+    />
   );
 }
 
