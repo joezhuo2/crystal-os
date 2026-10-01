@@ -5,8 +5,18 @@ const API_BASE = "https://api.weather.gc.ca/collections/citypageweather-realtime
 export interface CityOption {
   id: string;
   name: string;
+  /** Forecast region, e.g. "City of Toronto"; only on cities from the full list. */
+  region?: string;
 }
 
+/** Location ids are a province or territory code and a number, e.g. "on-85". */
+const CITY_ID = /^(ab|bc|mb|nb|nl|ns|nt|nu|on|pe|qc|sk|yt)-\d+$/;
+
+export function isCityId(id: unknown): id is string {
+  return typeof id === "string" && CITY_ID.test(id);
+}
+
+/** Suggested before anything is searched; any of the ~840 locations can be picked. */
 export const AVAILABLE_CITIES: CityOption[] = [
   { id: "on-85", name: "Markham" },
   { id: "on-143", name: "Toronto" },
@@ -278,6 +288,36 @@ export function useWeather(cityId: string) {
     queryFn: () => fetchWeather(cityId),
     refetchInterval: 10 * 60 * 1000, // refresh every 10 minutes
     staleTime: 5 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+// ── Every location the city page API covers ──
+
+async function fetchCities(): Promise<CityOption[]> {
+  // Names and regions only: the full items are ~33 KB each.
+  const res = await fetch(`${API_BASE}?f=json&lang=en&limit=2000&skipGeometry=true&properties=name.en,region.en`);
+  if (!res.ok) throw new Error(`Weather API error: ${res.status}`);
+  const data = await res.json();
+  return (data.features ?? [])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((f: Record<string, any>) => ({
+      id: f.id,
+      name: f.properties?.name?.en ?? f.id,
+      region: f.properties?.region?.en,
+    }))
+    .filter((c: CityOption) => isCityId(c.id))
+    .sort((a: CityOption, b: CityOption) => a.name.localeCompare(b.name));
+}
+
+/** The full location list, fetched once per session for the city picker. */
+export function useCityList(enabled = true) {
+  return useQuery<CityOption[]>({
+    queryKey: ["weather-cities"],
+    queryFn: fetchCities,
+    enabled,
+    staleTime: Infinity,
+    gcTime: Infinity,
     retry: 2,
   });
 }

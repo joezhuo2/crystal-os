@@ -5,6 +5,20 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.7.4] - 2026-09-30
+
+### Added
+
+- **Any Canadian city for the weather.** The city dropdown on The Atmosphere is now a search box over all ~840 Environment Canada city page locations, not just the nine Ontario ones. Before you type it suggests those nine; typing matches city names (accents ignored, so "montreal" finds Montréal) and then forecast regions ("city of toronto"), and each row shows its province and region so places like Richmond, BC and Richmond Hill, ON are easy to tell apart. Arrow keys and Enter pick a city; Escape closes the list. The location list (names and regions only, about 118 KB) is fetched once per session the first time the picker loads (`useCityList` in `src/hooks/useWeather.ts`). The picker is a new `ThemedCombobox` in `src/components/ui/field-controls.tsx`, styled like `ThemedSelect`.
+
+### Changed
+
+- **A saved city is accepted if its id looks like any city page location** (a province or territory code and a number, e.g. `qc-147`; `isCityId` in `src/hooks/useWeather.ts`), so a city picked from search survives a reload. Unknown ids still fall back to Markham. The Home weather box takes the city's name from the forecast when it is not one of the nine suggestions.
+
+### Fixed
+
+- **Dropdowns would not scroll with the cursor resting on a row.** Hovering a row highlights it, and the highlighted row was scrolled into full view on every change. As the wheel moved the list, a new row slid under the still cursor; if it was cut off at the edge, the list jumped back to reveal it and undid the scroll. Only the keyboard (arrows, Home/End, opening the list) scrolls the highlighted row into view now. This applies to every `ThemedSelect` in the app and to the new city picker.
+
 ## [v0.7.3] - 2026-09-26
 
 ### Added

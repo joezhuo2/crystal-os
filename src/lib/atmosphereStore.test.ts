@@ -38,7 +38,16 @@ describe("atmosphere settings", () => {
     localStorage.clear();
     atmosphere.setCity("atlantis");
     expect(atmosphere.getState().cityId).toBe(DEFAULT_CITY);
+    atmosphere.setCity("xx-12");
+    expect(atmosphere.getState().cityId).toBe(DEFAULT_CITY);
     expect(localStorage.getItem(CITY_KEY)).toBeNull();
+  });
+
+  it("accepts any city page location, not just the suggested ones", () => {
+    atmosphere.setCity("qc-147");
+    expect(atmosphere.getState().cityId).toBe("qc-147");
+    atmosphere._reset();
+    expect(atmosphere.getState().cityId).toBe("qc-147");
   });
 
   it("notifies subscribers only on real changes", () => {

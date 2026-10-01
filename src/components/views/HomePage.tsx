@@ -84,7 +84,7 @@ const HOME_RIDGE = pineRidge(5, 1000, 36);
 function WeatherWidget({ onClick }: { onClick?: () => void }) {
   const { cityId, weatherEffects, aurora, backdropUrl } = useAtmosphere();
   const { data, phase, weather } = useSkyScene();
-  const cityName = AVAILABLE_CITIES.find((c) => c.id === cityId)?.name ?? "Markham";
+  const cityName = AVAILABLE_CITIES.find((c) => c.id === cityId)?.name ?? data?.cityName ?? "";
 
   // Find today's high/low from daily forecasts
   const todayHigh = data?.dailyForecasts?.[0]?.high ?? data?.dailyForecasts?.[1]?.high ?? null;

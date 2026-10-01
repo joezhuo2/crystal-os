@@ -11,7 +11,7 @@
 ![Version](https://img.shields.io/badge/version-0.7.0-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.7.3** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.7.4** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -23,7 +23,7 @@ Current release: **v0.7.3** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | **📅 The Horizon** | Google Calendar, live: month and agenda views, create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along. The page has its own black hole backdrop and blue palette (see [The Horizon](#-the-horizon-google-calendar-integration)) |
 | **🏠 Home widgets** | A 3×3 grid: clock, weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
-| **🌤️ Weather** | Current conditions + 7-day forecast for saved Ontario locations, over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
+| **🌤️ Weather** | Current conditions + 7-day forecast for any of ~840 Canadian locations (searchable city picker), over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
 | **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and hides the global search bar, since it has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
 | **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, a context-window meter, per-model token counts, and a swirling three-colour nebula |
 | **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges, and three themes (desktop; the web build opens apps in new tabs) |
@@ -147,7 +147,7 @@ src/
 │   │   ├── PortalSkeleton.tsx  # Themed placeholder shown while an app's page loads
 │   │   └── AddPortalAppDialog.tsx # Presets + custom https app
 │   ├── ui/                     # shadcn/ui components (40+)
-│   │   ├── field-controls.tsx  # ThemedSelect, DateField, TimeField (portalled popups)
+│   │   ├── field-controls.tsx  # ThemedSelect, ThemedCombobox, DateField, TimeField (portalled popups)
 │   │   ├── glass-tooltip.tsx   # GlassTip: gradient-bordered tooltip used in place of `title`, drawn above the page
 │   │   └── dashboard-skeletons.tsx # Per-widget loading skeletons for the home page
 │   ├── views/                  # Page-level components
@@ -177,7 +177,7 @@ src/
 │   ├── usePortal.ts            # Portal store bindings, overlay occlusion, session start
 │   ├── useTrayQuickAdd.ts      # Tray Quick Add events
 │   ├── useEscapeKey.ts         # Stacked Escape-to-close for overlays (topmost closes first)
-│   ├── useWeather.ts           # Weather API integration
+│   ├── useWeather.ts           # Weather API integration + searchable city list
 │   ├── useSkyScene.ts          # Living Sky state: phase of day, weather look, moon, for the chosen city
 │   ├── use-toast.ts            # Toast notifications (Sonner)
 │   └── use-mobile.tsx          # Responsive breakpoint hook
@@ -288,7 +288,7 @@ The weather tab draws a Living Sky behind its panels (`src/components/layout/Atm
 - **Background image.** Choose a PNG or JPEG (up to 25 MB) in Settings. It is checked, scaled down to 2560 px on its longest side, and stored in IndexedDB on this device (`src/lib/atmosphereImage.ts`). The image is shown under frosted glass behind the page and the Home box; the sky becomes a light tint of the current phase over it, and the sun, moon, stars, aurora and weather draw on top.
 - **Image blur** (0–100%, default 50%). How much the glass frosts the image, up to a 40 px blur. The store bakes a blurred 1600 px copy on a canvas whenever the image or the setting changes (the slider commits on release), and the page shows that copy as a plain image. There is no live CSS blur and no blend mode on the aurora: together with the aurora's large moving layers, they could make the desktop WebView drop the photo on high-DPI screens.
 
-Both switches work together or apart; with both off you get the plain sky for the time of day. The city picked on the page is shared with the Home box and the backdrop (`src/lib/atmosphereStore.ts`, same `crystal-os-weather-city` key as before). Every canvas pauses while the window is hidden, and performance mode or reduced motion shows a still frame with no lightning.
+Both switches work together or apart; with both off you get the plain sky for the time of day. The city picked on the page is shared with the Home box and the backdrop (`src/lib/atmosphereStore.ts`, same `crystal-os-weather-city` key as before). The picker searches every Environment Canada city page location by name or forecast region, and suggests the nine GTA-area cities before you type. Every canvas pauses while the window is hidden, and performance mode or reduced motion shows a still frame with no lightning.
 
 ---
 
@@ -554,7 +554,7 @@ Edit `tailwind.config.ts` and `src/index.css` for:
 - Glassmorphism intensity (`backdrop-blur`, opacity)
 - Animation durations (including the `shimmer` keyframe behind `.skeleton-shimmer`)
 
-Native `<select>`, date, and time inputs are replaced app-wide by `src/components/ui/field-controls.tsx`, because the browser's own popups render as OS chrome — a white sheet on Windows/Chrome — through the dark glass theme. Their popups are portalled, so a dialog's overflow or stacking context cannot clip them, and they flip above the trigger when the viewport has no room below. `:root` also sets `color-scheme: dark` so any remaining native chrome (number spinners, scrollbars) stays dark.
+Native `<select>`, date, and time inputs are replaced app-wide by `src/components/ui/field-controls.tsx`, because the browser's own popups render as OS chrome — a white sheet on Windows/Chrome — through the dark glass theme. Their popups are portalled, so a dialog's overflow or stacking context cannot clip them, and they flip above the trigger when the viewport has no room below. Hovering a row highlights it without scrolling the list; only the keyboard scrolls the highlighted row into view, so the wheel works wherever the cursor rests. `ThemedCombobox` adds a search box for long lists such as the city picker. `:root` also sets `color-scheme: dark` so any remaining native chrome (number spinners, scrollbars) stays dark.
 
 ### Adding New Views
 1. Create the component in `src/components/views/`
