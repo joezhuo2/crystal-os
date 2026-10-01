@@ -29,6 +29,22 @@ export const AVAILABLE_CITIES: CityOption[] = [
   { id: "on-48", name: "London" },
 ];
 
+/**
+ * The suggestions with ids taken from the live list by name, since a
+ * hard-coded id can point at another place (on-82 is not Mississauga). A name
+ * the list lacks keeps its id but takes the list's name for it, so a row never
+ * shows one city and picks another.
+ */
+export function resolveSuggestions(cities: CityOption[] | undefined): CityOption[] {
+  if (!cities) return AVAILABLE_CITIES;
+  return AVAILABLE_CITIES.map(
+    (s) =>
+      cities.find((c) => c.name === s.name && c.id.startsWith("on-")) ??
+      cities.find((c) => c.id === s.id) ??
+      s,
+  );
+}
+
 export interface CurrentConditions {
   temperature: number;
   condition: string;
