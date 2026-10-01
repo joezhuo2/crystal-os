@@ -69,7 +69,7 @@
     overflow: hidden;
   }
 
-  /* No rubber-band overscroll anywhere. WebView2 stretches a scroller past
+  /* No rubber-band overscroll on any scroller. WebView2 stretches a scroller past
      its end when a touchpad gesture that was already moving reaches the edge,
      and hands a fresh gesture on to the next scroller out. `none` stops both,
      so every panel stops dead at its bounds.

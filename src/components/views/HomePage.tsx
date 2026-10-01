@@ -3,7 +3,6 @@ import { Cloud, Sun, Moon, CloudRain, CloudSun, CloudSnow, CloudLightning, Cloud
 import { useApp, type Priority, type Task } from "@/contexts/AppContext";
 import { motion } from "framer-motion";
 import { normalizeRepeatDays, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
-import { AVAILABLE_CITIES } from "@/hooks/useWeather";
 import { useSkyScene } from "@/hooks/useSkyScene";
 import { useAtmosphere } from "@/lib/atmosphereStore";
 import { auroraStrength, pineRidge } from "@/lib/atmosphereScene";
@@ -82,9 +81,8 @@ const HOME_RIDGE = pineRidge(5, 1000, 36);
  * layers are CSS only (index.css, "Home spaces"), so Home stays light.
  */
 function WeatherWidget({ onClick }: { onClick?: () => void }) {
-  const { cityId, weatherEffects, aurora, backdropUrl } = useAtmosphere();
+  const { weatherEffects, aurora, backdropUrl } = useAtmosphere();
   const { data, phase, weather } = useSkyScene();
-  const cityName = AVAILABLE_CITIES.find((c) => c.id === cityId)?.name ?? data?.cityName ?? "";
 
   // Find today's high/low from daily forecasts
   const todayHigh = data?.dailyForecasts?.[0]?.high ?? data?.dailyForecasts?.[1]?.high ?? null;
@@ -136,7 +134,7 @@ function WeatherWidget({ onClick }: { onClick?: () => void }) {
               </p>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">{data.current.condition} · {cityName}</p>
+          <p className="text-xs text-muted-foreground">{data.current.condition} · {data.cityName}</p>
         </div>
       </div>
     </div>

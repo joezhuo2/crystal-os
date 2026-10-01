@@ -26,6 +26,7 @@ import {
   getMoonPhase,
   useCityList,
   AVAILABLE_CITIES,
+  resolveSuggestions,
   type CityOption,
   type DayForecast,
   type HourlyForecast,
@@ -145,8 +146,6 @@ function toOption(city: CityOption): ComboboxOption {
   return { value: city.id, label: city.name, hint: city.region ? `${province} · ${city.region}` : province };
 }
 
-const SUGGESTED_OPTIONS = AVAILABLE_CITIES.map(toOption);
-
 /** Searches every city page location; the full list loads the first time it opens. */
 function CityPicker({
   cityId,
@@ -159,6 +158,7 @@ function CityPicker({
 }) {
   const { data: cities, isLoading } = useCityList();
   const options = useMemo(() => (cities ?? AVAILABLE_CITIES).map(toOption), [cities]);
+  const suggestions = useMemo(() => resolveSuggestions(cities).map(toOption), [cities]);
 
   return (
     <ThemedCombobox
@@ -167,7 +167,7 @@ function CityPicker({
       aria-label="City"
       onChange={onChange}
       options={options}
-      suggestions={SUGGESTED_OPTIONS}
+      suggestions={suggestions}
       loading={isLoading}
       searchPlaceholder="Search Canadian cities…"
       emptyText="No matching city"
