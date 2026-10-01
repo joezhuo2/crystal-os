@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-301%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.7.0-6366F1)
+![Tests](https://img.shields.io/badge/tests-479%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.7.5-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.7.4** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.7.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -19,18 +19,18 @@ Current release: **v0.7.4** — see [CHANGELOG.md](CHANGELOG.md) for release his
 
 | Feature | Description |
 |---------|-------------|
-| **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking |
-| **📅 The Horizon** | Google Calendar, live: month and agenda views, create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along. The page has its own black hole backdrop and blue palette (see [The Horizon](#-the-horizon-google-calendar-integration)) |
-| **🏠 Home widgets** | A 3×3 grid: clock, weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton |
+| **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule |
+| **📅 The Horizon** | Google Calendar, live: month, week, day and agenda views (week and day are hour grids: overlapping events sit side by side, a line marks now, and clicking an empty slot creates an event at that half hour), create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along. The page has its own black hole backdrop and blue palette (see [The Horizon](#-the-horizon-google-calendar-integration)) |
+| **🏠 Home widgets** | A 3×3 grid: clock, weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for any of ~840 Canadian locations (searchable city picker), over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
-| **📖 The Archive** | Browse, search, and read your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and hides the global search bar, since it has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
+| **📖 The Archive** | Browse, search, read and edit your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown, and a CodeMirror markdown editor that refuses to overwrite a note changed on disk since you opened it. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and hides the global search bar, since it has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
 | **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, a context-window meter, per-model token counts, and a swirling three-colour nebula |
 | **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges, and three themes (desktop; the web build opens apps in new tabs) |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
 | **⏱️ Pomodoro** | Customizable focus/break intervals, session tracking, audio notifications, and tray controls (Tasks view) |
 | **🖥️ Desktop shell** | Native Tauri window with PowerShell terminal, tray (Pomodoro + Quick Add), always-on global hotkeys, and launch-at-login — the web build is unaffected |
-| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, vault folder, Nebula keys, models and look, Portal theme, and downloading or building an installer. Click a section's header to fold it away (remembered on this device); switches and sliders glide instead of snapping |
+| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, vault folder, Nebula keys, models and look, Portal theme, and downloading or building an installer. A search box (Ctrl+F) hides sections that don't match and unfolds the ones that do. Click a section's header to fold it away (remembered on this device); switches and sliders glide instead of snapping. **Diagnostics** copies recent errors (unhandled rejections, uncaught errors, failed Supabase saves) with the app version for a bug report; on desktop they are also logged to `diagnostics.log` |
 | **⌨️ Command Palette** | Global search over tasks, transactions, and vault note bodies, plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
 | **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar |
@@ -93,6 +93,10 @@ GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URI=http://localhost:8080/api/calendar/auth/callback
 # Written automatically after you click Connect. Leave blank.
 GOOGLE_REFRESH_TOKEN=
+
+# Optional: a dedicated test user for the E2E smoke test (npm run test:e2e).
+E2E_EMAIL=
+E2E_PASSWORD=
 ```
 
 Changing `OBSIDIAN_VAULT_PATH` or the `GOOGLE_*` keys requires a dev-server restart — Vite reads them once at config time. The one exception is `GOOGLE_REFRESH_TOKEN`, which the OAuth callback also holds in memory, so connecting takes effect immediately.
@@ -152,13 +156,16 @@ src/
 │   │   └── dashboard-skeletons.tsx # Per-widget loading skeletons for the home page
 │   ├── views/                  # Page-level components
 │   │   ├── HomePage.tsx        # Clock, weather, Vault, Engine, today's events, themed weather, Horizon and Archive widgets
+│   │   ├── HomeGrid.tsx        # Home's rearrangeable grid: drag to move, edit mode to resize, hide and reset
 │   │   ├── HomeSpaces.tsx      # Home's themed Nebula, Portal and Terminal boxes
 │   │   ├── TasksPage.tsx       # Task list, form, filtering, Pomodoro
-│   │   ├── CalendarPage.tsx    # Google Calendar: month + agenda, event CRUD
+│   │   ├── CalendarPage.tsx    # Google Calendar: month, week, day + agenda, event CRUD
+│   │   ├── TimeGrid.tsx        # Hour-by-hour columns for the week and day views
 │   │   ├── FinancialsPage.tsx  # Transactions, summaries, charts
 │   │   ├── WeatherPage.tsx     # Detailed weather view
-│   │   ├── ArchivePage.tsx     # Vault browser: search, tags, markdown reader
-│   │   ├── TerminalPage.tsx    # Up to 5 PowerShell terminals in tabs (xterm.js, desktop only)
+│   │   ├── ArchivePage.tsx     # Vault browser: search, tags, markdown reader, virtualised note list
+│   │   ├── NoteEditor.tsx      # CodeMirror note editor with mtime-checked saves (lazy-loaded)
+│   │   ├── TerminalPage.tsx    # Up to 5 PowerShell terminals in tabs, up to 4 split on screen (xterm.js, desktop only)
 │   │   ├── PortalPage.tsx      # The Portal: places the active app's webview over its frame
 │   │   ├── SettingsPage.tsx    # Hotkeys, launch at login, vault folder, Portal theme, Atmosphere effects and image, Install & update
 │   │   ├── InstallerSection.tsx # Release picker, installer download, build-from-source log
@@ -192,6 +199,8 @@ src/
 │   ├── portalNative.ts         # Desktop Portal bridge (portal_* commands)
 │   ├── installerNative.ts      # Desktop installer bridge (installer_* commands, version helpers)
 │   ├── homeTasks.ts            # Home Engine ordering: priority ranks, upcoming tasks
+│   ├── homeLayout.ts           # Home grid order, hidden widgets and sizes, saved in localStorage
+│   ├── timeGrid.ts             # Week/day view dates and overlapping-event layout
 │   ├── atmosphereScene.ts      # Living Sky maths: sky phase, weather codes → effects, aurora/star strength, moon, pine ridge
 │   ├── atmosphereStore.ts      # Atmosphere settings: city, weather effects, aurora, background image and its blur
 │   ├── atmosphereImage.ts      # Background image: checks, scaling, baked blur, IndexedDB storage
@@ -246,6 +255,8 @@ Parsing, search ranking, tag handling, and quick-add formatting live in `src/lib
 | `GET` | `/api/obsidian/notes` | List notes (`?q=` search, `?tag=` filter, `?limit=`) |
 | `GET` | `/api/obsidian/notes?path=<rel>` | Read one note, including its body |
 | `POST` | `/api/obsidian/quick-add` | Append `{ text, notePath?, tags? }` to a note |
+| `GET` | `/api/obsidian/raw?path=<rel>` | A note's whole file, frontmatter included, with its `mtime` (for the editor) |
+| `PUT` | `/api/obsidian/note` | Replace a note with `{ path, content, expectedMtime }`; `409` if it changed on disk since `expectedMtime` (2 MB cap) |
 
 The middleware is mounted on both the dev server and `vite preview`. It is **not** part of a static production build — a bare `dist/` deployment has no vault access.
 
@@ -255,18 +266,20 @@ The middleware is mounted on both the dev server and `vite preview`. It is **not
 - **Frontmatter** — `title`, `tags`, `date`, and `status` are modelled explicitly; every other key is surfaced as-is in the reader.
 - **Wikilinks** — `[[Note]]` and `[[Note|alias]]` resolve to in-app navigation; unresolved links stay plain text rather than becoming dead anchors.
 - **Quick Add** — appends a `- **HH:MM** text` bullet under a `## YYYY-MM-DD` heading, creating the note (and any parent directories) when missing. Supplied tags are merged into the note's frontmatter; the existing YAML list style (inline or block) is preserved and no other key is reformatted.
+- **Editing** — **Edit** in the reader opens the whole file, frontmatter included, in CodeMirror (`src/components/views/NoteEditor.tsx`, loaded only when first used). **Save** or Ctrl+S writes it back with the `mtime` it was opened at; if Obsidian saved the note in between, the save is refused and you choose **Discard mine, load theirs** or **Overwrite with mine**. Unsaved edits survive switching notes or tabs as a draft until the window closes.
 - **Caching** — parsed notes are cached per path and invalidated on `mtime` change.
 
 ### Layout
 
-The Archive has no global search bar (like the Terminal, Portal and Nebula), so the rail runs down to the bottom of the window. It is a fixed-height column split into two halves that scroll independently: the tag cloud on top, the filtered note list below, with the note count between them as a divider and the search field pinned above both. Each half is `flex-1 basis-0 min-h-0`, so a vault with many tags cannot crowd the list out of view, and a vault with few tags leaves the extra space to the list.
+The Archive has no global search bar (like the Terminal, Portal and Nebula), so the rail runs down to the bottom of the window. It is a fixed-height column split into two halves that scroll independently: the tag cloud on top, the filtered note list below, with the note count between them as a divider and the search field pinned above both. Each half is `flex-1 basis-0 min-h-0`, so a vault with many tags cannot crowd the list out of view, and a vault with few tags leaves the extra space to the list. Past 80 notes the list is virtualised (`@tanstack/react-virtual`): only the rows in view are mounted, so large vaults scroll smoothly; smaller lists keep their staggered entrance.
 
 ### Theme
 
 The Archive has its own dark amethyst look. The panels, tags, note list, buttons, and sidebar turn violet, and `ObsidianBackdrop` (`src/components/layout/ObsidianBackdrop.tsx`) draws the scene behind them with CSS, SVG, and DOM only (no canvas, WebGL, or 3D library):
 
 - **Crystals.** 53 glass crystals grow in from the four corners and edges, in five faceted shapes. Clusters sit every 12–16% along each edge, so the border reads as one continuous band of crystal, at resting opacities between 0.3 and 0.9. Each one is tilted to point into the screen and pushed out along its own axis until its flat base sits past the edge, so no root is ever on screen. The layout is seeded, so it is the same on every visit (`src/lib/obsidianScene.ts`). The resting glass is painted with gradients only, with no `backdrop-filter`, and every third crystal holds still while the rest float.
-- **Sparkles.** 80 four-point stars (10–22 px) twinkle at random across the background, and one (24–40 px) sits near the tip of each crystal, on top of the glass. Each star is a bright white core with two thin rays drawn as gradients (so they stay crisp at any size), and a soft violet glow that twinkles with it. In performance mode and with reduced motion the stars hold still at 80% instead of twinkling.
+- **Sparkles.** 80 four-point stars (10–22 px; 60, 44 and 32 on 1.25×, 1.75× and 2.5× displays, which paint each one at several times the pixels) twinkle at random across the background, and one (24–40 px) sits near the tip of each crystal, on top of the glass. Each star is a bright white core with two thin rays drawn as gradients (so they stay crisp at any size), and a soft violet glow that twinkles with it. In performance mode and with reduced motion the stars hold still at 80% instead of twinkling.
+- **Still while scrolling.** While anything on the page scrolls, the floating crystals, twinkles, haze and aura pause where they are and pick up again 180 ms after the scroll stops, so the scroll gets the frames.
 - **Cursor light.** A soft violet aura follows the pointer and breathes between 0.5 and 0.8 opacity. It fades out when the pointer leaves the window.
 - **Reflections.** A crystal near the pointer lights up: a brighter rim, a halo, and a second glass layer with a stronger `backdrop-filter` (brightness, saturation, contrast) that carries a glint positioned where the pointer is. The light is worked out in the crystal's own rotated frame, so tilted crystals light along their length.
 
@@ -338,7 +351,8 @@ The consent flow carries a random `state` nonce that is verified on callback and
 
 ```sql
 tasks                (id, user_id, name, start_date, start_time, end_date,
-                      end_time, priority, category_id, completed, repeat_days)
+                      end_time, priority, category_id, completed, repeat_days,
+                      repeat_kind, repeat_weekdays)
 transactions         (id, user_id, name, amount, type, category_id, date)
 task_categories      (id, user_id, name, color)
 financial_categories (id, user_id, name, color)
@@ -352,7 +366,10 @@ category leaves its tasks intact and uncategorised rather than deleting them.
 
 Apply [`supabase/migrations/0001_auth_and_rls.sql`](supabase/migrations/0001_auth_and_rls.sql)
 in the Supabase Dashboard → SQL Editor, then run `npm run verify:rls` to confirm the
-anon role can read and write nothing.
+anon role can read and write nothing. Then apply
+[`supabase/migrations/0002_task_repeat_kinds.sql`](supabase/migrations/0002_task_repeat_kinds.sql)
+(v0.7.5), which adds the repeat kind (`days`, `weekly`, `monthly`, `after`) and weekdays.
+Task saves fail until it is applied. Older rows with only `repeat_days` keep repeating every N days.
 
 ---
 
@@ -366,11 +383,15 @@ npm run preview      # Preview production build (vault + calendar APIs included)
 npm run lint         # ESLint check
 npm run test         # Run tests (Vitest) — covers src/ and server/
 npm run test:watch   # Watch mode
+npm run test:e2e     # Playwright smoke test in Edge (needs E2E_EMAIL / E2E_PASSWORD)
+npm run badges       # Refresh the README version and tests badges
 
 npm run dev:desktop   # Native window on the Vite dev server (needs Rust)
 npm run build:sidecar # Bundle server/ into src-tauri/binaries/crystal-api-<triple>.exe
 npm run build:desktop # Sidecar + web build + Windows installer
 ```
+
+**Before a release**, run `npm run badges` and `npm run test:e2e`. The smoke test signs in, adds and deletes a task, logs and deletes a transaction, and opens every page, failing on any uncaught error or a page that renders nothing. It starts its own Vite server on port 8090 (`E2E_PORT` to change) and uses the Edge that ships with Windows (`E2E_CHANNEL=chrome` or an empty value for Playwright's Chromium). Point it at a test user created in the Supabase dashboard, not your own account; Row Level Security keeps its rows apart from yours.
 
 ---
 
@@ -417,6 +438,7 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 **Terminal.** The terminal icon above Settings opens a PowerShell terminal (PowerShell 7 if installed, otherwise Windows PowerShell) running on a real pseudoconsole, so colours, tab completion, and interactive prompts work. Shells keep running while you switch tabs and are killed when Crystal OS quits.
 
 - **Up to 5 terminals at once.** The strip above the frame has one tab per shell, **+** to open another (disabled at the limit, shown as `n/5`), and **×** to close one. Middle-click also closes a tab. The last terminal cannot be closed. Every shell keeps running in the background; switching tabs never interrupts a command. Coming back to the Terminal page reopens the tab you last used.
+- **Split view, up to 4 shells on screen.** Drag a tab over the terminal: the pane under the pointer shows an outline of where it would land. Near an edge it splits that pane in half (left, right, top or bottom); in the middle it takes that pane's place, or swaps with it if the dragged shell is already on screen. Once 4 panes are showing, a fifth tab can only replace one. Each pane has a title bar you can drag to rearrange, and a button that takes it off screen without closing the shell. Drag a divider to resize (double-click resets it to half). Clicking a pane focuses it (Refresh and the header follow the focused pane); clicking a tab that is not on screen puts it in the focused pane. The split comes back when you return to the Terminal page. Layout logic lives in `src/lib/terminalLayout.ts`.
 - Shortcuts while a terminal has focus: **Ctrl+Shift+T** new tab, **Ctrl+Shift+W** close tab, **Ctrl+Tab** / **Ctrl+Shift+Tab** next / previous tab.
 - **Refresh** restarts the selected shell with PATH and the other environment variables read again from the registry. Use it after installing something (`winget`, `npm -g`, an installer) that the terminal does not find yet: a running app keeps the environment it started with, so a plain restart of the shell would not see the change.
 - Ctrl+C copies when text is selected and interrupts otherwise; Ctrl+V pastes.
@@ -473,7 +495,7 @@ The Pomodoro timer lives in `src/lib/pomodoro.ts`, so it keeps running when you 
 
 - **Live updates.** A file watcher (`notify`, debounced 250 ms) emits `vault://changed` whenever a note is added, edited, renamed, or deleted, and every vault view refetches. Edits made in Obsidian show up without a refresh. Only changed notes are re-read.
 - **Scoped access.** The webview has no fs, shell, or dialog plugin permissions (the Terminal tab runs its shell through its own commands, not the shell plugin). It reaches the vault only through six commands (`get_vault_status`, `pick_vault`, `list_vault`, `read_vault_file`, `write_vault_file`, `watch_vault`), and `src-tauri/capabilities/default.json` allowlists every app command by name. Each path must be a `.md` file inside the picked folder, outside `.obsidian`, `.trash`, `.git`, and `node_modules`.
-- **Safe writes.** Quick Add writes to a temp file and swaps it in. It sends the `mtime` it read, so if Obsidian saves the note in between, the append is redone on top of that edit instead of overwriting it.
+- **Safe writes.** Quick Add and the note editor write to a temp file and swap it in. Both send the `mtime` they read: if Obsidian saves the note in between, Quick Add redoes the append on top of that edit, and the editor asks whether to keep your version or theirs, instead of overwriting it.
 - **When things go wrong.** A saved folder that is gone at startup (renamed, or on an unplugged drive) or unreadable shows a card with **Choose vault folder** and **Retry**; the watcher restarts once the folder is back. A note deleted while open shows **This note is gone** with **Close note**.
 
 Code that behaves differently on desktop goes through `src/lib/platform.ts` (`isDesktop()`, `apiUrl()`, `openExternal()`), so the web bundle never imports Tauri.

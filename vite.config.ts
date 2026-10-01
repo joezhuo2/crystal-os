@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { readFileSync } from "fs";
 import { componentTagger } from "lovable-tagger";
 import { obsidianApi } from "./server/obsidian/plugin";
 import { calendarApi } from "./server/calendar/plugin";
@@ -24,7 +25,13 @@ export default defineConfig(({ mode }) => {
         )
       : undefined;
 
+  const { version } = JSON.parse(readFileSync(path.resolve(__dirname, "package.json"), "utf8"));
+
   return {
+    // Shown in Settings → Diagnostics reports (src/lib/diagnostics.ts).
+    define: {
+      __APP_VERSION__: JSON.stringify(version),
+    },
     server: {
       // Loopback only. "::" bound every interface, which served the vault and
       // calendar to anything on the same network. Correct while this runs

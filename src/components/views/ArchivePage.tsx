@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { motion } from "framer-motion";
@@ -11,6 +12,7 @@ import {
   FileX,
   FolderOpen,
   NotebookPen,
+  Pencil,
   RotateCw,
   Search,
   Tag as TagIcon,
@@ -25,6 +27,9 @@ import {
 } from "@/hooks/useVault";
 import { isDesktop } from "@/lib/platform";
 import { useDebouncedValue } from "@/lib/utils";
+
+// CodeMirror is only needed once someone edits, so it stays out of the main bundle.
+const NoteEditor = lazy(() => import("./NoteEditor"));
 
 function relativeDate(note: VaultNote): string {
   const ms = note.date ? Date.parse(note.date) : note.mtime;
@@ -80,6 +85,78 @@ function NoteRow({
   );
 }
 
+/**
+ * Past this many notes the list is virtualised: only the rows in view (plus a
+ * few either side) are mounted, so a vault of thousands scrolls like one of
+ * dozens. Smaller lists keep their staggered entrance animation.
+ */
+const VIRTUALIZE_AFTER = 80;
+
+function NoteList({
+  notes,
+  selectedPath,
+  onSelect,
+}: {
+  notes: VaultNote[];
+  selectedPath: string | null;
+  onSelect: (path: string) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const virtual = notes.length > VIRTUALIZE_AFTER;
+  const virtualizer = useVirtualizer({
+    count: virtual ? notes.length : 0,
+    getScrollElement: () => scrollRef.current,
+    // A row without a match snippet; rows with one are measured as they mount.
+    estimateSize: () => 62,
+    overscan: 8,
+    getItemKey: (i) => notes[i].path,
+  });
+
+  return (
+    <div ref={scrollRef} className="flex-1 basis-0 min-h-0 overflow-y-auto scrollbar-thin -mx-1 px-1">
+      {virtual ? (
+        <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+          {virtualizer.getVirtualItems().map((item) => {
+            const note = notes[item.index];
+            return (
+              <div
+                key={item.key}
+                data-index={item.index}
+                ref={virtualizer.measureElement}
+                className="absolute left-0 top-0 w-full pb-1"
+                style={{ transform: `translateY(${item.start}px)` }}
+              >
+                <NoteRow
+                  note={note}
+                  active={selectedPath === note.path}
+                  onSelect={() => onSelect(note.path)}
+                />
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {notes.map((note, i) => (
+            <motion.div
+              key={note.path}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i * 0.03, 0.3) }}
+            >
+              <NoteRow
+                note={note}
+                active={selectedPath === note.path}
+                onSelect={() => onSelect(note.path)}
+              />
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Rewrite Obsidian wikilinks so they resolve against the notes we actually have. */
 function resolveWikilinks(content: string, notes: VaultNote[]): string {
   return content.replace(
@@ -102,6 +179,9 @@ function resolveWikilinks(content: string, notes: VaultNote[]): string {
 function NoteReader({ notes }: { notes: VaultNote[] }) {
   const { selectedNotePath, setSelectedNotePath } = useApp();
   const { data: note, isLoading, error } = useVaultNote(selectedNotePath);
+  // Keyed by path, so opening another note always comes back to reading.
+  const [editingPath, setEditingPath] = useState<string | null>(null);
+  const editing = !!note && editingPath === note.path;
 
   if (!selectedNotePath) {
     return (
@@ -170,56 +250,77 @@ function NoteReader({ notes }: { notes: VaultNote[] }) {
       animate={{ opacity: 1, y: 0 }}
       className="glass-card p-6 min-h-[320px]"
     >
-      <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">
-        {note.path}
-      </p>
+      <div className="flex items-start gap-3 mb-2">
+        <p className="text-xs text-muted-foreground uppercase tracking-widest min-w-0 break-all flex-1">
+          {note.path}
+        </p>
+        {!editing && (
+          <button
+            onClick={() => setEditingPath(note.path)}
+            className="obsidian-action flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border shrink-0"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            Edit
+          </button>
+        )}
+      </div>
       <h2 className="text-2xl font-bold tracking-tight">{note.title}</h2>
 
-      <div className="flex flex-wrap items-center gap-2 mt-3">
-        {note.tags.map((tag) => (
-          <span
-            key={tag}
-            className="obsidian-tag px-2 py-0.5 rounded-full text-[11px]"
-          >
-            {tag}
-          </span>
-        ))}
-        {note.status && (
-          <span
-            className="px-2 py-0.5 rounded-full text-[11px]"
-            style={{ background: "hsl(160 84% 39% / 0.12)", color: "hsl(160 84% 55%)" }}
-          >
-            {note.status}
-          </span>
-        )}
-        <span className="text-xs text-muted-foreground">{relativeDate(note)}</span>
-      </div>
-
-      {extras.length > 0 && (
-        <div className="flex flex-wrap gap-x-6 gap-y-1 mt-4 p-3 rounded-lg bg-background/30">
-          {extras.map(([key, value]) => (
-            <div key={key} className="text-xs min-w-0">
-              <span className="text-muted-foreground uppercase tracking-wider">{key}</span>{" "}
-              <span className="text-foreground/80 break-all">{String(value)}</span>
-            </div>
-          ))}
+      {editing ? (
+        <div className="mt-4">
+          <Suspense fallback={<p className="text-sm text-muted-foreground py-10 text-center">Opening editor…</p>}>
+            <NoteEditor path={note.path} onDone={() => setEditingPath(null)} />
+          </Suspense>
         </div>
-      )}
+      ) : (
+        <>
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          {note.tags.map((tag) => (
+            <span
+              key={tag}
+              className="obsidian-tag px-2 py-0.5 rounded-full text-[11px]"
+            >
+              {tag}
+            </span>
+          ))}
+          {note.status && (
+            <span
+              className="px-2 py-0.5 rounded-full text-[11px]"
+              style={{ background: "hsl(160 84% 39% / 0.12)", color: "hsl(160 84% 55%)" }}
+            >
+              {note.status}
+            </span>
+          )}
+          <span className="text-xs text-muted-foreground">{relativeDate(note)}</span>
+        </div>
 
-      <div
-        className="prose prose-invert prose-sm max-w-none mt-6 prose-headings:tracking-tight prose-a:text-primary"
-        onClick={(e) => {
-          // Wikilinks render as #vault/<path> anchors — keep them in-app.
-          const anchor = (e.target as HTMLElement).closest("a");
-          const href = anchor?.getAttribute("href");
-          if (href?.startsWith("#vault/")) {
-            e.preventDefault();
-            setSelectedNotePath(decodeURIComponent(href.slice("#vault/".length)));
-          }
-        }}
-      >
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
-      </div>
+        {extras.length > 0 && (
+          <div className="flex flex-wrap gap-x-6 gap-y-1 mt-4 p-3 rounded-lg bg-background/30">
+            {extras.map(([key, value]) => (
+              <div key={key} className="text-xs min-w-0">
+                <span className="text-muted-foreground uppercase tracking-wider">{key}</span>{" "}
+                <span className="text-foreground/80 break-all">{String(value)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div
+          className="prose prose-invert prose-sm max-w-none mt-6 prose-headings:tracking-tight prose-a:text-primary"
+          onClick={(e) => {
+            // Wikilinks render as #vault/<path> anchors — keep them in-app.
+            const anchor = (e.target as HTMLElement).closest("a");
+            const href = anchor?.getAttribute("href");
+            if (href?.startsWith("#vault/")) {
+              e.preventDefault();
+              setSelectedNotePath(decodeURIComponent(href.slice("#vault/".length)));
+            }
+          }}
+        >
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
+        </div>
+        </>
+      )}
     </motion.div>
   );
 }
@@ -400,37 +501,24 @@ export default function ArchivePage() {
           </div>
 
           {/* Bottom half: filtered notes. */}
-          <div className="flex-1 basis-0 min-h-0 overflow-y-auto scrollbar-thin space-y-1 -mx-1 px-1">
-            {isLoading &&
-              [...Array(6)].map((_, i) => (
-                <div key={i} className="px-3 py-2.5 space-y-1.5">
-                  <div className="w-2/3 h-4 rounded bg-primary/10 animate-pulse" />
-                  <div className="w-1/2 h-3 rounded bg-primary/5 animate-pulse" />
-                </div>
-              ))}
-
-            {!isLoading && notes.length === 0 && (
-              <p className="text-sm text-muted-foreground px-3 py-6 text-center">
-                No notes match.
-              </p>
-            )}
-
-            {!isLoading &&
-              notes.map((note, i) => (
-                <motion.div
-                  key={note.path}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: Math.min(i * 0.03, 0.3) }}
-                >
-                  <NoteRow
-                    note={note}
-                    active={selectedNotePath === note.path}
-                    onSelect={() => setSelectedNotePath(note.path)}
-                  />
-                </motion.div>
-              ))}
-          </div>
+          {isLoading || notes.length === 0 ? (
+            <div className="flex-1 basis-0 min-h-0 overflow-y-auto scrollbar-thin space-y-1 -mx-1 px-1">
+              {isLoading ? (
+                [...Array(6)].map((_, i) => (
+                  <div key={i} className="px-3 py-2.5 space-y-1.5">
+                    <div className="w-2/3 h-4 rounded bg-primary/10 animate-pulse" />
+                    <div className="w-1/2 h-3 rounded bg-primary/5 animate-pulse" />
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground px-3 py-6 text-center">
+                  No notes match.
+                </p>
+              )}
+            </div>
+          ) : (
+            <NoteList notes={notes} selectedPath={selectedNotePath} onSelect={setSelectedNotePath} />
+          )}
         </div>
 
         {/* ── Right pane: reader ── */}

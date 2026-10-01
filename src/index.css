@@ -403,6 +403,107 @@
     outline-offset: 1px;
   }
 
+  /* On screen in a split, but not the focused pane. */
+  .terminal-tab[data-visible] {
+    color: #d4d4d4;
+    border-color: rgb(255 255 255 / 0.45);
+  }
+
+  .terminal-tab[data-dragging] {
+    opacity: 0.45;
+  }
+
+  /* Split view: a title bar (also a drag handle) over each pane. */
+  .terminal-pane-header {
+    @apply flex h-6 shrink-0 items-center gap-2 pl-2 pr-0.5 text-[10px] uppercase tracking-[0.14em] cursor-grab select-none;
+    font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+    color: #737373;
+  }
+
+  .terminal-pane-header[data-focused] {
+    color: #fafafa;
+  }
+
+  .terminal-pane {
+    @apply rounded-sm p-1.5;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+
+  .terminal-pane[data-focused] {
+    border-color: rgb(255 255 255 / 0.55);
+    box-shadow: 0 0 12px rgb(255 255 255 / 0.08);
+  }
+
+  /* Wide hit area centred on the gap between two panes. */
+  .terminal-divider {
+    position: absolute;
+    z-index: 10;
+    touch-action: none;
+  }
+
+  .terminal-divider[data-dir="row"] {
+    width: 9px;
+    transform: translateX(-50%);
+    cursor: col-resize;
+  }
+
+  .terminal-divider[data-dir="col"] {
+    height: 9px;
+    transform: translateY(-50%);
+    cursor: row-resize;
+  }
+
+  .terminal-divider::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    border-radius: 1px;
+    background: transparent;
+    transition: background-color 150ms;
+  }
+
+  .terminal-divider[data-dir="row"]::after {
+    width: 2px;
+  }
+
+  .terminal-divider[data-dir="col"]::after {
+    height: 2px;
+  }
+
+  .terminal-divider:hover::after,
+  .terminal-divider:active::after {
+    background: rgb(255 255 255 / 0.6);
+  }
+
+  /* Outline of where a dragged tab would land. */
+  .terminal-drop-preview {
+    position: absolute;
+    z-index: 20;
+    pointer-events: none;
+    border: 2px solid rgb(255 255 255 / 0.85);
+    border-radius: 0.25rem;
+    background: rgb(255 255 255 / 0.08);
+    box-shadow: inset 0 0 24px rgb(255 255 255 / 0.08), 0 0 16px rgb(255 255 255 / 0.15);
+    transition: left 120ms ease-out, top 120ms ease-out, width 120ms ease-out, height 120ms ease-out;
+  }
+
+  .terminal-drag-ghost {
+    position: fixed;
+    z-index: 100;
+    pointer-events: none;
+    color: #fafafa;
+    border-color: #fafafa;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.6);
+  }
+
+  .terminal-dragging,
+  .terminal-dragging * {
+    cursor: grabbing !important;
+    user-select: none !important;
+  }
+
   /* Sidebar while the Terminal tab is open. */
   .sidebar-terminal {
     background: rgb(0 0 0 / 0.72);
@@ -421,6 +522,9 @@
     .terminal-glitch-text::after,
     .terminal-btn:hover:not(:disabled) {
       animation: none;
+    }
+    .terminal-drop-preview {
+      transition: none;
     }
     .terminal-glitch-frame::after,
     .terminal-glitch-text::before,
@@ -1448,6 +1552,17 @@
     }
   }
 
+  /* Hold still while the page scrolls (ObsidianBackdrop sets this), so the
+     floating crystals and twinkles don't compete with the scroll for frames.
+     Paused rather than removed, so they pick up where they stopped. */
+  .obsidian-backdrop[data-scrolling] .obsidian-haze,
+  .obsidian-backdrop[data-scrolling] .obsidian-crystal,
+  .obsidian-backdrop[data-scrolling] .obsidian-sparkle::before,
+  .obsidian-backdrop[data-scrolling] .obsidian-sparkle::after,
+  .obsidian-backdrop[data-scrolling] .obsidian-aura {
+    animation-play-state: paused;
+  }
+
   /* Performance mode ends every animation on its last frame, which for a
      twinkle is invisible. Hold the sparkles lit instead. */
   html.perf-still .obsidian-sparkle::before,
@@ -1963,6 +2078,34 @@
     font-weight: 600;
     color: #fff;
     text-shadow: 0 0 10px color-mix(in srgb, var(--tip-b) 55%, transparent);
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Home grid (views/HomeGrid.tsx): dragging a widget by its box, and the
+ * dashed outline each widget wears while the layout is being edited.
+ * ------------------------------------------------------------------ */
+@layer components {
+  body.home-dragging,
+  body.home-dragging * {
+    cursor: grabbing !important;
+    user-select: none !important;
+  }
+
+  /* Horizon view switch (CalendarPage): the outermost glass cards fade
+     themselves, keeping each one its own backdrop root. */
+  .horizon-view {
+    --view-fade: 1;
+  }
+
+  .horizon-view .glass-card:not(.glass-card .glass-card) {
+    opacity: var(--view-fade);
+  }
+
+  .home-tile-editing {
+    outline: 1px dashed hsl(var(--primary) / 0.45);
+    outline-offset: 3px;
+    border-radius: 1rem;
   }
 }
 

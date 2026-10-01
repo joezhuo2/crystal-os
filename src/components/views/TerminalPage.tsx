@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, RotateCw, SquareTerminal, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
+import { Minimize2, Plus, RotateCw, SquareTerminal, X } from "lucide-react";
 import type { Terminal } from "@xterm/xterm";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { isDesktop } from "@/lib/platform";
@@ -16,6 +17,23 @@ import {
   restartTerminal,
   writeTerminal,
 } from "@/lib/terminalNative";
+import {
+  type DropZone,
+  EMPTY_LAYOUT,
+  type Layout,
+  type LayoutNode,
+  type Rect,
+  dropOnPane,
+  effectiveZone,
+  mapPanes,
+  measure,
+  paneKeys,
+  removePane,
+  selectPane,
+  setRatio,
+  zoneAt,
+  zoneRect,
+} from "@/lib/terminalLayout";
 
 const DIM = "\x1b[2m";
 const RED = "\x1b[31m";
@@ -56,8 +74,11 @@ function errorText(err: unknown) {
   return err instanceof Error ? err.message : String(err);
 }
 
-/** The session shown last, kept across visits to other tabs. */
-let lastActiveId: number | null = null;
+/**
+ * The panes on screen when the tab was last left, by session id (tab keys are
+ * made fresh each visit), so a split survives visits to other tabs.
+ */
+let lastLayout: { root: LayoutNode | null; focused: string | null } = { root: null, focused: null };
 
 interface Tab {
   /** Stable across Refresh, which gives the session a new id. */
@@ -76,7 +97,8 @@ type TabShortcut = "new" | "close" | "next" | "previous";
 
 interface PaneProps {
   tab: Tab;
-  active: boolean;
+  /** Takes keyboard input. Panes off screen are hidden by the page. */
+  focused: boolean;
   hub: TerminalHub;
   onChange(key: string, patch: Partial<Tab>): void;
   onShortcut(shortcut: TabShortcut): void;
@@ -86,20 +108,20 @@ interface PaneProps {
 let nextKey = 0;
 const tabFor = (id: number, shell: string, exited: boolean): Tab => ({ key: `t${++nextKey}`, id, shell, exited });
 
-function TerminalPane({ tab, active, hub, onChange, onShortcut, register }: PaneProps) {
+function TerminalPane({ tab, focused, hub, onChange, onShortcut, register }: PaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const streamRef = useRef<TerminalStream | null>(null);
   // Read once on mount; Refresh changes the id afterwards through the stream.
   const initialId = useRef(tab.id);
-  const activeRef = useRef(active);
+  const activeRef = useRef(focused);
   const callbacks = useRef({ onChange, onShortcut });
   callbacks.current = { onChange, onShortcut };
 
   useEffect(() => {
-    activeRef.current = active;
-    if (active) termRef.current?.focus();
-  }, [active]);
+    activeRef.current = focused;
+    if (focused) termRef.current?.focus();
+  }, [focused]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -227,26 +249,65 @@ function TerminalPane({ tab, active, hub, onChange, onShortcut, register }: Pane
     };
   }, [hub, register, tab.key]);
 
-  return <div ref={containerRef} className="h-full w-full" hidden={!active} />;
+  return <div ref={containerRef} className="h-full w-full" />;
 }
+
+/** Where a dragged tab would land, shown as an outline over the panes. */
+interface DragState {
+  key: string;
+  label: string;
+  x: number;
+  y: number;
+  target: { key: string; zone: DropZone } | null;
+}
+
+/** Percent offsets for an absolutely placed box inside the pane area. */
+function rectStyle(rect: Rect) {
+  return {
+    left: `${rect.x * 100}%`,
+    top: `${rect.y * 100}%`,
+    width: `${rect.w * 100}%`,
+    height: `${rect.h * 100}%`,
+  };
+}
+
+/** Pointer travel before a press on a tab counts as a drag, not a click. */
+const DRAG_THRESHOLD = 5;
 
 export default function TerminalPage() {
   const desktop = isDesktop();
   const [hub] = useState(() => new TerminalHub());
   const [tabs, setTabs] = useState<Tab[]>([]);
-  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [layout, setLayout] = useState<Layout>(EMPTY_LAYOUT);
+  const [drag, setDrag] = useState<DragState | null>(null);
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const panes = useRef(new Map<string, PaneHandle>());
+  const paneEls = useRef(new Map<string, HTMLDivElement>());
+  const areaRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
+  // Set for the click that follows a drag's pointerup, so a drop is not also a selection.
+  const suppressClick = useRef(false);
+  const cancelDrag = useRef<(() => void) | null>(null);
 
+  const activeKey = layout.focused;
   const activeTab = tabs.find((t) => t.key === activeKey) ?? null;
+  const { panes: paneRects, dividers } = useMemo(() => measure(layout.root), [layout.root]);
 
   useEffect(() => {
-    if (activeTab) lastActiveId = activeTab.id;
-  }, [activeTab]);
+    if (!layout.root) return;
+    const idOf = new Map(tabs.map((t) => [t.key, String(t.id)]));
+    lastLayout = {
+      root: mapPanes(layout.root, (key) => idOf.get(key) ?? null),
+      focused: (layout.focused && idOf.get(layout.focused)) || null,
+    };
+  }, [layout, tabs]);
+
+  useEffect(() => () => cancelDrag.current?.(), []);
 
   const register = useCallback((key: string, handle: PaneHandle | null) => {
     if (handle) panes.current.set(key, handle);
@@ -255,6 +316,12 @@ export default function TerminalPage() {
 
   const updateTab = useCallback((key: string, patch: Partial<Tab>) => {
     setTabs((current) => current.map((t) => (t.key === key ? { ...t, ...patch } : t)));
+  }, []);
+
+  const select = useCallback((key: string) => setLayout((current) => selectPane(current, key)), []);
+
+  const focusPane = useCallback((key: string) => {
+    setLayout((current) => (current.focused === key ? current : { ...current, focused: key }));
   }, []);
 
   // Subscribed before listing, so a new shell's first output is held for its pane.
@@ -273,7 +340,16 @@ export default function TerminalPage() {
         if (disposed) return;
         const next = sessions.map((s) => tabFor(s.id, s.shell, s.exited));
         setTabs(next);
-        setActiveKey((next.find((t) => t.id === lastActiveId) ?? next[0]).key);
+        // Bring back the last split, minus any shells that have since closed.
+        const keyOf = new Map(next.map((t) => [String(t.id), t.key]));
+        const root = mapPanes(lastLayout.root, (id) => keyOf.get(id) ?? null);
+        const keys = paneKeys(root);
+        const focused = lastLayout.focused ? keyOf.get(lastLayout.focused) : undefined;
+        setLayout(
+          root
+            ? { root, focused: focused && keys.includes(focused) ? focused : keys[0] }
+            : selectPane(EMPTY_LAYOUT, next[0].key),
+        );
       } catch (err) {
         if (!disposed) setError(`Could not start the shell: ${errorText(err)}`);
       }
@@ -294,13 +370,13 @@ export default function TerminalPage() {
       const info = await openTerminal(size.cols, size.rows);
       const tab = tabFor(info.id, info.shell, info.exited);
       setTabs((current) => [...current, tab]);
-      setActiveKey(tab.key);
+      select(tab.key);
     } catch (err) {
       setError(errorText(err));
     } finally {
       setBusy(false);
     }
-  }, [activeKey, busy]);
+  }, [activeKey, busy, select]);
 
   const closeTab = useCallback(
     (key: string) => {
@@ -313,9 +389,9 @@ export default function TerminalPage() {
       void closeTerminal(tab.id).catch(() => {});
       const remaining = current.filter((t) => t.key !== key);
       setTabs(remaining);
-      if (key === activeKey) setActiveKey(remaining[Math.min(index, remaining.length - 1)].key);
+      setLayout((layout) => removePane(layout, key, remaining[Math.min(index, remaining.length - 1)].key));
     },
-    [activeKey, hub],
+    [hub],
   );
 
   const cycle = useCallback(
@@ -323,9 +399,9 @@ export default function TerminalPage() {
       const current = tabsRef.current;
       const index = current.findIndex((t) => t.key === activeKey);
       if (index === -1 || current.length < 2) return;
-      setActiveKey(current[(index + step + current.length) % current.length].key);
+      select(current[(index + step + current.length) % current.length].key);
     },
-    [activeKey],
+    [activeKey, select],
   );
 
   const onShortcut = useCallback(
@@ -349,6 +425,81 @@ export default function TerminalPage() {
     }
   }, [activeKey]);
 
+  /**
+   * Drags a tab (or a pane's title bar) over the panes: the pane under the
+   * pointer shows an outline of where the shell would go — the half nearest
+   * the pointer to split it, or the whole pane to take its place.
+   */
+  const startDrag = useCallback((e: ReactPointerEvent, key: string, label: string) => {
+    if (e.button !== 0) return;
+    cancelDrag.current?.();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let dragging = false;
+    let target: DragState["target"] = null;
+
+    const hit = (x: number, y: number): DragState["target"] => {
+      const current = layoutRef.current;
+      for (const paneKey of paneKeys(current.root)) {
+        const r = paneEls.current.get(paneKey)?.getBoundingClientRect();
+        if (!r || r.width === 0 || x < r.left || x > r.right || y < r.top || y > r.bottom) continue;
+        const zone = effectiveZone(current, key, paneKey, zoneAt((x - r.left) / r.width, (y - r.top) / r.height));
+        return zone ? { key: paneKey, zone } : null;
+      }
+      return null;
+    };
+
+    const move = (ev: PointerEvent) => {
+      if (!dragging) {
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD) return;
+        dragging = true;
+        document.body.classList.add("terminal-dragging");
+      }
+      target = hit(ev.clientX, ev.clientY);
+      setDrag({ key, label, x: ev.clientX, y: ev.clientY, target });
+    };
+    const finish = (commit: boolean) => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("keydown", escape, true);
+      cancelDrag.current = null;
+      if (!dragging) return;
+      document.body.classList.remove("terminal-dragging");
+      suppressClick.current = true;
+      setTimeout(() => (suppressClick.current = false), 0);
+      setDrag(null);
+      const drop = target;
+      if (commit && drop) setLayout((current) => dropOnPane(current, key, drop.key, drop.zone));
+    };
+    const up = () => finish(true);
+    const cancel = () => finish(false);
+    const escape = (ev: KeyboardEvent) => {
+      if (ev.key !== "Escape" || !dragging) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      finish(false);
+    };
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
+    window.addEventListener("keydown", escape, true);
+    cancelDrag.current = cancel;
+  }, []);
+
+  /** Moves the divider of the split at `path`, measured against that split's area. */
+  const resizeSplit = useCallback((e: ReactPointerEvent<HTMLDivElement>, path: string, dir: "row" | "col", rect: Rect) => {
+    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+    const area = areaRef.current?.getBoundingClientRect();
+    if (!area) return;
+    const ratio =
+      dir === "row"
+        ? (e.clientX - (area.left + rect.x * area.width)) / (rect.w * area.width)
+        : (e.clientY - (area.top + rect.y * area.height)) / (rect.h * area.height);
+    setLayout((current) => ({ ...current, root: setRatio(current.root, path, ratio) }));
+  }, []);
+
   if (!desktop) {
     return (
       <div className="max-w-3xl space-y-4">
@@ -364,6 +515,8 @@ export default function TerminalPage() {
   }
 
   const full = tabs.length >= MAX_TERMINALS;
+  const split = paneRects.size > 1;
+  const preview = drag?.target ? paneRects.get(drag.target.key) : undefined;
 
   // The search bar is hidden on this tab (see Index), so the page takes its space.
   return (
@@ -395,13 +548,24 @@ export default function TerminalPage() {
         {tabs.map((tab, index) => {
           const selected = tab.key === activeKey;
           return (
-            <div key={tab.key} className="terminal-tab" data-active={selected || undefined} data-exited={tab.exited || undefined}>
+            <div
+              key={tab.key}
+              className="terminal-tab"
+              data-active={selected || undefined}
+              data-visible={(split && !selected && paneRects.has(tab.key)) || undefined}
+              data-exited={tab.exited || undefined}
+              data-dragging={drag?.key === tab.key || undefined}
+            >
               <button
                 type="button"
                 role="tab"
                 aria-selected={selected}
                 className="terminal-tab-label"
-                onClick={() => setActiveKey(tab.key)}
+                title="Drag onto a terminal to split the view"
+                onPointerDown={(e) => startDrag(e, tab.key, `${index + 1} ${tab.shell}`)}
+                onClick={() => {
+                  if (!suppressClick.current) select(tab.key);
+                }}
                 onAuxClick={(e) => {
                   if (e.button === 1) closeTab(tab.key);
                 }}
@@ -444,18 +608,92 @@ export default function TerminalPage() {
       </div>
 
       <div className="terminal-glitch-frame flex-1 min-h-0 mx-2 mb-2 p-3">
-        {tabs.map((tab) => (
-          <TerminalPane
-            key={tab.key}
-            tab={tab}
-            active={tab.key === activeKey}
-            hub={hub}
-            onChange={updateTab}
-            onShortcut={onShortcut}
-            register={register}
-          />
-        ))}
+        <div ref={areaRef} className="relative h-full w-full">
+          {tabs.map((tab, index) => {
+            const rect = paneRects.get(tab.key);
+            const focused = tab.key === activeKey;
+            return (
+              <div
+                key={tab.key}
+                ref={(el) => {
+                  if (el) paneEls.current.set(tab.key, el);
+                  else paneEls.current.delete(tab.key);
+                }}
+                // `hidden` alone loses to `flex`, and an off-screen pane must measure 0×0 so it keeps its size.
+                className={rect ? "absolute flex flex-col" : "hidden"}
+                style={rect ? { ...rectStyle(rect), padding: split ? 4 : 0 } : undefined}
+                hidden={!rect}
+                onPointerDownCapture={() => focusPane(tab.key)}
+                onFocus={() => focusPane(tab.key)}
+              >
+                {split && (
+                  <div
+                    className="terminal-pane-header"
+                    data-focused={focused || undefined}
+                    onPointerDown={(e) => startDrag(e, tab.key, `${index + 1} ${tab.shell}`)}
+                  >
+                    <span className="text-neutral-500">{index + 1}</span>
+                    <span className="truncate flex-1">{tab.shell}</span>
+                    <button
+                      type="button"
+                      className="terminal-tab-close m-0"
+                      aria-label={`Remove terminal ${index + 1} from the split`}
+                      title="Close pane (the shell keeps running in its tab)"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() => setLayout((current) => removePane(current, tab.key))}
+                    >
+                      <Minimize2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                <div className={`flex-1 min-h-0 ${split ? "terminal-pane" : ""}`} data-focused={(split && focused) || undefined}>
+                  <TerminalPane
+                    tab={tab}
+                    focused={focused}
+                    hub={hub}
+                    onChange={updateTab}
+                    onShortcut={onShortcut}
+                    register={register}
+                  />
+                </div>
+              </div>
+            );
+          })}
+
+          {dividers.map(({ path, dir, rect, ratio }) => (
+            <div
+              key={`d${path}`}
+              role="separator"
+              aria-orientation={dir === "row" ? "vertical" : "horizontal"}
+              aria-valuenow={Math.round(ratio * 100)}
+              className="terminal-divider"
+              data-dir={dir}
+              style={
+                dir === "row"
+                  ? { left: `${(rect.x + rect.w * ratio) * 100}%`, top: `${rect.y * 100}%`, height: `${rect.h * 100}%` }
+                  : { top: `${(rect.y + rect.h * ratio) * 100}%`, left: `${rect.x * 100}%`, width: `${rect.w * 100}%` }
+              }
+              onPointerDown={(e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+              }}
+              onPointerMove={(e) => resizeSplit(e, path, dir, rect)}
+              onDoubleClick={() => setLayout((current) => ({ ...current, root: setRatio(current.root, path, 0.5) }))}
+            />
+          ))}
+
+          {preview && drag?.target && (
+            <div className="terminal-drop-preview" style={rectStyle(zoneRect(preview, drag.target.zone))} aria-hidden="true" />
+          )}
+        </div>
       </div>
+
+      {drag && (
+        <div className="terminal-tab terminal-drag-ghost" style={{ left: drag.x + 12, top: drag.y + 12 }} aria-hidden="true">
+          <span className="terminal-tab-label">{drag.label}</span>
+        </div>
+      )}
     </div>
   );
 }

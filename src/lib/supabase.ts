@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createLoggingFetch } from "@/lib/diagnostics";
 
 // Supplied by .env.local, which is git-ignored. These two values are VITE_-
 // prefixed because the browser client genuinely needs them at runtime, so they
@@ -15,4 +16,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// The logging fetch records failed writes for Settings → Diagnostics.
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: { fetch: createLoggingFetch() },
+});

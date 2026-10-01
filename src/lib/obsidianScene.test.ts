@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  backSparkleCount,
   BASE_MARGIN,
   CRYSTALS,
   CRYSTAL_SHAPES,
@@ -147,5 +148,19 @@ describe("outline formatting", () => {
     const outline = [[50, 0], [100, 100], [0, 100]] as const;
     expect(clipPolygon(outline)).toBe("polygon(50% 0%, 100% 100%, 0% 100%)");
     expect(svgPoints(outline)).toBe("50,0 100,100 0,100");
+  });
+});
+
+describe("backSparkleCount", () => {
+  it("draws fewer sparkles on denser screens", () => {
+    expect(backSparkleCount(1)).toBe(80);
+    expect(backSparkleCount(1.5)).toBe(60);
+    expect(backSparkleCount(2)).toBe(44);
+    expect(backSparkleCount(3)).toBe(32);
+  });
+
+  it("falls back to the 1x count for a missing or bad ratio", () => {
+    expect(backSparkleCount(0)).toBe(80);
+    expect(backSparkleCount(Number.NaN)).toBe(80);
   });
 });

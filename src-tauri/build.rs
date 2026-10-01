@@ -7,6 +7,8 @@ fn main() {
     "pause_global_shortcut",
     "get_launch_at_login",
     "set_launch_at_login",
+    "diagnostics_append",
+    "diagnostics_read",
     "update_tray_pomodoro",
     "get_vault_status",
     "pick_vault",

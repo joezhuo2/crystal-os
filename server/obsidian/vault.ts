@@ -164,6 +164,83 @@ export async function readNote(
 }
 
 /* ------------------------------------------------------------------ *
+ * Editing
+ * ------------------------------------------------------------------ */
+
+/** Largest note the editor may save. */
+export const MAX_NOTE_BYTES = 2 * 1024 * 1024;
+
+/** A note's file exactly as stored, frontmatter included. */
+export async function readRawNote(
+  vaultRoot: string,
+  relPath: string,
+): Promise<{ path: string; content: string; mtime: number }> {
+  const abs = resolveVaultPath(vaultRoot, relPath);
+  const rel = toRelative(vaultRoot, abs);
+  try {
+    const [content, stat] = await Promise.all([
+      fs.readFile(abs, { encoding: "utf-8" }),
+      fs.stat(abs),
+    ]);
+    return { path: rel, content, mtime: stat.mtimeMs };
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new VaultError(`Note not found: ${rel}`, 404);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Replace an existing note's whole file, refusing with 409 when its mtime is
+ * no longer `expectedMtime`: someone (usually Obsidian) saved it since the
+ * editor read it. Mirrors write_note in src-tauri/src/vault.rs, including the
+ * write-beside-then-rename so a crash never leaves half a note.
+ */
+export async function saveNote(
+  vaultRoot: string,
+  relPath: string,
+  content: unknown,
+  expectedMtime: unknown,
+): Promise<{ path: string; mtime: number }> {
+  if (typeof content !== "string") throw new VaultError("content must be a string");
+  if (typeof expectedMtime !== "number" || !Number.isFinite(expectedMtime)) {
+    throw new VaultError("expectedMtime must be a number");
+  }
+  if (byteLength(content) > MAX_NOTE_BYTES) throw new VaultError("Note is too large", 413);
+
+  const abs = resolveVaultPath(vaultRoot, relPath);
+  const rel = toRelative(vaultRoot, abs);
+
+  let stat;
+  try {
+    stat = await fs.stat(abs);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new VaultError(`Note not found: ${rel}`, 404);
+    }
+    throw err;
+  }
+  if (stat.mtimeMs !== expectedMtime) {
+    throw new VaultError(`${rel} changed on disk. Try again.`, 409);
+  }
+
+  const tmp = path.join(path.dirname(abs), `.${path.basename(abs)}.crystal-tmp`);
+  await fs.writeFile(tmp, content, { encoding: "utf-8" });
+  try {
+    await fs.rename(tmp, abs);
+  } catch {
+    // Windows refuses the swap while another app holds the note open.
+    await fs.rm(tmp, { force: true });
+    await fs.writeFile(abs, content, { encoding: "utf-8" });
+  }
+
+  noteCache.delete(cacheKey(path.resolve(vaultRoot), rel));
+  const written = await fs.stat(abs);
+  return { path: rel, mtime: written.mtimeMs };
+}
+
+/* ------------------------------------------------------------------ *
  * Quick add
  * ------------------------------------------------------------------ */
 

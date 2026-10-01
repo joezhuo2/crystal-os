@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo, useEf
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { normalizeRepeatDays } from "@/lib/utils";
+import { cleanRepeat, completionUpdates, normalizeRepeat, toLocalDateStr, type RepeatRule } from "@/lib/utils";
 import {
   seedDefaultCategories,
   shouldSeedCategories,
@@ -28,7 +28,7 @@ export type Task = {
   priority: Priority;
   categoryId: string;
   completed: boolean;
-  repeatDays?: number;
+  repeat?: RepeatRule;
 };
 
 export type Transaction = {
@@ -56,6 +56,8 @@ type AppState = {
   addTask: (task: Omit<Task, "id">) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
+  /** Marks a task done today, or moves an "after completion" repeat to its next date. */
+  completeTask: (task: Task) => void;
   addTransaction: (tx: Omit<Transaction, "id">) => void;
   updateTransaction: (id: string, updates: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
@@ -120,7 +122,7 @@ function mapTaskFromDb(row: TaskRow): Task {
     priority: row.priority,
     categoryId: row.category_id,
     completed: row.completed,
-    repeatDays: normalizeRepeatDays(row.repeat_days),
+    repeat: normalizeRepeat(row.repeat_kind, row.repeat_days, row.repeat_weekdays),
   };
 }
 
@@ -134,7 +136,21 @@ function mapTaskToDb(task: Omit<Task, "id">) {
     priority: task.priority,
     category_id: task.categoryId,
     completed: task.completed,
-    repeat_days: normalizeRepeatDays(task.repeatDays) ?? null,
+    ...mapRepeatToDb(task.repeat),
+  };
+}
+
+/**
+ * The three repeat columns for a rule. Every column is always written, nulls
+ * included, so switching kinds or turning a repeat off leaves nothing stale
+ * behind for the next load to pick up.
+ */
+function mapRepeatToDb(rule: RepeatRule | undefined) {
+  const clean = cleanRepeat(rule);
+  return {
+    repeat_kind: (clean?.kind ?? null) as RepeatRule["kind"] | null,
+    repeat_days: (clean && "every" in clean ? clean.every : null) as number | null,
+    repeat_weekdays: (clean?.kind === "weekly" ? clean.weekdays : null) as number[] | null,
   };
 }
 
@@ -348,19 +364,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
     if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
     if (updates.completed !== undefined) dbUpdates.completed = updates.completed;
-    // Unlike the other fields, an explicit `repeatDays` key is written even
-    // when it is undefined or 0: that is how a repeat is turned off, and the
-    // column has to be cleared to null for it to stay off after a reload.
-    const repeatChanged = "repeatDays" in updates;
-    const repeatDays = normalizeRepeatDays(updates.repeatDays);
-    if (repeatChanged) dbUpdates.repeat_days = repeatDays ?? null;
+    // Unlike the other fields, an explicit `repeat` key is written even when
+    // it is undefined: that is how a repeat is turned off, and the columns have
+    // to be cleared to null for it to stay off after a reload.
+    const repeatChanged = "repeat" in updates;
+    const repeat = cleanRepeat(updates.repeat);
+    if (repeatChanged) Object.assign(dbUpdates, mapRepeatToDb(repeat));
 
     const { error } = await supabase.from("tasks").update(dbUpdates).eq("id", id);
     if (reportError("update the task", error)) return;
     setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updates, ...(repeatChanged ? { repeatDays } : {}) } : t)),
+      prev.map((t) => (t.id === id ? { ...t, ...updates, ...(repeatChanged ? { repeat } : {}) } : t)),
     );
   }, []);
+
+  const completeTask = useCallback(
+    (task: Task) => {
+      const updates = completionUpdates(task, toLocalDateStr());
+      updateTask(task.id, updates);
+      if ("startDate" in updates) {
+        const next = new Date(`${updates.startDate}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+        toast.success(`${task.name} done`, { description: `Next due ${next}` });
+      }
+    },
+    [updateTask],
+  );
 
   const deleteTask = useCallback(async (id: string) => {
     const { error } = await supabase.from("tasks").delete().eq("id", id);
@@ -444,7 +472,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const value = useMemo(
     () => ({
       tasks, transactions, taskCategories, financialCategories, dailyFocus, loading,
-      addTask, updateTask, deleteTask, addTransaction, updateTransaction, deleteTransaction,
+      addTask, updateTask, deleteTask, completeTask, addTransaction, updateTransaction, deleteTransaction,
       setDailyFocus, addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
       showTaskForm, setShowTaskForm, showTransactionForm, setShowTransactionForm,
       editingTask, setEditingTask, editingTransaction, setEditingTransaction,
@@ -453,7 +481,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       quickAddDraft, setQuickAddDraft,
     }),
     [tasks, transactions, taskCategories, financialCategories, dailyFocus, loading,
-     addTask, updateTask, deleteTask, addTransaction, updateTransaction, deleteTransaction,
+     addTask, updateTask, deleteTask, completeTask, addTransaction, updateTransaction, deleteTransaction,
      setDailyFocus, addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
      showTaskForm, showTransactionForm, editingTask, editingTransaction,
      selectedNotePath, showQuickAdd, showEventForm, quickAddDraft]

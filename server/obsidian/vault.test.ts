@@ -13,6 +13,8 @@ import {
   mergeTags,
   normalizeTags,
   readNote,
+  readRawNote,
+  saveNote,
   resolveVaultPath,
   searchNotes,
   upsertFrontmatterTags,
@@ -390,5 +392,42 @@ describe("appendToNote", () => {
     ).rejects.toThrow(VaultError);
 
     await expect(fs.access(path.join(vault, "Bad.md"))).rejects.toThrow();
+  });
+});
+
+describe("saveNote", () => {
+  it("replaces the whole file, frontmatter included, when the mtime matches", async () => {
+    await write("Note.md", "---\ntags: [a]\n---\nold body\n");
+    const raw = await readRawNote(vault, "Note.md");
+    expect(raw.content).toBe("---\ntags: [a]\n---\nold body\n");
+
+    const saved = await saveNote(vault, "Note.md", "---\ntags: [b]\n---\nnew body\n", raw.mtime);
+    expect(saved.path).toBe("Note.md");
+    expect(await fs.readFile(path.join(vault, "Note.md"), "utf-8")).toBe("---\ntags: [b]\n---\nnew body\n");
+    expect((await readNote(vault, "Note.md")).tags).toEqual(["b"]);
+  });
+
+  it("refuses with 409 when the file changed since it was read", async () => {
+    await write("Note.md", "one\n");
+    const raw = await readRawNote(vault, "Note.md");
+    await write("Note.md", "edited in Obsidian\n");
+    await fs.utimes(path.join(vault, "Note.md"), new Date(), new Date(raw.mtime + 5000));
+
+    await expect(saveNote(vault, "Note.md", "mine\n", raw.mtime)).rejects.toMatchObject({ status: 409 });
+    expect(await fs.readFile(path.join(vault, "Note.md"), "utf-8")).toBe("edited in Obsidian\n");
+  });
+
+  it("refuses a missing note, a bad mtime and paths outside the vault", async () => {
+    await expect(saveNote(vault, "Gone.md", "x", 1)).rejects.toMatchObject({ status: 404 });
+    await write("Note.md", "x");
+    await expect(saveNote(vault, "Note.md", "y", "1" as unknown as number)).rejects.toThrow(VaultError);
+    await expect(saveNote(vault, "../escape.md", "y", 1)).rejects.toThrow(VaultError);
+  });
+
+  it("leaves no temp file behind", async () => {
+    await write("Note.md", "x");
+    const raw = await readRawNote(vault, "Note.md");
+    await saveNote(vault, "Note.md", "y", raw.mtime);
+    expect(await fs.readdir(vault)).toEqual(["Note.md"]);
   });
 });

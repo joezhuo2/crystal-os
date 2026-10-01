@@ -1,6 +1,7 @@
 use tauri::{Manager, RunEvent, WindowEvent};
 
 mod autostart;
+mod diagnostics;
 mod harness;
 mod hotkey;
 mod installer;
@@ -88,12 +89,15 @@ pub fn run() {
     .manage(portal::PortalState::default())
     .manage(harness::HarnessState::default())
     .manage(installer::InstallerState::default())
+    .manage(diagnostics::DiagnosticsState::default())
     .invoke_handler(tauri::generate_handler![
       hotkey::get_global_shortcut,
       hotkey::set_global_shortcut,
       hotkey::pause_global_shortcut,
       autostart::get_launch_at_login,
       autostart::set_launch_at_login,
+      diagnostics::diagnostics_append,
+      diagnostics::diagnostics_read,
       tray::update_tray_pomodoro,
       vault::get_vault_status,
       vault::pick_vault,

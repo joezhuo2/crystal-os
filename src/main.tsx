@@ -16,7 +16,10 @@ import "@fontsource/cascadia-mono/symbols2-700.css";
 import "./index.css";
 import { initTrayBridge } from "./lib/tray";
 import { startAppActivity } from "./lib/appActivity";
+import { installGlobalErrorHandlers } from "./lib/diagnostics";
 
+// First, so errors thrown while the rest starts up are logged too.
+installGlobalErrorHandlers();
 // Outside React: the Pomodoro store and tray outlive every view and sign-in.
 initTrayBridge();
 // Pauses animation and polling while the window is hidden.

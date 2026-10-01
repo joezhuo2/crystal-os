@@ -59,7 +59,7 @@ describe("upcomingTasks", () => {
   it("uses a repeating task's next occurrence and skips completed or out-of-range tasks", () => {
     const result = upcomingTasks(
       [
-        task("weekly", "medium", "2026-09-20", { repeatDays: 7 }),
+        task("weekly", "medium", "2026-09-20", { repeat: { kind: "days", every: 7 } }),
         task("done", "urgent", "2026-09-24", { completed: true }),
         task("far", "urgent", "2026-12-01"),
       ],

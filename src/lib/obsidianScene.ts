@@ -291,6 +291,20 @@ export interface Sparkle {
   delay: number;
 }
 
+/**
+ * How many background sparkles to draw for a display's device pixel ratio.
+ * Each one is a pair of animated, blurred pseudo-elements, and a 2x screen
+ * paints four times the pixels for every one of them, while at that density
+ * fewer still read as a full sky.
+ */
+export function backSparkleCount(devicePixelRatio: number): number {
+  const dpr = Number.isFinite(devicePixelRatio) && devicePixelRatio > 0 ? devicePixelRatio : 1;
+  if (dpr >= 2.5) return 32;
+  if (dpr >= 1.75) return 44;
+  if (dpr >= 1.25) return 60;
+  return 80;
+}
+
 /** Random sparkles. `rng` returns [0, 1), like Math.random. */
 export function makeSparkles(
   count: number,

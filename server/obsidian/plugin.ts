@@ -1,7 +1,15 @@
 import type { Connect, Plugin } from "vite";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { RequireUser } from "../auth/requireUser";
-import { VaultError, appendToNote, listNotes, readNote } from "./vault";
+import {
+  MAX_NOTE_BYTES,
+  VaultError,
+  appendToNote,
+  listNotes,
+  readNote,
+  readRawNote,
+  saveNote,
+} from "./vault";
 import { DEFAULT_NOTE_PATH, queryNotes } from "../../src/lib/vaultCore";
 
 const ROUTE_PREFIX = "/api/obsidian";
@@ -26,14 +34,14 @@ function sendError(res: ServerResponse, err: unknown) {
 }
 
 /** Read a JSON request body, aborting rather than buffering unbounded input. */
-function readJsonBody(req: IncomingMessage): Promise<unknown> {
+function readJsonBody(req: IncomingMessage, maxBytes = MAX_BODY_BYTES): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
 
     req.on("data", (chunk: Buffer) => {
       size += chunk.length;
-      if (size > MAX_BODY_BYTES) {
+      if (size > maxBytes) {
         reject(new VaultError("Request body too large", 413));
         req.destroy();
         return;
@@ -137,6 +145,30 @@ export function createObsidianMiddleware(
         if (route === "/notes") {
           if (method !== "GET") throw new VaultError("Use GET", 405);
           await handleNotes(vaultPath, url, res);
+          return;
+        }
+
+        if (route === "/raw") {
+          if (method !== "GET") throw new VaultError("Use GET", 405);
+          const notePath = url.searchParams.get("path");
+          if (!notePath) throw new VaultError("path is required");
+          sendJson(res, 200, await readRawNote(vaultPath, notePath));
+          return;
+        }
+
+        if (route === "/note") {
+          if (method !== "PUT") throw new VaultError("Use PUT", 405);
+          // JSON escaping can double a note's size, so allow headroom over the cap.
+          const body = (await readJsonBody(req, MAX_NOTE_BYTES * 2 + 1024)) as {
+            path?: unknown;
+            content?: unknown;
+            expectedMtime?: unknown;
+          };
+          if (typeof body.path !== "string" || !body.path.trim()) {
+            throw new VaultError("path is required");
+          }
+          const result = await saveNote(vaultPath, body.path, body.content, body.expectedMtime);
+          sendJson(res, 200, { ok: true, ...result });
           return;
         }
 

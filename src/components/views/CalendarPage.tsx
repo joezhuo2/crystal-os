@@ -5,8 +5,10 @@ import { motion, AnimatePresence, type Variants } from "framer-motion";
 import {
   AlertTriangle,
   CalendarDays,
+  CalendarRange,
   ChevronLeft,
   ChevronRight,
+  Clock,
   ExternalLink,
   List,
   Loader2,
@@ -19,7 +21,9 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { toLocalDateStr } from "@/lib/utils";
+import { addDays, toLocalDateStr } from "@/lib/utils";
+import { fromMinutes, toMinutes, weekDates } from "@/lib/timeGrid";
+import TimeGrid from "./TimeGrid";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { useApp } from "@/contexts/AppContext";
@@ -53,6 +57,10 @@ import {
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const CALENDAR_STORAGE_KEY = "crystal-os-google-calendar";
+const VIEW_STORAGE_KEY = "crystal-os-horizon-view";
+
+type HorizonView = "month" | "week" | "day" | "agenda";
+const VIEWS: readonly HorizonView[] = ["month", "week", "day", "agenda"];
 const DEFAULT_COLOR = "hsl(var(--primary))";
 /** Tooltip border stops matching the Horizon's accretion-disk blues. */
 const HORIZON_TIP: [string, string] = ["#93c5fd", "#2563eb"];
@@ -596,13 +604,19 @@ function EventForm({
   calendarId,
   editingEvent,
   defaultDate,
+  defaultTime,
   onClose,
 }: {
   calendarId: string;
   editingEvent: CalendarEvent | null;
   defaultDate: string;
+  /** Start time for a new event, e.g. the slot clicked in the week view. */
+  defaultTime?: string;
   onClose: () => void;
 }) {
+  const newStart = defaultTime ?? "09:00";
+  // An hour long, without running past midnight.
+  const newEnd = fromMinutes(Math.min(toMinutes(newStart) + 60, 23 * 60 + 59));
   const create = useCreateEvent();
   const update = useUpdateEvent();
   const initialRecurrence = parseRecurrence(editingEvent?.recurrence ?? null);
@@ -613,9 +627,9 @@ function EventForm({
     location: editingEvent?.location ?? "",
     allDay: editingEvent?.allDay ?? false,
     startDate: editingEvent?.startDate || defaultDate,
-    startTime: editingEvent?.startTime || "09:00",
+    startTime: editingEvent?.startTime || newStart,
     endDate: editingEvent?.endDate || defaultDate,
-    endTime: editingEvent?.endTime || "10:00",
+    endTime: editingEvent?.endTime || newEnd,
     freq: initialRecurrence.freq as RecurrenceFreq,
     until: initialRecurrence.until,
   });
@@ -1001,8 +1015,25 @@ export default function CalendarPage() {
   const connected = Boolean(status.data?.connected);
   const { showEventForm, setShowEventForm } = useApp();
 
-  const [view, setView] = useState<"month" | "agenda">("month");
+  const [view, setViewState] = useState<HorizonView>(() => {
+    try {
+      const saved = localStorage.getItem(VIEW_STORAGE_KEY);
+      return VIEWS.includes(saved as HorizonView) ? (saved as HorizonView) : "month";
+    } catch {
+      return "month";
+    }
+  });
+  const setView = (next: HorizonView) => {
+    setViewState(next);
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, next);
+    } catch {
+      /* ignore localStorage errors */
+    }
+  };
   const [currentDate, setCurrentDate] = useState(() => new Date());
+  // The day the week and day views are built around.
+  const [focusDate, setFocusDate] = useState(() => toLocalDateStr());
   // Paging direction for the month transition, and whether the dots still
   // play their opening cascade (only until the first page turn).
   const [direction, setDirection] = useState(1);
@@ -1012,6 +1043,7 @@ export default function CalendarPage() {
     open: boolean;
     event: CalendarEvent | null;
     date: string;
+    time?: string;
   }>({ open: false, event: null, date: toLocalDateStr() });
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
 
@@ -1035,7 +1067,17 @@ export default function CalendarPage() {
     }
   };
 
+  const gridDates = useMemo(
+    () => (view === "week" ? weekDates(focusDate) : [focusDate]),
+    [view, focusDate],
+  );
+
   const range = useMemo(() => {
+    if (view === "week" || view === "day") {
+      const start = new Date(`${gridDates[0]}T00:00:00`);
+      const end = new Date(`${addDays(gridDates[gridDates.length - 1], 1)}T00:00:00`);
+      return { timeMin: start.toISOString(), timeMax: end.toISOString() };
+    }
     if (view === "agenda") {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
@@ -1050,11 +1092,20 @@ export default function CalendarPage() {
       timeMin: new Date(year, month, 1).toISOString(),
       timeMax: new Date(year, month + 1, 1).toISOString(),
     };
-  }, [view, currentDate]);
+  }, [view, currentDate, gridDates]);
 
   const eventsQuery = useCalendarEvents({ calendarId, ...range }, connected);
 
+  // The periods either side of the one shown, so paging lands on cached data.
   const neighbours = useMemo(() => {
+    if (view === "week" || view === "day") {
+      const step = gridDates.length;
+      return [-step, step].map((offset) => ({
+        calendarId,
+        timeMin: new Date(`${addDays(gridDates[0], offset)}T00:00:00`).toISOString(),
+        timeMax: new Date(`${addDays(gridDates[0], offset + step)}T00:00:00`).toISOString(),
+      }));
+    }
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     return [-1, 1].map((d) => ({
@@ -1062,14 +1113,36 @@ export default function CalendarPage() {
       timeMin: new Date(year, month + d, 1).toISOString(),
       timeMax: new Date(year, month + d + 1, 1).toISOString(),
     }));
-  }, [calendarId, currentDate]);
-  usePrefetchCalendarEvents(neighbours, connected && view === "month");
+  }, [calendarId, currentDate, view, gridDates]);
+  usePrefetchCalendarEvents(neighbours, connected && view !== "agenda");
 
   const pageMonth = (dir: number) => {
     setDirection(dir);
     setCascade(false);
     setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + dir, 1));
   };
+  const pageGrid = (dir: number) => setFocusDate((d) => addDays(d, dir * gridDates.length));
+  const openDay = (date: string) => {
+    setFocusDate(date);
+    setView("day");
+  };
+
+  const gridTitle =
+    view === "day"
+      ? new Date(`${focusDate}T12:00:00`).toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
+      : (() => {
+          const first = new Date(`${gridDates[0]}T12:00:00`);
+          const last = new Date(`${gridDates[6]}T12:00:00`);
+          const sameMonth = first.getMonth() === last.getMonth();
+          const from = first.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+          const to = last.toLocaleDateString("en-US", sameMonth ? { day: "numeric" } : { month: "short", day: "numeric" });
+          return `${from} – ${to}, ${last.getFullYear()}`;
+        })();
   const events = eventsQuery.data?.events ?? [];
 
   const activeCalendar = calendars.data?.calendars.find(
@@ -1077,8 +1150,8 @@ export default function CalendarPage() {
   );
   const color = activeCalendar?.backgroundColor || DEFAULT_COLOR;
 
-  const openCreate = (date: string) =>
-    setFormState({ open: true, event: null, date });
+  const openCreate = (date: string, time?: string) =>
+    setFormState({ open: true, event: null, date, time });
   const openEdit = (event: CalendarEvent) =>
     setFormState({ open: true, event, date: event.startDate });
   const closeForm = () => setFormState((s) => ({ ...s, open: false }));
@@ -1118,28 +1191,28 @@ export default function CalendarPage() {
     >
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex glass-card p-0.5 rounded-lg">
-          <button
-            onClick={() => setView("month")}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              view === "month"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <CalendarDays className="w-3.5 h-3.5 inline mr-1" />
-            Month
-          </button>
-          <button
-            onClick={() => setView("agenda")}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              view === "agenda"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <List className="w-3.5 h-3.5 inline mr-1" />
-            Agenda
-          </button>
+          {(
+            [
+              ["month", "Month", CalendarDays],
+              ["week", "Week", CalendarRange],
+              ["day", "Day", Clock],
+              ["agenda", "Agenda", List],
+            ] as const
+          ).map(([value, label, Icon]) => (
+            <button
+              key={value}
+              onClick={() => setView(value)}
+              aria-pressed={view === value}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                view === value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5 inline mr-1" />
+              {label}
+            </button>
+          ))}
         </div>
 
         {(calendars.data?.calendars.length ?? 0) > 1 && (
@@ -1198,25 +1271,77 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {view === "month" ? (
-        <MonthGrid
-          currentDate={currentDate}
-          direction={direction}
-          cascade={cascade}
-          events={events}
-          color={color}
-          onPrev={() => pageMonth(-1)}
-          onNext={() => pageMonth(1)}
-          onSelectDay={setSelectedDay}
-        />
-      ) : (
-        <AgendaList
-          events={events}
-          color={color}
-          onEdit={openEdit}
-          onDelete={setDeleteTarget}
-        />
-      )}
+      {/* Switching views fades the old one out, then the new one in. The
+          wrapper animates --view-fade rather than its own opacity: a fading
+          ancestor becomes the glass cards' backdrop root, so their blur would
+          snap on at the end (the flicker DayPanel had). Each card applies the
+          fade itself instead (.horizon-view in index.css). */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={view}
+          className="horizon-view"
+          initial={{ "--view-fade": 0 }}
+          animate={{ "--view-fade": 1 }}
+          exit={{ "--view-fade": 0 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+        >
+          {view === "month" ? (
+            <MonthGrid
+              currentDate={currentDate}
+              direction={direction}
+              cascade={cascade}
+              events={events}
+              color={color}
+              onPrev={() => pageMonth(-1)}
+              onNext={() => pageMonth(1)}
+              onSelectDay={setSelectedDay}
+            />
+          ) : view === "week" || view === "day" ? (
+            <TimeGrid
+              dates={gridDates}
+              events={events}
+              color={color}
+              onCreateAt={openCreate}
+              onEdit={openEdit}
+              onSelectDate={view === "week" ? openDay : undefined}
+              header={
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h2 className="text-lg font-semibold">{gridTitle}</h2>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setFocusDate(toLocalDateStr())}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-medium hover:bg-secondary transition-colors"
+                    >
+                      Today
+                    </button>
+                    <button
+                      onClick={() => pageGrid(-1)}
+                      aria-label={view === "week" ? "Previous week" : "Previous day"}
+                      className="p-2 rounded-lg hover:bg-secondary transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => pageGrid(1)}
+                      aria-label={view === "week" ? "Next week" : "Next day"}
+                      className="p-2 rounded-lg hover:bg-secondary transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              }
+            />
+          ) : (
+            <AgendaList
+              events={events}
+              color={color}
+              onEdit={openEdit}
+              onDelete={setDeleteTarget}
+            />
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       <AnimatePresence>
         {selectedDay && (
@@ -1236,10 +1361,11 @@ export default function CalendarPage() {
         {formState.open && (
           <EventForm
             // Remount on target change so the form state re-initialises.
-            key={formState.event?.id ?? `new-${formState.date}`}
+            key={formState.event?.id ?? `new-${formState.date}-${formState.time ?? ""}`}
             calendarId={calendarId}
             editingEvent={formState.event}
             defaultDate={formState.date}
+            defaultTime={formState.time}
             onClose={closeForm}
           />
         )}

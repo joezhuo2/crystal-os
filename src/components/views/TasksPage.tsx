@@ -1,8 +1,18 @@
 import { useState, useRef } from "react";
 import { useApp, type Task, type Priority } from "@/contexts/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil } from "lucide-react";
-import { toLocalDateStr } from "@/lib/utils";
+import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock } from "lucide-react";
+import {
+  cleanRepeat,
+  describeRepeat,
+  isTaskOverdue,
+  ordinal,
+  rescheduleToToday,
+  toLocalDateStr,
+  WEEKDAY_SHORT,
+  type RepeatKind,
+  type RepeatRule,
+} from "@/lib/utils";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import PomodoroTimer from "./PomodoroTimer";
@@ -11,9 +21,10 @@ import { CategoryManagerButton } from "./CategoryManager";
 const priorityLabel: Record<Priority, string> = { low: "Low", medium: "Med", high: "High", urgent: "Urgent" };
 const priorityClass: Record<Priority, string> = { low: "priority-low", medium: "priority-medium", high: "priority-high", urgent: "priority-urgent" };
 
-function TaskItem({ task, draggable }: { task: Task; draggable?: boolean }) {
-  const { updateTask, deleteTask, taskCategories, setEditingTask, setShowTaskForm } = useApp();
+function TaskItem({ task, draggable, overdue }: { task: Task; draggable?: boolean; overdue?: boolean }) {
+  const { updateTask, completeTask, deleteTask, taskCategories, setEditingTask, setShowTaskForm } = useApp();
   const cat = taskCategories.find((c) => c.id === task.categoryId);
+  const repeatLabel = describeRepeat(task.repeat, task.startDate);
   return (
     <motion.div
       layout
@@ -27,7 +38,7 @@ function TaskItem({ task, draggable }: { task: Task; draggable?: boolean }) {
       className={`glass-card-hover p-4 flex items-center gap-3 group ${task.completed ? "opacity-50" : ""} ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
     >
       <button
-        onClick={() => updateTask(task.id, { completed: !task.completed })}
+        onClick={() => (task.completed ? updateTask(task.id, { completed: false }) : completeTask(task))}
         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
           task.completed ? "bg-accent border-accent" : "border-muted-foreground/40 hover:border-primary"
         }`}
@@ -39,6 +50,11 @@ function TaskItem({ task, draggable }: { task: Task; draggable?: boolean }) {
         <div className="flex items-center gap-2 mt-1">
           <span className="text-[10px] text-muted-foreground">{task.startDate} {task.startTime} – {task.endDate === task.startDate ? "" : `${task.endDate} `}{task.endTime}</span>
           <span className={`text-[10px] font-semibold ${priorityClass[task.priority]}`}>{priorityLabel[task.priority]}</span>
+          {repeatLabel && (
+            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5" title="Repeats">
+              <Repeat className="w-2.5 h-2.5" />{repeatLabel}
+            </span>
+          )}
           {cat && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: `${cat.color}22`, color: cat.color }}>
               {cat.name}
@@ -46,6 +62,17 @@ function TaskItem({ task, draggable }: { task: Task; draggable?: boolean }) {
           )}
         </div>
       </div>
+      {overdue && (
+        <button
+          onClick={() => updateTask(task.id, rescheduleToToday(task, toLocalDateStr()))}
+          title="Reschedule to today"
+          aria-label={`Reschedule ${task.name} to today`}
+          className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-amber-300 hover:bg-amber-400/10 transition-colors shrink-0"
+        >
+          <CalendarClock className="w-3.5 h-3.5" />
+          Today
+        </button>
+      )}
       <button onClick={() => { setEditingTask(task); setShowTaskForm(true); }} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary">
         <Pencil className="w-4 h-4" />
       </button>
@@ -125,9 +152,45 @@ function KanbanBoard({ tasks }: { tasks: Task[] }) {
   );
 }
 
+type RepeatChoice = "none" | RepeatKind;
+
+const repeatOptions: { value: RepeatChoice; label: string }[] = [
+  { value: "none", label: "Does not repeat" },
+  { value: "days", label: "Every N days" },
+  { value: "weekly", label: "Weekly on…" },
+  { value: "monthly", label: "Monthly" },
+  { value: "after", label: "N days after done" },
+];
+
+const weekdayOf = (dateStr: string) => new Date(`${dateStr}T12:00:00`).getDay();
+
+/** Repeat editor state. Every field is kept, so switching kinds doesn't lose what was typed. */
+function initialRepeat(rule: RepeatRule | undefined, startDate: string) {
+  return {
+    kind: (rule?.kind ?? "none") as RepeatChoice,
+    every: rule && "every" in rule ? rule.every : 1,
+    weekdays: rule?.kind === "weekly" ? rule.weekdays : [weekdayOf(startDate)],
+  };
+}
+
+function buildRepeat(r: ReturnType<typeof initialRepeat>): RepeatRule | undefined {
+  switch (r.kind) {
+    case "none":
+      return undefined;
+    case "days":
+    case "after":
+      return cleanRepeat({ kind: r.kind, every: r.every });
+    case "weekly":
+      return cleanRepeat({ kind: "weekly", weekdays: r.weekdays });
+    case "monthly":
+      return { kind: "monthly" };
+  }
+}
+
 export function TaskForm({ onClose, editingTask }: { onClose: () => void; editingTask?: Task | null }) {
   const { addTask, updateTask, taskCategories } = useApp();
   const today = toLocalDateStr();
+  const [repeat, setRepeat] = useState(() => initialRepeat(editingTask?.repeat, editingTask?.startDate || today));
   const [form, setForm] = useState({
     name: editingTask?.name || "",
     startDate: editingTask?.startDate || today,
@@ -136,16 +199,16 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
     endTime: editingTask?.endTime || "10:00",
     priority: (editingTask?.priority || "medium") as Priority,
     categoryId: editingTask?.categoryId || taskCategories[0]?.id || "",
-    repeatDays: editingTask?.repeatDays || 0,
   });
 
   const submit = () => {
     if (!form.name.trim()) return;
+    const rule = buildRepeat(repeat);
     if (editingTask) {
-      // Always send repeatDays, 0 included: updateTask clears the repeat for 0.
-      updateTask(editingTask.id, { ...form, completed: editingTask.completed });
+      // Always send repeat, undefined included: updateTask clears the repeat for it.
+      updateTask(editingTask.id, { ...form, repeat: rule, completed: editingTask.completed });
     } else {
-      addTask({ ...form, completed: false, repeatDays: form.repeatDays || undefined });
+      addTask({ ...form, completed: false, repeat: rule });
     }
     onClose();
   };
@@ -219,11 +282,52 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
             options={taskCategories.map((c) => ({ value: c.id, label: c.name, color: c.color }))}
             className="flex-1" />
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground">Repeat every</label>
-          <input type="number" min={0} value={form.repeatDays} onChange={(e) => setForm((f) => ({ ...f, repeatDays: Math.max(0, parseInt(e.target.value) || 0) }))}
-            className="w-16 bg-secondary/50 rounded-lg px-2 py-1.5 text-sm outline-none" />
-          <span className="text-xs text-muted-foreground">days</span>
+        <div className="space-y-2">
+          <ThemedSelect value={repeat.kind} aria-label="Repeat"
+            onChange={(v) => setRepeat((r) => ({ ...r, kind: v as RepeatChoice }))}
+            options={repeatOptions} />
+          {(repeat.kind === "days" || repeat.kind === "after") && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground">{repeat.kind === "days" ? "Every" : "Due"}</label>
+              <input type="number" min={1} value={repeat.every} aria-label="Days"
+                onChange={(e) => setRepeat((r) => ({ ...r, every: Math.max(1, parseInt(e.target.value) || 1) }))}
+                className="w-16 bg-secondary/50 rounded-lg px-2 py-1.5 text-sm outline-none" />
+              <span className="text-xs text-muted-foreground">
+                {`day${repeat.every === 1 ? "" : "s"}`}{repeat.kind === "after" && " after it's done"}
+              </span>
+            </div>
+          )}
+          {repeat.kind === "weekly" && (
+            <div className="flex gap-1" role="group" aria-label="Weekdays">
+              {WEEKDAY_SHORT.map((label, day) => {
+                const on = repeat.weekdays.includes(day);
+                return (
+                  <button key={label} type="button" aria-pressed={on} aria-label={label}
+                    onClick={() => setRepeat((r) => ({
+                      ...r,
+                      weekdays: on ? r.weekdays.filter((d) => d !== day) : [...r.weekdays, day].sort((a, b) => a - b),
+                    }))}
+                    className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors ${
+                      on ? "bg-primary text-primary-foreground" : "bg-secondary/50 text-muted-foreground hover:text-foreground"
+                    }`}>
+                    {label.slice(0, 2)}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {repeat.kind === "weekly" && repeat.weekdays.length === 0 && (
+            <p className="text-[11px] text-muted-foreground">Pick at least one day, or the task won't repeat.</p>
+          )}
+          {repeat.kind === "monthly" && (
+            <p className="text-[11px] text-muted-foreground">
+              On the {ordinal(Number(form.startDate.slice(8, 10)))} of each month
+              {Number(form.startDate.slice(8, 10)) > 28 ? ", or the last day in shorter months" : ""}.
+            </p>
+          )}
+          {repeat.kind === "after" && (
+            <p className="text-[11px] text-muted-foreground">Completing it moves the task forward instead of closing it.</p>
+          )}
         </div>
         <button onClick={submit} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg py-2.5 text-sm font-medium transition-colors">
           {editingTask ? "Save Changes" : "Add Task"}
@@ -234,14 +338,24 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
 }
 
 export default function TasksPage() {
-  const { tasks, showTaskForm, setShowTaskForm } = useApp();
+  const { tasks, showTaskForm, setShowTaskForm, updateTask } = useApp();
   const [view, setView] = useState<"list" | "kanban">("list");
+  const today = toLocalDateStr();
 
   const sortedTasks = [...tasks].sort((a, b) => {
     if (a.completed !== b.completed) return a.completed ? 1 : -1;
     const prio = { urgent: 0, high: 1, medium: 2, low: 3 };
     return prio[a.priority] - prio[b.priority];
   });
+  // Overdue work gets its own group at the top of the list, oldest first.
+  const overdueTasks = sortedTasks
+    .filter((t) => isTaskOverdue(t, today))
+    .sort((a, b) => a.endDate.localeCompare(b.endDate));
+  const otherTasks = sortedTasks.filter((t) => !isTaskOverdue(t, today));
+
+  const rescheduleAll = () => {
+    for (const task of overdueTasks) updateTask(task.id, rescheduleToToday(task, today));
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
@@ -263,10 +377,35 @@ export default function TasksPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4">
         <div className="space-y-4">
           {view === "list" ? (
-            <div className="space-y-2">
-              <AnimatePresence>
-                {sortedTasks.map((task) => <TaskItem key={task.id} task={task} />)}
-              </AnimatePresence>
+            <div className="space-y-4">
+              {overdueTasks.length > 0 && (
+                <section aria-labelledby="overdue-heading" className="space-y-2">
+                  <div className="flex items-center gap-2 px-1">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    <h2 id="overdue-heading" className="text-xs uppercase tracking-widest text-amber-300">
+                      Overdue
+                    </h2>
+                    <span className="text-[10px] text-muted-foreground">{overdueTasks.length}</span>
+                    {overdueTasks.length > 1 && (
+                      <button
+                        onClick={rescheduleAll}
+                        className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-amber-300 hover:bg-amber-400/10 transition-colors"
+                      >
+                        <CalendarClock className="w-3.5 h-3.5" />
+                        Move all to today
+                      </button>
+                    )}
+                  </div>
+                  <AnimatePresence>
+                    {overdueTasks.map((task) => <TaskItem key={task.id} task={task} overdue />)}
+                  </AnimatePresence>
+                </section>
+              )}
+              <div className="space-y-2">
+                <AnimatePresence>
+                  {otherTasks.map((task) => <TaskItem key={task.id} task={task} />)}
+                </AnimatePresence>
+              </div>
             </div>
           ) : (
             <KanbanBoard tasks={sortedTasks} />

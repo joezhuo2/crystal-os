@@ -231,6 +231,38 @@ export async function quickAddNative(
   }
 }
 
+/** A note's file exactly as stored, frontmatter included, for the editor. */
+export interface RawNote {
+  path: string;
+  content: string;
+  /** Pass back as `expectedMtime` when saving. */
+  mtime: number;
+}
+
+export async function readRawNoteNative(notePath: string): Promise<RawNote> {
+  const file = await invoke<VaultFile>("read_vault_file", { path: normalizeNotePath(notePath) });
+  return { path: file.path, content: file.content, mtime: file.mtime };
+}
+
+/**
+ * Replace a note's whole file. The write is refused with code `conflict` when
+ * the file's mtime no longer matches `expectedMtime`, so an edit saved in
+ * Obsidian while this one was open is never silently overwritten.
+ */
+export async function saveNoteNative(input: {
+  path: string;
+  content: string;
+  expectedMtime: number;
+}): Promise<{ path: string; mtime: number }> {
+  const written = await invoke<{ path: string; mtime: number }>("write_vault_file", {
+    path: normalizeNotePath(input.path),
+    content: input.content,
+    expectedMtime: input.expectedMtime,
+  });
+  noteCache.delete(written.path);
+  return { path: written.path, mtime: written.mtime };
+}
+
 /* ------------------------------------------------------------------ *
  * Vault folder and live updates
  * ------------------------------------------------------------------ */

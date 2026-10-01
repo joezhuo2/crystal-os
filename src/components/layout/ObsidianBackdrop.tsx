@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   CRYSTALS,
+  backSparkleCount,
   CRYSTAL_SHAPES,
   clipPolygon,
   crystalLight,
@@ -9,7 +10,8 @@ import {
   type Sparkle,
 } from "@/lib/obsidianScene";
 
-const BACK_SPARKLES = 80;
+/** How long after the last scroll event the crystals start moving again. */
+const SCROLL_SETTLE_MS = 180;
 
 function sparkleStyle(s: Sparkle): React.CSSProperties {
   return {
@@ -31,7 +33,10 @@ function sparkleStyle(s: Sparkle): React.CSSProperties {
  * The cursor never touches React state. A pointer listener schedules one
  * animation frame, which reads every crystal's position first and then writes
  * `--obsidian-mx/--obsidian-my` on this element and `--lit/--lx/--ly` on each
- * crystal; the CSS in index.css turns those into transforms and opacity. Sits
+ * crystal; the CSS in index.css turns those into transforms and opacity.
+ *
+ * While anything on the page scrolls, `data-scrolling` pauses the floating
+ * and twinkling, so the compositor spends those frames on the scroll. Sits
  * behind the page (the parent must create a stacking context) and never takes
  * pointer events.
  */
@@ -39,7 +44,7 @@ export default function ObsidianBackdrop() {
   const rootRef = useRef<HTMLDivElement>(null);
   // Random once per visit; later renders reuse them.
   const [sparkles] = useState(() => ({
-    back: makeSparkles(BACK_SPARKLES, Math.random, [10, 22]),
+    back: makeSparkles(backSparkleCount(window.devicePixelRatio), Math.random, [10, 22]),
     // One near each crystal's tip, so it sits on top of the glass. Larger
     // than the background ones so the rays read as a glint, not a dot.
     front: CRYSTALS.map(
@@ -124,13 +129,28 @@ export default function ObsidianBackdrop() {
       schedule();
     };
 
+    // Scroll events don't bubble, so listen in the capture phase to hear the
+    // reader, the note list and every other scroller on the page.
+    let scrollTimer = 0;
+    const onScroll = () => {
+      if (!scrollTimer) root.toggleAttribute("data-scrolling", true);
+      clearTimeout(scrollTimer);
+      scrollTimer = window.setTimeout(() => {
+        scrollTimer = 0;
+        root.toggleAttribute("data-scrolling", false);
+      }, SCROLL_SETTLE_MS);
+    };
+
     measureSizes();
     window.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("pointerout", onOut);
     window.addEventListener("blur", onAway);
     window.addEventListener("resize", onResize);
+    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
     return () => {
       cancelAnimationFrame(frame);
+      clearTimeout(scrollTimer);
+      document.removeEventListener("scroll", onScroll, { capture: true });
       window.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerout", onOut);
       window.removeEventListener("blur", onAway);

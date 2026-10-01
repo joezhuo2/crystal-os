@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Cloud, Sun, Moon, CloudRain, CloudSun, CloudSnow, CloudLightning, CloudDrizzle, MoonStar } from "lucide-react";
 import { useApp, type Priority, type Task } from "@/contexts/AppContext";
 import { motion } from "framer-motion";
-import { normalizeRepeatDays, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
+import { isTaskOverdue, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 import { useSkyScene } from "@/hooks/useSkyScene";
 import { useAtmosphere } from "@/lib/atmosphereStore";
 import { auroraStrength, pineRidge } from "@/lib/atmosphereScene";
@@ -24,6 +24,7 @@ import {
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { PRIORITY_RANK, upcomingTasks } from "@/lib/homeTasks";
 import { NebulaSpace, PortalSpace, TerminalSpace } from "./HomeSpaces";
+import HomeGrid, { type HomeWidget } from "./HomeGrid";
 
 function Clock() {
   const [time, setTime] = useState(new Date());
@@ -382,11 +383,10 @@ function formatUpcomingDay(date: string, today: string): string {
 type TaskRow = { task: Task; label: string };
 
 function EngineWidget({ onClick }: { onClick?: () => void }) {
-  const { tasks, updateTask, setEditingTask, setShowTaskForm, loading } = useApp();
+  const { tasks, completeTask, setEditingTask, setShowTaskForm, loading } = useApp();
   const today = toLocalDateStr();
 
-  // Repeating tasks recur rather than lapse, so only one-off tasks count as overdue.
-  const isOverdue = (t: Task) => !normalizeRepeatDays(t.repeatDays) && t.endDate < today;
+  const isOverdue = (t: Task) => isTaskOverdue(t, today);
 
   // Open work for today plus anything overdue, most pressing first.
   const openTasks = tasks
@@ -467,7 +467,7 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        updateTask(task.id, { completed: true });
+                        completeTask(task);
                       }}
                       aria-label="Complete task"
                       className="w-4 h-4 rounded-full border-2 border-muted-foreground/40 hover:border-accent hover:bg-accent/20 flex items-center justify-center shrink-0 transition-colors group/check"
@@ -557,21 +557,22 @@ function VaultSticker({ onClick }: { onClick?: () => void }) {
 }
 
 export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) => void }) {
+  const go = (tab: string) => () => onNavigate?.(tab);
+  const widgets: HomeWidget[] = [
+    { id: "clock", label: "Clock", render: () => <Clock /> },
+    { id: "weather", label: "Atmosphere", render: () => <WeatherWidget onClick={go("weather")} /> },
+    { id: "vault", label: "The Vault", render: () => <VaultSticker onClick={go("financials")} /> },
+    { id: "engine", label: "The Engine", render: () => <EngineWidget onClick={go("tasks")} /> },
+    { id: "horizon", label: "The Horizon", render: () => <TodayHorizon onClick={go("calendar")} /> },
+    { id: "archive", label: "The Archive", render: () => <ArchiveWidget onClick={go("archive")} /> },
+    { id: "nebula", label: "The Nebula", render: () => <NebulaSpace onClick={go("nebula")} /> },
+    { id: "portal", label: "The Portal", render: () => <PortalSpace onClick={go("portal")} /> },
+    { id: "terminal", label: "Terminal", render: () => <TerminalSpace onClick={go("terminal")} /> },
+  ];
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-    >
-      <Clock />
-      <WeatherWidget onClick={() => onNavigate?.("weather")} />
-      <VaultSticker onClick={() => onNavigate?.("financials")} />
-      <EngineWidget onClick={() => onNavigate?.("tasks")} />
-      <TodayHorizon onClick={() => onNavigate?.("calendar")} />
-      <ArchiveWidget onClick={() => onNavigate?.("archive")} />
-      <NebulaSpace onClick={() => onNavigate?.("nebula")} />
-      <PortalSpace onClick={() => onNavigate?.("portal")} />
-      <TerminalSpace onClick={() => onNavigate?.("terminal")} />
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+      <HomeGrid widgets={widgets} />
     </motion.div>
   );
 }

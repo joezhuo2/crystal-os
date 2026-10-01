@@ -18,12 +18,15 @@ import {
   pickVault,
   quickAddNative,
   readNoteNative,
+  readRawNoteNative,
+  saveNoteNative,
+  type RawNote,
   type VaultErrorCode,
   type VaultStatus,
 } from "@/lib/vaultNative";
 
 export type { VaultNoteDetail, VaultNotesResponse, VaultQuery } from "@/lib/vaultCore";
-export type { VaultErrorCode, VaultStatus } from "@/lib/vaultNative";
+export type { RawNote, VaultErrorCode, VaultStatus } from "@/lib/vaultNative";
 
 export interface VaultNote extends CoreVaultNote {
   /** Present on list/search responses. */
@@ -63,6 +66,7 @@ export function vaultErrorCode(error: unknown): VaultErrorCode | null {
   if (error instanceof ApiError) {
     if (error.status === 404) return "not_found";
     if (error.status === 503) return "not_configured";
+    if (error.status === 409) return "conflict";
   }
   return null;
 }
@@ -129,6 +133,52 @@ export function useQuickAdd() {
         ? quickAddNative(input)
         : request<QuickAddResult>(`${API_BASE}/quick-add`, {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(input),
+          }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vault"] });
+    },
+  });
+}
+
+/**
+ * A note's whole file for the editor. Fetched fresh each time editing starts
+ * and kept out of the "vault" key, so live updates from disk refetch the
+ * reader but never swap the text out from under someone typing.
+ */
+export function useRawNote(notePath: string | null) {
+  return useQuery<RawNote>({
+    queryKey: ["vault-edit", notePath],
+    queryFn: () =>
+      isDesktop()
+        ? readRawNoteNative(notePath as string)
+        : request<RawNote>(`${API_BASE}/raw?path=${encodeURIComponent(notePath as string)}`),
+    enabled: !!notePath,
+    gcTime: 0,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    retry: retryVault,
+  });
+}
+
+export interface SaveNoteInput {
+  path: string;
+  content: string;
+  /** The mtime the edit started from; a newer file on disk fails with `conflict`. */
+  expectedMtime: number;
+}
+
+/** Replace a note's file, then refresh every vault query. */
+export function useSaveNote() {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ path: string; mtime: number }, Error, SaveNoteInput>({
+    mutationFn: (input) =>
+      isDesktop()
+        ? saveNoteNative(input)
+        : request<{ path: string; mtime: number }>(`${API_BASE}/note`, {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(input),
           }),
