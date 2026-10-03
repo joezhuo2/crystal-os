@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-portal-rebuild"
+description = "Enables the portal_rebuild command without any pre-configured scope."
+commands.allow = ["portal_rebuild"]
+
+[[permission]]
+identifier = "deny-portal-rebuild"
+description = "Denies the portal_rebuild command without any pre-configured scope."
+commands.deny = ["portal_rebuild"]

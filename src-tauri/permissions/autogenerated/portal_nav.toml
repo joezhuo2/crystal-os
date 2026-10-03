@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-portal-nav"
+description = "Enables the portal_nav command without any pre-configured scope."
+commands.allow = ["portal_nav"]
+
+[[permission]]
+identifier = "deny-portal-nav"
+description = "Denies the portal_nav command without any pre-configured scope."
+commands.deny = ["portal_nav"]

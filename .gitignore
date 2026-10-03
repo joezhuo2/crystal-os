@@ -1,0 +1,194 @@
+# ---------------------------------------------------------------------------
+# Secrets and local configuration
+# ---------------------------------------------------------------------------
+# .env.example is the only env file that belongs in the repo — it must never
+# contain real values.
+.env
+.env.*
+!.env.example
+*.local
+.envrc
+.direnv/
+
+# Credentials, keys, certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+*.jks
+*.keystore
+*.asc
+*.gpg
+id_rsa*
+id_ed25519*
+*.ppk
+secrets.*
+secret.*
+credentials.*
+*credentials.json
+service-account*.json
+*.secret
+*.secrets
+.npmrc
+.yarnrc
+.netrc
+.htpasswd
+# Token / password stores
+token.json
+tokens.json
+*.token
+.token
+*.kdbx
+*.ovpn
+.mcp.json
+*.mcp.json
+
+# Cloud / deploy provider state
+.vercel
+.netlify
+.firebase/
+.firebaserc
+.wrangler/
+.serverless/
+.aws/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# Supabase local state (keep supabase/migrations and supabase/config.toml)
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+.supabase/
+supabase/.env.*
+supabase/seed.sql
+# Supabase service_role key must NEVER be committed - it bypasses RLS.
+# Keep every Supabase credential in .env.local (ignored above).
+
+# ---------------------------------------------------------------------------
+# Personal data
+# ---------------------------------------------------------------------------
+# Never commit vault contents, exports, or captures — this app reads a
+# personal Obsidian vault from disk.
+vault/
+Vault/
+*.obsidian/
+notes/
+exports/
+backups/
+*.sqlite
+*.sqlite3
+*.db
+# Calendar / contact exports and captures
+*.ics
+*.vcf
+*.har
+*.mbox
+*.pst
+*.ost
+# Data dumps pulled out of Supabase or the vault
+*.dump
+*.sql.gz
+export-*.csv
+export-*.json
+*-export.csv
+*-export.json
+
+# ---------------------------------------------------------------------------
+# Dependencies and build output
+# ---------------------------------------------------------------------------
+node_modules
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/versions
+dist
+dist-ssr
+build
+out
+.output/
+.vite/
+*.tsbuildinfo
+# Desktop shell: Cargo output, the bundled sidecar, and its build intermediates
+src-tauri/target/
+src-tauri/binaries/
+server-dist/
+
+# ---------------------------------------------------------------------------
+# Caches and test output
+# ---------------------------------------------------------------------------
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+coverage/
+*.lcov
+.nyc_output/
+.vitest/
+playwright-report/
+test-results/
+.turbo/
+
+# ---------------------------------------------------------------------------
+# Logs
+# ---------------------------------------------------------------------------
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+report.*.json
+
+# ---------------------------------------------------------------------------
+# Editor, tooling, and OS files
+# ---------------------------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~
+.history/
+.VSCodeCounter/
+
+# AI assistant local state
+.claude/
+.cursor/
+.aider*
+CLAUDE.local.md
+
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ---------------------------------------------------------------------------
+# Scratch
+# ---------------------------------------------------------------------------
+tmp/
+temp/
+scratch/
+*.bak
+*.orig
+*.rej
+
+Claude outputs/
+/graphify-out/*
+
+supabase/

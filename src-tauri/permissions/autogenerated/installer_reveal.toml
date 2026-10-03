@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-installer-reveal"
+description = "Enables the installer_reveal command without any pre-configured scope."
+commands.allow = ["installer_reveal"]
+
+[[permission]]
+identifier = "deny-installer-reveal"
+description = "Denies the installer_reveal command without any pre-configured scope."
+commands.deny = ["installer_reveal"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-installer-status"
+description = "Enables the installer_status command without any pre-configured scope."
+commands.allow = ["installer_status"]
+
+[[permission]]
+identifier = "deny-installer-status"
+description = "Denies the installer_status command without any pre-configured scope."
+commands.deny = ["installer_status"]

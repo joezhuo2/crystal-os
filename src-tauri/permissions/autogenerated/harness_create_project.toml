@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-harness-create-project"
+description = "Enables the harness_create_project command without any pre-configured scope."
+commands.allow = ["harness_create_project"]
+
+[[permission]]
+identifier = "deny-harness-create-project"
+description = "Denies the harness_create_project command without any pre-configured scope."
+commands.deny = ["harness_create_project"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-harness-claude-start"
+description = "Enables the harness_claude_start command without any pre-configured scope."
+commands.allow = ["harness_claude_start"]
+
+[[permission]]
+identifier = "deny-harness-claude-start"
+description = "Denies the harness_claude_start command without any pre-configured scope."
+commands.deny = ["harness_claude_start"]

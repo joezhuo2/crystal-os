@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-harness-acp-open-session"
+description = "Enables the harness_acp_open_session command without any pre-configured scope."
+commands.allow = ["harness_acp_open_session"]
+
+[[permission]]
+identifier = "deny-harness-acp-open-session"
+description = "Denies the harness_acp_open_session command without any pre-configured scope."
+commands.deny = ["harness_acp_open_session"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-harness-install-runtime"
+description = "Enables the harness_install_runtime command without any pre-configured scope."
+commands.allow = ["harness_install_runtime"]
+
+[[permission]]
+identifier = "deny-harness-install-runtime"
+description = "Denies the harness_install_runtime command without any pre-configured scope."
+commands.deny = ["harness_install_runtime"]

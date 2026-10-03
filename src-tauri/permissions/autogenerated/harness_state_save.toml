@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-harness-state-save"
+description = "Enables the harness_state_save command without any pre-configured scope."
+commands.allow = ["harness_state_save"]
+
+[[permission]]
+identifier = "deny-harness-state-save"
+description = "Denies the harness_state_save command without any pre-configured scope."
+commands.deny = ["harness_state_save"]
