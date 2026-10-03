@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { TooltipPortal } from "@radix-ui/react-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-export type GlassTipTone = "indigo" | "emerald" | "amethyst";
+export type GlassTipTone = "indigo" | "emerald" | "amethyst" | "orbit";
 
 /**
  * Written out in full so Tailwind's content scan keeps the rules in
@@ -12,6 +12,7 @@ const TONE_CLASS: Record<GlassTipTone, string> = {
   indigo: "glass-tooltip-indigo",
   emerald: "glass-tooltip-emerald",
   amethyst: "glass-tooltip-amethyst",
+  orbit: "glass-tooltip-orbit",
 };
 
 /**

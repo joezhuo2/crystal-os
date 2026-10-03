@@ -56,7 +56,6 @@ type AppState = {
   transactions: Transaction[];
   taskCategories: TaskCategory[];
   financialCategories: FinancialCategory[];
-  dailyFocus: string;
   loading: boolean;
   addTask: (task: Omit<Task, "id">) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
@@ -66,7 +65,6 @@ type AppState = {
   addTransaction: (tx: Omit<Transaction, "id">) => void;
   updateTransaction: (id: string, updates: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
-  setDailyFocus: (focus: string) => void;
   addTaskCategory: (cat: Omit<TaskCategory, "id">) => void;
   deleteTaskCategory: (id: string) => void;
   addFinancialCategory: (cat: Omit<FinancialCategory, "id">) => void;
@@ -257,7 +255,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [taskCategories, setTaskCategories] = useState<TaskCategory[]>(defaultTaskCategories);
   const [financialCategories, setFinancialCategories] = useState<FinancialCategory[]>(defaultFinancialCategories);
-  const [dailyFocus, setDailyFocusState] = useState("");
   const [loading, setLoading] = useState(true);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showTransactionForm, setShowTransactionForm] = useState(false);
@@ -280,7 +277,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTransactions([]);
       setTaskCategories(defaultTaskCategories);
       setFinancialCategories(defaultFinancialCategories);
-      setDailyFocusState("");
       setLoading(false);
       return;
     }
@@ -307,12 +303,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         { isActive },
       );
 
-      const [, , taskCatRes, finCatRes, settingsRes] = await Promise.all([
+      const [, , taskCatRes, finCatRes] = await Promise.all([
         tasksLoad.firstPage,
         txLoad.firstPage,
         supabase.from("task_categories").select("*").order("name"),
         supabase.from("financial_categories").select("*").order("name"),
-        supabase.from("settings").select("*").eq("key", "daily_focus").maybeSingle(),
       ]);
 
       if (!active) return;
@@ -331,8 +326,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           defaultFinancialCategories,
         ),
       );
-
-      if (settingsRes.data) setDailyFocusState(settingsRes.data.value ?? "");
 
       setLoading(false);
 
@@ -478,27 +471,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTransactions((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // ── Daily Focus ──
-  const setDailyFocus = useCallback(
-    async (focus: string) => {
-      if (!user) return;
-      setDailyFocusState(focus);
-      // user_id is sent explicitly here, unlike every insert, which relies on
-      // the column default. An upsert is INSERT ... ON CONFLICT DO UPDATE and
-      // must satisfy the insert policy's `with check` and, on collision, the
-      // update policy's `using` and `with check`. Supplying user_id from the
-      // session removes any dependence on how the default interacts with
-      // conflict resolution. This is the only upsert in the codebase.
-      await supabase
-        .from("settings")
-        .upsert(
-          { user_id: user.id, key: "daily_focus", value: focus },
-          { onConflict: "user_id,key" },
-        );
-    },
-    [user],
-  );
-
   // ── Task Categories ──
   const addTaskCategory = useCallback(async (cat: Omit<TaskCategory, "id">) => {
     const { data, error } = await supabase.from("task_categories").insert(mapCategoryToDb(cat)).select().single();
@@ -527,18 +499,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const value = useMemo(
     () => ({
-      tasks, transactions, taskCategories, financialCategories, dailyFocus, loading,
+      tasks, transactions, taskCategories, financialCategories, loading,
       addTask, updateTask, deleteTask, completeTask, addTransaction, updateTransaction, deleteTransaction,
-      setDailyFocus, addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
+      addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
       showTaskForm, setShowTaskForm, showTransactionForm, setShowTransactionForm,
       editingTask, setEditingTask, editingTransaction, setEditingTransaction,
       selectedNotePath, setSelectedNotePath, showQuickAdd, setShowQuickAdd,
       showEventForm, setShowEventForm,
       quickAddDraft, setQuickAddDraft,
     }),
-    [tasks, transactions, taskCategories, financialCategories, dailyFocus, loading,
+    [tasks, transactions, taskCategories, financialCategories, loading,
      addTask, updateTask, deleteTask, completeTask, addTransaction, updateTransaction, deleteTransaction,
-     setDailyFocus, addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
+     addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
      showTaskForm, showTransactionForm, editingTask, editingTransaction,
      selectedNotePath, showQuickAdd, showEventForm, quickAddDraft]
   );

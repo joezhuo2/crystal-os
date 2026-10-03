@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FocusBars, MoneyBars, TaskOrbit } from "@/components/views/orbit/OrbitCharts";
+import { TodayCard } from "@/components/views/orbit/TodayCard";
 import { OrbitHistoryError, useNow, useOrbitReview, type OrbitReviewResult } from "@/hooks/useOrbitReview";
 import { useCreateNote, vaultErrorCode } from "@/hooks/useVault";
 import { useAppActivity } from "@/lib/appActivity";
@@ -39,6 +40,7 @@ import {
   formatMinutes,
   formatMoney,
   formatTrendValue,
+  inProgressPeriod,
   latestReadyPeriod,
   periodLabel,
   promptLabel,
@@ -64,7 +66,7 @@ const NAMES_SHOWN = 5;
 
 interface Target {
   kind: ReviewKind;
-  /** 0 is the newest ready review; -1 the one before, and so on. */
+  /** 0 is the newest ready review; -1 the one before; 1 the period still in progress. */
   offset: number;
 }
 
@@ -308,7 +310,7 @@ function AgendaGroup({ label, items, cap }: { label: string; items: AgendaItem[]
   );
 }
 
-function AgendaCard({ review, calendarConnected }: { review: Review; calendarConnected: boolean }) {
+function AgendaCard({ review, calendarConnected, wide }: { review: Review; calendarConnected: boolean; wide?: boolean }) {
   const unit = unitOf(review.period.kind);
   const monthly = review.period.kind === "monthly";
   const groups = useMemo(() => {
@@ -321,7 +323,7 @@ function AgendaCard({ review, calendarConnected }: { review: Review; calendarCon
   }, [review.agenda, review.next, monthly]);
 
   return (
-    <section className="orbit-card md:col-span-2" aria-labelledby="orbit-agenda">
+    <section className={`orbit-card ${wide ? "md:col-span-3" : "md:col-span-2"}`} aria-labelledby="orbit-agenda">
       <CardTitle
         icon={CalendarRange}
         aside={<span className="text-xs text-muted-foreground">{periodLabel(review.next)}</span>}
@@ -491,13 +493,33 @@ export default function OrbitPage() {
   const store = useOrbitStore();
   const { still } = useAppActivity();
   const now = useNow();
-  const [target, setTarget] = useState<Target>({ kind: store.view, offset: 0 });
-  const [offsets, setOffsets] = useState<Record<ReviewKind, number>>({ weekly: 0, monthly: 0 });
+  // The Home card asks for this week so far, or for the Today card. Read once,
+  // then cleared so a later visit opens normally.
+  const [landing] = useState(() => store.landing);
+  useEffect(() => orbitStore.land(null), []);
 
+  // One step past the newest ready review is the period still running, until
+  // it is ready itself.
+  const runningWeek = inProgressPeriod("weekly", now);
+  const runningMonth = inProgressPeriod("monthly", now);
+  const maxOffset: Record<ReviewKind, number> = { weekly: runningWeek ? 1 : 0, monthly: runningMonth ? 1 : 0 };
+
+  const [target, setTarget] = useState<Target>(() =>
+    landing === "current" ? { kind: "weekly", offset: maxOffset.weekly } : { kind: store.view, offset: 0 },
+  );
+  const [offsets, setOffsets] = useState<Record<ReviewKind, number>>(() => ({
+    weekly: landing === "current" ? maxOffset.weekly : 0,
+    monthly: 0,
+  }));
+
+  // Once a running period's review turns ready it is offset 0, so a view one
+  // step past it would be the future: clamp.
+  const weeklyOffset = Math.min(offsets.weekly, maxOffset.weekly);
+  const monthlyOffset = Math.min(offsets.monthly, maxOffset.monthly);
   const latestWeek = latestReadyPeriod("weekly", now);
   const latestMonth = latestReadyPeriod("monthly", now);
-  const weeklyPeriod = useMemo(() => shiftPeriod(latestWeek, offsets.weekly), [latestWeek.key, offsets.weekly]); // eslint-disable-line react-hooks/exhaustive-deps
-  const monthlyPeriod = useMemo(() => shiftPeriod(latestMonth, offsets.monthly), [latestMonth.key, offsets.monthly]); // eslint-disable-line react-hooks/exhaustive-deps
+  const weeklyPeriod = useMemo(() => shiftPeriod(latestWeek, weeklyOffset), [latestWeek.key, weeklyOffset]); // eslint-disable-line react-hooks/exhaustive-deps
+  const monthlyPeriod = useMemo(() => shiftPeriod(latestMonth, monthlyOffset), [latestMonth.key, monthlyOffset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Both kinds load together, so the switch has its numbers ready.
   const weekly = useOrbitReview(weeklyPeriod);
@@ -554,7 +576,10 @@ export default function OrbitPage() {
   }, [frozen, review, shown.kind, shown.period.key, latestKey]);
 
   const unit = unitOf(shown.kind);
-  const atLatest = target.offset >= 0;
+  const atReady = Math.min(target.offset, maxOffset[target.kind]) === 0;
+  const atNewest = target.offset >= maxOffset[target.kind];
+  const runningKey = (shown.kind === "weekly" ? runningWeek : runningMonth)?.key;
+  const inProgress = shown.period.key === runningKey;
   const empty = review && review.stats.done === 0 && review.stats.focusMinutes === 0;
 
   return (
@@ -567,6 +592,7 @@ export default function OrbitPage() {
           <div className={`orbit-view flex items-center gap-2 mt-1`} data-fade={fade ?? undefined}>
             <p className="text-sm text-muted-foreground" data-fade-unit aria-live="polite">
               {shown.kind === "weekly" ? "Weekly" : "Monthly"} review · <span className="text-foreground/90">{periodLabel(shown.period)}</span>
+              {inProgress && <span className="orbit-so-far"> · so far</span>}
             </p>
           </div>
         </div>
@@ -584,7 +610,7 @@ export default function OrbitPage() {
               type="button"
               className="orbit-icon-button"
               onClick={() => go({ kind: target.kind, offset: 0 })}
-              disabled={atLatest}
+              disabled={atReady}
               aria-label="Latest review"
               title="Latest review"
             >
@@ -594,7 +620,7 @@ export default function OrbitPage() {
               type="button"
               className="orbit-icon-button"
               onClick={() => go({ kind: target.kind, offset: target.offset + 1 })}
-              disabled={atLatest}
+              disabled={atNewest}
               aria-label={`Next ${unitOf(target.kind)}`}
             >
               <ChevronRight className="w-4 h-4" />
@@ -617,6 +643,8 @@ export default function OrbitPage() {
         </div>
       </header>
 
+      <TodayCard focusOnMount={landing === "today"} />
+
       <div className="orbit-view space-y-4" data-fade={fade ?? undefined}>
         {historyError && <HistoryBanner error={historyError} />}
         {loading && !review ? (
@@ -625,7 +653,9 @@ export default function OrbitPage() {
           <>
             {empty && !historyError && (
               <p className="orbit-hint" data-fade-unit>
-                No completions or focus time logged this {unit}. The Orbit records them from v0.8.0 onward.
+                {inProgress
+                  ? `Nothing logged yet this ${unit}. Tasks you tick and focus runs show up here as they happen.`
+                  : `No completions or focus time logged this ${unit}. The Orbit records them from v0.8.0 onward.`}
               </p>
             )}
             <div className="grid gap-4 md:grid-cols-3">
@@ -634,8 +664,9 @@ export default function OrbitPage() {
               <MoneyCard review={review} />
               <TrendsCard review={review} />
               <VaultCard review={review} unavailable={vaultUnavailable} />
-              <AgendaCard review={review} calendarConnected={calendarConnected} />
-              <ReflectionCard key={`${review.period.kind}-${review.period.key}`} review={review} />
+              {/* With no Reflect card, the agenda fills its row. */}
+              <AgendaCard review={review} calendarConnected={calendarConnected} wide={inProgress} />
+              {!inProgress && <ReflectionCard key={`${review.period.kind}-${review.period.key}`} review={review} />}
             </div>
           </>
         ) : null}

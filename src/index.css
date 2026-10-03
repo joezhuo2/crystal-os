@@ -2809,6 +2809,13 @@
     --tip-b: #f0abfc;
   }
 
+  /* The Orbit's ice and mauve, spelled out: the tip renders into <body>,
+     outside .home-space-orbit where the --orbit-* variables live. */
+  .glass-tooltip-orbit {
+    --tip-a: hsl(190 95% 82%);
+    --tip-b: hsl(285 34% 74%);
+  }
+
   .glass-tooltip[data-side] {
     display: flex;
     flex-direction: column;
@@ -3345,6 +3352,32 @@
     color: hsl(226 60% 8%);
     background: linear-gradient(120deg, hsl(var(--orbit-ice)), hsl(var(--orbit-mauve)));
     box-shadow: 0 0 14px hsl(var(--orbit-cyan) / 0.45);
+  }
+
+  .orbit-daily-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: hsl(var(--orbit-ice));
+    background: hsl(var(--orbit-slate) / 0.18);
+    border: 1px solid hsl(var(--orbit-ice) / 0.22);
+    transition: color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms;
+  }
+
+  .orbit-daily-button:hover {
+    background: linear-gradient(120deg, hsl(var(--orbit-cyan) / 0.24), hsl(var(--orbit-mauve) / 0.22));
+    border-color: hsl(var(--orbit-ice) / 0.5);
+    box-shadow: 0 0 14px hsl(var(--orbit-cyan) / 0.35);
+  }
+
+  .orbit-daily-button:focus-visible {
+    outline: 2px solid hsl(var(--orbit-cyan));
+    outline-offset: 2px;
   }
 
   .orbit-ready-dot {

@@ -95,6 +95,15 @@ export function latestReadyPeriod(kind: ReviewKind, now: Date = new Date()): Rev
   return now >= readyAt(current) ? current : shiftPeriod(current, -1);
 }
 
+/**
+ * The period still running at `now`, while its review is not ready yet (so it
+ * sits one step past `latestReadyPeriod`); null once it is ready.
+ */
+export function inProgressPeriod(kind: ReviewKind, now: Date = new Date()): ReviewPeriod | null {
+  const current = periodContaining(kind, toLocalDateStr(now));
+  return now >= readyAt(current) ? null : current;
+}
+
 /** The period `delta` steps after (or before, when negative) this one. */
 export function shiftPeriod(period: ReviewPeriod, delta: number): ReviewPeriod {
   if (period.kind === "weekly") return weekPeriod(addDays(period.start, delta * 7));

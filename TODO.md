@@ -1,19 +1,17 @@
 # Planned Features
 - [v0.10.0] banking update - use plaid to connect to banks (store api keys and tokens in secure env variables)
 
-- performance on the archive page is still quite heavy
+- performance on the archive page is still heavy
 
 ## Bugs
 
-- [ ] **Daily Focus is dead state.** v0.6.8 removed the Daily Focus card from Home, but `AppContext.tsx` still loads and saves `dailyFocus` (and `setDailyFocus` still ignores the upsert's `error`). Either remove the state and its Supabase read/write, or give it a new home.
 
 ## To Test
 
-- [ ] v0.8.0 Orbit migration. Run `supabase/migrations/0003_orbit_review.sql` in the SQL Editor, then `npm run verify:rls`: the two new tables must refuse the anon role. Before running it, The Orbit should show the setup banner and still render money, vault and agenda.
+- [ ] v0.8.1 Orbit this week so far. Tick a task, then open The Orbit from the Home card (no review-ready chip showing): it opens on this week with "so far" in the header and counts the task. The arrows step back to the latest finished review; **Latest** returns to it.
+- [ ] v0.8.1 Orbit Today card. With no daily note for today, save a focus and mood: `Daily/YYYY-MM-DD.md` (or the folder your existing daily notes use) is created with the `daily` tag. Add text to the note in Obsidian, change the mood in the app, and save: only the block between the `crystal-os:today` comments changes. Edit the note in Obsidian while the card has unsaved changes, then save: a "changed in Obsidian" toast, and the next save merges.
+- [ ] v0.8.1 Home "Daily review" button. Hover it: the ice-to-mauve glass tip reads "Log today's orbit". Click it: The Orbit opens with the cursor in the Today card's focus field.
 - [ ] v0.8.0 Orbit history. Tick a task, untick it, tick it again, and finish (or reset after a minute) a Pomodoro focus run: the Home card's teaser counts one completion and the focus minutes.
-- [ ] v0.8.0 Orbit switch. Flip Weekly/Monthly and page back with the arrows, with performance mode off and on: cards fade out and in with no blank flash or flicker afterwards (off), or swap at once (on).
-- [ ] v0.8.0 Orbit export. Export a review, then export it again: the second asks before overwriting. Turn on auto-export: the latest ready review is written once and never overwritten. Check both on the web (sidecar) and desktop (native vault).
-- [ ] v0.8.0 Orbit ready badge. On a Sunday after 6 PM (or with the clock moved), the Orbit nav icon gets a dot and the Home card a "review ready" chip; opening that review clears them.
 - [ ] v0.7.5 After-completion repeat. Make a task "2 days after done", tick it off on Home: it moves to two days from today with a "Next due" toast instead of disappearing.
 - [ ] v0.7.2 Categories. Sign in with the network off (or let the session expire), then reconnect and reload: the Engine's categories stay one of each.
 - [ ] v0.7.1 Repeat off. Edit a repeating task, set **Repeat every** to 0, save, and reload the app: the task no longer repeats.
@@ -26,7 +24,6 @@
 - [ ] **Task notes and subtasks.** A `notes` text field and a checklist of subtasks on each task. Optionally link a task to a vault note so the details live in Obsidian.
 - [ ] **Time-blocking.** Drag a task from the Engine or Tasks page onto a day in The Horizon to create a calendar event for it, with the task linked so completing one updates the other.
 - [ ] **Native notifications.** Desktop toasts for task due times, calendar events (10 min before), Pomodoro phase changes and budget alerts. Tauri has `tauri-plugin-notification`; respect a Do Not Disturb toggle in Settings.
-- [ ] **Daily note / journal.** Reuse the dead Daily Focus state: a "Today" card on Home that writes into the vault's daily note (`YYYY-MM-DD.md`, with the daily tag) with a focus line, mood, and a (optional) one-line end-of-day reflection. Would close the Daily Focus bug above.
 - [ ] **Habit tracker.** Daily check-offs with streaks, shown as a small contribution-style grid. Store in Supabase next to tasks.
 - [ ] **Data export / backup.** One button in Settings that exports tasks, transactions, categories and settings to JSON/CSV, and an import to restore them. Useful before schema changes like Plaid.
 - [ ] **Offline queue.** Queue task and transaction writes while Supabase is unreachable and replay them on reconnect, instead of failing the save.
@@ -44,7 +41,7 @@
 ## Before first release (v1.0.0)
 
 ### Blockers
-- [ ] **Fix the open bugs above.** Daily Focus dead state, the Mississauga/Waterloo weather mismatch, and the heavy Archive page.
+- [ ] **Fix the open bugs above.** The Mississauga/Waterloo weather mismatch, and the heavy Archive page.
 - [ ] **Clear the To Test list.** Run every item above on a packaged build (`npm run build:desktop`), not just `npm run dev:desktop`.
 - [ ] **Apply all Supabase migrations to the production project.** `0001_auth_and_rls.sql` and `0002_task_repeat_kinds.sql`, then run `npm run verify:rls` against it.
 - [ ] **First-run setup without hand-editing files.** The packaged app reads Supabase, vault and Google credentials from `%APPDATA%\com.crystalos.desktop\.env.local`. A fresh install needs a setup screen (or the onboarding checklist idea above) that writes these, plus a clear error when they are missing.

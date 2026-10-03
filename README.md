@@ -8,7 +8,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-505%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.8.0-6366F1)
+![Version](https://img.shields.io/badge/version-0.8.1-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 Current release: **v0.7.7** — see [CHANGELOG.md](CHANGELOG.md) for release history.

@@ -3,6 +3,7 @@ import {
   buildAgenda,
   buildReview,
   exportPath,
+  inProgressPeriod,
   isoWeek,
   latestReadyPeriod,
   periodContaining,
@@ -37,6 +38,15 @@ describe("review periods", () => {
     expect(latestReadyPeriod("monthly", local("2026-10-31", "17:59")).key).toBe("2026-09");
     expect(latestReadyPeriod("monthly", local("2026-10-31", "18:00")).key).toBe("2026-10");
     expect(latestReadyPeriod("monthly", local("2026-02-28", "18:30"))).toMatchObject({ start: "2026-02-01", end: "2026-02-28" });
+  });
+
+  it("offers the period still in progress until its review is ready", () => {
+    // Saturday: last week's review is the latest ready one, this week is still running.
+    expect(inProgressPeriod("weekly", local("2026-10-03"))).toMatchObject({ start: "2026-09-28", end: "2026-10-04" });
+    expect(inProgressPeriod("monthly", local("2026-10-03"))?.key).toBe("2026-10");
+    // From 18:00 on the last day the current period is the ready review itself.
+    expect(inProgressPeriod("weekly", local("2026-10-04", "18:00"))).toBeNull();
+    expect(inProgressPeriod("monthly", local("2026-10-31", "18:00"))).toBeNull();
   });
 
   it("steps across month and year ends", () => {

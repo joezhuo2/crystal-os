@@ -13,7 +13,7 @@ import {
   useCalendarStatus,
   type CalendarEvent,
 } from "@/hooks/useGoogleCalendar";
-import { BookOpen, NotebookPen, CalendarClock, ChevronRight, Gem, Plus, Check, Wallet } from "lucide-react";
+import { BookOpen, NotebookPen, CalendarClock, ChevronRight, Gem, PenLine, Plus, Check, Wallet } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   TodayHorizonContentSkeleton,
@@ -27,6 +27,7 @@ import { NebulaSpace, PortalSpace, TerminalSpace } from "./HomeSpaces";
 import HomeGrid, { type HomeWidget } from "./HomeGrid";
 import { useOrbitReady, useOrbitTeaser } from "@/hooks/useOrbitReview";
 import { formatMinutes } from "@/lib/orbitReview";
+import { orbitStore } from "@/lib/orbitStore";
 
 /** The greeting and clock, on the Orbit's black hole, with this week so far. */
 function Clock({ onClick }: { onClick?: () => void }) {
@@ -49,24 +50,40 @@ function Clock({ onClick }: { onClick?: () => void }) {
   const teaser = useOrbitTeaser(time);
   const { unseen } = useOrbitReady(time);
 
+  // A ready review opens as usual; otherwise land on this week so far, which
+  // is what the teaser below counts.
+  const openOrbit = () => {
+    orbitStore.land(unseen.length > 0 ? null : "current");
+    onClick?.();
+  };
+  const openToday = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    orbitStore.land("today");
+    onClick?.();
+  };
+
   return (
     <div className="home-space home-space-orbit">
       <span aria-hidden="true" className="home-backdrop-scene">
         {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />}
       </span>
-      <div onClick={onClick} className="home-card-orbit h-full p-6 cursor-pointer group">
+      <div onClick={openOrbit} className="home-card-orbit h-full p-6 cursor-pointer group">
         <div className="flex items-center justify-between gap-2 mb-2">
           <p className="text-xs text-muted-foreground uppercase tracking-widest">{greeting}</p>
-          {unseen.length > 0 ? (
-            <span className="orbit-ready-chip">
-              <span className="orbit-ready-dot" aria-hidden="true" />
-              {unseen.length > 1 ? "Reviews ready" : `${unseen[0] === "weekly" ? "Weekly" : "Monthly"} review ready`}
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary">
-              The Orbit <ChevronRight className="w-3.5 h-3.5" />
-            </span>
-          )}
+          <div className="flex items-center gap-1.5 min-w-0">
+            {unseen.length > 0 && (
+              <span className="orbit-ready-chip">
+                <span className="orbit-ready-dot" aria-hidden="true" />
+                {unseen.length > 1 ? "Reviews ready" : `${unseen[0] === "weekly" ? "Weekly" : "Monthly"} review ready`}
+              </span>
+            )}
+            <GlassTip label="Log today's orbit" hint="Focus, mood, and a line to end the day" tone="orbit">
+              <button type="button" onClick={openToday} className="orbit-daily-button">
+                <PenLine className="w-3 h-3" aria-hidden="true" />
+                Daily review
+              </button>
+            </GlassTip>
+          </div>
         </div>
         <div className="text-4xl font-bold tracking-tight tabular-nums">
           {time.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}

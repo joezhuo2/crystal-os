@@ -15,6 +15,12 @@ const VIEW_KEY = "crystal-os-orbit-view";
 
 type ByKind = Partial<Record<ReviewKind, string>>;
 
+/**
+ * Where the next visit to The Orbit should open, set by the Home card just
+ * before it navigates: this week so far, or the Today card. Not persisted.
+ */
+export type OrbitLanding = "current" | "today" | null;
+
 export interface OrbitState {
   autoExport: boolean;
   /** Newest period key opened on The Orbit, per kind. */
@@ -23,6 +29,7 @@ export interface OrbitState {
   autoExported: ByKind;
   /** The Weekly/Monthly switch, remembered. */
   view: ReviewKind;
+  landing: OrbitLanding;
 }
 
 function read(key: string): string | null {
@@ -59,6 +66,7 @@ function load(): OrbitState {
     seen: readByKind(SEEN_KEY),
     autoExported: readByKind(EXPORTED_KEY),
     view: read(VIEW_KEY) === "monthly" ? "monthly" : "weekly",
+    landing: null,
   };
 }
 
@@ -101,6 +109,11 @@ export const orbitStore = {
   setView(view: ReviewKind) {
     write(VIEW_KEY, view);
     set({ ...state, view });
+  },
+
+  land(landing: OrbitLanding) {
+    if (state.landing === landing) return;
+    set({ ...state, landing });
   },
 
   /** Test hook: reread storage. */

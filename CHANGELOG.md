@@ -5,6 +5,23 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.1] - 2026-10-03
+
+### Added
+
+- **Today card on The Orbit.** A focus line, a mood (Rough, Low, Okay, Good, Great) and an optional one-line reflection, saved into the vault's daily note `YYYY-MM-DD.md`. The folder is whichever one your newest daily note is in, or `Daily/` when there are none (`pickDailyFolder` in `src/lib/dailyNote.ts`). The card writes only its own block, between `<!-- crystal-os:today -->` comments, and adds the `daily` tag to the frontmatter. Everything else in the note stays as it is. On open it reads the block back, so the note is the only store. Saves carry the note's mtime, so an edit made in Obsidian meanwhile is reloaded rather than overwritten (`TodayCard.tsx`).
+- **"Daily review" button on the Home Orbit card.** It replaces the "The Orbit" link text, with an ice-to-mauve glass tooltip ("Log today's orbit", new `orbit` tone on `GlassTip`). It opens The Orbit with the cursor in the Today card.
+- **This week (or month) so far.** The Orbit's next arrow now steps one past the latest finished review into the period still running, labelled "so far". The Reflect & export card is hidden until that period's review is ready. Clicking the Home card when no review is waiting opens this week, which is what its teaser counts (`inProgressPeriod` in `src/lib/orbitReview.ts`, `orbitStore.land`).
+
+### Fixed
+
+- **The Orbit showed no completed tasks.** It only showed finished periods, so on any day before Sunday 6 PM the newest review was last week. Ticks recorded since the v0.8.0 migration all fall in the current week, so they never appeared. The current week and month can now be opened (see above). Tasks completed before the migration still have no history, because `tasks` stores no completion time.
+- **`0003_orbit_review.sql` had a stray backtick** in `gen_random_uuid()`, a syntax error on a fresh run. Re-running the corrected file is safe.
+
+### Removed
+
+- **Dead Daily Focus state.** `dailyFocus`/`setDailyFocus` and the `settings` `daily_focus` read and upsert are gone from `AppContext.tsx`. The Today card replaces them, with the vault as the store. The `settings` table is left in place.
+
 ## [v0.8.0] - 2026-10-03
 
 ### Upgrade note
