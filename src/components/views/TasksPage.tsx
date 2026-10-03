@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useApp, type Task, type Priority } from "@/contexts/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock } from "lucide-react";
@@ -15,6 +15,7 @@ import {
 } from "@/lib/utils";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { useAppActivity } from "@/lib/appActivity";
 import PomodoroTimer from "./PomodoroTimer";
 import { CategoryManagerButton } from "./CategoryManager";
 
@@ -131,7 +132,7 @@ function KanbanBoard({ tasks }: { tasks: Task[] }) {
             dragOverCat === col.id ? "bg-primary/10 ring-1 ring-primary/30" : ""
           }`}
         >
-          <div className="flex items-center gap-2 px-1 mb-3">
+          <div data-fade-unit className="flex items-center gap-2 px-1 mb-3">
             <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
             <p className="text-xs text-muted-foreground uppercase tracking-widest">{col.label}</p>
             <span className="text-[10px] text-muted-foreground/60 ml-auto">{col.tasks.length}</span>
@@ -143,7 +144,7 @@ function KanbanBoard({ tasks }: { tasks: Task[] }) {
               ))}
             </AnimatePresence>
             {col.tasks.length === 0 && (
-              <p className="text-xs text-muted-foreground/40 text-center py-6">Drop tasks here</p>
+              <p data-fade-unit className="text-xs text-muted-foreground/40 text-center py-6">Drop tasks here</p>
             )}
           </div>
         </div>
@@ -337,9 +338,38 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
   );
 }
 
+type View = "list" | "kanban";
+
+/** Length of each half of the List/Board fade: out, then in. Matches .engine-view in index.css. */
+const VIEW_FADE_MS = 150;
+
 export default function TasksPage() {
   const { tasks, showTaskForm, setShowTaskForm, updateTask } = useApp();
-  const [view, setView] = useState<"list" | "kanban">("list");
+  // `selected` lights the toggle at once; `view` is what's on screen, which
+  // trails it by the fade-out.
+  const [selected, setSelected] = useState<View>("list");
+  const [view, setView] = useState<View>("list");
+  const [fade, setFade] = useState<"out" | "in" | null>(null);
+  const fadeTimer = useRef<number>();
+  const { still } = useAppActivity();
+  useEffect(() => () => window.clearTimeout(fadeTimer.current), []);
+
+  const switchView = (next: View) => {
+    if (next === selected) return;
+    setSelected(next);
+    window.clearTimeout(fadeTimer.current);
+    if (still) {
+      setView(next);
+      setFade(null);
+      return;
+    }
+    setFade("out");
+    fadeTimer.current = window.setTimeout(() => {
+      setView(next);
+      setFade("in");
+      fadeTimer.current = window.setTimeout(() => setFade(null), VIEW_FADE_MS);
+    }, VIEW_FADE_MS);
+  };
   const today = toLocalDateStr();
 
   const sortedTasks = [...tasks].sort((a, b) => {
@@ -361,10 +391,10 @@ export default function TasksPage() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex glass-card p-0.5 rounded-lg">
-          <button onClick={() => setView("list")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+          <button onClick={() => switchView("list")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${selected === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <LayoutList className="w-3.5 h-3.5 inline mr-1" />List
           </button>
-          <button onClick={() => setView("kanban")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+          <button onClick={() => switchView("kanban")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${selected === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <Columns className="w-3.5 h-3.5 inline mr-1" />Board
           </button>
         </div>
@@ -376,43 +406,50 @@ export default function TasksPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4">
         <div className="space-y-4">
-          {/* Rows already there when a view mounts skip their fade-in (initial={false}
-              on each AnimatePresence), so switching List/Board swaps in place instead
-              of blanking every row to transparent. New tasks still fade in. */}
-          {view === "list" ? (
-            <div className="space-y-4">
-              {overdueTasks.length > 0 && (
-                <section aria-labelledby="overdue-heading" className="space-y-2">
-                  <div className="flex items-center gap-2 px-1">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                    <h2 id="overdue-heading" className="text-xs uppercase tracking-widest text-amber-300">
-                      Overdue
-                    </h2>
-                    <span className="text-[10px] text-muted-foreground">{overdueTasks.length}</span>
-                    {overdueTasks.length > 1 && (
-                      <button
-                        onClick={rescheduleAll}
-                        className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-amber-300 hover:bg-amber-400/10 transition-colors"
-                      >
-                        <CalendarClock className="w-3.5 h-3.5" />
-                        Move all to today
-                      </button>
-                    )}
-                  </div>
+          {/* Switching List/Board fades the old view out, then the new one in;
+              reduced motion (OS setting or performance mode) swaps at once. The
+              fade runs on each glass card and header (data-fade on .engine-view,
+              see index.css), never on this wrapper: opacity on an ancestor of a
+              backdrop-filter cuts the blur off, and it snapped back when the
+              fade ended. Rows already there when a view mounts skip their own
+              fade-in (initial={false} on each AnimatePresence). New tasks still
+              fade in. */}
+          <div className="engine-view" data-fade={fade ?? undefined}>
+            {view === "list" ? (
+              <div className="space-y-4">
+                {overdueTasks.length > 0 && (
+                  <section aria-labelledby="overdue-heading" className="space-y-2">
+                    <div data-fade-unit className="flex items-center gap-2 px-1">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                      <h2 id="overdue-heading" className="text-xs uppercase tracking-widest text-amber-300">
+                        Overdue
+                      </h2>
+                      <span className="text-[10px] text-muted-foreground">{overdueTasks.length}</span>
+                      {overdueTasks.length > 1 && (
+                        <button
+                          onClick={rescheduleAll}
+                          className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-amber-300 hover:bg-amber-400/10 transition-colors"
+                        >
+                          <CalendarClock className="w-3.5 h-3.5" />
+                          Move all to today
+                        </button>
+                      )}
+                    </div>
+                    <AnimatePresence initial={false}>
+                      {overdueTasks.map((task) => <TaskItem key={task.id} task={task} overdue />)}
+                    </AnimatePresence>
+                  </section>
+                )}
+                <div className="space-y-2">
                   <AnimatePresence initial={false}>
-                    {overdueTasks.map((task) => <TaskItem key={task.id} task={task} overdue />)}
+                    {otherTasks.map((task) => <TaskItem key={task.id} task={task} />)}
                   </AnimatePresence>
-                </section>
-              )}
-              <div className="space-y-2">
-                <AnimatePresence initial={false}>
-                  {otherTasks.map((task) => <TaskItem key={task.id} task={task} />)}
-                </AnimatePresence>
+                </div>
               </div>
-            </div>
-          ) : (
-            <KanbanBoard tasks={sortedTasks} />
-          )}
+            ) : (
+              <KanbanBoard tasks={sortedTasks} />
+            )}
+          </div>
         </div>
         <div className="hidden lg:block">
           <PomodoroTimer />

@@ -9,15 +9,9 @@
 
 ## To Test
 
-- [ ] v0.7.6 List/Board. Switch the Engine between List and Board a few times: no blank flash, no sideways jump.
-- [ ] v0.7.6 Search bar. Only Home shows it. From the Engine press Ctrl+K: Home opens with the bar focused. Hide the window, press Alt+Shift+Space from another app: same. In the Terminal, Ctrl+K still goes to the shell.
-- [ ] v0.7.6 Engine theme. Open the Engine: red black hole behind the page, ember glass panels, orange sidebar pill and buttons. Open a category or priority dropdown and a date picker: they are ember too. Switch to the Horizon and back: each keeps its own image and palette. The Engine box on Home shows the image behind it.
-- [ ] v0.7.5 Migration. Apply `supabase/migrations/0002_task_repeat_kinds.sql`, then add a task with each repeat kind and reload: each keeps its kind, and an old every-N-days task still repeats.
 - [ ] v0.7.5 After-completion repeat. Make a task "2 days after done", tick it off on Home: it moves to two days from today with a "Next due" toast instead of disappearing.
-
 - [ ] v0.7.2 Categories. Sign in with the network off (or let the session expire), then reconnect and reload: the Engine's categories stay one of each.
 - [ ] v0.7.1 Repeat off. Edit a repeating task, set **Repeat every** to 0, save, and reload the app: the task no longer repeats.
-- [ ] v0.7.0 Weather effects. On a rainy, snowy or stormy day the right effect shows (rain streaks, drifting snow, lightning flashes that also light the aurora). Turning **Weather effects** off in Settings removes clouds and precipitation at once, on the page and the Home box.
 - [ ] Portal unload end to end. Turn off **Keep loaded** for Discord, set the delay to 5 s, and switch to another app. In Task Manager, Discord's `msedgewebview2` process tree should exit after about 5 s. Reopen Discord: it reloads, still signed in.
 - [ ] Race check. With the delay at 1 s, switch away from an app and straight back, repeatedly. The app must never end up blank.
 
@@ -28,7 +22,13 @@
 - [ ] **Time-blocking.** Drag a task from the Engine or Tasks page onto a day in The Horizon to create a calendar event for it, with the task linked so completing one updates the other.
 - [ ] **Native notifications.** Desktop toasts for task due times, calendar events (10 min before), Pomodoro phase changes and budget alerts. Tauri has `tauri-plugin-notification`; respect a Do Not Disturb toggle in Settings.
 - [ ] **Daily note / journal.** Reuse the dead Daily Focus state: a "Today" card on Home that writes into the vault's daily note (`YYYY-MM-DD.md`) with a focus line, mood, and a one-line end-of-day reflection. Would close the Daily Focus bug above.
-- [ ] **Weekly review page.** Every Sunday: tasks completed vs. added, Pomodoro focus minutes per day, spending vs. last week, next week's calendar load. Export it as a vault note.
+
+- New section based on review (add in between home and engine navbar icons)
+    - [ ] there should be a switch at the top that switches between weekly/monthly review, updates every sunday/last day of month
+    - [ ] the review should show multiple boxes (like the home screen widget cards) that display the following info:
+        - [ ] **Weekly review page.** Every Sunday: tasks completed (number, highlight names) vs. added (number, names), Pomodoro focus minutes total/per day average, spending vs. last week, next week's calendar load.  and number of vault notes added. button to export it as a vault note.
+        - [ ] **Monthly review page.** Every last day of month: tasks completed (number, names) vs. added (number, names), Pomodoro focus minutes total/per day/week average, spending vs. last month, next month's calendar overview, and number of vault notes added.. button to export it as a vault note.
+
 - [ ] **Habit tracker.** Daily check-offs with streaks, shown as a small contribution-style grid. Store in Supabase next to tasks.
 - [ ] **Focus stats.** Pomodoro sessions are tracked but not shown over time. Persist them and chart focus minutes per day/week, optionally tagged to the task being worked on.
 - [ ] **Data export / backup.** One button in Settings that exports tasks, transactions, categories and settings to JSON/CSV, and an import to restore them. Useful before schema changes like Plaid.

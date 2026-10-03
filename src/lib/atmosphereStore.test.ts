@@ -9,7 +9,7 @@ beforeEach(() => {
 
 describe("atmosphere settings", () => {
   it("defaults to Markham with both effects on", () => {
-    expect(atmosphere.getState()).toEqual({ cityId: DEFAULT_CITY, weatherEffects: true, aurora: true, imageUrl: null, backdropUrl: null, imageBlur: DEFAULT_IMAGE_BLUR });
+    expect(atmosphere.getState()).toEqual({ cityId: DEFAULT_CITY, weatherEffects: true, aurora: true, imageUrl: null, customImage: false, backdropUrl: null, imageBlur: DEFAULT_IMAGE_BLUR });
   });
 
   it("keeps the city saved under the old weather key", () => {
@@ -28,7 +28,7 @@ describe("atmosphere settings", () => {
     expect(localStorage.getItem(WEATHER_EFFECTS_KEY)).toBe("0");
     expect(localStorage.getItem(AURORA_KEY)).toBe("0");
     atmosphere._reset();
-    expect(atmosphere.getState()).toEqual({ cityId: "on-118", weatherEffects: false, aurora: false, imageUrl: null, backdropUrl: null, imageBlur: 20 });
+    expect(atmosphere.getState()).toEqual({ cityId: "on-118", weatherEffects: false, aurora: false, imageUrl: null, customImage: false, backdropUrl: null, imageBlur: 20 });
   });
 
   it("ignores unknown cities, stored or set", () => {

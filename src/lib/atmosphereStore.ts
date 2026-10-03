@@ -1,13 +1,15 @@
 /**
  * The Atmosphere's settings, shared by the page, its backdrop, the Home box,
  * and Settings: the city, whether the Living Sky shows weather effects and
- * the aurora, an optional background image, and how much that image is
- * blurred. The settings persist in localStorage, the image in IndexedDB
+ * the aurora, the background image, and how much that image is blurred.
+ * With no image of the user's own, a bundled misty forest lake is shown. The
+ * settings persist in localStorage, a chosen image in IndexedDB
  * (atmosphereImage.ts); every change applies at once.
  */
 
 import { useSyncExternalStore } from "react";
 import { isCityId } from "@/hooks/useWeather";
+import defaultImageSrc from "@/assets/atmosphere-backdrop.webp";
 import {
   DEFAULT_IMAGE_BLUR,
   blurImage,
@@ -31,8 +33,14 @@ export interface AtmosphereSettings {
   weatherEffects: boolean;
   /** Aurora ribbons over a pine treeline, bending toward the cursor. */
   aurora: boolean;
-  /** Object URL of the custom background as chosen, for the Settings preview; null for the plain sky. */
+  /**
+   * Object URL of the background as chosen (the user's own, else the bundled
+   * default), for the Settings preview. Null until the default has loaded,
+   * and if it cannot be read.
+   */
   imageUrl: string | null;
+  /** Whether the background is the user's own image rather than the default. */
+  customImage: boolean;
   /**
    * Object URL of the blurred copy the page and Home box show, with the sky's
    * effects drawn over it. Null until it is baked, and with no image.
@@ -73,6 +81,7 @@ function load(): AtmosphereSettings {
     weatherEffects: read(WEATHER_EFFECTS_KEY) !== "0",
     aurora: read(AURORA_KEY) !== "0",
     imageUrl: null,
+    customImage: false,
     backdropUrl: null,
     imageBlur: clampImageBlur(read(IMAGE_BLUR_KEY)),
   };
@@ -86,8 +95,14 @@ function set(next: AtmosphereSettings) {
   listeners.forEach((l) => l());
 }
 
-// The chosen image, kept so a new blur can be baked from it.
+// The user's image, kept so a new blur can be baked from it.
 let imageBlob: Blob | null = null;
+// The bundled default, fetched the first time there is no image of the user's own.
+let defaultBlob: Blob | null = null;
+let defaultLoading = false;
+
+/** The image shown: the user's own, else the default once it has loaded. */
+const shownBlob = () => imageBlob ?? defaultBlob;
 
 // Bumped by every set or clear, so a slow startup read never overwrites a
 // newer choice.
@@ -101,13 +116,13 @@ function revoke(url: string | null) {
 
 /** Bakes the blurred copy for the current image and blur, then swaps it in. */
 function bake() {
-  const blob = imageBlob;
+  const blob = shownBlob();
   const version = ++bakeVersion;
   if (!blob) return;
   blurImage(blob, state.imageBlur)
     .catch(() => blob)
     .then((blurred) => {
-      if (version !== bakeVersion || blob !== imageBlob) return;
+      if (version !== bakeVersion || blob !== shownBlob()) return;
       revoke(state.backdropUrl);
       set({ ...state, backdropUrl: URL.createObjectURL(blurred) });
     });
@@ -117,10 +132,36 @@ function showImage(blob: Blob | null) {
   imageBlob = blob;
   revoke(state.imageUrl);
   revoke(state.backdropUrl);
-  set({ ...state, imageUrl: blob ? URL.createObjectURL(blob) : null, backdropUrl: null });
+  const shown = shownBlob();
+  set({ ...state, imageUrl: shown ? URL.createObjectURL(shown) : null, customImage: !!blob, backdropUrl: null });
+  if (!shown) loadDefault();
   bake();
 }
 
+function loadDefault() {
+  if (defaultBlob || defaultLoading) return;
+  defaultLoading = true;
+  fetch(defaultImageSrc)
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.blob();
+    })
+    .then((blob) => {
+      defaultBlob = blob;
+      if (!imageBlob) showImage(null);
+    })
+    .catch(() => {
+      // No default: fall back to the plain sky.
+    })
+    .finally(() => {
+      defaultLoading = false;
+    });
+}
+
+/**
+ * Shows the saved image, or the default if there is none. The default waits
+ * for the saved image's read, so a saved image never flashes the default first.
+ */
 function restoreImage() {
   const version = imageVersion;
   loadImage()
@@ -128,7 +169,10 @@ function restoreImage() {
       if (blob && version === imageVersion) showImage(blob);
     })
     .catch(() => {
-      // Unreadable store: fall back to the plain sky.
+      // Unreadable store: fall back to the default.
+    })
+    .finally(() => {
+      if (!imageBlob) loadDefault();
     });
 }
 
@@ -189,6 +233,7 @@ export const atmosphere = {
     if (version === imageVersion) showImage(blob);
   },
 
+  /** Removes the user's image and goes back to the default. */
   async clearImage() {
     ++imageVersion;
     showImage(null);

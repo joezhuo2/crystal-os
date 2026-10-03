@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.7.7] - 2026-10-03
+
+### Added
+
+- **The Atmosphere has a default background.** A misty forest lake (`src/assets/atmosphere-backdrop.webp`) now sits behind the page and the Home weather box when you have not chosen an image of your own, blurred by the **Image blur** setting like a custom image, with the sky's tint and effects drawn over it. It is fetched only after the saved-image read finds nothing, so a saved image never flashes the default first. Choosing a PNG or JPEG still replaces it; the remove button now goes back to the default rather than the plain sky, and **Image blur** is always shown. The store has a new `customImage` flag, and `imageUrl` is the image shown (yours or the default). The plain sky appears only if the default cannot load.
+- **The Engine fades between List and Board.** Switching views fades the old one out and the new one in (150 ms each). The fade runs on each glass card and header (`.engine-view[data-fade]` in `index.css`), not on a wrapper, because opacity on an ancestor of a `backdrop-filter` cuts the blur off and it snapped back with a flicker when the fade ended. Performance mode or the OS reduced-motion setting swaps at once, as before. Rows still skip their own fade-in when a view mounts, so the v0.7.6 flicker fix stands.
+
 ## [v0.7.6] - 2026-10-02
 
 ### Added

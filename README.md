@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-479%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.7.6-6366F1)
+![Version](https://img.shields.io/badge/version-0.7.7-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.7.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.7.7** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -19,7 +19,7 @@ Current release: **v0.7.6** — see [CHANGELOG.md](CHANGELOG.md) for release his
 
 | Feature | Description |
 |---------|-------------|
-| **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule. The Engine page has its own red black hole backdrop and ember palette, matching the Horizon's look |
+| **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule. The Engine page has its own red black hole backdrop and ember palette, matching the Horizon's look. Switching between List and Board fades one view out and the other in (instantly in performance mode) |
 | **📅 The Horizon** | Google Calendar, live: month, week, day and agenda views (week and day are hour grids: overlapping events sit side by side, a line marks now, and clicking an empty slot creates an event at that half hour), create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along. The page has its own black hole backdrop and blue palette (see [The Horizon](#-the-horizon-google-calendar-integration)) |
 | **🏠 Home widgets** | A 3×3 grid: clock, weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Engine, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Engine's red black hole, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
@@ -135,6 +135,7 @@ server/
 
 src/
 ├── assets/
+│   ├── atmosphere-backdrop.webp # The Atmosphere's default background (a misty forest lake)
 │   ├── engine-backdrop.webp    # The Engine's red black hole background
 │   └── horizon-backdrop.webp   # The Horizon's black hole background
 ├── components/
@@ -299,10 +300,10 @@ The weather tab draws a Living Sky behind its panels (`src/components/layout/Atm
 - **The sky, always on.** The gradient follows the time of day for the chosen city: dawn and dusk run 45 minutes either side of that day's sunrise and sunset, with day between them and night outside. Phases cross-fade over four seconds. The sun glows high by day and low on the horizon at dawn and dusk; the moon is drawn in its current phase and illumination; stars twinkle at night and faintly at twilight. Without usable sunrise and sunset times, 6:30 and 19:30 are used.
 - **Weather effects** (Settings → The Atmosphere, on by default). The current Environment Canada icon code sets cloud cover, rain, snow, sleet, fog and lightning (`skyWeather` in `src/lib/atmosphereScene.ts`). Two tiled cloud bands drift across the sky, an overcast layer darkens it, and one canvas draws rain, snow and lightning at 30 fps. A strike flashes the sky, draws a bolt, and briefly lights up the clouds and the aurora.
 - **Aurora** (on by default). Three ribbons of northern lights sway on their own and bend toward the cursor over a pine treeline. They sit behind the clouds and rain, at full strength at night and faint by day. As with the Archive light, the cursor never touches React state: one frame per move writes `--bend-x` on the field and CSS does the rest.
-- **Background image.** Choose a PNG or JPEG (up to 25 MB) in Settings. It is checked, scaled down to 2560 px on its longest side, and stored in IndexedDB on this device (`src/lib/atmosphereImage.ts`). The image is shown under frosted glass behind the page and the Home box; the sky becomes a light tint of the current phase over it, and the sun, moon, stars, aurora and weather draw on top.
+- **Background image.** By default a misty forest lake (`src/assets/atmosphere-backdrop.webp`), loaded once there is no image of your own, so a saved image never flashes the default first. Choose a PNG or JPEG (up to 25 MB) in Settings to replace it, or remove yours to go back to the default. Your image is checked, scaled down to 2560 px on its longest side, and stored in IndexedDB on this device (`src/lib/atmosphereImage.ts`). The image is shown under frosted glass behind the page and the Home box; the sky becomes a light tint of the current phase over it, and the sun, moon, stars, aurora and weather draw on top.
 - **Image blur** (0–100%, default 50%). How much the glass frosts the image, up to a 40 px blur. The store bakes a blurred 1600 px copy on a canvas whenever the image or the setting changes (the slider commits on release), and the page shows that copy as a plain image. There is no live CSS blur and no blend mode on the aurora: together with the aurora's large moving layers, they could make the desktop WebView drop the photo on high-DPI screens.
 
-Both switches work together or apart; with both off you get the plain sky for the time of day. The city picked on the page is shared with the Home box and the backdrop (`src/lib/atmosphereStore.ts`, same `crystal-os-weather-city` key as before). The picker searches every Environment Canada city page location by name or forecast region, and suggests the nine GTA-area cities before you type. Every canvas pauses while the window is hidden, and performance mode or reduced motion shows a still frame with no lightning.
+Both switches work together or apart; with both off you get the background image under the sky's tint for the time of day (the plain sky only if the image cannot load). The city picked on the page is shared with the Home box and the backdrop (`src/lib/atmosphereStore.ts`, same `crystal-os-weather-city` key as before). The picker searches every Environment Canada city page location by name or forecast region, and suggests the nine GTA-area cities before you type. Every canvas pauses while the window is hidden, and performance mode or reduced motion shows a still frame with no lightning.
 
 ---
 

@@ -192,9 +192,9 @@ function Combo({ children, error }: { children: React.ReactNode; error?: boolean
 /**
  * Picks, previews and removes The Atmosphere's background image. The file is
  * checked and stored by atmosphereStore; failures show as a toast and keep
- * the current background.
+ * the current background. Removing the user's image goes back to the default.
  */
-function AtmosphereImagePicker({ imageUrl }: { imageUrl: string | null }) {
+function AtmosphereImagePicker({ imageUrl, custom }: { imageUrl: string | null; custom: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
@@ -229,10 +229,10 @@ function AtmosphereImagePicker({ imageUrl }: { imageUrl: string | null }) {
       />
       <Button variant="outline" size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
         <ImagePlus className="w-4 h-4 mr-1.5" />
-        {busy ? "Saving…" : imageUrl ? "Change" : "Choose image"}
+        {busy ? "Saving…" : custom ? "Change" : "Choose image"}
       </Button>
-      {imageUrl && (
-        <Button variant="ghost" size="sm" disabled={busy} onClick={() => atmosphere.clearImage()} aria-label="Remove background image">
+      {custom && (
+        <Button variant="ghost" size="sm" disabled={busy} onClick={() => atmosphere.clearImage()} aria-label="Remove background image and use the default">
           <Trash2 className="w-4 h-4" />
         </Button>
       )}
@@ -522,14 +522,14 @@ export default function SettingsPage() {
           </Row>
           <Row
             title="Background image"
-            description="A PNG or JPEG shown behind the page and the Home box, under frosted glass, with the sky's tint and effects drawn over it. Stored on this device only."
+            description="Shown behind the page and the Home box, under frosted glass, with the sky's tint and effects drawn over it. A misty forest lake by default; choose a PNG or JPEG of your own (stored on this device only), or remove yours to go back to the default."
           >
-            <AtmosphereImagePicker imageUrl={sky.imageUrl} />
+            <AtmosphereImagePicker imageUrl={sky.imageUrl} custom={sky.customImage} />
           </Row>
           {sky.imageUrl && (
             <Row
               title="Image blur"
-              description="How much the glass blurs your background image, from sharp (0%) to heavily frosted (100%)."
+              description="How much the glass blurs the background image, from sharp (0%) to heavily frosted (100%)."
             >
               <ImageBlurSlider value={sky.imageBlur} />
             </Row>
