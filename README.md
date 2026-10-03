@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-479%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.7.5-6366F1)
+![Version](https://img.shields.io/badge/version-0.7.6-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.7.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.7.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -19,12 +19,12 @@ Current release: **v0.7.5** — see [CHANGELOG.md](CHANGELOG.md) for release his
 
 | Feature | Description |
 |---------|-------------|
-| **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule |
+| **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule. The Engine page has its own red black hole backdrop and ember palette, matching the Horizon's look |
 | **📅 The Horizon** | Google Calendar, live: month, week, day and agenda views (week and day are hour grids: overlapping events sit side by side, a line marks now, and clicking an empty slot creates an event at that half hour), create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along. The page has its own black hole backdrop and blue palette (see [The Horizon](#-the-horizon-google-calendar-integration)) |
-| **🏠 Home widgets** | A 3×3 grid: clock, weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device |
+| **🏠 Home widgets** | A 3×3 grid: clock, weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Engine, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Engine's red black hole, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **🌤️ Weather** | Current conditions + 7-day forecast for any of ~840 Canadian locations (searchable city picker), over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
-| **📖 The Archive** | Browse, search, read and edit your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown, and a CodeMirror markdown editor that refuses to overwrite a note changed on disk since you opened it. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and hides the global search bar, since it has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
+| **📖 The Archive** | Browse, search, read and edit your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown, and a CodeMirror markdown editor that refuses to overwrite a note changed on disk since you opened it. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
 | **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, a context-window meter, per-model token counts, and a swirling three-colour nebula |
 | **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges, and three themes (desktop; the web build opens apps in new tabs) |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
@@ -135,15 +135,16 @@ server/
 
 src/
 ├── assets/
+│   ├── engine-backdrop.webp    # The Engine's red black hole background
 │   └── horizon-backdrop.webp   # The Horizon's black hole background
 ├── components/
 │   ├── layout/
 │   │   ├── AppSplash.tsx       # "Crystal OS / Loading…" splash while the session restores
-│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal/Nebula/Atmosphere/Archive/Horizon restyle the sidebar)
+│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal/Nebula/Atmosphere/Archive/Horizon/Engine restyle the sidebar)
 │   │   ├── TerminalStatic.tsx  # Static-noise backdrop for the Terminal tab
 │   │   ├── PortalBackdrop.tsx  # Themed backdrop for The Portal
 │   │   ├── AtmosphereBackdrop.tsx # Living Sky for The Atmosphere: sky, sun/moon, aurora, clouds, rain/snow/lightning
-│   │   ├── HorizonBackdrop.tsx # Blurred black hole behind The Horizon
+│   │   ├── ImageBackdrop.tsx   # Blurred black hole behind The Horizon or The Engine
 │   │   ├── StarCanvas.tsx      # Twinkling star canvas (Portal Stargate theme, Atmosphere night sky)
 │   │   └── ObsidianBackdrop.tsx # Crystal backdrop and cursor light for The Archive
 │   ├── portal/
@@ -155,7 +156,7 @@ src/
 │   │   ├── glass-tooltip.tsx   # GlassTip: gradient-bordered tooltip used in place of `title`, drawn above the page
 │   │   └── dashboard-skeletons.tsx # Per-widget loading skeletons for the home page
 │   ├── views/                  # Page-level components
-│   │   ├── HomePage.tsx        # Clock, weather, Vault, Engine, today's events, themed weather, Horizon and Archive widgets
+│   │   ├── HomePage.tsx        # Clock, weather, Vault, Engine, today's events, themed weather, Horizon and Archive widgets (the Engine box themed too)
 │   │   ├── HomeGrid.tsx        # Home's rearrangeable grid: drag to move, edit mode to resize, hide and reset
 │   │   ├── HomeSpaces.tsx      # Home's themed Nebula, Portal and Terminal boxes
 │   │   ├── TasksPage.tsx       # Task list, form, filtering, Pomodoro
@@ -204,7 +205,7 @@ src/
 │   ├── atmosphereScene.ts      # Living Sky maths: sky phase, weather codes → effects, aurora/star strength, moon, pine ridge
 │   ├── atmosphereStore.ts      # Atmosphere settings: city, weather effects, aurora, background image and its blur
 │   ├── atmosphereImage.ts      # Background image: checks, scaling, baked blur, IndexedDB storage
-│   ├── horizonBackdrop.ts      # Horizon background: bakes the page (15%) and Home box (25%) blurs once per session
+│   ├── imageBackdrop.ts        # Horizon and Engine backgrounds: bakes the page (15%) and Home box (25%) blurs once per session
 │   ├── pomodoro.ts             # Module-level Pomodoro store (page + tray agree)
 │   ├── tray.ts                 # Tauri tray events → app, app state → tray menu
 │   ├── hotkey.ts               # Hotkey parsing + combo validation
@@ -271,7 +272,7 @@ The middleware is mounted on both the dev server and `vite preview`. It is **not
 
 ### Layout
 
-The Archive has no global search bar (like the Terminal, Portal and Nebula), so the rail runs down to the bottom of the window. It is a fixed-height column split into two halves that scroll independently: the tag cloud on top, the filtered note list below, with the note count between them as a divider and the search field pinned above both. Each half is `flex-1 basis-0 min-h-0`, so a vault with many tags cannot crowd the list out of view, and a vault with few tags leaves the extra space to the list. Past 80 notes the list is virtualised (`@tanstack/react-virtual`): only the rows in view are mounted, so large vaults scroll smoothly; smaller lists keep their staggered entrance.
+The global search bar lives on Home only, so the rail runs down to the bottom of the window. It is a fixed-height column split into two halves that scroll independently: the tag cloud on top, the filtered note list below, with the note count between them as a divider and the search field pinned above both. Each half is `flex-1 basis-0 min-h-0`, so a vault with many tags cannot crowd the list out of view, and a vault with few tags leaves the extra space to the list. Past 80 notes the list is virtualised (`@tanstack/react-virtual`): only the rows in view are mounted, so large vaults scroll smoothly; smaller lists keep their staggered entrance.
 
 ### Theme
 
@@ -309,7 +310,7 @@ Both switches work together or apart; with both off you get the plain sky for th
 
 The calendar tab reads and writes your real Google Calendar. The client secret and refresh token must never reach the browser, so every Google call happens in a Vite middleware plugin and the bundle only ever sees JSON — the same shape as the Obsidian tier above.
 
-**Look.** A black hole with a blue accretion disk sits behind the page (`src/components/layout/HorizonBackdrop.tsx`), and the "Today on the Horizon" box on Home wears it too. The image ships in `src/assets/horizon-backdrop.webp` and is blurred with the Atmosphere's baked blur (`blurImage`), at 15% for the page and 25% for the Home box, once per session (`src/lib/horizonBackdrop.ts`), so neither runs a live CSS blur. The page's palette is electric blue over deep navy: logo, buttons, sidebar, event dots, dark blue glass panels, and the dropdowns and date pickers, which render into `<body>` and so read the palette from a `horizon-theme` class set there while the tab is open.
+**Look.** A black hole with a blue accretion disk sits behind the page (`src/components/layout/ImageBackdrop.tsx`), and the "Today on the Horizon" box on Home wears it too. The image ships in `src/assets/horizon-backdrop.webp` and is blurred with the Atmosphere's baked blur (`blurImage`), at 15% for the page and 25% for the Home box, once per session (`src/lib/imageBackdrop.ts`), so neither runs a live CSS blur. The page's palette is electric blue over deep navy: logo, buttons, sidebar, event dots, dark blue glass panels, and the dropdowns and date pickers, which render into `<body>` and so read the palette from a `horizon-theme` class set there while the tab is open. The Engine gets the same treatment with a red black hole (`src/assets/engine-backdrop.webp`) and an ember palette (orange buttons and rings, dark ember glass, `engine-theme` on `<body>`), with the same blur and glass opacity.
 
 ### Setup
 
@@ -444,7 +445,7 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 - Ctrl+C copies when text is selected and interrupts otherwise; Ctrl+V pastes.
 - The shells run in Rust (`src-tauri/src/terminal.rs`) and the view talks to them through `terminal_list`, `terminal_open`, `terminal_attach`, `terminal_restart`, `terminal_close`, `terminal_write`, and `terminal_resize` (`src/lib/terminalNative.ts`). Every command after `terminal_open` takes the shell's `id`; the Rust side enforces the limit of 5.
 - **Cascadia Mono is bundled with the app** (`@fontsource/cascadia-mono`), not read from the machine, so the terminal looks the same whether or not Windows Terminal is installed. Only the subsets a shell draws ship: latin, latin-ext, and the box-drawing block TUIs use for borders, in regular and bold. The view waits for the face to load before opening xterm, because xterm measures the character cell once and keeps those metrics for the life of the terminal.
-- While the tab is open the window switches to a black, glitching monochrome look, and the search bar is hidden. The page title and the sidebar's Crystal OS mark glitch with white and grey ghost copies that are clipped away at rest, so the title stays white when animations are stopped (performance mode, reduced motion, hidden window).
+- While the tab is open the window switches to a black, glitching monochrome look. The page title and the sidebar's Crystal OS mark glitch with white and grey ghost copies that are clipped away at rest, so the title stays white when animations are stopped (performance mode, reduced motion, hidden window).
 
 **The Portal.** The orbit icon above Terminal opens **The Portal**, where web apps such as Discord and Instagram run as real pages that you sign in to once. See [ADR 0002](docs/adr/0002-portal-child-webviews.md) for how it works.
 
@@ -459,7 +460,7 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 - **Themes.** Choose **Void swirl** (default), **Event horizon**, or **Stargate blue** under **Settings → The Portal**. The theme styles the backdrop, sidebar, navbar, and the animated ring around the app.
 - **Keyboard shortcuts (desktop).** While a Portal app is on screen: **Ctrl+Tab** cycles to the next app, **Ctrl+Shift+Tab** cycles to the previous one, **Ctrl+W** opens the Remove confirmation, and **Ctrl+R** reloads the active app. They also work while you are typing inside an app page (Windows): the app's webview catches them before the page does. In Crystal OS's own UI they are disabled while a dialog is open or the focus is inside a text field. `Ctrl+R` prevents Tauri's default full-page reload, which would otherwise drop you to the Home tab.
 - **Web build.** Browsers refuse to embed these sites in another page, so there the Portal keeps your app list and opens each app in a new tab.
-- The app pages draw above Crystal OS's own UI, so the search bar is hidden on this tab and menus and dialogs (such as the pill right-click menu or tray **Quick Add**) hide the app while they are open. A still picture of the page stays in its place behind them. The pages get no access to Crystal OS commands. The view talks to Rust through the `portal_*` commands in `src/lib/portalNative.ts`.
+- The app pages draw above Crystal OS's own UI, so menus and dialogs (such as the pill right-click menu or tray **Quick Add**) hide the app while they are open. A still picture of the page stays in its place behind them. The pages get no access to Crystal OS commands. The view talks to Rust through the `portal_*` commands in `src/lib/portalNative.ts`.
 
 **Performance.** **Settings → Performance** has two controls.
 
@@ -471,7 +472,7 @@ Whether or not performance mode is on, hiding the window to the tray or minimisi
 **Global hotkeys.** Three combos work from any app:
 
 - `Alt+Space` shows Crystal OS; press it again while the app is in front to hide it, including while you are typing in a Portal app. It does not touch the search bar. Saved as `globalShortcut`.
-- `Alt+Shift+Space` shows Crystal OS and focuses the search bar. Saved as `paletteShortcut`.
+- `Alt+Shift+Space` shows Crystal OS, switches to Home and focuses the search bar. Saved as `paletteShortcut`.
 - `Alt+Shift+H` shows Crystal OS if it is hidden and opens the Home page; if the window is already open it just switches to Home, from any tab. Saved as `homeShortcut`.
 
 Change any of them with **Change** in Settings. All are saved in `%APPDATA%\com.crystalos.desktop\settings.json`, and no two can share a combo. If another app already owns one, Crystal OS still starts and shows a toast.
@@ -551,7 +552,7 @@ The toolbar's **Context** chip shows how full the current model's context window
 
 ## ⌨️ Command Palette
 
-`Cmd/Ctrl + K` focuses the palette while Crystal OS is focused; on desktop, `Alt+Shift+Space` does the same from any app. It filters tasks and transactions locally and searches vault notes server-side (2+ characters, debounced 250 ms), and understands two natural-language prefixes:
+The palette sits at the top of Home only. `Cmd/Ctrl + K` switches to Home and focuses it from any tab while Crystal OS is focused (not while typing in the Terminal); on desktop, `Alt+Shift+Space` does the same from any app. It filters tasks and transactions locally and searches vault notes server-side (2+ characters, debounced 250 ms), and understands two natural-language prefixes:
 
 | Input | Result |
 |-------|--------|

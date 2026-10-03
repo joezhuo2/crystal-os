@@ -1719,10 +1719,11 @@
     background: #020617;
   }
 
-  /* The Horizon page: the black hole, pre-blurred at 15%
-     Image blur (horizonBackdrop.ts), so no live CSS filter here either. */
+  /* The Horizon and Engine pages: a black hole, pre-blurred at 15%
+     Image blur (imageBackdrop.ts), so no live CSS filter here either. */
   .horizon-root,
-  .horizon-backdrop {
+  .engine-root,
+  .image-backdrop {
     background: #000;
   }
 
@@ -1775,23 +1776,88 @@
     filter: drop-shadow(0 0 4px rgb(96 165 250 / 0.5));
   }
 
-  .horizon-image {
+  .image-backdrop-image {
     position: absolute;
     inset: 0;
     background-size: cover;
     background-position: center;
-    animation: horizon-image-in 600ms ease-out;
+    animation: image-backdrop-in 600ms ease-out;
   }
 
-  @keyframes horizon-image-in {
+  @keyframes image-backdrop-in {
     from { opacity: 0; }
     to   { opacity: 1; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .horizon-image {
+    .image-backdrop-image {
       animation: none;
     }
+  }
+
+  /* The Engine's palette: the red black hole's embers and molten orange over
+     near-black. On <body> as well (Index.tsx) so portalled popups follow it. */
+  .engine-root,
+  body.engine-theme {
+    --background: 10 45% 4%;
+    --popover: 12 40% 9%;
+    --card: 12 38% 12%;
+    --secondary: 14 34% 18%;
+    --muted: 14 30% 15%;
+    --border: 18 42% 24%;
+    --input: 18 42% 24%;
+    --primary: 22 95% 55%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 30 95% 62%;
+    --accent: 40 95% 58%;
+    --glow-indigo: 20 95% 58%;
+    --muted-foreground: 24 28% 74%;
+    --glass-border: 28 100% 88%;
+  }
+
+  .engine-title {
+    background: linear-gradient(100deg, #fff1e6, #fb923c 45%, #dc2626);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Page panels: dark ember glass, so text reads over the bright disk. Same
+     opacity as the Horizon's panels. */
+  .engine-root main .glass-card,
+  .engine-root main .glass-card-hover {
+    background: linear-gradient(160deg, rgb(48 16 10 / 0.55), rgb(16 4 3 / 0.65));
+    border-color: rgb(253 186 116 / 0.16);
+    box-shadow:
+      0 8px 32px rgb(12 2 0 / 0.55),
+      0 0 36px rgb(249 115 22 / 0.07),
+      inset 0 1px 0 rgb(255 237 213 / 0.07);
+  }
+
+  .engine-root main .glass-card-hover:hover {
+    border-color: rgb(251 146 60 / 0.4);
+    box-shadow:
+      0 8px 32px rgb(12 2 0 / 0.55),
+      0 0 24px rgb(249 115 22 / 0.18),
+      inset 0 1px 0 rgb(255 237 213 / 0.1);
+  }
+
+  /* The list is taller than the board: keep the scrollbar's space so
+     switching views doesn't shift the page sideways. */
+  .engine-root main {
+    scrollbar-gutter: stable;
+  }
+
+  .sidebar-engine {
+    background: linear-gradient(180deg, rgb(56 18 10 / 0.75) 0%, rgb(14 4 3 / 0.85) 50%, rgb(76 26 12 / 0.6) 100%);
+    border-color: transparent;
+    box-shadow:
+      inset -1px 0 0 rgb(251 146 60 / 0.32),
+      6px 0 28px rgb(249 115 22 / 0.16);
+  }
+
+  .sidebar-engine button svg {
+    filter: drop-shadow(0 0 4px rgb(251 146 60 / 0.5));
   }
 
   .atmo-sky {
@@ -2451,8 +2517,8 @@
       inset 0 1px 0 rgb(224 242 254 / 0.12);
   }
 
-  /* Horizon: the black hole behind the box, already blurred (horizonBackdrop.ts
-     bakes it at 25% Image blur), under a very light glass. */
+  /* Horizon and Engine: the black hole behind the box, already blurred
+     (imageBackdrop.ts bakes it at 25% Image blur), under a very light glass. */
   .home-space-horizon {
     --primary: 205 95% 70%;
     --muted-foreground: 212 30% 78%;
@@ -2463,7 +2529,7 @@
     box-shadow: 0 0 32px rgb(59 130 246 / 0.18);
   }
 
-  .home-horizon-scene {
+  .home-backdrop-scene {
     position: absolute;
     inset: -8px;
     z-index: -1;
@@ -2472,12 +2538,12 @@
     pointer-events: none;
   }
 
-  .home-horizon-image {
+  .home-backdrop-image {
     position: absolute;
     inset: 0;
     background-size: cover;
     background-position: center 55%;
-    animation: horizon-image-in 600ms ease-out;
+    animation: image-backdrop-in 600ms ease-out;
   }
 
   .home-card-horizon {
@@ -2500,8 +2566,44 @@
       inset 0 1px 0 rgb(224 242 254 / 0.12);
   }
 
+  .home-space-engine {
+    --primary: 28 95% 66%;
+    --accent: 40 95% 62%;
+    --muted-foreground: 24 30% 80%;
+  }
+
+  .home-space-engine::before {
+    background: #000;
+    box-shadow: 0 0 32px rgb(249 115 22 / 0.18);
+  }
+
+  /* The disk sits right of centre in this image; keep it in the box. */
+  .home-space-engine .home-backdrop-image {
+    background-position: 70% 55%;
+  }
+
+  .home-card-engine {
+    border-radius: 1rem;
+    color: #fff7ed;
+    background: linear-gradient(160deg, rgb(42 12 8 / 0.1), rgb(20 4 2 / 0.28));
+    border: 1px solid rgb(254 215 170 / 0.16);
+    text-shadow: 0 1px 8px rgb(20 4 2 / 0.7);
+    box-shadow:
+      0 8px 32px rgb(12 2 0 / 0.45),
+      inset 0 1px 0 rgb(255 237 213 / 0.08);
+    transition: border-color 300ms, box-shadow 300ms;
+  }
+
+  .home-card-engine:hover {
+    border-color: rgb(251 146 60 / 0.45);
+    box-shadow:
+      0 8px 32px rgb(12 2 0 / 0.45),
+      0 0 30px rgb(249 115 22 / 0.25),
+      inset 0 1px 0 rgb(255 237 213 / 0.12);
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .home-horizon-image {
+    .home-backdrop-image {
       animation: none;
     }
   }

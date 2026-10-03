@@ -49,7 +49,7 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "hsl(222 47% 11% / 0.8)" }}
+      style={{ background: "hsl(var(--background) / 0.8)" }}
       onClick={onClose}
     >
       <motion.div

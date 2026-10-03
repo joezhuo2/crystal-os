@@ -7,7 +7,7 @@ import { useSkyScene } from "@/hooks/useSkyScene";
 import { useAtmosphere } from "@/lib/atmosphereStore";
 import { auroraStrength, pineRidge } from "@/lib/atmosphereScene";
 import { useVaultNotes } from "@/hooks/useVault";
-import { HORIZON_CARD_BLUR, useHorizonBackdrop } from "@/lib/horizonBackdrop";
+import { CARD_BACKDROP_BLUR, useImageBackdrop } from "@/lib/imageBackdrop";
 import {
   useCalendarEvents,
   useCalendarStatus,
@@ -269,7 +269,7 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
 
   const status = useCalendarStatus();
   const connected = status.data?.connected === true;
-  const backdropUrl = useHorizonBackdrop(HORIZON_CARD_BLUR);
+  const backdropUrl = useImageBackdrop("horizon", CARD_BACKDROP_BLUR);
 
   // Local midnight today through local midnight tomorrow.
   const range = useMemo(() => {
@@ -303,8 +303,8 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
 
   return (
     <div className="home-space home-space-horizon">
-      <span aria-hidden="true" className="home-horizon-scene">
-        {backdropUrl && <span className="home-horizon-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />}
+      <span aria-hidden="true" className="home-backdrop-scene">
+        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />}
       </span>
       <div onClick={onClick} className="home-card-horizon h-full p-6 cursor-pointer group">
         <div className="flex items-center justify-between mb-3">
@@ -385,6 +385,7 @@ type TaskRow = { task: Task; label: string };
 function EngineWidget({ onClick }: { onClick?: () => void }) {
   const { tasks, completeTask, setEditingTask, setShowTaskForm, loading } = useApp();
   const today = toLocalDateStr();
+  const backdropUrl = useImageBackdrop("engine", CARD_BACKDROP_BLUR);
 
   const isOverdue = (t: Task) => isTaskOverdue(t, today);
 
@@ -424,73 +425,78 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
   };
 
   return (
-    <div onClick={onClick} className="glass-card-hover p-6 cursor-pointer group">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-muted-foreground uppercase tracking-widest">The Engine</p>
-        <GlassTip label="Add task" hint="New task in The Engine">
-          <button
-            onClick={openNewTask}
-            aria-label="Add task"
-            className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        </GlassTip>
-      </div>
+    <div className="home-space home-space-engine">
+      <span aria-hidden="true" className="home-backdrop-scene">
+        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />}
+      </span>
+      <div onClick={onClick} className="home-card-engine h-full p-6 cursor-pointer group">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-widest">The Engine</p>
+          <GlassTip label="Add task" hint="New task in The Engine">
+            <button
+              onClick={openNewTask}
+              aria-label="Add task"
+              className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </GlassTip>
+        </div>
 
-      {loading ? (
-        <TodayHorizonContentSkeleton />
-      ) : (
-        <>
-          <div className="flex items-baseline gap-2 mb-4">
-            <span className="text-3xl font-bold tabular-nums">{showingUpcoming ? upcoming.length : openTasks.length}</span>
-            <span className="text-sm text-muted-foreground">
-              {showingUpcoming
-                ? `upcoming task${upcoming.length !== 1 ? "s" : ""} · today is clear`
-                : `open task${openTasks.length !== 1 ? "s" : ""} today`}
-            </span>
-          </div>
-
-          {topRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">All clear. Nothing left to run.</p>
-          ) : (
-            <div className="space-y-1.5">
-              {topRows.map(({ task, label }, i) => (
-                <motion.div
-                  key={task.id}
-                  initial={{ opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                  className="flex items-center gap-3"
-                >
-                  <GlassTip label="Complete task" tone="emerald" side="left">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        completeTask(task);
-                      }}
-                      aria-label="Complete task"
-                      className="w-4 h-4 rounded-full border-2 border-muted-foreground/40 hover:border-accent hover:bg-accent/20 flex items-center justify-center shrink-0 transition-colors group/check"
-                    >
-                      <Check className="w-2.5 h-2.5 text-accent opacity-0 group-hover/check:opacity-100" />
-                    </button>
-                  </GlassTip>
-                  <span className="text-sm truncate">{task.name}</span>
-                  <span className={`ml-auto text-[10px] font-semibold shrink-0 ${PRIORITY_CLASS[task.priority]}`}>
-                    {label}
-                  </span>
-                </motion.div>
-              ))}
+        {loading ? (
+          <TodayHorizonContentSkeleton />
+        ) : (
+          <>
+            <div className="flex items-baseline gap-2 mb-4">
+              <span className="text-3xl font-bold tabular-nums">{showingUpcoming ? upcoming.length : openTasks.length}</span>
+              <span className="text-sm text-muted-foreground">
+                {showingUpcoming
+                  ? `upcoming task${upcoming.length !== 1 ? "s" : ""} · today is clear`
+                  : `open task${openTasks.length !== 1 ? "s" : ""} today`}
+              </span>
             </div>
-          )}
 
-          {remaining > 0 && (
-            <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors mt-3">
-              +{remaining} more {showingUpcoming ? "upcoming " : ""}task{remaining !== 1 ? "s" : ""} →
-            </p>
-          )}
-        </>
-      )}
+            {topRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">All clear. Nothing left to run.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {topRows.map(({ task, label }, i) => (
+                  <motion.div
+                    key={task.id}
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    className="flex items-center gap-3"
+                  >
+                    <GlassTip label="Complete task" tone="emerald" side="left">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          completeTask(task);
+                        }}
+                        aria-label="Complete task"
+                        className="w-4 h-4 rounded-full border-2 border-muted-foreground/40 hover:border-accent hover:bg-accent/20 flex items-center justify-center shrink-0 transition-colors group/check"
+                      >
+                        <Check className="w-2.5 h-2.5 text-accent opacity-0 group-hover/check:opacity-100" />
+                      </button>
+                    </GlassTip>
+                    <span className="text-sm truncate">{task.name}</span>
+                    <span className={`ml-auto text-[10px] font-semibold shrink-0 ${PRIORITY_CLASS[task.priority]}`}>
+                      {label}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {remaining > 0 && (
+              <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors mt-3">
+                +{remaining} more {showingUpcoming ? "upcoming " : ""}task{remaining !== 1 ? "s" : ""} →
+              </p>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

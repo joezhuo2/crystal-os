@@ -5,6 +5,22 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.7.6] - 2026-10-02
+
+### Added
+
+- **The Engine gets the Horizon's look.** A red black hole sits behind the Engine page, blurred at 15% like the Horizon's, and the Engine box on Home wears it at 25% (`src/assets/engine-backdrop.webp`). The page takes an ember palette from the image: orange buttons, rings and focus outlines, gold check marks, dark ember glass panels at the same opacity as the Horizon's, a tinted sidebar with a glowing active pill and a fire gradient logo. Dropdowns and pickers opened from the Engine follow it through an `engine-theme` class on `<body>`.
+
+### Fixed
+
+- **Switching the Engine between List and Board flickered.** Every row of the new view mounted transparent and faded in, blanking the page for a moment, and the scrollbar appearing or vanishing shifted it sideways. Rows already present when a view mounts now skip the fade (`AnimatePresence initial={false}`), and the Engine keeps a stable scrollbar gutter. New tasks still fade in.
+
+### Changed
+
+- The Horizon-only backdrop code is now shared: `src/lib/imageBackdrop.ts` (`useImageBackdrop(image, amount)`, `PAGE_BACKDROP_BLUR`, `CARD_BACKDROP_BLUR`) and `src/components/layout/ImageBackdrop.tsx` replace `horizonBackdrop.ts` and `HorizonBackdrop.tsx`. The CSS classes `horizon-image` and `home-horizon-scene`/`-image` are now `image-backdrop-image` and `home-backdrop-scene`/`-image`.
+- **The search bar is on Home only.** Every other tab drops it and gets the space back. `Alt+Shift+Space` (desktop) and Ctrl/Cmd+K now switch to Home from any tab and focus the bar; Ctrl+K is still left to the shell inside the Terminal. The shortcuts moved from `CommandPalette` to `Index.tsx`, which keeps the desktop hotkey's failed-to-register toast mounted on every tab. The Horizon's week and day hour grids grow by the bar's height.
+- The Pomodoro ring and the category manager's overlay read the page's palette instead of fixed indigo and navy, so they follow the Engine's colours. Other pages look the same.
+
 ## [v0.7.5] - 2026-10-01
 
 ### Upgrade note

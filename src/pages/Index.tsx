@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import { useAuth } from "@/contexts/AuthContext";
 import LoginPage from "@/components/auth/LoginPage";
@@ -14,7 +14,7 @@ import PortalBackdrop from "@/components/layout/PortalBackdrop";
 import NebulaBackdrop from "@/components/layout/NebulaBackdrop";
 import ObsidianBackdrop from "@/components/layout/ObsidianBackdrop";
 import AtmosphereBackdrop from "@/components/layout/AtmosphereBackdrop";
-import HorizonBackdrop from "@/components/layout/HorizonBackdrop";
+import ImageBackdrop from "@/components/layout/ImageBackdrop";
 import { useHarness } from "@/hooks/useHarness";
 import { usePortal } from "@/hooks/usePortal";
 import { isDesktop } from "@/lib/platform";
@@ -22,7 +22,8 @@ import { hidePortal } from "@/lib/portalNative";
 import { PORTAL_THEME_CLASS } from "@/lib/portalStore";
 import QuickAddDialog from "@/components/QuickAddDialog";
 import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
-import { useHomeHotkey } from "@/hooks/useGlobalHotkey";
+import { useHomeHotkey, usePaletteHotkey } from "@/hooks/useGlobalHotkey";
+import { inTerminal, isPaletteShortcut } from "@/lib/hotkey";
 import { useVaultLiveUpdates } from "@/hooks/useVault";
 import { useAppActivity } from "@/lib/appActivity";
 import { LazyTaskForm, LazyTransactionDrawer, lazyViews, preloadViews, type ViewProps } from "@/lib/viewLoader";
@@ -36,8 +37,6 @@ const views: Record<TabId, React.ComponentType<ViewProps>> = {
   terminal: TerminalPage,
 };
 
-/** Tabs without the global search bar. */
-const PALETTE_HIDDEN: ReadonlySet<TabId> = new Set(["terminal", "portal", "nebula", "archive"]);
 
 /** Shown for the moment a view's chunk is still loading. */
 function ViewFallback() {
@@ -79,14 +78,41 @@ const Index = () => {
   const View = views[activeTab];
   useHomeHotkey(() => setActiveTab("home"));
 
+  // The search bar lives on Home only. Its shortcuts work from every tab:
+  // they switch to Home, and the bar focuses itself once it is mounted.
+  const [paletteRequested, setPaletteRequested] = useState(false);
+  const openPalette = useCallback(() => {
+    setActiveTab("home");
+    setPaletteRequested(true);
+  }, []);
+  const clearPaletteRequest = useCallback(() => setPaletteRequested(false), []);
+
+  // Desktop global hotkey (Rust shows and focuses the window first). Also
+  // toasts hotkeys that failed to register, so it stays mounted on every tab.
+  usePaletteHotkey(openPalette);
+
+  // In-app Ctrl/Cmd+K. Skipped when something else already handled the key,
+  // such as the hotkey recorder, and inside the Terminal, whose keys belong
+  // to the shell.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || !isPaletteShortcut(e) || inTerminal(e)) return;
+      e.preventDefault();
+      openPalette();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [openPalette]);
+
   useEffect(() => {
     preloadViews();
   }, []);
 
   // Popups (dropdowns, pickers) portal to <body>, outside the page root, so
-  // the Horizon's palette goes on <body> too for them to pick it up.
+  // the Horizon's and the Engine's palettes go on <body> too for them to pick up.
   useEffect(() => {
     document.body.classList.toggle("horizon-theme", activeTab === "calendar");
+    document.body.classList.toggle("engine-theme", activeTab === "tasks");
   }, [activeTab]);
 
   // Hide the Portal's native webview as soon as another tab is picked. The
@@ -117,7 +143,9 @@ const Index = () => {
               ? "obsidian-root"
               : activeTab === "calendar"
                 ? "horizon-root"
-                : "mesh-gradient-bg";
+                : activeTab === "tasks"
+                  ? "engine-root"
+                  : "mesh-gradient-bg";
   // The Nebula page, sidebar, and backdrop read their colours from these.
   const rootStyle =
     activeTab === "nebula"
@@ -132,14 +160,18 @@ const Index = () => {
         {activeTab === "nebula" && <NebulaBackdrop theme={nebulaTheme} />}
         {activeTab === "weather" && <AtmosphereBackdrop />}
         {activeTab === "archive" && <ObsidianBackdrop />}
-        {activeTab === "calendar" && <HorizonBackdrop />}
+        {activeTab === "calendar" && <ImageBackdrop image="horizon" />}
+        {activeTab === "tasks" && <ImageBackdrop image="engine" />}
         <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
         <main className="flex-1 min-h-0 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
-          {/* Unmounted on the Terminal, Portal, Nebula, and Archive tabs: hides the
-              bar and drops its shortcuts, including the global palette hotkey's focus.
-              On the Portal it would open under the app webview. The Archive has its
-              own vault search. */}
-          {!PALETTE_HIDDEN.has(activeTab) && <CommandPalette onNavigate={setActiveTab} />}
+          {/* Home only. Its shortcuts are above, so they reach it from any tab. */}
+          {activeTab === "home" && (
+            <CommandPalette
+              onNavigate={setActiveTab}
+              focusRequested={paletteRequested}
+              onFocusRequested={clearPaletteRequest}
+            />
+          )}
           {/* Reduced motion (OS setting or performance mode) swaps views
               without the slide, so the next view is not held back 200 ms. */}
           <AnimatePresence mode="wait">

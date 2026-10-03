@@ -2,7 +2,6 @@
 - [v0.8.0] banking update - use plaid to connect to banks (store api keys and tokens in secure env variables)
 
 - performance on the archive page is still quite heavy
-- selecting mississauga/waterloo displays waterloo after closing the dropdown but displays mississauga in the home screen (weather section)
 
 ## Bugs
 
@@ -10,6 +9,9 @@
 
 ## To Test
 
+- [ ] v0.7.6 List/Board. Switch the Engine between List and Board a few times: no blank flash, no sideways jump.
+- [ ] v0.7.6 Search bar. Only Home shows it. From the Engine press Ctrl+K: Home opens with the bar focused. Hide the window, press Alt+Shift+Space from another app: same. In the Terminal, Ctrl+K still goes to the shell.
+- [ ] v0.7.6 Engine theme. Open the Engine: red black hole behind the page, ember glass panels, orange sidebar pill and buttons. Open a category or priority dropdown and a date picker: they are ember too. Switch to the Horizon and back: each keeps its own image and palette. The Engine box on Home shows the image behind it.
 - [ ] v0.7.5 Migration. Apply `supabase/migrations/0002_task_repeat_kinds.sql`, then add a task with each repeat kind and reload: each keeps its kind, and an old every-N-days task still repeats.
 - [ ] v0.7.5 After-completion repeat. Make a task "2 days after done", tick it off on Home: it moves to two days from today with a "Next due" toast instead of disappearing.
 
@@ -41,3 +43,35 @@
 - [ ] **Portal: per-app zoom and mute.** Remember a zoom level per app and a mute toggle for apps that play sounds.
 - [ ] **Nebula: cost and usage view.** Token totals are stored in `harness/state.json`; show them per project and per day, with an estimated cost per tier.
 - [ ] **Onboarding checklist.** First-run card listing what is not set up yet (vault folder, Google Calendar, NIM key, launch at login) with a button for each.
+
+## Before first release (v1.0.0)
+
+### Blockers
+- [ ] **Fix the open bugs above.** Daily Focus dead state, the Mississauga/Waterloo weather mismatch, and the heavy Archive page.
+- [ ] **Clear the To Test list.** Run every item above on a packaged build (`npm run build:desktop`), not just `npm run dev:desktop`.
+- [ ] **Apply all Supabase migrations to the production project.** `0001_auth_and_rls.sql` and `0002_task_repeat_kinds.sql`, then run `npm run verify:rls` against it.
+- [ ] **First-run setup without hand-editing files.** The packaged app reads Supabase, vault and Google credentials from `%APPDATA%\com.crystalos.desktop\.env.local`. A fresh install needs a setup screen (or the onboarding checklist idea above) that writes these, plus a clear error when they are missing.
+- [ ] **Publish a GitHub release.** The repo has no tags or releases yet, so Settings → Installer has nothing to download. Tag `v1.0.0`, attach the installer, and check the Installer section picks it up as the default.
+
+### Packaging and distribution
+- [ ] **Rename the npm package.** `package.json` is still `vite_react_shadcn_ts`; make it `crystal-os`.
+- [ ] **Code-sign the Windows installer.** Unsigned builds trigger SmartScreen "unknown publisher" warnings.
+- [ ] **Auto-update.** Add `tauri-plugin-updater` (signing key, update endpoint pointing at GitHub releases) or decide the Installer section is the update path.
+- [ ] **Bundle targets.** `targets: "all"` builds every format; pick the ones that ship (e.g. NSIS only) to cut build time and size.
+- [ ] **Clean-machine install test.** Install on a Windows machine (or VM) with no dev tools: WebView2 present, the `crystal-api` sidecar starts, tray, hotkeys and launch-at-login work, and uninstall leaves nothing behind except user data.
+- [ ] **App icons.** Confirm the icons in `src-tauri/icons` are final, not placeholders.
+
+### Integrations
+- [ ] **Google OAuth app out of testing mode.** In testing mode refresh tokens expire after 7 days, so The Horizon disconnects weekly. Publish the OAuth consent screen (or document the limit).
+- [ ] **Review the CSP.** `connect-src` lists the sidecar, Supabase and weather.gc.ca; confirm Nebula (NIM, OmniRoute) and Portal traffic still works in the packaged build with it.
+
+### Quality
+- [ ] **CI.** There is no `.github/workflows`. Add one that runs `npm run lint`, `npm test`, `tsc`, and `cargo check` on every PR, and builds the installer on tags.
+- [ ] **Run the E2E smoke test** (`npm run test:e2e`) against the release build with the dedicated test user.
+- [ ] **Dependency audit.** `npm audit` and `cargo audit`; drop unused shadcn/Radix packages from the template.
+
+### Docs
+- [ ] **README install section** for end users (download, first-run setup, where settings and logs live), separate from the developer setup.
+- [ ] **Refresh badges and version.** Run `npm run badges` (the tests badge says 479; the suite is now 482) and bump `package.json`, `Cargo.toml` and `tauri.conf.json` to 1.0.0 together.
+- [ ] **CHANGELOG 1.0.0 entry** summarising what ships.
+- [ ] **Privacy note.** What is stored where: Supabase (tasks, transactions), local disk (vault, `.env.local`, Portal sessions, `diagnostics.log`), and what Nebula sends to model providers.

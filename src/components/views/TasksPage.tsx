@@ -137,7 +137,7 @@ function KanbanBoard({ tasks }: { tasks: Task[] }) {
             <span className="text-[10px] text-muted-foreground/60 ml-auto">{col.tasks.length}</span>
           </div>
           <div className="space-y-2">
-            <AnimatePresence>
+            <AnimatePresence initial={false}>
               {col.tasks.map((task) => (
                 <TaskItem key={task.id} task={task} draggable={col.id !== "__done__"} />
               ))}
@@ -376,6 +376,9 @@ export default function TasksPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4">
         <div className="space-y-4">
+          {/* Rows already there when a view mounts skip their fade-in (initial={false}
+              on each AnimatePresence), so switching List/Board swaps in place instead
+              of blanking every row to transparent. New tasks still fade in. */}
           {view === "list" ? (
             <div className="space-y-4">
               {overdueTasks.length > 0 && (
@@ -396,13 +399,13 @@ export default function TasksPage() {
                       </button>
                     )}
                   </div>
-                  <AnimatePresence>
+                  <AnimatePresence initial={false}>
                     {overdueTasks.map((task) => <TaskItem key={task.id} task={task} overdue />)}
                   </AnimatePresence>
                 </section>
               )}
               <div className="space-y-2">
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   {otherTasks.map((task) => <TaskItem key={task.id} task={task} />)}
                 </AnimatePresence>
               </div>

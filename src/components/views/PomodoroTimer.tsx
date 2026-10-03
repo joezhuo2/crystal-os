@@ -20,7 +20,7 @@ export default function PomodoroTimer() {
 
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  const strokeColor = isBreak ? "hsl(160 84% 39%)" : "hsl(239 84% 67%)";
+  const strokeColor = isBreak ? "hsl(160 84% 39%)" : "hsl(var(--primary))";
 
   const handleTimeClick = () => {
     if (running) return;
@@ -56,7 +56,7 @@ export default function PomodoroTimer() {
       </p>
       <div className="relative w-48 h-48">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
-          <circle cx="100" cy="100" r={radius} fill="none" stroke="hsl(217 33% 20%)" strokeWidth="6" />
+          <circle cx="100" cy="100" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
           <circle
             cx="100" cy="100" r={radius} fill="none"
             stroke={strokeColor} strokeWidth="6" strokeLinecap="round"

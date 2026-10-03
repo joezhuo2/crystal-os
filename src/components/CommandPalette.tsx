@@ -28,20 +28,17 @@ import {
   Orbit,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { usePaletteHotkey } from "@/hooks/useGlobalHotkey";
-import { isPaletteShortcut, paletteShortcutLabel } from "@/lib/hotkey";
+import { inTerminal, paletteShortcutLabel } from "@/lib/hotkey";
 import { isDesktop } from "@/lib/platform";
-
-/** Keys typed into the Terminal tab belong to the shell. */
-function inTerminal(e: KeyboardEvent) {
-  return e.target instanceof Element && e.target.closest(".xterm") !== null;
-}
 
 interface CommandPaletteProps {
   onNavigate: (tab: TabId) => void;
+  /** True when a shortcut asked for the bar; it is focused, then onFocusRequested clears it. */
+  focusRequested: boolean;
+  onFocusRequested: () => void;
 }
 
-export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
+export default function CommandPalette({ onNavigate, focusRequested, onFocusRequested }: CommandPaletteProps) {
   const [focused, setFocused] = useState(false);
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -87,21 +84,14 @@ export default function CommandPalette({ onNavigate }: CommandPaletteProps) {
     setFocused(true);
   }, []);
 
-  // Desktop global hotkey: Rust shows and focuses the window first; the
-  // webview may not have focus back until the next frame.
-  usePaletteHotkey(() => requestAnimationFrame(focusBar));
-
-  // In-app Ctrl/Cmd+K. Skipped when something else already handled the key,
-  // such as the hotkey recorder.
+  // The shortcuts live in Index.tsx, which switches to Home (the only tab with
+  // the bar) and then asks here. Focus waits a frame: after the desktop hotkey,
+  // Rust shows the window and the webview may not have focus back yet.
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || !isPaletteShortcut(e) || inTerminal(e)) return;
-      e.preventDefault();
-      focusBar();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [focusBar]);
+    if (!focusRequested) return;
+    onFocusRequested();
+    requestAnimationFrame(focusBar);
+  }, [focusRequested, onFocusRequested, focusBar]);
 
   // ---------- Natural-language parsing ----------
   const addPrefix = search.toLowerCase().startsWith("add ");

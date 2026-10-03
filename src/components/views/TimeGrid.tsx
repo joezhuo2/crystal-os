@@ -137,7 +137,7 @@ export default function TimeGrid({
       )}
 
       {/* Hour grid */}
-      <div ref={scrollRef} className="overflow-y-auto scrollbar-thin h-[60vh] lg:h-[calc(100vh-17rem)] min-h-[320px]">
+      <div ref={scrollRef} className="overflow-y-auto scrollbar-thin h-[60vh] lg:h-[calc(100vh-12.5rem)] min-h-[320px]">
         <div className="grid relative" style={{ gridTemplateColumns: columns, height: 24 * HOUR_PX }}>
           {/* Hour labels */}
           <div className="relative">
