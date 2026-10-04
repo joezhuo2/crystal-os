@@ -61,6 +61,8 @@ fn main() {
     "installer_build",
     "installer_cancel_build",
     "installer_reveal",
+    "update_check",
+    "update_install",
   ]);
   tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))
     .expect("failed to run tauri-build");

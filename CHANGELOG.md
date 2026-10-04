@@ -5,6 +5,23 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.2] - 2026-10-04
+
+### Upgrade note
+
+This is the last version that has to be installed by hand. From here, **Settings → Install & update → Check for updates** installs newer releases in place, once a release has been published with `npm run build:release` (see the README's "Publishing a release"). The updater's private key is kept outside the repo; back it up, because without it installed copies cannot update in place.
+
+### Added
+
+- **Check for updates.** A new first block in Settings → Install & update. It reads `latest.json` from the newest GitHub release through `tauri-plugin-updater`; when that is newer than the running build, **Update to vX** downloads the installer with a progress bar, verifies its minisign signature against the public key in `tauri.conf.json`, and runs it in passive mode, which reopens the app when done. Before the installer starts, the sidecar, shells and agents are stopped so none of them holds a file it replaces (`stop_children` in `lib.rs`, shared with a normal quit). The webview has no updater permission of its own: it calls two app commands, `update_check` and `update_install`, and install only runs the update the last check found (`src-tauri/src/updater.rs`).
+- **`npm run build:release`.** `build:desktop` plus `createUpdaterArtifacts` (`src-tauri/tauri.release.conf.json`), which signs the installer with `TAURI_SIGNING_PRIVATE_KEY`, then `scripts/updater-manifest.mjs` writes `latest.json` next to it. The notes come from the version's CHANGELOG section, and the URL uses the dotted asset name GitHub serves (`Crystal.OS_0.8.2_x64-setup.exe`).
+- **Optional Windows code signing.** Every bundled binary goes through `scripts/sign-windows.mjs` (`bundle.windows.signCommand`). It signs with `signtool` when `CRYSTAL_SIGN_THUMBPRINT` (a certificate in the Windows store) or `CRYSTAL_SIGN_PFX` is set, timestamped, and otherwise leaves the build unsigned and says so. `CRYSTAL_SIGN_REQUIRED=1` turns the skip into a failure.
+
+### Changed
+
+- **NSIS is the only bundle target.** `targets: "all"` also built an MSI that nothing used; the Installer section already preferred the `.exe`. Builds are faster and leave one installer.
+- **The npm package is named `crystal-os`** instead of the template's `vite_react_shadcn_ts`.
+
 ## [v0.8.1] - 2026-10-03
 
 ### Added

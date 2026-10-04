@@ -1,5 +1,8 @@
 {
   "bundle": {
-    "externalBin": ["binaries/crystal-api"]
+    "externalBin": ["binaries/crystal-api"],
+    "windows": {
+      "signCommand": { "cmd": "node", "args": ["../scripts/sign-windows.mjs", "%1"] }
+    }
   }
 }

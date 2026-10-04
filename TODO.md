@@ -1,17 +1,13 @@
 # Planned Features
-- [v0.10.0] banking update - use plaid to connect to banks (store api keys and tokens in secure env variables)
+- [v0.9.0] banking update - use plaid to connect to banks (store api keys and tokens in secure env variables)
 
 - performance on the archive page is still heavy
 
-## Bugs
-
-
 ## To Test
 
-- [ ] v0.8.1 Orbit this week so far. Tick a task, then open The Orbit from the Home card (no review-ready chip showing): it opens on this week with "so far" in the header and counts the task. The arrows step back to the latest finished review; **Latest** returns to it.
-- [ ] v0.8.1 Orbit Today card. With no daily note for today, save a focus and mood: `Daily/YYYY-MM-DD.md` (or the folder your existing daily notes use) is created with the `daily` tag. Add text to the note in Obsidian, change the mood in the app, and save: only the block between the `crystal-os:today` comments changes. Edit the note in Obsidian while the card has unsaved changes, then save: a "changed in Obsidian" toast, and the next save merges.
-- [ ] v0.8.1 Home "Daily review" button. Hover it: the ice-to-mauve glass tip reads "Log today's orbit". Click it: The Orbit opens with the cursor in the Today card's focus field.
-- [ ] v0.8.0 Orbit history. Tick a task, untick it, tick it again, and finish (or reset after a minute) a Pomodoro focus run: the Home card's teaser counts one completion and the focus minutes.
+- [ ] v0.8.2 Check for updates. Publish a test release with `npm run build:release` (installer + `latest.json`, not a pre-release) at a version above the installed one. In Settings → Install & update, **Check for updates** offers it; **Update to vX** shows progress, closes the app, runs the installer and reopens on the new version. Task Manager shows no leftover `crystal-api` from the old one. With no newer release it says "You have the latest release".
+- [ ] v0.8.2 Unsigned build. `npm run build:desktop` with no `CRYSTAL_SIGN_*` set prints "leaving … unsigned" for each binary and still produces only `bundle/nsis/Crystal OS_0.8.2_x64-setup.exe`.
+
 - [ ] v0.7.5 After-completion repeat. Make a task "2 days after done", tick it off on Home: it moves to two days from today with a "Next due" toast instead of disappearing.
 - [ ] v0.7.2 Categories. Sign in with the network off (or let the session expire), then reconnect and reload: the Engine's categories stay one of each.
 - [ ] v0.7.1 Repeat off. Edit a repeating task, set **Repeat every** to 0, save, and reload the app: the task no longer repeats.
@@ -32,7 +28,7 @@
 - [ ] **Archive: backlinks and graph.** Show "Linked from" under each note (wikilinks are already parsed) and, later, a small local link graph.
 - [ ] **Archive: recent and pinned notes.** A short "recently opened" list and pinned notes at the top of the rail.
 - [ ] **Atmosphere: hourly forecast and alerts.** A 24-hour strip (temperature, precipitation chance) and Environment Canada weather warnings shown as a banner, also on the Home weather box.
-- [ ] **Atmosphere: cities outside Ontario.** Now that v0.7.4 has a searchable picker, consider all Environment Canada sites, and a "use my location" option.
+- [ ] **Atmosphere: use my location.** add a "use my location" option to weather city selection.
 - [ ] **Portal: notification passthrough.** Turn unread badge increases into native notifications (per-app toggle).
 - [ ] **Portal: per-app zoom and mute.** Remember a zoom level per app and a mute toggle for apps that play sounds.
 - [ ] **Nebula: cost and usage view.** Token totals are stored in `harness/state.json`; show them per project and per day, with an estimated cost per tier.
@@ -41,31 +37,26 @@
 ## Before first release (v1.0.0)
 
 ### Blockers
-- [ ] **Fix the open bugs above.** The Mississauga/Waterloo weather mismatch, and the heavy Archive page.
-- [ ] **Clear the To Test list.** Run every item above on a packaged build (`npm run build:desktop`), not just `npm run dev:desktop`.
-- [ ] **Apply all Supabase migrations to the production project.** `0001_auth_and_rls.sql` and `0002_task_repeat_kinds.sql`, then run `npm run verify:rls` against it.
+- [ ] **Fix the open bugs above.** The heavy Archive page.
 - [ ] **First-run setup without hand-editing files.** The packaged app reads Supabase, vault and Google credentials from `%APPDATA%\com.crystalos.desktop\.env.local`. A fresh install needs a setup screen (or the onboarding checklist idea above) that writes these, plus a clear error when they are missing.
-- [ ] **Publish a GitHub release.** The repo has no tags or releases yet, so Settings → Installer has nothing to download. Tag `v1.0.0`, attach the installer, and check the Installer section picks it up as the default.
+- [ ] **Publish a GitHub release.** The repo has no tags or releases yet, so Settings → Installer has nothing to download or update to. Build with `npm run build:release`, tag `v1.0.0`, attach the installer and `latest.json`, and check the Installer section picks it up as the default.
 
 ### Packaging and distribution
-- [ ] **Rename the npm package.** `package.json` is still `vite_react_shadcn_ts`; make it `crystal-os`.
-- [ ] **Code-sign the Windows installer.** Unsigned builds trigger SmartScreen "unknown publisher" warnings.
-- [ ] **Auto-update.** Add `tauri-plugin-updater` (signing key, update endpoint pointing at GitHub releases) or decide the Installer section is the update path.
-- [ ] **Bundle targets.** `targets: "all"` builds every format; pick the ones that ship (e.g. NSIS only) to cut build time and size.
+- [ ] **Code-signing certificate.** v0.8.2 wired `scripts/sign-windows.mjs` into the build; it skips while no certificate is set, so SmartScreen still says "unknown publisher". Get an OV certificate or Azure Trusted Signing account, set `CRYSTAL_SIGN_THUMBPRINT` (or `CRYSTAL_SIGN_PFX`), and add `CRYSTAL_SIGN_REQUIRED=1` for release builds.
+- [ ] **Back up the updater key.** `%USERPROFILE%\.tauri\crystal-os.key` signs every release `latest.json` points at. Without it, installed copies cannot update in place.
 - [ ] **Clean-machine install test.** Install on a Windows machine (or VM) with no dev tools: WebView2 present, the `crystal-api` sidecar starts, tray, hotkeys and launch-at-login work, and uninstall leaves nothing behind except user data.
-- [ ] **App icons.** Confirm the icons in `src-tauri/icons` are final, not placeholders.
 
 ### Integrations
 - [ ] **Google OAuth app out of testing mode.** In testing mode refresh tokens expire after 7 days, so The Horizon disconnects weekly. Publish the OAuth consent screen (or document the limit).
 - [ ] **Review the CSP.** `connect-src` lists the sidecar, Supabase and weather.gc.ca; confirm Nebula (NIM, OmniRoute) and Portal traffic still works in the packaged build with it.
 
 ### Quality
-- [ ] **CI.** There is no `.github/workflows`. Add one that runs `npm run lint`, `npm test`, `tsc`, and `cargo check` on every PR, and builds the installer on tags.
+- [ ] **CI.** There is no `.github/workflows`. Add one that runs `npm run lint`, `npm test`, `tsc`, and `cargo check` on every PR, and builds the installer on tags (`build:release`, with `TAURI_SIGNING_PRIVATE_KEY` as a secret).
 - [ ] **Run the E2E smoke test** (`npm run test:e2e`) against the release build with the dedicated test user.
 - [ ] **Dependency audit.** `npm audit` and `cargo audit`; drop unused shadcn/Radix packages from the template.
 
 ### Docs
 - [ ] **README install section** for end users (download, first-run setup, where settings and logs live), separate from the developer setup.
 - [ ] **Refresh badges and version.** Run `npm run badges` (the tests badge says 479; the suite is now 482) and bump `package.json`, `Cargo.toml` and `tauri.conf.json` to 1.0.0 together.
-- [ ] **CHANGELOG 1.0.0 entry** summarising what ships.
 - [ ] **Privacy note.** What is stored where: Supabase (tasks, transactions), local disk (vault, `.env.local`, Portal sessions, `diagnostics.log`), and what Nebula sends to model providers.
+- [ ] **CHANGELOG 1.0.0 entry** summarising what ships.

@@ -1,7 +1,7 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "crystal-os",
   "private": true,
-  "version": "0.8.1",
+  "version": "0.8.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,7 +18,8 @@
     "dev:desktop": "tauri dev",
     "build:sidecar": "node scripts/build-sidecar.mjs",
     "prune:bundles": "node scripts/prune-bundles.mjs",
-    "build:desktop": "npm run prune:bundles && npm run build:sidecar && tauri build --config src-tauri/tauri.bundle.conf.json"
+    "build:desktop": "npm run prune:bundles && npm run build:sidecar && tauri build --config src-tauri/tauri.bundle.conf.json",
+    "build:release": "npm run prune:bundles && npm run build:sidecar && tauri build --config src-tauri/tauri.bundle.conf.json --config src-tauri/tauri.release.conf.json && node scripts/updater-manifest.mjs"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.2",

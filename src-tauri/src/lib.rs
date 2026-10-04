@@ -9,6 +9,7 @@ mod portal;
 mod settings;
 mod terminal;
 mod tray;
+mod updater;
 mod vault;
 mod window;
 
@@ -49,6 +50,17 @@ fn spawn_sidecar(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
   Ok(())
 }
 
+/// Stops the processes the app spawned: shells, agents and the sidecar. Runs
+/// on exit, and before an update's installer starts (src-tauri/src/updater.rs)
+/// so none of them holds a file the installer replaces.
+pub(crate) fn stop_children(app: &tauri::AppHandle) {
+  terminal::shutdown(app);
+  harness::shutdown(app);
+  if let Some(child) = app.state::<Sidecar>().0.lock().unwrap().take() {
+    let _ = child.kill();
+  }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   let app = tauri::Builder::default()
@@ -68,6 +80,7 @@ pub fn run() {
     .plugin(tauri_plugin_dialog::init())
     .plugin(hotkey::plugin())
     .plugin(autostart::plugin())
+    .plugin(tauri_plugin_updater::Builder::new().build())
     // Closing the window hides it to the tray so the hotkey stays live. Tray
     // Quit calls app.exit, which does not go through CloseRequested.
     .on_window_event(|window, event| {
@@ -89,6 +102,7 @@ pub fn run() {
     .manage(portal::PortalState::default())
     .manage(harness::HarnessState::default())
     .manage(installer::InstallerState::default())
+    .manage(updater::UpdaterState::default())
     .manage(diagnostics::DiagnosticsState::default())
     .invoke_handler(tauri::generate_handler![
       hotkey::get_global_shortcut,
@@ -150,6 +164,8 @@ pub fn run() {
       installer::installer_build,
       installer::installer_cancel_build,
       installer::installer_reveal,
+      updater::update_check,
+      updater::update_install,
     ])
     .setup(|_app| {
       hotkey::init(_app.handle());
@@ -180,11 +196,7 @@ pub fn run() {
 
   app.run(|app, event| {
     if let RunEvent::Exit = event {
-      terminal::shutdown(app);
-      harness::shutdown(app);
-      if let Some(child) = app.state::<Sidecar>().0.lock().unwrap().take() {
-        let _ = child.kill();
-      }
+      stop_children(app);
     }
   });
 }

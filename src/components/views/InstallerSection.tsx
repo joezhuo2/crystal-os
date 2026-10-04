@@ -1,13 +1,14 @@
 /**
- * Settings → Install & update: pick a published release and save its Windows
- * installer, or build one from a local checkout when a release has no asset or
- * has not been cut yet. The work runs in Rust; see src-tauri/src/installer.rs
- * for why none of it can happen in the webview.
+ * Settings → Install & update: update in place to the newest signed release,
+ * pick a published release and save its Windows installer, or build one from a
+ * local checkout when a release has no asset or has not been cut yet. The work
+ * runs in Rust; see src-tauri/src/installer.rs for why none of it can happen
+ * in the webview, and src-tauri/src/updater.rs for the in-place update.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { CircleStop, Download, FolderOpen, Hammer, RefreshCw } from "lucide-react";
+import { CircleArrowUp, CircleStop, Download, FolderOpen, Hammer, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,18 +16,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   buildInstaller,
   cancelBuild,
+  checkForUpdate,
   compareVersions,
   downloadInstaller,
   formatBytes,
   installerStatus,
+  installUpdate,
   listReleases,
   onBuildProgress,
   onDownloadProgress,
+  onUpdateProgress,
   pickSourceFolder,
   releaseStanding,
   revealFile,
   type InstallerStatus,
   type Release,
+  type UpdateInfo,
+  type UpdateProgress,
 } from "@/lib/installerNative";
 
 /** Build output kept in view. Older lines fall off the top. */
@@ -64,6 +70,11 @@ export default function InstallerSection() {
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState<{ received: number; total: number } | null>(null);
   const [downloaded, setDownloaded] = useState<string | null>(null);
+
+  /** Null until checked, "none" when up to date, else the update found. */
+  const [update, setUpdate] = useState<UpdateInfo | "none" | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [updating, setUpdating] = useState<UpdateProgress | null>(null);
 
   const [building, setBuilding] = useState(false);
   const [log, setLog] = useState<string[]>([]);
@@ -127,6 +138,8 @@ export default function InstallerSection() {
     [],
   );
 
+  useEffect(() => onUpdateProgress(setUpdating), []);
+
   useEffect(() => {
     if (log.length) logEnd.current?.scrollIntoView({ block: "end" });
   }, [log]);
@@ -146,6 +159,29 @@ export default function InstallerSection() {
     } finally {
       setDownloading(false);
       setProgress(null);
+    }
+  };
+
+  const checkUpdate = async () => {
+    setChecking(true);
+    try {
+      setUpdate((await checkForUpdate()) ?? "none");
+    } catch (err) {
+      setUpdate(null);
+      toast.error("Could not check for updates", { description: errorText(err) });
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const startUpdate = async () => {
+    setUpdating({ received: 0, total: 0, installing: false });
+    try {
+      // Success never returns: the app exits as the installer starts.
+      await installUpdate();
+    } catch (err) {
+      toast.error("Update failed", { description: errorText(err) });
+      setUpdating(null);
     }
   };
 
@@ -191,6 +227,8 @@ export default function InstallerSection() {
   };
 
   const percent = progress && progress.total > 0 ? Math.min(100, Math.round((progress.received / progress.total) * 100)) : null;
+  const updatePercent =
+    updating && updating.total > 0 ? Math.min(100, Math.round((updating.received / updating.total) * 100)) : null;
 
   return (
     <div className="space-y-5">
@@ -205,6 +243,57 @@ export default function InstallerSection() {
           <RefreshCw className="mr-2 h-3.5 w-3.5" />
           Refresh
         </Button>
+      </div>
+
+      {/* ---------- Update in place ---------- */}
+      <div className="space-y-3 border-t border-white/[0.06] pt-4">
+        <div className="space-y-0.5">
+          <p className="text-sm font-medium">Check for updates</p>
+          <p className="text-xs text-muted-foreground">
+            Downloads the newest release, checks its signature, and installs it. Crystal OS closes while the installer runs and opens again
+            when it is done.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => void checkUpdate()} disabled={checking || updating !== null}>
+            <RefreshCw className={`mr-2 h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
+            {checking ? "Checking…" : "Check for updates"}
+          </Button>
+          {update && update !== "none" && (
+            <Button size="sm" onClick={() => void startUpdate()} disabled={updating !== null}>
+              <CircleArrowUp className="mr-2 h-3.5 w-3.5" />
+              {updating ? "Updating…" : `Update to v${update.version}`}
+            </Button>
+          )}
+        </div>
+
+        {update === "none" && <p className="text-xs text-muted-foreground">You have the latest release.</p>}
+        {update && update !== "none" && !updating && (
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              v{update.version} is available (you have v{update.currentVersion}).
+            </p>
+            {update.notes && (
+              <p className="line-clamp-4 whitespace-pre-wrap text-xs text-muted-foreground/80 [overflow-wrap:anywhere]">{update.notes}</p>
+            )}
+          </div>
+        )}
+
+        {updating && (
+          <div className="space-y-1">
+            <Progress value={updating.installing ? 100 : (updatePercent ?? undefined)} className="h-1.5" />
+            <p className="text-xs text-muted-foreground">
+              {updating.installing
+                ? "Starting the installer…"
+                : updating.total > 0
+                  ? `${formatBytes(updating.received)} of ${formatBytes(updating.total)} · ${updatePercent}%`
+                  : updating.received > 0
+                    ? `${formatBytes(updating.received)} downloaded`
+                    : "Downloading…"}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ---------- Download a published release ---------- */}

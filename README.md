@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-505%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.8.1-6366F1)
+![Tests](https://img.shields.io/badge/tests-517%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.8.2-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.7.7** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.8.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -175,7 +175,7 @@ src/
 │   │   ├── TerminalPage.tsx    # Up to 5 PowerShell terminals in tabs, up to 4 split on screen (xterm.js, desktop only)
 │   │   ├── PortalPage.tsx      # The Portal: places the active app's webview over its frame
 │   │   ├── SettingsPage.tsx    # Hotkeys, launch at login, vault folder, Portal theme, Atmosphere effects and image, Install & update
-│   │   ├── InstallerSection.tsx # Release picker, installer download, build-from-source log
+│   │   ├── InstallerSection.tsx # Check for updates, release picker, installer download, build-from-source log
 │   │   ├── PomodoroTimer.tsx   # Focus timer component
 │   │   └── CategoryManager.tsx # Category CRUD for tasks/finances
 │   ├── CommandPalette.tsx      # Search, NL commands, vault note results
@@ -204,7 +204,7 @@ src/
 │   ├── portalApps.ts           # Portal presets, URL/id validation, badge parsing
 │   ├── portalStore.ts          # Module-level Portal store: apps, active app, badges, theme
 │   ├── portalNative.ts         # Desktop Portal bridge (portal_* commands)
-│   ├── installerNative.ts      # Desktop installer bridge (installer_* commands, version helpers)
+│   ├── installerNative.ts      # Desktop installer bridge (installer_* and update_* commands, version helpers)
 │   ├── homeTasks.ts            # Home Engine ordering: priority ranks, upcoming tasks
 │   ├── homeLayout.ts           # Home grid order, hidden widgets and sizes, saved in localStorage
 │   ├── timeGrid.ts             # Week/day view dates and overlapping-event layout
@@ -240,7 +240,8 @@ src-tauri/
 │   ├── terminal.rs             # ConPTY PowerShell shells (up to 5)
 │   ├── portal.rs               # Portal child webviews: show/hide/fade, snapshots, per-app data, sign-out, background memory
 │   ├── portal/webview2.rs      # WebView2 page capture, tab-shortcut forwarding, memory level for Portal apps
-│   └── installer.rs            # GitHub releases, installer download, build:desktop from a checkout
+│   ├── installer.rs            # GitHub releases, installer download, build:desktop from a checkout
+│   └── updater.rs              # Check for updates and install in place (tauri-plugin-updater)
 ├── capabilities/
 │   └── default.json            # App command allowlist by name
 └── tauri.conf.json             # Window, tray, bundle config
@@ -404,6 +405,7 @@ npm run badges       # Refresh the README version and tests badges
 npm run dev:desktop   # Native window on the Vite dev server (needs Rust)
 npm run build:sidecar # Bundle server/ into src-tauri/binaries/crystal-api-<triple>.exe
 npm run build:desktop # Sidecar + web build + Windows installer
+npm run build:release # Same, plus the updater signature and latest.json for a GitHub release
 ```
 
 **Before a release**, run `npm run badges` and `npm run test:e2e`. The smoke test signs in, adds and deletes a task, logs and deletes a transaction, and opens every page, failing on any uncaught error or a page that renders nothing. It starts its own Vite server on port 8090 (`E2E_PORT` to change) and uses the Edge that ships with Windows (`E2E_CHANNEL=chrome` or an empty value for Playwright's Chromium). Point it at a test user created in the Supabase dashboard, not your own account; Row Level Security keeps its rows apart from yours.
@@ -433,7 +435,17 @@ This starts Vite on port 8080 and opens a native window on it. HMR works, and th
 npm run build:desktop
 ```
 
-This produces an installer in `src-tauri/target/release/bundle/`. The packaged app has no Vite server. Instead, Tauri launches `crystal-api`, a Node sidecar that serves the same `/api/obsidian` and `/api/calendar` routes on `127.0.0.1:8787` and exits with the app.
+This produces an NSIS installer (`Crystal OS_<version>_x64-setup.exe`) in `src-tauri/target/release/bundle/nsis/`. NSIS is the only bundle target; MSI is no longer built. The packaged app has no Vite server. Instead, Tauri launches `crystal-api`, a Node sidecar that serves the same `/api/obsidian` and `/api/calendar` routes on `127.0.0.1:8787` and exits with the app.
+
+**Code signing.** Every binary Tauri bundles (the app, the sidecar and the installer) goes through `scripts/sign-windows.mjs` (`bundle.windows.signCommand` in `src-tauri/tauri.bundle.conf.json`). With no certificate configured it leaves them unsigned and the build still succeeds; Windows SmartScreen then shows "unknown publisher". To sign, set `CRYSTAL_SIGN_THUMBPRINT` to the SHA-1 thumbprint of a code-signing certificate in the Windows certificate store, or `CRYSTAL_SIGN_PFX` and `CRYSTAL_SIGN_PFX_PASSWORD` for a `.pfx` file. `signtool.exe` comes from the Windows SDK (or `SIGNTOOL`), timestamps from DigiCert (or `CRYSTAL_SIGN_TIMESTAMP_URL`). `CRYSTAL_SIGN_REQUIRED=1` makes an unconfigured build fail instead.
+
+**Publishing a release.** The in-app updater reads `latest.json` from the newest GitHub release and installs only an installer signed with the updater key, whose public half is `plugins.updater.pubkey` in `tauri.conf.json`. The private key is not in the repo.
+
+1. Set `TAURI_SIGNING_PRIVATE_KEY` to the private key file's path or contents (and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if it has one).
+2. Run `npm run build:release`. Next to the installer it writes `<installer>.sig` and `latest.json`, with the notes taken from this version's `CHANGELOG.md` section.
+3. Create a GitHub release tagged `v<version>` (not a pre-release, so `releases/latest` points at it) and attach the installer and `latest.json`.
+
+Losing the private key means installed copies can no longer update in place; they would need a manual install of a build signed with a new key.
 
 `VITE_SUPABASE_*` are baked in at build time. The sidecar reads its server-side settings from the app config directory:
 
@@ -444,6 +456,8 @@ This produces an installer in `src-tauri/target/release/bundle/`. The packaged a
 **Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: all three global hotkeys, **Launch at login**, the vault folder, The Portal's theme, and **Install & update**. Each section's header folds it open and closed with a short height animation; which sections are folded is saved in `localStorage` (`crystal-os-settings-collapsed`). Switches, sliders and the fold animation are marked `data-smooth` and keep their short transitions in performance mode, which otherwise makes transitions instant. The palette's **Open Settings** row goes there too. Click the Crystal OS mark at the top of the sidebar to return to **The Pulse** (home) from any page.
 
 **Install & update.** The last panel in Settings keeps Crystal OS current without leaving the app.
+
+- **Check for updates.** Asks the newest GitHub release for its `latest.json`. When it is newer than the running build, **Update to vX** downloads the installer, checks its signature against the updater public key, closes Crystal OS (stopping the sidecar, shells and agents first) and runs the installer in passive mode, which opens the app again when it finishes. An installer that fails the signature check is never run. Pre-releases are not offered here; download one below instead.
 
 - **Download an installer.** The panel lists every published release of `joezhuo2/crystal-os` and pre-selects the newest stable one that has a Windows installer attached. **Download** saves it to your Downloads folder with a progress bar, then offers **Show in folder**. Run the installer yourself when you are ready; Crystal OS never installs over itself.
 - **Choose a different version.** The dropdown holds every release, each labelled where it matters — `installed`, `newer`, `pre-release`, or `no installer`. Pick an older version to roll back, or a pre-release to try one early. A release with no Windows asset can be selected but not downloaded; build it from source instead.

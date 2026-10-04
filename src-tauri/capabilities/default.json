@@ -67,6 +67,8 @@
     "allow-installer-pick-source",
     "allow-installer-build",
     "allow-installer-cancel-build",
-    "allow-installer-reveal"
+    "allow-installer-reveal",
+    "allow-update-check",
+    "allow-update-install"
   ]
 }

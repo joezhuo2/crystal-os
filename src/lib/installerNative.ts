@@ -57,8 +57,26 @@ export interface BuildProgress {
   error: string | null;
 }
 
+/** Mirrors `UpdateInfo` in src-tauri/src/updater.rs. */
+export interface UpdateInfo {
+  version: string;
+  currentVersion: string;
+  /** Release notes from `latest.json`, or null when it has none. */
+  notes: string | null;
+}
+
+/** Mirrors `UpdateEvent` in src-tauri/src/updater.rs. */
+export interface UpdateProgress {
+  received: number;
+  /** 0 when the server sent no length. */
+  total: number;
+  /** True once the download is verified and the installer is starting. */
+  installing: boolean;
+}
+
 export const DOWNLOAD_EVENT = "installer://download";
 export const BUILD_EVENT = "installer://build";
+export const UPDATE_EVENT = "installer://update";
 
 let tauriCore: Promise<typeof import("@tauri-apps/api/core")> | undefined;
 
@@ -105,6 +123,19 @@ export function revealFile(path: string) {
   return invoke<void>("installer_reveal", { path });
 }
 
+/** Asks the latest release for a newer version. Null when up to date. */
+export function checkForUpdate() {
+  return invoke<UpdateInfo | null>("update_check");
+}
+
+/**
+ * Downloads, verifies and installs the update the last check found. The app
+ * exits as the installer starts, so this only ever settles with an error.
+ */
+export function installUpdate() {
+  return invoke<void>("update_install");
+}
+
 /**
  * Subscribes to one installer event. The unsubscribe is safe to call before
  * the listener has finished registering.
@@ -130,6 +161,10 @@ export function onDownloadProgress(cb: (progress: DownloadProgress) => void) {
 
 export function onBuildProgress(cb: (progress: BuildProgress) => void) {
   return subscribe<BuildProgress>(BUILD_EVENT, cb);
+}
+
+export function onUpdateProgress(cb: (progress: UpdateProgress) => void) {
+  return subscribe<UpdateProgress>(UPDATE_EVENT, cb);
 }
 
 /** `12.3 MB`, or an em dash when the size is unknown. */
