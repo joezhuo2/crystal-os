@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import React, { createContext, useContext, useCallback, useMemo, useEffect } from "react";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { pomodoro } from "@/lib/pomodoro";
 import { ORBIT_QUERY_KEY } from "@/lib/orbitReview";
@@ -13,6 +13,7 @@ import {
   type CategoryTable,
 } from "@/lib/seedCategories";
 import { ascNullsLast, loadInPages, mergePage } from "@/lib/pagedLoad";
+import { appUi } from "@/lib/appUi";
 
 export type Priority = "low" | "medium" | "high" | "urgent";
 export type TaskCategory = {
@@ -51,12 +52,12 @@ export type FinancialCategory = {
   color: string;
 };
 
-type AppState = {
-  tasks: Task[];
-  transactions: Transaction[];
-  taskCategories: TaskCategory[];
-  financialCategories: FinancialCategory[];
-  loading: boolean;
+/**
+ * Every write the app makes to tasks, transactions and categories. Each one is
+ * a stable callback, so the context value never changes after mount and
+ * reading it never re-renders a component.
+ */
+export type AppActions = {
   addTask: (task: Omit<Task, "id">) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
@@ -69,25 +70,6 @@ type AppState = {
   deleteTaskCategory: (id: string) => void;
   addFinancialCategory: (cat: Omit<FinancialCategory, "id">) => void;
   deleteFinancialCategory: (id: string) => void;
-  showTaskForm: boolean;
-  setShowTaskForm: (show: boolean) => void;
-  showTransactionForm: boolean;
-  setShowTransactionForm: (show: boolean) => void;
-  editingTask: Task | null;
-  setEditingTask: (task: Task | null) => void;
-  editingTransaction: Transaction | null;
-  setEditingTransaction: (tx: Transaction | null) => void;
-  /** Vault note the Archive page should open. UI-only, never persisted. */
-  selectedNotePath: string | null;
-  setSelectedNotePath: (path: string | null) => void;
-  showQuickAdd: boolean;
-  setShowQuickAdd: (show: boolean) => void;
-  /** Requests that the Horizon open its "New Event" form. UI-only, never persisted. */
-  showEventForm: boolean;
-  setShowEventForm: (show: boolean) => void;
-  /** Seeds the Quick Add dialog, e.g. with whatever was typed in the palette. */
-  quickAddDraft: string;
-  setQuickAddDraft: (text: string) => void;
 };
 
 const defaultTaskCategories: TaskCategory[] = [
@@ -106,7 +88,104 @@ const defaultFinancialCategories: FinancialCategory[] = [
   { id: "coffee", name: "Coffee", color: "hsl(30 60% 40%)" },
 ];
 
-const AppContext = createContext<AppState | null>(null);
+const AppActionsContext = createContext<AppActions | null>(null);
+
+// ── data lives in the React Query cache ──
+//
+// Nothing fetches these keys through React Query: AppProvider loads them and
+// every write updates them with setQueryData. Views read them with useQuery
+// and `select`, so a view re-renders only when the slice it selects changes
+// (structural sharing keeps an unchanged slice's reference), not on every
+// edit anywhere in the list.
+
+export const APP_DATA_KEYS = {
+  tasks: ["app", "tasks"],
+  transactions: ["app", "transactions"],
+  taskCategories: ["app", "taskCategories"],
+  financialCategories: ["app", "financialCategories"],
+  loading: ["app", "loading"],
+} as const;
+
+const EMPTY_TASKS: Task[] = [];
+const EMPTY_TRANSACTIONS: Transaction[] = [];
+
+function useAppData<T, S = T>(key: readonly string[], initial: T, select?: (data: T) => S): S {
+  const { data } = useQuery<T, Error, S>({
+    queryKey: key,
+    enabled: false,
+    initialData: initial,
+    select,
+  });
+  return data as S;
+}
+
+/** All tasks, or the slice `select` returns. Keep `select` cheap or memoise it. */
+export function useTasks(): Task[];
+export function useTasks<S>(select: (tasks: Task[]) => S): S;
+export function useTasks<S>(select?: (tasks: Task[]) => S) {
+  return useAppData(APP_DATA_KEYS.tasks, EMPTY_TASKS, select);
+}
+
+/** All transactions (newest first), or the slice `select` returns. */
+export function useTransactions(): Transaction[];
+export function useTransactions<S>(select: (transactions: Transaction[]) => S): S;
+export function useTransactions<S>(select?: (transactions: Transaction[]) => S) {
+  return useAppData(APP_DATA_KEYS.transactions, EMPTY_TRANSACTIONS, select);
+}
+
+export function useTaskCategories(): TaskCategory[] {
+  return useAppData(APP_DATA_KEYS.taskCategories, defaultTaskCategories);
+}
+
+export function useFinancialCategories(): FinancialCategory[] {
+  return useAppData(APP_DATA_KEYS.financialCategories, defaultFinancialCategories);
+}
+
+/** True until the first page of tasks and transactions and the categories are in. */
+export function useAppLoading(): boolean {
+  return useAppData(APP_DATA_KEYS.loading, true);
+}
+
+export function useAppActions(): AppActions {
+  const ctx = useContext(AppActionsContext);
+  if (!ctx) throw new Error("useAppActions must be used within AppProvider");
+  return ctx;
+}
+
+/**
+ * Holds every app key while AppProvider is mounted. The keys have no queryFn,
+ * so the cache must never drop them: a moment with no view reading tasks (or
+ * performance mode's one-minute gcTime) would otherwise empty the list.
+ * Tracks no result fields, so it never re-renders the provider.
+ */
+function useKeepAppData() {
+  const keep = { enabled: false, notifyOnChangeProps: [] };
+  useQuery({ queryKey: APP_DATA_KEYS.tasks, initialData: EMPTY_TASKS, ...keep });
+  useQuery({ queryKey: APP_DATA_KEYS.transactions, initialData: EMPTY_TRANSACTIONS, ...keep });
+  useQuery({ queryKey: APP_DATA_KEYS.taskCategories, initialData: defaultTaskCategories, ...keep });
+  useQuery({ queryKey: APP_DATA_KEYS.financialCategories, initialData: defaultFinancialCategories, ...keep });
+  useQuery({ queryKey: APP_DATA_KEYS.loading, initialData: true, ...keep });
+}
+
+/** setState-style writers over the cache keys. */
+function cacheSetters(client: QueryClient) {
+  const setter =
+    <T,>(key: readonly string[], empty: T) =>
+    (next: T | ((prev: T) => T)) =>
+      client.setQueryData<T>(key, (prev) =>
+        typeof next === "function" ? (next as (prev: T) => T)(prev ?? empty) : next,
+      );
+  return {
+    setTasks: setter<Task[]>(APP_DATA_KEYS.tasks, EMPTY_TASKS),
+    setTransactions: setter<Transaction[]>(APP_DATA_KEYS.transactions, EMPTY_TRANSACTIONS),
+    setTaskCategories: setter<TaskCategory[]>(APP_DATA_KEYS.taskCategories, defaultTaskCategories),
+    setFinancialCategories: setter<FinancialCategory[]>(
+      APP_DATA_KEYS.financialCategories,
+      defaultFinancialCategories,
+    ),
+    setLoading: setter<boolean>(APP_DATA_KEYS.loading, true),
+  };
+}
 
 // ── helpers to map between Supabase snake_case and app camelCase ──
 
@@ -251,19 +330,19 @@ async function resolveCategories<T extends TaskCategory | FinancialCategory>(
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [taskCategories, setTaskCategories] = useState<TaskCategory[]>(defaultTaskCategories);
-  const [financialCategories, setFinancialCategories] = useState<FinancialCategory[]>(defaultFinancialCategories);
-  const [loading, setLoading] = useState(true);
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [showTransactionForm, setShowTransactionForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [selectedNotePath, setSelectedNotePath] = useState<string | null>(null);
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [showEventForm, setShowEventForm] = useState(false);
-  const [quickAddDraft, setQuickAddDraft] = useState("");
+  useKeepAppData();
+  const { setTasks, setTransactions, setTaskCategories, setFinancialCategories, setLoading } =
+    useMemo(() => cacheSetters(queryClient), [queryClient]);
+
+  // Signing out must not hand the next session this one's data while it
+  // loads, or reopen the forms and dialogs it left open.
+  useEffect(
+    () => () => {
+      queryClient.removeQueries({ queryKey: ["app"] });
+      appUi.reset();
+    },
+    [queryClient],
+  );
 
   // ── Fetch all data when a user is present ──
   //
@@ -397,7 +476,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { data, error } = await supabase.from("tasks").insert(mapTaskToDb(task)).select().single();
     if (reportError("add the task", error) || !data) return;
     setTasks((prev) => [...prev, mapTaskFromDb(data)]);
-  }, []);
+  }, [setTasks]);
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
     const dbUpdates: Partial<TaskRow> = {};
@@ -424,7 +503,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Unticking takes back the tick's history row, so a misclick is not
     // counted as done in The Orbit.
     if (updates.completed === false) void forgetCompletion(id);
-  }, [forgetCompletion]);
+  }, [forgetCompletion, setTasks]);
 
   const completeTask = useCallback(
     (task: Task) => {
@@ -443,14 +522,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (reportError("delete the task", error)) return;
     setTasks((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  }, [setTasks]);
 
   // ── Transactions ──
   const addTransaction = useCallback(async (tx: Omit<Transaction, "id">) => {
     const { data, error } = await supabase.from("transactions").insert(mapTransactionToDb(tx)).select().single();
     if (reportError("add the transaction", error) || !data) return;
     setTransactions((prev) => [...prev, mapTransactionFromDb(data)]);
-  }, []);
+  }, [setTransactions]);
 
   const updateTransaction = useCallback(async (id: string, updates: Partial<Transaction>) => {
     const dbUpdates: Partial<TransactionRow> = {};
@@ -463,63 +542,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error } = await supabase.from("transactions").update(dbUpdates).eq("id", id);
     if (reportError("update the transaction", error)) return;
     setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
-  }, []);
+  }, [setTransactions]);
 
   const deleteTransaction = useCallback(async (id: string) => {
     const { error } = await supabase.from("transactions").delete().eq("id", id);
     if (reportError("delete the transaction", error)) return;
     setTransactions((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  }, [setTransactions]);
 
   // ── Task Categories ──
   const addTaskCategory = useCallback(async (cat: Omit<TaskCategory, "id">) => {
     const { data, error } = await supabase.from("task_categories").insert(mapCategoryToDb(cat)).select().single();
     if (reportError("add the category", error) || !data) return;
     setTaskCategories((prev) => [...prev, mapCategoryFromDb(data) as TaskCategory]);
-  }, []);
+  }, [setTaskCategories]);
 
   const deleteTaskCategory = useCallback(async (id: string) => {
     const { error } = await supabase.from("task_categories").delete().eq("id", id);
     if (reportError("delete the category", error)) return;
     setTaskCategories((prev) => prev.filter((c) => c.id !== id));
-  }, []);
+  }, [setTaskCategories]);
 
   // ── Financial Categories ──
   const addFinancialCategory = useCallback(async (cat: Omit<FinancialCategory, "id">) => {
     const { data, error } = await supabase.from("financial_categories").insert(mapCategoryToDb(cat)).select().single();
     if (reportError("add the category", error) || !data) return;
     setFinancialCategories((prev) => [...prev, mapCategoryFromDb(data) as FinancialCategory]);
-  }, []);
+  }, [setFinancialCategories]);
 
   const deleteFinancialCategory = useCallback(async (id: string) => {
     const { error } = await supabase.from("financial_categories").delete().eq("id", id);
     if (reportError("delete the category", error)) return;
     setFinancialCategories((prev) => prev.filter((c) => c.id !== id));
-  }, []);
+  }, [setFinancialCategories]);
 
-  const value = useMemo(
+  const actions = useMemo<AppActions>(
     () => ({
-      tasks, transactions, taskCategories, financialCategories, loading,
       addTask, updateTask, deleteTask, completeTask, addTransaction, updateTransaction, deleteTransaction,
       addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
-      showTaskForm, setShowTaskForm, showTransactionForm, setShowTransactionForm,
-      editingTask, setEditingTask, editingTransaction, setEditingTransaction,
-      selectedNotePath, setSelectedNotePath, showQuickAdd, setShowQuickAdd,
-      showEventForm, setShowEventForm,
-      quickAddDraft, setQuickAddDraft,
     }),
-    [tasks, transactions, taskCategories, financialCategories, loading,
-     addTask, updateTask, deleteTask, completeTask, addTransaction, updateTransaction, deleteTransaction,
-     addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
-     showTaskForm, showTransactionForm, editingTask, editingTransaction,
-     selectedNotePath, showQuickAdd, showEventForm, quickAddDraft]
+    [addTask, updateTask, deleteTask, completeTask, addTransaction, updateTransaction, deleteTransaction,
+     addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory]
   );
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
-};
-
-export const useApp = () => {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error("useApp must be used within AppProvider");
-  return ctx;
+  return <AppActionsContext.Provider value={actions}>{children}</AppActionsContext.Provider>;
 };

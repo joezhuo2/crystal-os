@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-526%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.8.7-6366F1)
+![Tests](https://img.shields.io/badge/tests-531%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.8.8-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.8.7** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.8.8** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -44,7 +44,7 @@ Current release: **v0.8.7** — see [CHANGELOG.md](CHANGELOG.md) for release his
 |----------|--------------|
 | **Frontend** | React 18, TypeScript, Vite |
 | **UI** | shadcn/ui (Radix UI), Tailwind CSS, Lucide Icons |
-| **State** | React Context + TanStack Query (React Query v5) |
+| **State** | TanStack Query (React Query v5) cache for app data, `useSyncExternalStore` stores for UI and settings |
 | **Backend** | Supabase (PostgreSQL, Auth, Realtime) |
 | **Vault** | Vite middleware plugin + `fast-glob` + `gray-matter` (Node-only, server side) |
 | **Calendar** | Vite middleware plugin + `google-auth-library` OAuth2 and the Calendar v3 REST API (Node-only, server side) |
@@ -217,7 +217,7 @@ src/
 │   ├── QuickAddDialog.tsx      # Append a capture to a vault note
 │   └── NavLink.tsx
 ├── contexts/
-│   └── AppContext.tsx          # Global state (tasks, transactions, categories, vault + event-form UI)
+│   └── AppContext.tsx          # Tasks, transactions, categories: loaded into the React Query cache, read with useTasks/useTransactions(select), written via useAppActions
 ├── hooks/
 │   ├── useVault.ts             # React Query bindings: /api/obsidian/* on web, Rust on desktop
 │   ├── useGoogleCalendar.ts    # React Query bindings for /api/calendar/*
@@ -232,6 +232,7 @@ src/
 │   └── use-mobile.tsx          # Responsive breakpoint hook
 ├── lib/
 │   ├── supabase.ts             # Supabase client + helpers
+│   ├── appUi.ts                # Transient UI store: open forms, Quick Add draft, selected note (useAppUi(selector))
 │   ├── vaultCore.ts            # Shared vault logic: parsing, search index, tags, quick-add formatting
 │   ├── wikilinks.ts            # Archive reader: wikilink targets mapped once per listing
 │   ├── vaultNative.ts          # Desktop vault client for src-tauri/src/vault.rs

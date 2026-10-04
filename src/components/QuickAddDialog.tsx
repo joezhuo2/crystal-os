@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useApp } from "@/contexts/AppContext";
+import { appUi, useAppUi } from "@/lib/appUi";
 import { useQuickAdd, useVaultNotes } from "@/hooks/useVault";
 import { usePortalOcclusion } from "@/hooks/usePortal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -32,7 +32,8 @@ function normalizeTag(raw: string): string {
  * Archive page, mounted once from GlobalOverlays and driven by showQuickAdd.
  */
 export default function QuickAddDialog() {
-  const { showQuickAdd, setShowQuickAdd, quickAddDraft, setQuickAddDraft } = useApp();
+  const showQuickAdd = useAppUi((s) => s.showQuickAdd);
+  const { setShowQuickAdd, setQuickAddDraft } = appUi;
   const [text, setText] = useState("");
   const [notePath, setNotePath] = useState("");
   const [showPathField, setShowPathField] = useState(false);
@@ -49,7 +50,9 @@ export default function QuickAddDialog() {
   // Seed from whatever was typed in the palette each time the dialog opens.
   useEffect(() => {
     if (showQuickAdd) {
-      setText(quickAddDraft);
+      // Read once on open: subscribing to the draft would re-render the
+      // dialog for every keystroke typed in the palette.
+      setText(appUi.getState().quickAddDraft);
       setNotePath("");
       setShowPathField(false);
       setTags([]);

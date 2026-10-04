@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useApp } from "@/contexts/AppContext";
+import { useAppActions, useFinancialCategories, useTaskCategories } from "@/contexts/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, Settings } from "lucide-react";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
@@ -18,11 +18,12 @@ const presetColors = [
 ];
 
 export default function CategoryManager({ mode, onClose }: CategoryManagerProps) {
+  const taskCategories = useTaskCategories();
+  const financialCategories = useFinancialCategories();
   const {
-    taskCategories, financialCategories,
     addTaskCategory, addFinancialCategory,
     deleteTaskCategory, deleteFinancialCategory,
-  } = useApp();
+  } = useAppActions();
 
   const categories = mode === "task" ? taskCategories : financialCategories;
   const [name, setName] = useState("");

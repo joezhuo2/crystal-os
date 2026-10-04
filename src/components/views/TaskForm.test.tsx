@@ -5,12 +5,11 @@ import type { Task } from "@/contexts/AppContext";
 const addTask = vi.fn();
 const updateTask = vi.fn();
 
+const taskCategories = [{ id: "c1", name: "Work", color: "hsl(0 0% 50%)" }];
+
 vi.mock("@/contexts/AppContext", () => ({
-  useApp: () => ({
-    addTask,
-    updateTask,
-    taskCategories: [{ id: "c1", name: "Work", color: "hsl(0 0% 50%)" }],
-  }),
+  useAppActions: () => ({ addTask, updateTask }),
+  useTaskCategories: () => taskCategories,
 }));
 
 // jsdom has no layout, so ThemedSelect's keep-the-active-row-visible call needs a stub.

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useApp } from "@/contexts/AppContext";
+import { useFinancialCategories, useTaskCategories, useTasks, useTransactions } from "@/contexts/AppContext";
+import { appUi } from "@/lib/appUi";
 import { toLocalDateStr, useDebouncedValue } from "@/lib/utils";
 import { useVaultNotes } from "@/hooks/useVault";
 import type { TabId } from "@/components/layout/Navigation";
@@ -43,7 +44,11 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { tasks, transactions, taskCategories, financialCategories, addTask, addTransaction, setShowTaskForm, setShowTransactionForm, setSelectedNotePath, setShowQuickAdd, setQuickAddDraft, setShowEventForm } = useApp();
+  const tasks = useTasks();
+  const transactions = useTransactions();
+  const taskCategories = useTaskCategories();
+  const financialCategories = useFinancialCategories();
+  const { setShowTaskForm, setShowTransactionForm, setSelectedNotePath, setShowQuickAdd, setQuickAddDraft, setShowEventForm } = appUi;
 
   const showDropdown = focused && (search.length > 0 || focused);
 

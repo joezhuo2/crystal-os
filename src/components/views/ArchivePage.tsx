@@ -17,7 +17,7 @@ import {
   Search,
   Tag as TagIcon,
 } from "lucide-react";
-import { useApp } from "@/contexts/AppContext";
+import { appUi, useAppUi } from "@/lib/appUi";
 import {
   usePickVault,
   useVaultNote,
@@ -201,7 +201,8 @@ const NoteMarkdown = memo(function NoteMarkdown({ body }: { body: string }) {
 });
 
 function NoteReader({ linkTargets }: { linkTargets: Map<string, string> }) {
-  const { selectedNotePath, setSelectedNotePath } = useApp();
+  const selectedNotePath = useAppUi((s) => s.selectedNotePath);
+  const { setSelectedNotePath } = appUi;
   const { data: note, isLoading, error } = useVaultNote(selectedNotePath);
   // Keyed by path, so opening another note always comes back to reading.
   const [editingPath, setEditingPath] = useState<string | null>(null);
@@ -440,7 +441,8 @@ function VaultUnavailable({ error }: { error: Error }) {
 }
 
 export default function ArchivePage() {
-  const { selectedNotePath, setSelectedNotePath, setShowQuickAdd, setQuickAddDraft } = useApp();
+  const selectedNotePath = useAppUi((s) => s.selectedNotePath);
+  const { setSelectedNotePath, setShowQuickAdd, setQuickAddDraft } = appUi;
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, 250);

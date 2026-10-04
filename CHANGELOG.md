@@ -5,6 +5,17 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.8] - 2026-10-04
+
+Fewer re-renders from global state.
+
+### Changed
+
+- **`AppContext` no longer holds UI state.** Tasks, transactions, categories and the transient UI flags (`quickAddDraft`, `showQuickAdd`, `showTaskForm`, `selectedNotePath`, …) shared one context value, so typing in the palette or opening a form re-rendered all 20 `useApp()` consumers, including the whole current view. The UI flags now live in a `useSyncExternalStore` store (`src/lib/appUi.ts`, like `perfSettings`); components read one field with `useAppUi(selector)` and call the setters on `appUi` directly, so a change re-renders only the components reading that field. The task and transaction forms each subscribe to their own flags (`TaskFormOverlay` and `TransactionFormOverlay` in `Index.tsx`), and Quick Add reads the palette draft once when it opens instead of subscribing to it.
+- **Tasks and transactions live in the React Query cache.** `AppProvider` still loads them in pages and writes every change, but into `["app", …]` keys with `setQueryData` instead of `useState`. Views read them through `useTasks(select)`, `useTransactions(select)`, `useTaskCategories()`, `useFinancialCategories()` and `useAppLoading()`; structural sharing keeps a selected slice's reference when an edit does not change it, so the component skips the render. The Home Engine card selects today's and upcoming tasks, the Vault sticker this month's totals, and the Financials charts their series, so renaming an old transaction or editing a task the card does not show re-renders none of them. The writes are on `useAppActions()`, whose value never changes after mount. `useApp()` is gone.
+- **Task rows are memoised.** An edit replaces only that task's object, so the other `TaskItem`s in the list and Kanban skip the render.
+- Signing out clears the `["app"]` keys and closes any open form, so the next session never starts with the last one's data or dialogs.
+
 ## [v0.8.7] - 2026-10-04
 
 A faster Archive: searching, filtering and reading the vault.

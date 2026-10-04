@@ -26,7 +26,7 @@ import { fromMinutes, toMinutes, weekDates } from "@/lib/timeGrid";
 import TimeGrid from "./TimeGrid";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
 import { GlassTip } from "@/components/ui/glass-tooltip";
-import { useApp } from "@/contexts/AppContext";
+import { appUi, useAppUi } from "@/lib/appUi";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1013,7 +1013,8 @@ function DeleteEventDialog({
 export default function CalendarPage() {
   const status = useCalendarStatus();
   const connected = Boolean(status.data?.connected);
-  const { showEventForm, setShowEventForm } = useApp();
+  const showEventForm = useAppUi((s) => s.showEventForm);
+  const { setShowEventForm } = appUi;
 
   const [view, setViewState] = useState<HorizonView>(() => {
     try {

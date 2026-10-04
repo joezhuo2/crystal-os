@@ -1,5 +1,6 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { AppProvider, useApp } from "@/contexts/AppContext";
+import { AppProvider } from "@/contexts/AppContext";
+import { appUi, useAppUi } from "@/lib/appUi";
 import { useAuth } from "@/contexts/AuthContext";
 import LoginPage from "@/components/auth/LoginPage";
 import AppSplash from "@/components/layout/AppSplash";
@@ -85,11 +86,37 @@ function ViewFallback() {
   );
 }
 
+const closeTaskForm = () => {
+  appUi.setShowTaskForm(false);
+  appUi.setEditingTask(null);
+};
+
+const closeTransactionForm = () => {
+  appUi.setShowTransactionForm(false);
+  appUi.setEditingTransaction(null);
+};
+
+// Each form subscribes to its own flags, so opening one re-renders only it.
+function TaskFormOverlay() {
+  const show = useAppUi((s) => s.showTaskForm);
+  const editingTask = useAppUi((s) => s.editingTask);
+  return <AnimatePresence>{show && <LazyTaskForm editingTask={editingTask} onClose={closeTaskForm} />}</AnimatePresence>;
+}
+
+function TransactionFormOverlay() {
+  const show = useAppUi((s) => s.showTransactionForm);
+  const editingTransaction = useAppUi((s) => s.editingTransaction);
+  return (
+    <AnimatePresence>
+      {show && <LazyTransactionDrawer editingTransaction={editingTransaction} onClose={closeTransactionForm} />}
+    </AnimatePresence>
+  );
+}
+
 function GlobalOverlays() {
-  const { showTaskForm, setShowTaskForm, showTransactionForm, setShowTransactionForm, editingTask, setEditingTask, editingTransaction, setEditingTransaction, setQuickAddDraft, setShowQuickAdd } = useApp();
   useTrayQuickAdd(() => {
-    setQuickAddDraft("");
-    setShowQuickAdd(true);
+    appUi.setQuickAddDraft("");
+    appUi.setShowQuickAdd(true);
   });
   useVaultLiveUpdates();
   const { autoExport } = useOrbitStore();
@@ -97,12 +124,8 @@ function GlobalOverlays() {
     <>
       {autoExport && <OrbitAutoExport />}
       <Suspense fallback={null}>
-        <AnimatePresence>
-          {showTaskForm && <LazyTaskForm editingTask={editingTask} onClose={() => { setShowTaskForm(false); setEditingTask(null); }} />}
-        </AnimatePresence>
-        <AnimatePresence>
-          {showTransactionForm && <LazyTransactionDrawer editingTransaction={editingTransaction} onClose={() => { setShowTransactionForm(false); setEditingTransaction(null); }} />}
-        </AnimatePresence>
+        <TaskFormOverlay />
+        <TransactionFormOverlay />
       </Suspense>
       <QuickAddDialog />
     </>

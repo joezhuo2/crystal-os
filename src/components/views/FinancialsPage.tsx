@@ -1,5 +1,11 @@
 import { useState, useMemo, useEffect, useRef, type ReactNode } from "react";
-import { useApp, type Transaction } from "@/contexts/AppContext";
+import {
+  useAppActions,
+  useFinancialCategories,
+  useTransactions,
+  type Transaction,
+} from "@/contexts/AppContext";
+import { appUi } from "@/lib/appUi";
 import { motion, AnimatePresence } from "framer-motion";
 import { toLocalDateStr } from "@/lib/utils";
 import { Plus, Trash2, X, Settings, Pencil } from "lucide-react";
@@ -58,29 +64,35 @@ function ChartFrame({ height, children }: { height: number; children: (width: nu
   );
 }
 
+// The charts select their series straight from the cache. Structural sharing
+// keeps a series' reference when an edit does not change it (a rename, say),
+// so the chart does not re-render.
+
+/** Income, expense and net for each of the last six months. */
+function cashFlowByMonth(transactions: Transaction[]) {
+  const months: { label: string; income: number; expense: number; net: number }[] = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const yr = d.getFullYear();
+    const mo = d.getMonth();
+    const label = d.toLocaleDateString("en-US", { month: "short" });
+    let income = 0;
+    let expense = 0;
+    transactions.forEach((t) => {
+      const td = new Date(t.date + "T12:00:00");
+      if (td.getFullYear() === yr && td.getMonth() === mo) {
+        if (t.type === "income") income += t.amount;
+        else expense += t.amount;
+      }
+    });
+    months.push({ label, income, expense, net: income - expense });
+  }
+  return months;
+}
+
 function CashFlowChart() {
-  const { transactions } = useApp();
-  const data = useMemo(() => {
-    const months: { label: string; income: number; expense: number; net: number }[] = [];
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const yr = d.getFullYear();
-      const mo = d.getMonth();
-      const label = d.toLocaleDateString("en-US", { month: "short" });
-      let income = 0;
-      let expense = 0;
-      transactions.forEach((t) => {
-        const td = new Date(t.date + "T12:00:00");
-        if (td.getFullYear() === yr && td.getMonth() === mo) {
-          if (t.type === "income") income += t.amount;
-          else expense += t.amount;
-        }
-      });
-      months.push({ label, income, expense, net: income - expense });
-    }
-    return months;
-  }, [transactions]);
+  const data = useTransactions(cashFlowByMonth);
 
   return (
     <div className="glass-card-hover p-5">
@@ -131,18 +143,24 @@ function CashFlowChart() {
   );
 }
 
+/** Total spent per category id. */
+function expenseByCategory(transactions: Transaction[]) {
+  const map: Record<string, number> = {};
+  transactions.filter((t) => t.type === "expense").forEach((t) => {
+    map[t.categoryId] = (map[t.categoryId] || 0) + t.amount;
+  });
+  return map;
+}
+
 function CategoryDonut() {
-  const { transactions, financialCategories } = useApp();
+  const spent = useTransactions(expenseByCategory);
+  const financialCategories = useFinancialCategories();
   const data = useMemo(() => {
-    const map: Record<string, number> = {};
-    transactions.filter((t) => t.type === "expense").forEach((t) => {
-      map[t.categoryId] = (map[t.categoryId] || 0) + t.amount;
-    });
-    return Object.entries(map).map(([id, value]) => {
+    return Object.entries(spent).map(([id, value]) => {
       const cat = financialCategories.find((c) => c.id === id);
       return { name: cat?.name || id, value, color: cat?.color || "hsl(217 33% 40%)" };
     });
-  }, [transactions, financialCategories]);
+  }, [spent, financialCategories]);
 
   return (
     <div className="glass-card-hover p-5">
@@ -173,22 +191,24 @@ function CategoryDonut() {
   );
 }
 
-function SavingsTrend() {
-  const { transactions } = useApp();
-  const data = useMemo(() => {
-    const map: Record<string, number> = {};
-    transactions.forEach((t) => {
-      const val = t.type === "income" ? t.amount : -t.amount;
-      map[t.date] = (map[t.date] || 0) + val;
+/** Running balance by day. */
+function savingsByDay(transactions: Transaction[]) {
+  const map: Record<string, number> = {};
+  transactions.forEach((t) => {
+    const val = t.type === "income" ? t.amount : -t.amount;
+    map[t.date] = (map[t.date] || 0) + val;
+  });
+  let running = 0;
+  return Object.entries(map)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, val]) => {
+      running += val;
+      return { date: date.slice(5), savings: Math.round(running * 100) / 100 };
     });
-    let running = 0;
-    return Object.entries(map)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, val]) => {
-        running += val;
-        return { date: date.slice(5), savings: Math.round(running * 100) / 100 };
-      });
-  }, [transactions]);
+}
+
+function SavingsTrend() {
+  const data = useTransactions(savingsByDay);
 
   return (
     <div className="glass-card-hover glass-card-emerald p-5">
@@ -213,7 +233,8 @@ function SavingsTrend() {
 }
 
 export function TransactionDrawer({ onClose, editingTransaction }: { onClose: () => void; editingTransaction?: Transaction | null }) {
-  const { addTransaction, updateTransaction, financialCategories } = useApp();
+  const { addTransaction, updateTransaction } = useAppActions();
+  const financialCategories = useFinancialCategories();
   const today = toLocalDateStr();
   const [form, setForm] = useState({
     name: editingTransaction?.name || "",
@@ -284,7 +305,10 @@ export function TransactionDrawer({ onClose, editingTransaction }: { onClose: ()
 }
 
 function TransactionList() {
-  const { transactions, financialCategories, deleteTransaction, setEditingTransaction, setShowTransactionForm } = useApp();
+  const transactions = useTransactions();
+  const financialCategories = useFinancialCategories();
+  const { deleteTransaction } = useAppActions();
+  const { setEditingTransaction, setShowTransactionForm } = appUi;
   const sorted = [...transactions].sort((a, b) => b.date.localeCompare(a.date));
   return (
     <div className="space-y-1.5">
@@ -314,7 +338,7 @@ function TransactionList() {
 }
 
 export default function FinancialsPage() {
-  const { setShowTransactionForm } = useApp();
+  const { setShowTransactionForm } = appUi;
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">

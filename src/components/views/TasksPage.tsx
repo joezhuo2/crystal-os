@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from "react";
-import { useApp, type Task, type Priority } from "@/contexts/AppContext";
+import { memo, useEffect, useState, useRef } from "react";
+import { useAppActions, useTaskCategories, useTasks, type Task, type Priority } from "@/contexts/AppContext";
+import { appUi } from "@/lib/appUi";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock } from "lucide-react";
 import {
@@ -22,8 +23,12 @@ import { CategoryManagerButton } from "./CategoryManager";
 const priorityLabel: Record<Priority, string> = { low: "Low", medium: "Med", high: "High", urgent: "Urgent" };
 const priorityClass: Record<Priority, string> = { low: "priority-low", medium: "priority-medium", high: "priority-high", urgent: "priority-urgent" };
 
-function TaskItem({ task, draggable, overdue }: { task: Task; draggable?: boolean; overdue?: boolean }) {
-  const { updateTask, completeTask, deleteTask, taskCategories, setEditingTask, setShowTaskForm } = useApp();
+// Memoised: an edit replaces only that task's object, so the other rows skip
+// the re-render.
+const TaskItem = memo(function TaskItem({ task, draggable, overdue }: { task: Task; draggable?: boolean; overdue?: boolean }) {
+  const { updateTask, completeTask, deleteTask } = useAppActions();
+  const taskCategories = useTaskCategories();
+  const { setEditingTask, setShowTaskForm } = appUi;
   const cat = taskCategories.find((c) => c.id === task.categoryId);
   const repeatLabel = describeRepeat(task.repeat, task.startDate);
   return (
@@ -82,10 +87,11 @@ function TaskItem({ task, draggable, overdue }: { task: Task; draggable?: boolea
       </button>
     </motion.div>
   );
-}
+});
 
 function KanbanBoard({ tasks }: { tasks: Task[] }) {
-  const { taskCategories, updateTask } = useApp();
+  const taskCategories = useTaskCategories();
+  const { updateTask } = useAppActions();
   const [dragOverCat, setDragOverCat] = useState<string | null>(null);
 
   const handleDragOver = (e: React.DragEvent, catId: string) => {
@@ -189,7 +195,8 @@ function buildRepeat(r: ReturnType<typeof initialRepeat>): RepeatRule | undefine
 }
 
 export function TaskForm({ onClose, editingTask }: { onClose: () => void; editingTask?: Task | null }) {
-  const { addTask, updateTask, taskCategories } = useApp();
+  const { addTask, updateTask } = useAppActions();
+  const taskCategories = useTaskCategories();
   const today = toLocalDateStr();
   const [repeat, setRepeat] = useState(() => initialRepeat(editingTask?.repeat, editingTask?.startDate || today));
   const [form, setForm] = useState({
@@ -344,7 +351,9 @@ type View = "list" | "kanban";
 const VIEW_FADE_MS = 150;
 
 export default function TasksPage() {
-  const { tasks, showTaskForm, setShowTaskForm, updateTask } = useApp();
+  const tasks = useTasks();
+  const { updateTask } = useAppActions();
+  const { setShowTaskForm } = appUi;
   // `selected` lights the toggle at once; `view` is what's on screen, which
   // trails it by the fade-out.
   const [selected, setSelected] = useState<View>("list");

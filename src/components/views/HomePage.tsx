@@ -1,6 +1,16 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Cloud, Sun, Moon, CloudRain, CloudSun, CloudSnow, CloudLightning, CloudDrizzle, MoonStar } from "lucide-react";
-import { useApp, type Priority, type Task } from "@/contexts/AppContext";
+import {
+  useAppActions,
+  useAppLoading,
+  useFinancialCategories,
+  useTasks,
+  useTransactions,
+  type Priority,
+  type Task,
+  type Transaction,
+} from "@/contexts/AppContext";
+import { appUi } from "@/lib/appUi";
 import { motion } from "framer-motion";
 import { isTaskOverdue, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 import { useSkyScene } from "@/hooks/useSkyScene";
@@ -192,7 +202,7 @@ function WeatherWidget({ onClick }: { onClick?: () => void }) {
  * its amethyst cave look (index.css, "Home spaces").
  */
 function ArchiveWidget({ onClick }: { onClick?: () => void }) {
-  const { setSelectedNotePath, setShowQuickAdd, setQuickAddDraft } = useApp();
+  const { setSelectedNotePath, setShowQuickAdd, setQuickAddDraft } = appUi;
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const { data, isLoading, error } = useVaultNotes({
     tag: activeTag ?? undefined,
@@ -428,27 +438,33 @@ function formatUpcomingDay(date: string, today: string): string {
 type TaskRow = { task: Task; label: string };
 
 function EngineWidget({ onClick }: { onClick?: () => void }) {
-  const { tasks, completeTask, setEditingTask, setShowTaskForm, loading } = useApp();
+  const { completeTask } = useAppActions();
+  const { setEditingTask, setShowTaskForm } = appUi;
+  const loading = useAppLoading();
   const today = toLocalDateStr();
   const backdropUrl = useImageBackdrop("engine", CARD_BACKDROP_BLUR);
 
   const isOverdue = (t: Task) => isTaskOverdue(t, today);
 
-  // Open work for today plus anything overdue, most pressing first.
-  const openTasks = tasks
-    .filter((t) => !t.completed && (taskFallsOnDate(t, today) || isOverdue(t)))
-    .sort((a, b) => {
-      if (a.priority !== b.priority) return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
-      if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
-      return a.startTime.localeCompare(b.startTime);
-    });
-
-  // Once today is clear, show what comes next: each open task's next date
-  // within UPCOMING_DAYS, highest priority first, then soonest.
-  const upcoming = useMemo(
-    () => (openTasks.length > 0 ? [] : upcomingTasks(tasks, today)),
-    [tasks, today, openTasks.length],
+  // Selected from the cache, so an edit to a task this card does not show
+  // leaves both lists (and the card) as they were.
+  const selectRows = useCallback(
+    (tasks: Task[]) => {
+      // Open work for today plus anything overdue, most pressing first.
+      const open = tasks
+        .filter((t) => !t.completed && (taskFallsOnDate(t, today) || isTaskOverdue(t, today)))
+        .sort((a, b) => {
+          if (a.priority !== b.priority) return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+          if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
+          return a.startTime.localeCompare(b.startTime);
+        });
+      // Once today is clear, show what comes next: each open task's next date
+      // within UPCOMING_DAYS, highest priority first, then soonest.
+      return { open, upcoming: open.length > 0 ? [] : upcomingTasks(tasks, today) };
+    },
+    [today],
   );
+  const { open: openTasks, upcoming } = useTasks(selectRows);
 
   const showingUpcoming = openTasks.length === 0 && upcoming.length > 0;
   const rows: TaskRow[] = showingUpcoming
@@ -548,21 +564,33 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
 
 /** This month at a glance from The Vault (financials). The whole card opens it. */
 function VaultSticker({ onClick }: { onClick?: () => void }) {
-  const { transactions, financialCategories, loading } = useApp();
+  const financialCategories = useFinancialCategories();
+  const loading = useAppLoading();
   const month = toLocalDateStr().slice(0, 7);
 
+  // Only this month's totals come out of the cache, so editing an older
+  // transaction does not re-render the card.
+  const selectMonth = useCallback(
+    (transactions: Transaction[]) => {
+      const monthTx = transactions.filter((t) => t.date.startsWith(month));
+      const income = monthTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+      const spent = monthTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+      const byCategory = new Map<string, number>();
+      for (const t of monthTx) {
+        if (t.type === "expense") byCategory.set(t.categoryId, (byCategory.get(t.categoryId) ?? 0) + t.amount);
+      }
+      const [topId, topAmount] = [...byCategory].sort((a, b) => b[1] - a[1])[0] ?? [];
+      return { count: monthTx.length, income, spent, net: income - spent, topId, topAmount };
+    },
+    [month],
+  );
+  const totals = useTransactions(selectMonth);
+
   const summary = useMemo(() => {
-    const monthTx = transactions.filter((t) => t.date.startsWith(month));
-    const income = monthTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-    const spent = monthTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-    const byCategory = new Map<string, number>();
-    for (const t of monthTx) {
-      if (t.type === "expense") byCategory.set(t.categoryId, (byCategory.get(t.categoryId) ?? 0) + t.amount);
-    }
-    const [topId, topAmount] = [...byCategory].sort((a, b) => b[1] - a[1])[0] ?? [];
-    const top = topId ? { name: financialCategories.find((c) => c.id === topId)?.name ?? "Other", amount: topAmount } : null;
-    return { count: monthTx.length, income, spent, net: income - spent, top };
-  }, [transactions, financialCategories, month]);
+    const { topId, topAmount, ...rest } = totals;
+    const top = topId ? { name: financialCategories.find((c) => c.id === topId)?.name ?? "Other", amount: topAmount ?? 0 } : null;
+    return { ...rest, top };
+  }, [totals, financialCategories]);
 
   if (loading) return <VaultStickerSkeleton />;
 

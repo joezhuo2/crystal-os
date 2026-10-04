@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { useApp } from "@/contexts/AppContext";
+import { useAppLoading, useTasks, useTransactions } from "@/contexts/AppContext";
 import { useVaultNotes } from "@/hooks/useVault";
 import { useCalendarEvents, useCalendarStatus } from "@/hooks/useGoogleCalendar";
 import {
@@ -119,7 +119,9 @@ export interface OrbitReviewResult {
 
 /** Everything a review of `period` needs, assembled. */
 export function useOrbitReview(period: ReviewPeriod): OrbitReviewResult {
-  const { tasks, transactions, loading: appLoading } = useApp();
+  const tasks = useTasks();
+  const transactions = useTransactions();
+  const appLoading = useAppLoading();
   const history = useHistory(dataStart(period), period.end);
   const notes = useAllNotes();
   const status = useCalendarStatus();
@@ -176,7 +178,8 @@ export function useOrbitReady(now: Date = new Date()): { weekly: ReviewPeriod; m
 
 /** This week so far, for the Home card's one-line teaser. */
 export function useOrbitTeaser(now: Date) {
-  const { tasks, transactions } = useApp();
+  const tasks = useTasks();
+  const transactions = useTransactions();
   const week = periodContaining("weekly", toLocalDateStr(now));
   const history = useHistory(week.start, week.end);
   if (!history.data && !history.error) return null;
