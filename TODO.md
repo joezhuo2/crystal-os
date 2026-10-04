@@ -1,5 +1,11 @@
 # Planned Features
 - [v0.9.0] vault/banking overhaul - use plaid to connect to banks (store api keys and tokens in secure env variables), themed glassmorphism UI 
+    - [ ] **Data export / backup.** One button in Settings that exports tasks, transactions, categories and settings to JSON/CSV, and an import to restore them. Useful before schema changes like Plaid.
+    - [ ] **Vault: budgets.** Monthly budget per category with progress bars and a warning at 80%.
+    - [ ] **Vault: subscriptions and bills.** Recurring charges with their next dates, shown in the Horizon and the Engine.
+    - [ ] **Vault: CSV import.** Import bank CSV exports as a fallback if Plaid doesn't cover the bank.
+    - [ ] **Vault: savings goals.** Goals with a target, deadline and progress.
+    - [ ] **Vault: net worth.** Net worth over time.
 
 ### Theme switching (left over from v0.8.5)
 - [ ] **Changing the root theme class still restyles the page subtree.** v0.8.5 turned the per-theme `.x-root main .glass-card` rule sets into `--glass-card-*` values on each theme's `<main>`, but `rootClass` and the `body` `horizon-theme`/`engine-theme`/`orbit-theme` classes still change on every switch, and the `portal-theme-*`, `sidebar-*` and `*-title` rules are still per theme. Measure a switch in the Performance panel before going further; if recalc is still a large share, move the remaining palettes to custom properties set from JS on one element.
@@ -10,17 +16,16 @@
 ## Ideas
 
 ### New features
-- [ ] **Task notes and subtasks.** A `notes` text field and a checklist of subtasks on each task. Optionally link a task to a vault note so the details live in Obsidian.
-- [ ] **Time-blocking.** Drag a task from the Engine or Tasks page onto a day in The Horizon to create a calendar event for it, with the task linked so completing one updates the other.
-- [ ] **Native notifications.** Desktop toasts for task due times, calendar events (10 min before), Pomodoro phase changes and budget alerts. Tauri has `tauri-plugin-notification`; respect a Do Not Disturb toggle in Settings.
-- [ ] **Data export / backup.** One button in Settings that exports tasks, transactions, categories and settings to JSON/CSV, and an import to restore them. Useful before schema changes like Plaid.
-- [ ] **Offline queue.** Queue task and transaction writes while Supabase is unreachable and replay them on reconnect, instead of failing the save.
+- [ ] **Task notes and subtasks.** A `notes` text field and a checklist of subtasks on each task. 
+    - [ ] option to make an existing note another note's subtask
+    - [ ] Optionally link a task to a vault note so the details live in Obsidian. 
+- [ ] **Native notifications.** Desktop toasts for task due times, calendar events (`configurable time` (default 30) min before), Pomodoro phase changes and budget alerts. Tauri has `tauri-plugin-notification`; respect a Do Not Disturb toggle in Settings.
+    - [ ] **Portal: notification passthrough.** Turn unread badge increases into native notifications (per-app toggle).
 
 ### Improvements to existing sections
-- [ ] **Archive: backlinks and graph.** Show "Linked from" under each note (wikilinks are already parsed) and, later, a small local link graph.
+- [ ] **Archive: Connections and Graph** Show a list of connected notes that are clickable (click loads the note that was clicked) (v1). 
+    - [ ] Implement the entire obsidian graph feature directly into the vault (v2)
 - [ ] **Archive: recent and pinned notes.** A short "recently opened" list and pinned notes at the top of the rail.
-- [ ] **Atmosphere: hourly forecast and alerts.** A 24-hour strip (temperature, precipitation chance) and Environment Canada weather warnings shown as a banner, also on the Home weather box.
-- [ ] **Portal: notification passthrough.** Turn unread badge increases into native notifications (per-app toggle).
 - [ ] **Portal: per-app zoom and mute.** Remember a zoom level per app and a mute toggle for apps that play sounds.
 - [ ] **Nebula: cost and usage view.** Token totals are stored in `harness/state.json`; show them per project and per day, with an estimated cost per tier.
 - [ ] **Onboarding checklist.** First-run card listing what is not set up yet (vault folder, Google Calendar, NIM key, launch at login) with a button for each.
@@ -42,3 +47,35 @@
 
 ### Docs
 - [ ] **CHANGELOG 1.0.0 entry** summarising what ships.
+
+- [ ] **[High] Engine: time estimates and capacity.** An estimate per task and a "fits today?" bar comparing the total against free time in the calendar.
+- [ ] **[Med] Pulse: Now / Next strip.** Countdown to the next event and, when it has a location, a leave-by time. (calculate from current location)
+- [ ] **[Med] Orbit: year in review.**
+- [ ] **[Med] Pulse: weather nudges.** "Rain from 4 PM, take an umbrella", "−20 °C windchill tomorrow".
+- [ ] **[Med] Snooze / defer tasks.** Hide a task until a chosen date, plus a "Someday" bucket to keep the Engine short.
+- [ ] **[Med] Pomodoro linked to a task.** Start a focus session on a specific task and track time per task, so The Orbit shows where focus went. Focus mode also mutes Portal badges.
+- [ ] **[Low] Undo toast.** A 5 s "Undo" after deleting, completing or rescheduling a task, event or transaction.
+- [ ] **[Low] Customisable navbar.** Reorder and hide sidebar sections.
+- [ ] **[Low] Atmosphere: AQHI, UV, sunrise / sunset.** Air quality from Environment Canada, UV index and daylight times.
+
+### Cross-app features
+- [ ] **[High] Morning plan and evening shutdown.** On the first open of the day, one card with weather, today's events, overdue tasks and habits, where you pick the day's top 3 tasks. In the evening, a shutdown step rolls unfinished tasks to tomorrow and writes a summary to the daily note.
+- [ ] **[Low] XP / levels.** A light gamification layer over habits and tasks.
+
+### Improvements to existing sections
+- [ ] **[Med] Horizon: meeting note from an event.** A button on an event that creates a vault note from a template, linked to the event.
+- [ ] **[Med] Horizon: free-slot finder.** "Next free 2 h block" search.
+- [ ] **[Low] Atmosphere: what to wear.** A clothing suggestion from the forecast.
+- [ ] **[Med] Orbit: habit targets and quantities.** "3× per week" goals and counted habits ("8 glasses of water") alongside daily yes/no.
+- [ ] **[Med] Orbit: correlations.** Mood against habits done or focus time.
+
+### New navbar sections
+- [ ] **[High] The Comet (inbox).** A hotkey captures anything instantly; triage it later into a task, event, note or transaction.
+- [ ] **[High] The Hangar (lists).** Reusable checklists: groceries, packing, the weekly shop. Usable from a phone through the web build.
+- [ ] **[Med] The Observatory (goals).** Yearly and quarterly goals with milestones, linked tasks and habits, and automatic progress. Referenced by Orbit reviews.
+- [ ] **[Med] The Launchpad (projects).** Groups tasks, a vault note and a Nebula folder under one project, with a progress bar.
+- [ ] **[Med] The Constellation (people).** Birthdays, last contacted and gift ideas, with reminders in the Horizon.
+- [ ] **[Med] The Biosphere (health).** Sleep, workouts, weight and water, entered by hand at first, feeding Orbit trends.
+- [ ] **[Med] The Stardock (life admin).** Car service, filter changes, passport and licence renewals, warranties, and where documents live.
+- [ ] **[Low] The Galley (meals).** Meal plan and recipes stored in the vault, feeding the Hangar grocery list.
+- [ ] **[Low] The Satellite (media).** Books, shows and games backlog with ratings.

@@ -14,6 +14,15 @@ import {
 } from "@/lib/seedCategories";
 import { ascNullsLast, loadInPages, mergePage } from "@/lib/pagedLoad";
 import { appUi } from "@/lib/appUi";
+import {
+  isRetryable,
+  offlineQueue,
+  overlayRows,
+  pendingInserts,
+  type QueuedWrite,
+  type QueueTable,
+  type WriteResult,
+} from "@/lib/offlineQueue";
 
 export type Priority = "low" | "medium" | "high" | "urgent";
 export type TaskCategory = {
@@ -294,6 +303,24 @@ function reportError(action: string, error: { message: string } | null): boolean
   return true;
 }
 
+// ── offline queue ──
+
+/** Sends one task, transaction or completion write to Supabase. */
+async function sendWrite(write: QueuedWrite): Promise<WriteResult> {
+  const table = supabase.from(write.table);
+  if (write.op === "insert") return await table.insert({ ...write.row, id: write.id });
+  if (write.op === "update") return await table.update(write.row).eq("id", write.id);
+  return await table.delete().eq("id", write.id);
+}
+
+type WriteSpec =
+  | { op: "insert"; table: QueueTable; id: string; row: Record<string, unknown> }
+  | { op: "update"; table: QueueTable; id: string; row: Record<string, unknown> }
+  | { op: "delete"; table: QueueTable; id: string };
+
+/** How often a non-empty queue is retried, besides the browser's "online" event. */
+const RETRY_MS = 30_000;
+
 /**
  * Returns the user's categories, creating the starter set the first time they
  * sign in. Falls back to the in-memory defaults only if the fetch or seeding
@@ -344,11 +371,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [queryClient],
   );
 
+  // ── Offline queue ──
+  //
+  // Replays queued writes in order. Rejected ones are reported and dropped;
+  // the rest wait for the next try.
+  const flushQueue = useCallback(async () => {
+    const result = await offlineQueue.flush(sendWrite);
+    if (!result) return;
+    for (const { write, message } of result.failed) {
+      console.error(`[crystal-os] offline ${write.op} on ${write.table} failed:`, message);
+      toast.error("Could not sync a change made offline", { description: message });
+    }
+    if (result.sent.some((w) => w.table === "task_completions")) {
+      queryClient.invalidateQueries({ queryKey: ORBIT_QUERY_KEY });
+    }
+    if (result.sent.length && !result.remaining.length && !offlineQueue.size()) {
+      const n = result.sent.length;
+      toast.success(`Synced ${n} offline change${n === 1 ? "" : "s"}`);
+    }
+  }, [queryClient]);
+
+  /**
+   * Sends a write, or keeps it for later when Supabase cannot be reached.
+   * Resolves true when the write was saved or queued (the caller then updates
+   * the lists), false when the server rejected it (already reported).
+   *
+   * While anything is queued, new writes queue behind it rather than going
+   * straight out, so an edit never reaches the server before the insert of
+   * the row it edits.
+   */
+  const saveWrite = useCallback(
+    async (spec: WriteSpec, action: string): Promise<boolean> => {
+      const queue = () => {
+        const wasEmpty = offlineQueue.size() === 0;
+        offlineQueue.push({ ...spec, queuedAt: new Date().toISOString() });
+        if (wasEmpty) {
+          toast("Saved on this device", {
+            description: "Supabase can't be reached. Your changes will sync when it's back.",
+          });
+        }
+        return true;
+      };
+      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+      if (offlineQueue.size() > 0 || offline) {
+        queue();
+        if (!offline) void flushQueue();
+        return true;
+      }
+      const result = await sendWrite({ ...spec, queuedAt: "" });
+      if (!result.error) return true;
+      if (isRetryable(result.status)) return queue();
+      reportError(action, result.error);
+      return false;
+    },
+    [flushQueue],
+  );
+
+  // Retry when the browser comes back online, and every 30 s while anything
+  // is waiting (a Supabase outage does not fire "online").
+  useEffect(() => {
+    if (!user) return;
+    const retry = () => {
+      if (offlineQueue.size()) void flushQueue();
+    };
+    window.addEventListener("online", retry);
+    const timer = window.setInterval(retry, RETRY_MS);
+    return () => {
+      window.removeEventListener("online", retry);
+      window.clearInterval(timer);
+    };
+  }, [user, flushQueue]);
+
   // ── Fetch all data when a user is present ──
   //
   // No .eq("user_id", …) filters appear anywhere below. RLS does that
   // server-side, and duplicating it here would be a second place to get wrong.
   useEffect(() => {
+    offlineQueue.use(user?.id ?? null);
     if (!user) {
       // Signing out must not leave the previous session's tasks on screen
       // while the login form animates in.
@@ -366,19 +465,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoading(true);
       setTasks([]);
       setTransactions([]);
+      // Writes left over from an offline session go first, so the load below
+      // already contains them.
+      await flushQueue();
+      if (!active) return;
 
       // Tasks and transactions arrive in pages rather than one query each, so
       // the dashboard renders once the first page is in and fills in behind it.
       const isActive = () => active;
       const tasksLoad = loadInPages<DbRow>(
         (afterId, limit) => fetchPage("tasks", afterId, limit),
-        (rows) => setTasks((prev) => mergePage(prev, rows.map(mapTaskFromDb), byStart)),
+        (rows) =>
+          setTasks((prev) =>
+            mergePage(prev, overlayRows(rows, offlineQueue.get(), "tasks").map(mapTaskFromDb), byStart),
+          ),
         { isActive },
       );
       const txLoad = loadInPages<DbRow>(
         (afterId, limit) => fetchPage("transactions", afterId, limit),
         (rows) =>
-          setTransactions((prev) => mergePage(prev, rows.map(mapTransactionFromDb), byDateDesc)),
+          setTransactions((prev) =>
+            mergePage(
+              prev,
+              overlayRows(rows, offlineQueue.get(), "transactions").map(mapTransactionFromDb),
+              byDateDesc,
+            ),
+          ),
         { isActive },
       );
 
@@ -390,6 +502,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ]);
 
       if (!active) return;
+
+      // Writes still waiting (Supabase answered the load but not the flush,
+      // or the load came from elsewhere) stay on screen until they are sent.
+      const queued = offlineQueue.get();
+      const queuedTasks = pendingInserts(queued, "tasks") as TaskRow[];
+      const queuedTx = pendingInserts(queued, "transactions") as unknown as TransactionRow[];
+      if (queuedTasks.length) setTasks((prev) => mergePage(prev, queuedTasks.map(mapTaskFromDb), byStart));
+      if (queuedTx.length) {
+        setTransactions((prev) => mergePage(prev, queuedTx.map(mapTransactionFromDb), byDateDesc));
+      }
 
       // A category has to be a real row before a task can reference it: the
       // starter set below used to live only in memory with ids like "work",
@@ -446,17 +568,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ── Completion history for The Orbit ──
   const recordCompletion = useCallback(
     async (task: Task) => {
-      const { error } = await supabase
-        .from("task_completions")
-        .insert({ task_id: task.id, title: task.name, category_id: task.categoryId || null });
-      if (reportError("record the completion", error)) return;
-      queryClient.invalidateQueries({ queryKey: ORBIT_QUERY_KEY });
+      const row = {
+        task_id: task.id,
+        title: task.name,
+        category_id: task.categoryId || null,
+        completed_at: new Date().toISOString(),
+      };
+      const saved = await saveWrite(
+        { op: "insert", table: "task_completions", id: crypto.randomUUID(), row },
+        "record the completion",
+      );
+      if (saved && !offlineQueue.size()) queryClient.invalidateQueries({ queryKey: ORBIT_QUERY_KEY });
     },
-    [queryClient],
+    [queryClient, saveWrite],
   );
 
   const forgetCompletion = useCallback(
     async (taskId: string) => {
+      // A tick still waiting to be sent is simply never sent.
+      const isQueuedTick = (w: QueuedWrite) =>
+        w.op === "insert" && w.table === "task_completions" && w.row.task_id === taskId;
+      if (offlineQueue.get().some(isQueuedTick)) {
+        offlineQueue.remove(isQueuedTick);
+        return;
+      }
       const { data, error } = await supabase
         .from("task_completions")
         .select("id")
@@ -472,11 +607,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 
   // ── Tasks ──
+  // Ids are made here rather than by the database, so a task added offline
+  // has its real id from the start.
   const addTask = useCallback(async (task: Omit<Task, "id">) => {
-    const { data, error } = await supabase.from("tasks").insert(mapTaskToDb(task)).select().single();
-    if (reportError("add the task", error) || !data) return;
-    setTasks((prev) => [...prev, mapTaskFromDb(data)]);
-  }, [setTasks]);
+    const id = crypto.randomUUID();
+    const row = { ...mapTaskToDb(task), created_at: new Date().toISOString() };
+    if (!(await saveWrite({ op: "insert", table: "tasks", id, row }, "add the task"))) return;
+    setTasks((prev) => [...prev, mapTaskFromDb({ ...row, id })]);
+  }, [saveWrite, setTasks]);
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
     const dbUpdates: Partial<TaskRow> = {};
@@ -495,15 +633,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const repeat = cleanRepeat(updates.repeat);
     if (repeatChanged) Object.assign(dbUpdates, mapRepeatToDb(repeat));
 
-    const { error } = await supabase.from("tasks").update(dbUpdates).eq("id", id);
-    if (reportError("update the task", error)) return;
+    if (!(await saveWrite({ op: "update", table: "tasks", id, row: dbUpdates }, "update the task"))) return;
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, ...updates, ...(repeatChanged ? { repeat } : {}) } : t)),
     );
     // Unticking takes back the tick's history row, so a misclick is not
     // counted as done in The Orbit.
     if (updates.completed === false) void forgetCompletion(id);
-  }, [forgetCompletion, setTasks]);
+  }, [forgetCompletion, saveWrite, setTasks]);
 
   const completeTask = useCallback(
     (task: Task) => {
@@ -519,17 +656,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 
   const deleteTask = useCallback(async (id: string) => {
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
-    if (reportError("delete the task", error)) return;
+    if (!(await saveWrite({ op: "delete", table: "tasks", id }, "delete the task"))) return;
     setTasks((prev) => prev.filter((t) => t.id !== id));
-  }, [setTasks]);
+  }, [saveWrite, setTasks]);
 
   // ── Transactions ──
   const addTransaction = useCallback(async (tx: Omit<Transaction, "id">) => {
-    const { data, error } = await supabase.from("transactions").insert(mapTransactionToDb(tx)).select().single();
-    if (reportError("add the transaction", error) || !data) return;
-    setTransactions((prev) => [...prev, mapTransactionFromDb(data)]);
-  }, [setTransactions]);
+    const id = crypto.randomUUID();
+    const row = mapTransactionToDb(tx);
+    if (!(await saveWrite({ op: "insert", table: "transactions", id, row }, "add the transaction"))) return;
+    setTransactions((prev) => [...prev, mapTransactionFromDb({ ...row, id })]);
+  }, [saveWrite, setTransactions]);
 
   const updateTransaction = useCallback(async (id: string, updates: Partial<Transaction>) => {
     const dbUpdates: Partial<TransactionRow> = {};
@@ -539,16 +676,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
     if (updates.date !== undefined) dbUpdates.date = updates.date;
 
-    const { error } = await supabase.from("transactions").update(dbUpdates).eq("id", id);
-    if (reportError("update the transaction", error)) return;
+    const saved = await saveWrite(
+      { op: "update", table: "transactions", id, row: dbUpdates },
+      "update the transaction",
+    );
+    if (!saved) return;
     setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
-  }, [setTransactions]);
+  }, [saveWrite, setTransactions]);
 
   const deleteTransaction = useCallback(async (id: string) => {
-    const { error } = await supabase.from("transactions").delete().eq("id", id);
-    if (reportError("delete the transaction", error)) return;
+    if (!(await saveWrite({ op: "delete", table: "transactions", id }, "delete the transaction"))) return;
     setTransactions((prev) => prev.filter((t) => t.id !== id));
-  }, [setTransactions]);
+  }, [saveWrite, setTransactions]);
 
   // ── Task Categories ──
   const addTaskCategory = useCallback(async (cat: Omit<TaskCategory, "id">) => {

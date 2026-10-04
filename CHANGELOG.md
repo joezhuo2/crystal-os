@@ -5,6 +5,18 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.12] - 2026-10-04
+
+Saves that wait out a lost connection.
+
+### Added
+
+- **Offline queue for tasks and transactions.** Adding, editing, completing or deleting a task or transaction while Supabase can't be reached no longer fails the save. The change shows up at once and is kept on this device (in `localStorage`, per account) with a "Saved on this device" notice, then replayed in order when the browser comes back online, every 30 s while anything is waiting, and on the next sign-in or app start. "Synced N offline changes" confirms the replay. A write the server rejects during replay is reported and dropped; the rest still go through. Ticking a task off offline also queues its Orbit history row, and unticking it before it is sent simply drops that row. A write is queued when there is no network, when the request gets no answer, or on a 401, 408, 429, 502, 503 or 504; other errors are reported as before.
+
+### Changed
+
+- **Task, transaction and completion ids are made on the device.** Inserts send a `crypto.randomUUID()` id (and tasks their `created_at`, completions their `completed_at`) instead of reading the row back, so a row added offline keeps the same id once it reaches the server and can be edited or deleted before then. Replaying an insert that had already landed (duplicate key) counts as sent. While anything is queued, new writes queue behind it, so an edit never reaches the server before the row it edits. Queued edits are laid over a fresh load, so they stay on screen until they are sent. The queue logic is in `src/lib/offlineQueue.ts`.
+
 ## [v0.8.11] - 2026-10-04
 
 Pick the weather city from where you are.

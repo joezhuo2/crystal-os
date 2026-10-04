@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-554%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.8.11-6366F1)
+![Tests](https://img.shields.io/badge/tests-593%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.8.12-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.8.10** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.8.12** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -24,6 +24,7 @@ Current release: **v0.8.10** — see [CHANGELOG.md](CHANGELOG.md) for release hi
 | **📅 The Horizon** | Google Calendar, live: month, week, day and agenda views (week and day are hour grids: overlapping events sit side by side, a line marks now, and clicking an empty slot creates an event at that half hour), create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along. The page has its own black hole backdrop and blue palette (see [The Horizon](#-the-horizon-google-calendar-integration)) |
 | **🏠 Home widgets** | A 3×3 grid: the greeting and clock (on The Orbit's black hole, with this week's tasks done and focus time; opens The Orbit), weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Engine, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Engine's red black hole, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
+| **📶 Offline saves** | Task and transaction changes made while Supabase is unreachable are kept on the device and replayed in order once it answers again (on reconnect, every 30 s, and at the next start), instead of failing the save. See [Offline queue](#-offline-queue) |
 | **🌤️ Weather** | Current conditions + 7-day forecast for any of ~840 Canadian locations (searchable city picker, or **Use my location** for the nearest one), over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
 | **📖 The Archive** | Browse, search, read and edit your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown, and a CodeMirror markdown editor that refuses to overwrite a note changed on disk since you opened it. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
 | **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, a context-window meter, per-model token counts, and a swirling three-colour nebula |
@@ -235,6 +236,7 @@ src/
 │   └── use-mobile.tsx          # Responsive breakpoint hook
 ├── lib/
 │   ├── supabase.ts             # Supabase client + helpers
+│   ├── offlineQueue.ts         # Task/transaction writes kept in localStorage while Supabase is unreachable, replayed in order
 │   ├── appUi.ts                # Transient UI store: open forms, Quick Add draft, selected note (useAppUi(selector))
 │   ├── vaultCore.ts            # Shared vault logic: parsing, search index, tags, quick-add formatting
 │   ├── wikilinks.ts            # Archive reader: wikilink targets mapped once per listing
@@ -404,6 +406,17 @@ As with the vault, the middleware is mounted on the dev server and `vite preview
 The consent flow carries a random `state` nonce that is verified on callback and expires after 10 minutes. Request bodies are capped at 64 KB. `google-auth-library` is Node-only and is never imported from `src/` — the client re-declares the event types it needs. The server calls the Calendar REST endpoints directly through `OAuth2Client.request` rather than the full `googleapis` client, which kept the desktop sidecar bundle at 13.5 MB (now about 650 KB).
 
 ---
+
+## 📶 Offline queue
+
+Every task, transaction and completion write goes through `saveWrite` in `src/contexts/AppContext.tsx`. When the browser is offline, or a request gets no answer (or a 401, 408, 429, 502, 503 or 504), the write is not reported as failed: it is added to a queue in `localStorage` (`crystal-os-offline-queue:<user id>`), the list updates as if it had saved, and a "Saved on this device" notice appears. The queue (`src/lib/offlineQueue.ts`) is replayed in order on the browser's `online` event, every 30 s while it is not empty, and before the data loads at sign-in or app start. A write the server rejects during replay is reported and dropped; anything after it still goes through.
+
+- **Ids come from the device.** Inserts send a `crypto.randomUUID()` id, so a task added offline can be edited, completed or deleted before it is sent. Edits to a queued row fold into its queued insert; deleting a queued row drops it from the queue. A replayed insert that had already landed (duplicate key) counts as sent.
+- **Order is kept.** While anything is queued, new writes queue behind it rather than going straight out, and a replay stops at the first write that still can't get through.
+- **Reloads keep queued changes.** A load overlays queued edits and deletes on the rows it fetches and adds queued inserts, so nothing waiting disappears from the lists.
+- **Per account.** Each user's queue is separate; one left when signing out is sent at that user's next sign-in.
+
+Categories, habits, focus sessions and settings are not queued and still report a failed save.
 
 ## 🗄️ Database Schema (Supabase)
 
