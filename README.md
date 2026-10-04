@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-517%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.8.2-6366F1)
+![Version](https://img.shields.io/badge/version-0.8.3-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.8.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.8.3** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -52,10 +52,44 @@ Current release: **v0.8.2** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | **Terminal** | xterm.js + ConPTY in Rust (PowerShell, desktop only) |
 | **The Portal** | Tauri child webviews (WebView2), one data directory per app, throttled and cache-trimmed while off screen (desktop only) |
 | **Markdown** | react-markdown + remark-gfm + `@tailwindcss/typography` |
-| **Forms** | React Hook Form + Zod validation |
 | **Animation** | Framer Motion |
 | **Date/Time** | date-fns |
 | **Testing** | Vitest + React Testing Library |
+
+---
+
+## 💾 Install (Windows)
+
+For using Crystal OS rather than working on it. To build from source, skip to [Quick Start](#-quick-start).
+
+### Download
+
+1. Open the [latest release](https://github.com/joezhuo2/crystal-os/releases/latest) and download `Crystal.OS_<version>_x64-setup.exe`.
+2. Run it. The installer is not code-signed yet, so Windows SmartScreen may say "Windows protected your PC": click **More info**, then **Run anyway**.
+3. Crystal OS installs for your user only (no admin prompt), opens, and adds a gem icon to the tray. It needs WebView2, which Windows 11 already has.
+
+From then on, **Settings → Install & update → Check for updates** installs new versions in place.
+
+### First-run setup
+
+You need a [Supabase](https://supabase.com) project of your own (the free tier works); Crystal OS keeps your tasks and transactions there.
+
+1. In the Supabase SQL Editor, run the files in [`supabase/migrations/`](supabase/migrations) in order. See [Database Schema](#-database-schema-supabase).
+2. Under **Authentication → Users**, create your account, then turn off new signups under **Authentication → Providers**.
+3. Create `%APPDATA%\com.crystalos.desktop\.env.local` from [`.env.example`](.env.example) with at least `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. For Google Calendar, add the `GOOGLE_*` keys with `GOOGLE_REDIRECT_URI=http://127.0.0.1:8787/api/calendar/auth/callback` (see [The Horizon](#-the-horizon-google-calendar-integration)).
+4. Restart Crystal OS (tray → **Quit Crystal OS**, then open it again) and sign in.
+5. Optional: in **The Archive**, **Choose vault folder** to pick your Obsidian vault; in **Settings → The Nebula**, add a NIM key.
+
+### Where things live
+
+| What | Where |
+|------|-------|
+| Program | `%LOCALAPPDATA%\Crystal OS\` |
+| Settings (`settings.json`), `.env.local`, Portal sessions, Nebula chats | `%APPDATA%\com.crystalos.desktop\` |
+| Logs (`diagnostics.log`) | `%LOCALAPPDATA%\com.crystalos.desktop\logs\` |
+| Tasks, transactions, categories, review history | Your Supabase project |
+
+Uninstall from **Settings → Apps → Installed apps**. Your settings and logs stay unless you tick the option to delete app data. See [docs/PRIVACY.md](docs/PRIVACY.md) for everything Crystal OS stores and what it sends where.
 
 ---
 
@@ -154,7 +188,7 @@ src/
 │   │   ├── PortalNavbar.tsx    # App pills (drag, right-click menu), browser controls
 │   │   ├── PortalSkeleton.tsx  # Themed placeholder shown while an app's page loads
 │   │   └── AddPortalAppDialog.tsx # Presets + custom https app
-│   ├── ui/                     # shadcn/ui components (40+)
+│   ├── ui/                     # shadcn/ui components in use, plus app controls (25 files)
 │   │   ├── field-controls.tsx  # ThemedSelect, ThemedCombobox, DateField, TimeField (portalled popups)
 │   │   ├── glass-tooltip.tsx   # GlassTip: gradient-bordered tooltip used in place of `title`, drawn above the page
 │   │   └── dashboard-skeletons.tsx # Per-widget loading skeletons for the home page
@@ -397,6 +431,7 @@ npm run build        # Production build
 npm run build:dev    # Development build
 npm run preview      # Preview production build (vault + calendar APIs included)
 npm run lint         # ESLint check
+npm run typecheck    # tsc over src/ and vite.config.ts
 npm run test         # Run tests (Vitest) — covers src/ and server/
 npm run test:watch   # Watch mode
 npm run test:e2e     # Playwright smoke test in Edge (needs E2E_EMAIL / E2E_PASSWORD)
@@ -407,6 +442,8 @@ npm run build:sidecar # Bundle server/ into src-tauri/binaries/crystal-api-<trip
 npm run build:desktop # Sidecar + web build + Windows installer
 npm run build:release # Same, plus the updater signature and latest.json for a GitHub release
 ```
+
+**CI.** `.github/workflows/ci.yml` runs on every pull request and push to `main`, on Windows: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, then `cargo check --locked` in `src-tauri`. Pushing a `v*` tag runs `release.yml` (see [Publishing a release](#packaged-build)).
 
 **Before a release**, run `npm run badges` and `npm run test:e2e`. The smoke test signs in, adds and deletes a task, logs and deletes a transaction, and opens every page, failing on any uncaught error or a page that renders nothing. It starts its own Vite server on port 8090 (`E2E_PORT` to change) and uses the Edge that ships with Windows (`E2E_CHANNEL=chrome` or an empty value for Playwright's Chromium). Point it at a test user created in the Supabase dashboard, not your own account; Row Level Security keeps its rows apart from yours.
 
@@ -445,7 +482,9 @@ This produces an NSIS installer (`Crystal OS_<version>_x64-setup.exe`) in `src-t
 2. Run `npm run build:release`. Next to the installer it writes `<installer>.sig` and `latest.json`, with the notes taken from this version's `CHANGELOG.md` section.
 3. Create a GitHub release tagged `v<version>` (not a pre-release, so `releases/latest` points at it) and attach the installer and `latest.json`.
 
-Losing the private key means installed copies can no longer update in place; they would need a manual install of a build signed with a new key.
+Or let CI do steps 1 to 3: bump the version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, add its CHANGELOG section, and push a `v<version>` tag. `.github/workflows/release.yml` checks the tag matches `package.json`, runs the tests, builds with `npm run build:release`, and creates a **draft** release with the installer and `latest.json` attached. Review it and click **Publish**; the updater ignores drafts. It needs the repository secret `TAURI_SIGNING_PRIVATE_KEY` (the key file's contents) and, if the key has one, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. For a signed installer also add `CRYSTAL_SIGN_PFX_BASE64` (the `.pfx`, base64-encoded) and `CRYSTAL_SIGN_PFX_PASSWORD`; with those set, an unsigned build fails.
+
+**Back up the updater key.** It is `%USERPROFILE%\.tauri\crystal-os.key` (plus its password, if any). Keep a copy somewhere other than this machine, such as a password manager. Losing it means installed copies can no longer update in place; they would need a manual install of a build signed with a new key.
 
 `VITE_SUPABASE_*` are baked in at build time. The sidecar reads its server-side settings from the app config directory:
 

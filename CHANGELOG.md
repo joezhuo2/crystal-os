@@ -5,6 +5,33 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.3] - 2026-10-04
+
+No app changes: this release is about building, checking and documenting it.
+
+### Upgrade note
+
+The updater signing key was replaced (new public key in `plugins.updater.pubkey`, key ID `2C3267CEA2CFF4A9`). A v0.8.2 install trusts only the old key, so install v0.8.3 by hand once; updates from v0.8.3 on install in place.
+
+### Added
+
+- **CI** (`.github/workflows/ci.yml`). Every pull request and push to `main` runs, on a Windows runner, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` and `cargo check --locked`. The web build comes before `cargo check` because `tauri::generate_context!` embeds `dist/`.
+- **Release workflow** (`.github/workflows/release.yml`). Pushing a `v*` tag checks the tag matches `package.json`, runs the tests, builds with `npm run build:release` and creates a draft GitHub release with the installer and `latest.json`, its notes taken from this file. Publishing the draft is left to you. It needs the `TAURI_SIGNING_PRIVATE_KEY` secret (and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if set); with `CRYSTAL_SIGN_PFX_BASE64` and `CRYSTAL_SIGN_PFX_PASSWORD` it also code-signs, and then fails rather than ship unsigned.
+- **`npm run typecheck`.** `tsc --noEmit` over `tsconfig.app.json` and `tsconfig.node.json`.
+- **Install section in the README** for people using the app rather than building it: where to download, the SmartScreen prompt while the installer is unsigned, first-run Supabase and `.env.local` setup, and where the program, settings and logs live.
+- **`docs/PRIVACY.md`.** What is stored in Supabase, what is on disk (vault, `.env.local`, `settings.json`, Portal sessions, Nebula chats and keys, `diagnostics.log`, `localStorage`), what leaves the machine and when, and what The Nebula sends to each model provider. There is no telemetry.
+- **Updater key backup note** in the README's "Publishing a release".
+
+### Removed
+
+- **27 unused shadcn/ui components** from the template (accordion, alert, aspect-ratio, avatar, badge, breadcrumb, card, carousel, chart, checkbox, collapsible, drawer, form, hover-card, input-otp, menubar, navigation-menu, pagination, radio-group, resizable, separator, sheet, sidebar, table, tabs, toggle, toggle-group). Nothing imported them.
+- **20 dependencies only they used:** `@hookform/resolvers`, `react-hook-form`, `zod`, `embla-carousel-react`, `input-otp`, `react-resizable-panels`, `vaul`, and the Radix accordion, aspect-ratio, avatar, checkbox, collapsible, hover-card, menubar, navigation-menu, radio-group, separator, tabs, toggle and toggle-group packages.
+
+### Security
+
+- **`npm audit fix`** cleared 24 of 36 advisories (including the critical one and the high ones in `rollup`, `ws` and `postcss`) without major upgrades. The 12 left need breaking upgrades: `react-router-dom` 7, `vite` 8 (`esbuild`), `vitest` 5 and `tailwindcss` 4 (`braces`). All but `react-router` are build and test tooling that does not ship in the app; the `react-router` advisories cover an open redirect through `<Link>` targets with backslashes and SSR hydration, and Crystal OS renders on the client and never passes a computed path to `<Link>` or `useNavigate`.
+- **`cargo audit`** finds no vulnerabilities. It warns about 7 unmaintained or unsound crates, all pulled in by Tauri: `proc-macro-error` and the `unic-*` crates at build time, and `glib`, which is only compiled on Linux.
+
 ## [v0.8.2] - 2026-10-04
 
 ### Upgrade note

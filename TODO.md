@@ -1,9 +1,21 @@
 # Planned Features
-- [v0.9.0] banking update - use plaid to connect to banks (store api keys and tokens in secure env variables)
+- [v0.9.0] vault/banking overhaul - use plaid to connect to banks (store api keys and tokens in secure env variables), themed glassmorphism UI 
 
 - performance on the archive page is still heavy
+- when expanding the navbar to show names/desc, do not move the icons (currently the top col. of icons move down/up slightly because of description getting added/removed)
+- glassmorphism ui to all home page widget cards (except terminal)
+- redo portal ui (change to glassmorphism with some background)
+- hover texts in the orbit are not themed
+- clicking the categories in the engine creates flickers
+- hovering events in week/day view in the horizon creates un-themed hover texts
+- hover texts in the nebula are not themed
 
 ## To Test
+
+- [ ] v0.8.3 CI. Push a branch and open a PR: the **CI** workflow goes green (lint, typecheck, tests, web build, cargo check).
+- [ ] v0.8.3 Release workflow. Add the `TAURI_SIGNING_PRIVATE_KEY` secret (and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if set), push tag `v0.8.3`: a draft release appears with `Crystal.OS_0.8.3_x64-setup.exe` and `latest.json`. Publish it and check **Check for updates** from a v0.8.2 install.
+- [ ] v0.8.3 E2E smoke test. Create the test user, set `E2E_EMAIL`/`E2E_PASSWORD` in `.env.local`, and run `npm run test:e2e`.
+- [ ] v0.8.3 Removed UI components. Click through every page and dialog once. Typecheck and build pass, so nothing imports the deleted shadcn files, but this confirms it.
 
 - [ ] v0.8.2 Check for updates. Publish a test release with `npm run build:release` (installer + `latest.json`, not a pre-release) at a version above the installed one. In Settings → Install & update, **Check for updates** offers it; **Update to vX** shows progress, closes the app, runs the installer and reopens on the new version. Task Manager shows no leftover `crystal-api` from the old one. With no newer release it says "You have the latest release".
 - [ ] v0.8.2 Unsigned build. `npm run build:desktop` with no `CRYSTAL_SIGN_*` set prints "leaving … unsigned" for each binary and still produces only `bundle/nsis/Crystal OS_0.8.2_x64-setup.exe`.
@@ -42,21 +54,14 @@
 - [ ] **Publish a GitHub release.** The repo has no tags or releases yet, so Settings → Installer has nothing to download or update to. Build with `npm run build:release`, tag `v1.0.0`, attach the installer and `latest.json`, and check the Installer section picks it up as the default.
 
 ### Packaging and distribution
-- [ ] **Code-signing certificate.** v0.8.2 wired `scripts/sign-windows.mjs` into the build; it skips while no certificate is set, so SmartScreen still says "unknown publisher". Get an OV certificate or Azure Trusted Signing account, set `CRYSTAL_SIGN_THUMBPRINT` (or `CRYSTAL_SIGN_PFX`), and add `CRYSTAL_SIGN_REQUIRED=1` for release builds.
-- [ ] **Back up the updater key.** `%USERPROFILE%\.tauri\crystal-os.key` signs every release `latest.json` points at. Without it, installed copies cannot update in place.
+- [ ] **Code-signing certificate.** Get an OV certificate (or Azure Trusted Signing), then set `CRYSTAL_SIGN_THUMBPRINT` locally, or the `CRYSTAL_SIGN_PFX_BASE64`/`CRYSTAL_SIGN_PFX_PASSWORD` secrets for the release workflow.
+- [ ] **Back up the updater key** (`%USERPROFILE%\.tauri\crystal-os.key`) somewhere off this machine.
+- [ ] **Breaking dependency upgrades** left by the v0.8.3 audit: `react-router-dom` 7, `vite` 8, `vitest` 5, `tailwindcss` 4.
 - [ ] **Clean-machine install test.** Install on a Windows machine (or VM) with no dev tools: WebView2 present, the `crystal-api` sidecar starts, tray, hotkeys and launch-at-login work, and uninstall leaves nothing behind except user data.
 
 ### Integrations
 - [ ] **Google OAuth app out of testing mode.** In testing mode refresh tokens expire after 7 days, so The Horizon disconnects weekly. Publish the OAuth consent screen (or document the limit).
 - [ ] **Review the CSP.** `connect-src` lists the sidecar, Supabase and weather.gc.ca; confirm Nebula (NIM, OmniRoute) and Portal traffic still works in the packaged build with it.
 
-### Quality
-- [ ] **CI.** There is no `.github/workflows`. Add one that runs `npm run lint`, `npm test`, `tsc`, and `cargo check` on every PR, and builds the installer on tags (`build:release`, with `TAURI_SIGNING_PRIVATE_KEY` as a secret).
-- [ ] **Run the E2E smoke test** (`npm run test:e2e`) against the release build with the dedicated test user.
-- [ ] **Dependency audit.** `npm audit` and `cargo audit`; drop unused shadcn/Radix packages from the template.
-
 ### Docs
-- [ ] **README install section** for end users (download, first-run setup, where settings and logs live), separate from the developer setup.
-- [ ] **Refresh badges and version.** Run `npm run badges` (the tests badge says 479; the suite is now 482) and bump `package.json`, `Cargo.toml` and `tauri.conf.json` to 1.0.0 together.
-- [ ] **Privacy note.** What is stored where: Supabase (tasks, transactions), local disk (vault, `.env.local`, Portal sessions, `diagnostics.log`), and what Nebula sends to model providers.
 - [ ] **CHANGELOG 1.0.0 entry** summarising what ships.

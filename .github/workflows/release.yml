@@ -1,0 +1,80 @@
+# Builds the signed NSIS installer and latest.json when a version tag is pushed,
+# and attaches both to a draft GitHub release. Review the draft and publish it:
+# the in-app updater only sees published releases.
+#
+# Secrets:
+#   TAURI_SIGNING_PRIVATE_KEY           contents of %USERPROFILE%\.tauri\crystal-os.key (required)
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password, if it has one
+#   CRYSTAL_SIGN_PFX_BASE64             optional code-signing certificate (.pfx, base64)
+#   CRYSTAL_SIGN_PFX_PASSWORD           its password
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      HAS_PFX: ${{ secrets.CRYSTAL_SIGN_PFX_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Tag matches package.json
+        shell: bash
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json $version"
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - run: npm test
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Decode code-signing certificate
+        if: env.HAS_PFX == 'true'
+        shell: bash
+        env:
+          PFX: ${{ secrets.CRYSTAL_SIGN_PFX_BASE64 }}
+        run: |
+          echo "$PFX" | base64 -d > "$RUNNER_TEMP/crystal-sign.pfx"
+          echo "CRYSTAL_SIGN_PFX=$RUNNER_TEMP/crystal-sign.pfx" >> "$GITHUB_ENV"
+          echo "CRYSTAL_SIGN_REQUIRED=1" >> "$GITHUB_ENV"
+
+      - name: Build installer and latest.json
+        run: npm run build:release
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          CRYSTAL_SIGN_PFX_PASSWORD: ${{ secrets.CRYSTAL_SIGN_PFX_PASSWORD }}
+
+      - name: Draft GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          dir="src-tauri/target/release/bundle/nsis"
+          node -e "process.stdout.write(require('./$dir/latest.json').notes)" > "$RUNNER_TEMP/notes.md"
+          gh release create "$GITHUB_REF_NAME" \
+            "$dir/Crystal OS_${version}_x64-setup.exe" \
+            "$dir/latest.json" \
+            --draft --title "Crystal OS $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
