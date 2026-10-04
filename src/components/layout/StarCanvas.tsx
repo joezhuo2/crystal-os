@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { appActivity } from "@/lib/appActivity";
 import { useBackdropStill } from "@/lib/backdropSlot";
+import { startFrameLoop } from "@/lib/frameLoop";
 
 const STAR_FPS = 12;
 const STARS_PER_PIXEL = 1 / 4500;
@@ -55,24 +56,17 @@ export default function StarCanvas({ rgb, opacity = 0.95, className = "" }: { rg
     window.addEventListener("resize", onResize);
     if (still) return () => window.removeEventListener("resize", onResize);
 
-    let frame = 0;
-    let last = 0;
-    const tick = (now: number) => {
-      frame = requestAnimationFrame(tick);
-      if (now - last < 1000 / STAR_FPS) return;
-      last = now;
-      draw(now);
-    };
+    let stopLoop: () => void = () => undefined;
     // The loop only runs while the window can be seen.
     const run = () => {
-      cancelAnimationFrame(frame);
-      if (appActivity.getState().visible) frame = requestAnimationFrame(tick);
+      stopLoop();
+      if (appActivity.getState().visible) stopLoop = startFrameLoop(STAR_FPS, draw);
     };
     run();
     const unsubscribe = appActivity.subscribe(run);
     return () => {
       unsubscribe();
-      cancelAnimationFrame(frame);
+      stopLoop();
       window.removeEventListener("resize", onResize);
     };
   }, [still, rgb, opacity]);

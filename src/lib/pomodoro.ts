@@ -6,8 +6,6 @@
  * per interval, so a throttled background webview does not drift.
  */
 
-import { appActivity } from "@/lib/appActivity";
-
 export const DEFAULT_WORK = 25 * 60;
 export const DEFAULT_BREAK = 5 * 60;
 
@@ -45,21 +43,16 @@ let endsAt: number | null = null;
 /** When the current focus phase was first started; null until it is. */
 let focusStartedAt: number | null = null;
 let recorder: ((session: FocusSession) => void) | null = null;
-let timer: ReturnType<typeof setInterval> | null = null;
+let timer: ReturnType<typeof setTimeout> | null = null;
 const listeners = new Set<() => void>();
 
-// Sub-second polling while visible so the display never skips a second. While
-// hidden only the tray title shows the time, so once a second is enough.
-const tickInterval = () => (appActivity.getState().visible ? 250 : 1000);
-
+// One wake-up per second, timed for the moment the shown second changes
+// (when the time to the deadline crosses a whole second), so the display never
+// lags or skips a second without polling faster than it changes.
 function startTicking() {
-  if (timer !== null) clearInterval(timer);
-  timer = setInterval(tick, tickInterval());
+  if (timer !== null) clearTimeout(timer);
+  timer = endsAt === null ? null : setTimeout(tick, (endsAt - Date.now()) % 1000 || 1000);
 }
-
-appActivity.subscribe(() => {
-  if (timer !== null) startTicking();
-});
 
 function set(next: PomodoroState) {
   state = next;
@@ -71,7 +64,7 @@ function durationOf(phase: PomodoroPhase) {
 }
 
 function stopTimer() {
-  if (timer !== null) clearInterval(timer);
+  if (timer !== null) clearTimeout(timer);
   timer = null;
   endsAt = null;
 }
@@ -101,6 +94,7 @@ function tick() {
   if (!state.running) return;
   const left = secondsLeft();
   if (left > 0) {
+    startTicking();
     if (left !== state.remaining) set({ ...state, remaining: left });
     return;
   }

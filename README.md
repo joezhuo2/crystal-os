@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-517%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.8.5-6366F1)
+![Version](https://img.shields.io/badge/version-0.8.6-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.8.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.8.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -250,6 +250,7 @@ src/
 │   ├── orbitStore.ts           # The Orbit's per-device state: auto-export, seen reviews, Weekly/Monthly choice
 │   ├── imageBackdrop.ts        # Horizon, Engine and Orbit backgrounds: bakes and decodes the page (15%) and Home box (25%) blurs once per session
 │   ├── backdropSlot.ts         # Whether the surrounding backdrop is on screen; useBackdropStill pauses its loops when not
+│   ├── frameLoop.ts            # fps-capped draw loop for backdrop canvases; sleeps on a timer between frames
 │   ├── pomodoro.ts             # Module-level Pomodoro store (page + tray agree)
 │   ├── tray.ts                 # Tauri tray events → app, app state → tray menu
 │   ├── hotkey.ts               # Hotkey parsing + combo validation
@@ -559,7 +560,7 @@ Change any of them with **Change** in Settings. All are saved in `%APPDATA%\com.
 - **Quick Add…** — shows the window and opens the Quick Add dialog.
 - **Quit Crystal OS**
 
-The Pomodoro timer lives in `src/lib/pomodoro.ts`, so it keeps running when you leave the Tasks page and the tray and the on-page timer always agree. Tray clicks reach it as Tauri events (`tray://pomodoro`, `tray://quick-add`) handled in `src/lib/tray.ts`, which reports every visible change back to Rust (`update_tray_pomodoro` in `src-tauri/src/tray.rs`).
+The Pomodoro timer lives in `src/lib/pomodoro.ts`, so it keeps running when you leave the Tasks page and the tray and the on-page timer always agree. It counts down from a wall-clock deadline and wakes once a second, timed for the moment the shown second changes. Tray clicks reach it as Tauri events (`tray://pomodoro`, `tray://quick-add`) handled in `src/lib/tray.ts`, which reports every visible change back to Rust (`update_tray_pomodoro` in `src-tauri/src/tray.rs`).
 
 **Vault.** The desktop app reads your Obsidian vault natively; it does not use `OBSIDIAN_VAULT_PATH` or the sidecar's `/api/obsidian` routes. On first launch, The Archive shows **Choose vault folder**, which opens the system folder picker. The choice is saved as `vaultPath` in `settings.json`; change it later with **Change folder** in Settings.
 

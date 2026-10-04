@@ -4,6 +4,7 @@ import { useSkyScene } from "@/hooks/useSkyScene";
 import { appActivity } from "@/lib/appActivity";
 import { useBackdropStill } from "@/lib/backdropSlot";
 import { useAtmosphere } from "@/lib/atmosphereStore";
+import { startFrameLoop } from "@/lib/frameLoop";
 import { auroraStrength, moonPath, pineRidge, starVisibility, type SkyWeather } from "@/lib/atmosphereScene";
 
 const PRECIP_FPS = 30;
@@ -182,11 +183,8 @@ function PrecipCanvas({ weather, rootRef }: { weather: SkyWeather; rootRef: Reac
     window.addEventListener("resize", onResize);
     if (still) return () => window.removeEventListener("resize", onResize);
 
-    let frame = 0;
     let last = 0;
     const tick = (now: number) => {
-      frame = requestAnimationFrame(tick);
-      if (now - last < 1000 / PRECIP_FPS) return;
       const dt = last ? Math.min((now - last) / 1000, 0.1) : 0;
       last = now;
 
@@ -209,16 +207,17 @@ function PrecipCanvas({ weather, rootRef }: { weather: SkyWeather; rootRef: Reac
       step(dt);
       draw();
     };
+    let stopLoop: () => void = () => undefined;
     const run = () => {
-      cancelAnimationFrame(frame);
+      stopLoop();
       last = 0;
-      if (appActivity.getState().visible) frame = requestAnimationFrame(tick);
+      if (appActivity.getState().visible) stopLoop = startFrameLoop(PRECIP_FPS, tick);
     };
     run();
     const unsubscribe = appActivity.subscribe(run);
     return () => {
       unsubscribe();
-      cancelAnimationFrame(frame);
+      stopLoop();
       window.removeEventListener("resize", onResize);
       setFlash(false);
     };

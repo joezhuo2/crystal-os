@@ -28,10 +28,6 @@
 - [ ] **framer-motion is used for simple fades and slides in many places.** `LazyMotion` with `domAnimation` and `m.` components would trim the eager bundle by roughly 30 KB gzipped.
 - [ ] **The sidecar is a 93 MB Node executable started on every launch,** even when the vault (native) and calendar are not used. Start it on the first `/api/*` call, or move the calendar proxy into Rust and drop the sidecar.
 
-### Background work
-- [ ] **Throttled rAF loops still wake every frame.** `NebulaBackdrop` caps drawing at 30 fps but its `requestAnimationFrame` callback still runs at the display rate (60–144 Hz) just to skip. A `setTimeout`-paced loop, or skipping alternate frames with a precomputed interval, saves wake-ups on high-refresh monitors. Same pattern in `AtmosphereBackdrop`, `StarCanvas` and `TerminalStatic`.
-- [ ] **Pomodoro ticks every 250 ms while visible.** It only notifies on a changed second, so re-renders are fine, but a timer aligned to the next whole second (`setTimeout(tick, 1000 - (Date.now() % 1000))`) would cut wake-ups by 4x.
-
 - redo portal ui (change to glassmorphism with some background)
 - glassmorphism ui to all home page widget cards (except terminal)
 

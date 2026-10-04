@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { appActivity } from "@/lib/appActivity";
 import { useBackdropStill } from "@/lib/backdropSlot";
+import { startFrameLoop } from "@/lib/frameLoop";
 import type { NebulaTheme } from "@/lib/harness/types";
 
 const MAX_FPS = 30;
@@ -81,8 +82,7 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
     let shaders: WebGLShader[] = [];
     let buffer: WebGLBuffer | null = null;
     let uniforms: Record<string, WebGLUniformLocation | null> = {};
-    let frame = 0;
-    let last = 0;
+    let stopLoop: () => void = () => undefined;
     // Time advances by the swirl speed, so changing speed never jumps.
     let clock = 0;
     let lastNow = performance.now();
@@ -149,25 +149,23 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
     };
 
     const tick = (now: number) => {
-      frame = requestAnimationFrame(tick);
-      if (document.hidden || now - last < 1000 / MAX_FPS) return;
+      if (document.hidden) return;
       clock += ((now - lastNow) / 1000) * themeRef.current.swirlSpeed;
       lastNow = now;
-      last = now;
       draw();
     };
 
     // Runs the loop only while moving and visible; otherwise the last frame stays.
     const resume = () => {
-      cancelAnimationFrame(frame);
+      stopLoop();
       if (!stillRef.current && appActivity.getState().visible) {
         lastNow = performance.now();
-        frame = requestAnimationFrame(tick);
+        stopLoop = startFrameLoop(MAX_FPS, tick);
       }
     };
 
     const start = () => {
-      cancelAnimationFrame(frame);
+      stopLoop();
       resize();
       clock = clock || 40;
       draw();
@@ -201,7 +199,7 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
     };
     const onLost = (e: Event) => {
       e.preventDefault();
-      cancelAnimationFrame(frame);
+      stopLoop();
     };
     const onRestored = () => {
       shaders = [];
@@ -218,7 +216,7 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
     return () => {
       resumeRef.current = () => undefined;
       unsubscribe();
-      cancelAnimationFrame(frame);
+      stopLoop();
       observer.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
       canvas.removeEventListener("webglcontextlost", onLost);
@@ -303,24 +301,19 @@ function Stars({ density }: { density: number }) {
     observer.observe(canvas);
     if (still) return () => observer.disconnect();
 
-    let frame = 0;
-    let last = 0;
-    const tick = (now: number) => {
-      frame = requestAnimationFrame(tick);
-      if (document.hidden || now - last < 1000 / MAX_FPS) return;
-      last = now;
-      draw(now);
-    };
+    let stopLoop: () => void = () => undefined;
     // The loop only runs while the window can be seen.
     const run = () => {
-      cancelAnimationFrame(frame);
-      if (appActivity.getState().visible) frame = requestAnimationFrame(tick);
+      stopLoop();
+      if (appActivity.getState().visible) stopLoop = startFrameLoop(MAX_FPS, (now) => {
+        if (!document.hidden) draw(now);
+      });
     };
     run();
     const unsubscribe = appActivity.subscribe(run);
     return () => {
       unsubscribe();
-      cancelAnimationFrame(frame);
+      stopLoop();
       observer.disconnect();
     };
   }, [density, still]);

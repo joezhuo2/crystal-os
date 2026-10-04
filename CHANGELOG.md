@@ -5,6 +5,15 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.6] - 2026-10-04
+
+Fewer background wake-ups.
+
+### Changed
+
+- **Capped backdrop loops sleep between frames.** The Nebula (30 fps), its stars (30 fps), the Atmosphere's rain and snow (30 fps), the star specks (12 fps) and the Terminal static (20 fps) ran a `requestAnimationFrame` callback on every display refresh just to skip most of them, so a 30 fps loop woke 144 times a second on a 144 Hz monitor. They now share `startFrameLoop` (`src/lib/frameLoop.ts`), which waits on a timer until a frame is nearly due and only then asks for an animation frame. Drawing still lines up with the display; each drawn frame costs two or three wake-ups instead of five on a 144 Hz monitor, and the 12 fps stars drop from five to two at 60 Hz.
+- **The Pomodoro timer wakes once a second instead of four times.** It polled every 250 ms while the window was visible so the display would not skip a second. Each wake-up is now timed for the moment the shown second changes (a whole number of seconds before the deadline), so it never lags and needs no faster polling, visible or not. A late timer realigns on the next one.
+
 ## [v0.8.5] - 2026-10-04
 
 Performance outside performance mode: expanding the sidebar and switching between pages.

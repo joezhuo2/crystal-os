@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_BREAK, DEFAULT_WORK, formatClock, pomodoro } from "./pomodoro";
-import { appActivity } from "./appActivity";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -8,7 +7,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  appActivity._setWindowShown(true);
   pomodoro._reset();
   vi.useRealTimers();
 });
@@ -68,19 +66,33 @@ describe("pomodoro store", () => {
     unsubscribe();
   });
 
-  it("polls once a second while the window is hidden, and 4x a second once shown", () => {
+  it("wakes once a second, when the shown second changes", () => {
     pomodoro.start();
-    appActivity._setWindowShown(false);
     expect(vi.getTimerCount()).toBe(1);
-    const tick = vi.spyOn(Date, "now");
-    vi.advanceTimersByTime(3_000);
-    const hiddenPolls = tick.mock.calls.length;
-    expect(hiddenPolls).toBe(3);
-    appActivity._setWindowShown(true);
-    vi.advanceTimersByTime(1_000);
-    expect(tick.mock.calls.length - hiddenPolls).toBe(4);
-    expect(pomodoro.getState().remaining).toBe(DEFAULT_WORK - 4);
-    tick.mockRestore();
+    const started = Date.now();
+    for (let i = 1; i <= 3; i++) {
+      vi.advanceTimersToNextTimer();
+      expect(Date.now() - started).toBe(i * 1000);
+      expect(pomodoro.getState().remaining).toBe(DEFAULT_WORK - i);
+    }
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
+  it("realigns to the deadline after a late wake-up", () => {
+    pomodoro.start();
+    const started = Date.now();
+    // A throttled timer fires 300 ms late; the next one must land back on the second.
+    vi.setSystemTime(started + 1300);
+    vi.advanceTimersToNextTimer();
+    expect(pomodoro.getState().remaining).toBe(DEFAULT_WORK - 2);
+    vi.advanceTimersToNextTimer();
+    expect((Date.now() - started) % 1000).toBe(0);
+  });
+
+  it("stops waking once paused", () => {
+    pomodoro.start();
+    pomodoro.pause();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
 
