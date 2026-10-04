@@ -5,6 +5,19 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.7] - 2026-10-04
+
+A faster Archive: searching, filtering and reading the vault.
+
+### Changed
+
+- **Search and tag filters no longer walk the vault.** On desktop, `useVaultNotes` keyed its query on the search text and tag, so each debounced keystroke and tag click ran `list_vault` (a directory walk plus a `stat` per file) before filtering. Every caller now shares one listing under `["vault", "notes"]` and filters it with `select` (`useVault.ts`). The web app still asks `/api/obsidian/notes` per query.
+- **Search runs over a prepared index.** `buildVaultIndex` (`vaultCore.ts`) strips and lowercases each note's body, title, tags and path once per listing, and counts the tag list once, so a keystroke is a scan of plain strings instead of re-running the markdown-stripping regexes over every note. Entries are kept per note object, and the desktop listing reuses the object of every unchanged file, so a rebuild after one edit re-indexes only that note. `searchNotes` and `queryNotes` keep their signatures for the Node middleware.
+- **The open note no longer re-parses while you type in the search box.** Wikilinks resolve through a map built once per listing (`src/lib/wikilinks.ts`) instead of a scan of every note per link, the resolved body is memoised on the note's content, and the markdown renders in a memoised component. Wikilinks now resolve against the whole vault, not only the notes the current search or tag shows.
+- **Note rows and the tag cloud are memoised.** `NoteRow` takes the path handler directly instead of a new closure per render, and relative dates are computed once per list. The tag cloud is its own memoised component with a stable toggle.
+- **Short lists stagger in only when the list first appears.** Rows that a search or tag filter brings in afterwards show at once instead of replaying the framer-motion entrance.
+- **A vault file change refetches only what changed.** `useVaultLiveUpdates` invalidated every `["vault"]` query, so one Obsidian autosave refetched each cached search, every open note and the vault status. It now invalidates the listing and the changed notes' paths, and everything only when the vault folder disappears.
+
 ## [v0.8.6] - 2026-10-04
 
 Fewer background wake-ups.

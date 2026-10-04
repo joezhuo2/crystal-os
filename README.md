@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-517%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.8.6-6366F1)
+![Tests](https://img.shields.io/badge/tests-526%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.8.7-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.8.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.8.7** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -232,7 +232,8 @@ src/
 │   └── use-mobile.tsx          # Responsive breakpoint hook
 ├── lib/
 │   ├── supabase.ts             # Supabase client + helpers
-│   ├── vaultCore.ts            # Shared vault logic: parsing, search, tags, quick-add formatting
+│   ├── vaultCore.ts            # Shared vault logic: parsing, search index, tags, quick-add formatting
+│   ├── wikilinks.ts            # Archive reader: wikilink targets mapped once per listing
 │   ├── vaultNative.ts          # Desktop vault client for src-tauri/src/vault.rs
 │   ├── obsidianScene.ts        # Archive backdrop: crystal shapes, edge layout, cursor light maths
 │   ├── terminalNative.ts       # Desktop terminal bridge (terminal_* commands, event routing per shell)
@@ -564,7 +565,8 @@ The Pomodoro timer lives in `src/lib/pomodoro.ts`, so it keeps running when you 
 
 **Vault.** The desktop app reads your Obsidian vault natively; it does not use `OBSIDIAN_VAULT_PATH` or the sidecar's `/api/obsidian` routes. On first launch, The Archive shows **Choose vault folder**, which opens the system folder picker. The choice is saved as `vaultPath` in `settings.json`; change it later with **Change folder** in Settings.
 
-- **Live updates.** A file watcher (`notify`, debounced 250 ms) emits `vault://changed` whenever a note is added, edited, renamed, or deleted, and every vault view refetches. Edits made in Obsidian show up without a refresh. Only changed notes are re-read.
+- **Live updates.** A file watcher (`notify`, debounced 250 ms) emits `vault://changed` whenever a note is added, edited, renamed, or deleted. The one vault listing refetches, plus the open note if it was among the changed files. Edits made in Obsidian show up without a refresh. Only changed notes are re-read.
+- **One listing, searched in memory.** Every vault view (The Archive, Home, the command palette, Quick Add, The Orbit) reads the same cached listing. Search and tag filters run over an index built once per listing (plain-text bodies, lowercased fields, counted tags), so typing never walks the vault.
 - **Scoped access.** The webview has no fs, shell, or dialog plugin permissions (the Terminal tab runs its shell through its own commands, not the shell plugin). It reaches the vault only through six commands (`get_vault_status`, `pick_vault`, `list_vault`, `read_vault_file`, `write_vault_file`, `watch_vault`), and `src-tauri/capabilities/default.json` allowlists every app command by name. Each path must be a `.md` file inside the picked folder, outside `.obsidian`, `.trash`, `.git`, and `node_modules`.
 - **Safe writes.** Quick Add and the note editor write to a temp file and swap it in. Both send the `mtime` they read: if Obsidian saves the note in between, Quick Add redoes the append on top of that edit, and the editor asks whether to keep your version or theirs, instead of overwriting it.
 - **When things go wrong.** A saved folder that is gone at startup (renamed, or on an unplugged drive) or unreadable shows a card with **Choose vault folder** and **Retry**; the watcher restarts once the folder is back. A note deleted while open shows **This note is gone** with **Close note**.

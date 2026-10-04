@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   VaultError,
   buildNote,
+  buildVaultIndex,
   byteLength,
   normalizeNotePath,
   noteCreatedDay,
   planQuickAdd,
   queryNotes,
+  queryVaultIndex,
   sortNotesByDate,
 } from "./vaultCore";
 
@@ -57,6 +59,25 @@ describe("queryNotes", () => {
 
     expect(queryNotes(notes, { limit: 1 }).notes).toHaveLength(1);
     expect(queryNotes(notes, { limit: 1 }).total).toBe(3);
+  });
+});
+
+describe("buildVaultIndex", () => {
+  const notes = sortNotesByDate([
+    note("a.md", { tags: ["work"], date: "2026-01-01" }, "# Alpha\n**budget** review"),
+    note("b.md", { tags: ["home"], date: "2026-03-01" }, "# Beta\nshopping"),
+  ]);
+
+  it("answers repeated queries from one index, sharing tags and unchanged rows", () => {
+    const index = buildVaultIndex(notes);
+    const first = queryVaultIndex(index, { q: "budget" });
+    expect(first.notes.map((n) => n.path)).toEqual(["a.md"]);
+    expect(first.notes[0].matchContext).toBe("Alpha budget review");
+    expect(queryVaultIndex(index, { tag: "home" }).allTags).toBe(index.allTags);
+
+    // A rebuild over the same note objects reuses their rows.
+    const again = buildVaultIndex([...notes]);
+    expect(queryVaultIndex(again).notes[0]).toBe(queryVaultIndex(index).notes[0]);
   });
 });
 

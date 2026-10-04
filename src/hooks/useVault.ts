@@ -1,9 +1,11 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiRequest, shouldRetry } from "@/lib/apiRequest";
 import { isDesktop } from "@/lib/platform";
 import {
-  queryNotes,
+  buildVaultIndex,
+  queryVaultIndex,
+  type VaultIndex,
   type QuickAddResult as CoreQuickAddResult,
   type VaultNote as CoreVaultNote,
   type VaultNoteDetail,
@@ -86,14 +88,36 @@ function retryVault(failureCount: number, error: unknown): boolean {
   return shouldRetry(failureCount, error);
 }
 
+/**
+ * The desktop listing: one entry for the whole vault, shared by every
+ * `useVaultNotes` caller. Searches and tag filters run in JS over this index,
+ * so typing never walks the vault again; only a file change refetches it.
+ */
+const VAULT_LISTING_KEY = ["vault", "notes"] as const;
+
+async function loadVaultIndex(): Promise<VaultIndex> {
+  return buildVaultIndex(await listNotesNative());
+}
+
 /** Recent notes, or search/tag results when the query is populated. */
 export function useVaultNotes(params: VaultQuery = {}, enabled = true) {
-  return useQuery<VaultNotesResponse>({
-    queryKey: ["vault", "notes", params],
-    queryFn: async () =>
-      isDesktop()
-        ? queryNotes(await listNotesNative(), params)
-        : request<VaultNotesResponse>(`${API_BASE}/notes${buildQuery(params)}`),
+  const desktop = isDesktop();
+  const { q, tag, limit } = params;
+  const select = useCallback(
+    (data: VaultIndex | VaultNotesResponse) =>
+      desktop ? queryVaultIndex(data as VaultIndex, { q, tag, limit }) : (data as VaultNotesResponse),
+    [desktop, q, tag, limit],
+  );
+
+  return useQuery<VaultIndex | VaultNotesResponse, Error, VaultNotesResponse>({
+    queryKey: desktop ? VAULT_LISTING_KEY : [...VAULT_LISTING_KEY, { q, tag, limit }],
+    queryFn: desktop
+      ? loadVaultIndex
+      : () => request<VaultNotesResponse>(`${API_BASE}/notes${buildQuery({ q, tag, limit })}`),
+    select,
+    // The index is rebuilt from cached note objects on each fetch; comparing
+    // thousands of notes deeply would cost more than it saves.
+    structuralSharing: !desktop,
     staleTime: 30 * 1000,
     retry: retryVault,
     enabled,
@@ -242,16 +266,26 @@ export function usePickVault() {
 }
 
 /**
- * Desktop only: refresh vault queries when notes change on disk, so the
- * Archive follows edits made in Obsidian without a manual refresh. Mount once.
+ * Desktop only: refresh the listing and any changed open note when files
+ * change on disk, so the Archive follows edits made in Obsidian without a
+ * manual refresh. Mount once.
  */
 export function useVaultLiveUpdates() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!isDesktop()) return;
-    return onVaultChanged(() => {
-      queryClient.invalidateQueries({ queryKey: ["vault"] });
+    return onVaultChanged(({ paths, rootMissing }) => {
+      if (rootMissing) {
+        queryClient.invalidateQueries({ queryKey: ["vault"] });
+        return;
+      }
+      // The listing, plus any open note that changed. Other open notes and
+      // the vault status stay cached.
+      queryClient.invalidateQueries({ queryKey: VAULT_LISTING_KEY, exact: true });
+      for (const path of paths) {
+        queryClient.invalidateQueries({ queryKey: ["vault", "note", path], exact: true });
+      }
     });
   }, [queryClient]);
 }

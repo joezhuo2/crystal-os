@@ -273,32 +273,79 @@ export function collectTags(notes: VaultNote[]): string[] {
  * Search
  * ------------------------------------------------------------------ */
 
+/** One note with everything search compares against, lowercased once. */
+interface IndexedNote {
+  /** The note without its body, scored 0: what an empty query lists. */
+  hit: SearchHit;
+  title: string;
+  tags: string[];
+  path: string;
+  /** The body as plain text, for snippets. */
+  body: string;
+  bodyLower: string;
+}
+
 /**
- * Score notes against a query: title beats tags beats path beats body. Body
- * hits carry a snippet so the caller can show why the note matched.
+ * A listing prepared for repeated queries: bodies stripped and lowercased and
+ * the tag list counted once, so each keystroke is a scan of plain strings.
  */
-export function searchNotes(notes: VaultNoteDetail[], query: string): SearchHit[] {
+export interface VaultIndex {
+  /** Every note, in listing order. */
+  notes: VaultNoteDetail[];
+  entries: IndexedNote[];
+  /** Every tag in the listing, most frequent first. */
+  allTags: string[];
+}
+
+/**
+ * Entries keyed by note object. The desktop listing reuses the parsed object
+ * of every unchanged file, so a rebuild after one edit only re-strips that
+ * note, and the other rows keep their identity for memoised components.
+ */
+const indexed = new WeakMap<VaultNoteDetail, IndexedNote>();
+
+function indexNote(note: VaultNoteDetail): IndexedNote {
+  let entry = indexed.get(note);
+  if (!entry) {
+    const body = stripMarkdown(note.content);
+    entry = {
+      hit: { ...toSummary(note), score: 0, matchContext: null },
+      title: note.title.toLowerCase(),
+      tags: note.tags.map((t) => t.toLowerCase()),
+      path: note.path.toLowerCase(),
+      body,
+      bodyLower: body.toLowerCase(),
+    };
+    indexed.set(note, entry);
+  }
+  return entry;
+}
+
+export function buildVaultIndex(notes: VaultNoteDetail[]): VaultIndex {
+  return { notes, entries: notes.map(indexNote), allTags: collectTags(notes) };
+}
+
+function searchEntries(entries: IndexedNote[], query: string): SearchHit[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
 
   const hits: SearchHit[] = [];
 
-  for (const note of notes) {
+  for (const entry of entries) {
     let score = 0;
     let matchContext: string | null = null;
 
-    const title = note.title.toLowerCase();
+    const { title, body } = entry;
     if (title === q) score += 100;
     else if (title.startsWith(q)) score += 60;
     else if (title.includes(q)) score += 40;
 
-    if (note.tags.some((t) => t.toLowerCase() === q)) score += 30;
-    else if (note.tags.some((t) => t.toLowerCase().includes(q))) score += 15;
+    if (entry.tags.some((t) => t === q)) score += 30;
+    else if (entry.tags.some((t) => t.includes(q))) score += 15;
 
-    if (note.path.toLowerCase().includes(q)) score += 10;
+    if (entry.path.includes(q)) score += 10;
 
-    const body = stripMarkdown(note.content);
-    const idx = body.toLowerCase().indexOf(q);
+    const idx = entry.bodyLower.indexOf(q);
     if (idx !== -1) {
       score += 5;
       const start = Math.max(0, idx - CONTEXT_RADIUS);
@@ -309,15 +356,23 @@ export function searchNotes(notes: VaultNoteDetail[], query: string): SearchHit[
         (end < body.length ? "..." : "");
     }
 
-    if (score > 0) hits.push({ ...toSummary(note), score, matchContext });
+    if (score > 0) hits.push({ ...entry.hit, score, matchContext });
   }
 
   return hits.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 }
 
-/** Recent notes, or search/tag results, shaped like `GET /api/obsidian/notes`. */
-export function queryNotes(
-  all: VaultNoteDetail[],
+/**
+ * Score notes against a query: title beats tags beats path beats body. Body
+ * hits carry a snippet so the caller can show why the note matched.
+ */
+export function searchNotes(notes: VaultNoteDetail[], query: string): SearchHit[] {
+  return searchEntries(notes.map(indexNote), query);
+}
+
+/** Recent notes, or search/tag results, from a prepared index. */
+export function queryVaultIndex(
+  index: VaultIndex,
   { q = "", tag = "", limit }: VaultQuery = {},
 ): VaultNotesResponse {
   const query = q.trim();
@@ -325,14 +380,19 @@ export function queryNotes(
   const max = limit && limit > 0 ? limit : DEFAULT_LIMIT;
 
   let notes: SearchHit[] = query
-    ? searchNotes(all, query)
-    : all.map((note) => ({ ...toSummary(note), score: 0, matchContext: null }));
+    ? searchEntries(index.entries, query)
+    : index.entries.map((entry) => entry.hit);
 
   if (wanted) {
     notes = notes.filter((n) => n.tags.some((t) => t.toLowerCase() === wanted));
   }
 
-  return { notes: notes.slice(0, max), allTags: collectTags(all), total: notes.length };
+  return { notes: notes.slice(0, max), allTags: index.allTags, total: notes.length };
+}
+
+/** Recent notes, or search/tag results, shaped like `GET /api/obsidian/notes`. */
+export function queryNotes(all: VaultNoteDetail[], params: VaultQuery = {}): VaultNotesResponse {
+  return queryVaultIndex(buildVaultIndex(all), params);
 }
 
 /* ------------------------------------------------------------------ *

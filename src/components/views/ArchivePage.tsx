@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useRef, useState } from "react";
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -27,6 +27,7 @@ import {
 } from "@/hooks/useVault";
 import { isDesktop } from "@/lib/platform";
 import { useDebouncedValue } from "@/lib/utils";
+import { buildLinkTargets, resolveWikilinks } from "@/lib/wikilinks";
 
 // CodeMirror is only needed once someone edits, so it stays out of the main bundle.
 const NoteEditor = lazy(() => import("./NoteEditor"));
@@ -57,24 +58,47 @@ function TagChip({
   );
 }
 
-function NoteRow({
+/** The tag filter. Memoised: `allTags` only changes when the listing does. */
+const TagCloud = memo(function TagCloud({
+  tags,
+  activeTag,
+  onToggle,
+}: {
+  tags: string[];
+  activeTag: string | null;
+  onToggle: (tag: string | null) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      <TagChip tag="all" active={activeTag === null} onClick={() => onToggle(null)} />
+      {tags.map((tag) => (
+        <TagChip key={tag} tag={tag} active={activeTag === tag} onClick={() => onToggle(tag)} />
+      ))}
+    </div>
+  );
+});
+
+const NoteRow = memo(function NoteRow({
   note,
+  date,
   active,
   onSelect,
 }: {
   note: VaultNote;
+  /** Relative date, computed once per list rather than on every row render. */
+  date: string;
   active: boolean;
-  onSelect: () => void;
+  onSelect: (path: string) => void;
 }) {
   return (
     <button
-      onClick={onSelect}
+      onClick={() => onSelect(note.path)}
       data-active={active || undefined}
       className="obsidian-note w-full text-left px-3 py-2.5 rounded-lg transition-colors border"
     >
       <p className="text-sm font-medium truncate">{note.title}</p>
       <p className="text-xs text-muted-foreground truncate mt-0.5">
-        {note.tags.length > 0 ? note.tags.join(" · ") : "untagged"} — {relativeDate(note)}
+        {note.tags.length > 0 ? note.tags.join(" · ") : "untagged"} — {date}
       </p>
       {note.matchContext && (
         <p className="text-[11px] text-muted-foreground/70 mt-1 line-clamp-2">
@@ -83,14 +107,18 @@ function NoteRow({
       )}
     </button>
   );
-}
+});
 
 /**
  * Past this many notes the list is virtualised: only the rows in view (plus a
  * few either side) are mounted, so a vault of thousands scrolls like one of
- * dozens. Smaller lists keep their staggered entrance animation.
+ * dozens. Smaller lists stagger in when the list first mounts; rows a search
+ * or tag filter brings in later just appear.
  */
 const VIRTUALIZE_AFTER = 80;
+
+/** A limit no vault reaches, for queries that want every note. */
+const ALL_NOTES = 1_000_000;
 
 function NoteList({
   notes,
@@ -103,6 +131,12 @@ function NoteList({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtual = notes.length > VIRTUALIZE_AFTER;
+  const dates = useMemo(() => notes.map(relativeDate), [notes]);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+  }, []);
+  const stagger = !mounted.current;
   const virtualizer = useVirtualizer({
     count: virtual ? notes.length : 0,
     getScrollElement: () => scrollRef.current,
@@ -128,8 +162,9 @@ function NoteList({
               >
                 <NoteRow
                   note={note}
+                  date={dates[item.index]}
                   active={selectedPath === note.path}
-                  onSelect={() => onSelect(note.path)}
+                  onSelect={onSelect}
                 />
               </div>
             );
@@ -140,14 +175,15 @@ function NoteList({
           {notes.map((note, i) => (
             <motion.div
               key={note.path}
-              initial={{ opacity: 0, y: 6 }}
+              initial={stagger ? { opacity: 0, y: 6 } : false}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: Math.min(i * 0.03, 0.3) }}
+              transition={stagger ? { delay: Math.min(i * 0.03, 0.3) } : undefined}
             >
               <NoteRow
                 note={note}
+                date={dates[i]}
                 active={selectedPath === note.path}
-                onSelect={() => onSelect(note.path)}
+                onSelect={onSelect}
               />
             </motion.div>
           ))}
@@ -157,31 +193,24 @@ function NoteList({
   );
 }
 
-/** Rewrite Obsidian wikilinks so they resolve against the notes we actually have. */
-function resolveWikilinks(content: string, notes: VaultNote[]): string {
-  return content.replace(
-    /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
-    (_match, target: string, alias?: string) => {
-      const label = (alias ?? target).trim();
-      const wanted = target.trim().toLowerCase();
-      const hit = notes.find(
-        (n) =>
-          n.title.toLowerCase() === wanted ||
-          n.path.toLowerCase() === `${wanted}.md` ||
-          n.path.toLowerCase().endsWith(`/${wanted}.md`),
-      );
-      // Unresolved links stay plain text rather than becoming dead anchors.
-      return hit ? `[${label}](#vault/${encodeURIComponent(hit.path)})` : label;
-    },
-  );
-}
+const REMARK_PLUGINS = [remarkGfm];
 
-function NoteReader({ notes }: { notes: VaultNote[] }) {
+/** The rendered body. Memoised so typing in the search box never re-parses it. */
+const NoteMarkdown = memo(function NoteMarkdown({ body }: { body: string }) {
+  return <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>{body}</ReactMarkdown>;
+});
+
+function NoteReader({ linkTargets }: { linkTargets: Map<string, string> }) {
   const { selectedNotePath, setSelectedNotePath } = useApp();
   const { data: note, isLoading, error } = useVaultNote(selectedNotePath);
   // Keyed by path, so opening another note always comes back to reading.
   const [editingPath, setEditingPath] = useState<string | null>(null);
   const editing = !!note && editingPath === note.path;
+  const content = note?.content;
+  const body = useMemo(
+    () => (content === undefined ? "" : resolveWikilinks(content, linkTargets)),
+    [content, linkTargets],
+  );
 
   if (!selectedNotePath) {
     return (
@@ -241,7 +270,6 @@ function NoteReader({ notes }: { notes: VaultNote[] }) {
   }
 
   const extras = Object.entries(note.frontmatter);
-  const body = resolveWikilinks(note.content, notes);
 
   return (
     <motion.div
@@ -317,7 +345,7 @@ function NoteReader({ notes }: { notes: VaultNote[] }) {
             }
           }}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
+          <NoteMarkdown body={body} />
         </div>
         </>
       )}
@@ -424,6 +452,17 @@ export default function ArchivePage() {
 
   const notes = useMemo(() => data?.notes ?? [], [data]);
 
+  // Wikilinks resolve against the whole vault, not only the filtered list. On
+  // desktop this reads the same cached listing; on the web it is one request.
+  const { data: everything } = useVaultNotes({ limit: ALL_NOTES });
+  const allNotes = everything?.notes ?? notes;
+  const linkTargets = useMemo(() => buildLinkTargets(allNotes), [allNotes]);
+
+  const toggleTag = useCallback(
+    (tag: string | null) => setActiveTag((current) => (tag === null || current === tag ? null : tag)),
+    [],
+  );
+
   const openQuickAdd = () => {
     setQuickAddDraft("");
     setShowQuickAdd(true);
@@ -477,21 +516,7 @@ export default function ArchivePage() {
           {/* Top half: tags, scrolls on its own so a big tag cloud never buries the list. */}
           {(data?.allTags.length ?? 0) > 0 && (
             <div className="flex-1 basis-0 min-h-0 overflow-y-auto scrollbar-thin -mx-1 px-1">
-              <div className="flex flex-wrap gap-1.5">
-                <TagChip
-                  tag="all"
-                  active={activeTag === null}
-                  onClick={() => setActiveTag(null)}
-                />
-                {data!.allTags.map((tag) => (
-                  <TagChip
-                    key={tag}
-                    tag={tag}
-                    active={activeTag === tag}
-                    onClick={() => setActiveTag(activeTag === tag ? null : tag)}
-                  />
-                ))}
-              </div>
+              <TagCloud tags={data!.allTags} activeTag={activeTag} onToggle={toggleTag} />
             </div>
           )}
 
@@ -522,7 +547,7 @@ export default function ArchivePage() {
         </div>
 
         {/* ── Right pane: reader ── */}
-        <NoteReader notes={notes} />
+        <NoteReader linkTargets={linkTargets} />
       </div>
     </div>
   );
