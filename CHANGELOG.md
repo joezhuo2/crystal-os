@@ -5,6 +5,23 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.5] - 2026-10-04
+
+Performance outside performance mode: expanding the sidebar and switching between pages.
+
+### Fixed
+
+- **v0.8.4 installers never got past the splash screen.** The release workflow built without `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (`.env.local` is not in the repo), so the bundle threw on its first line. `release.yml` now passes both from repository secrets and stops before building if either is missing. Add them under **Settings → Secrets and variables → Actions** before tagging; the README's "Publishing a release" lists them.
+
+### Changed
+
+- **The sidebar expands over the page instead of pushing it.** A fixed 64 px slot holds its place in the row and the panel is positioned on top, so expanding no longer re-lays out `<main>` and the current view on every frame (or refits the Terminal). The width, labels and headers follow a `data-expanded` attribute in CSS (`.sidebar-shell` in `index.css`) instead of React state and Motion springs, so hovering re-renders nothing; `SidebarButton` is memoized with a stable handler. On The Portal the slot still widens with the panel, because the app's native webview would cover an overlay (`Navigation.tsx`).
+- **Page backdrops stay mounted after you leave their tab.** The current backdrop and the last one are kept, the hidden one with `visibility: hidden` on it and everything inside it (so a crystal lit by the cursor cannot show through on another page), its CSS animations paused and its loops stopped (`BackdropSlot.tsx`, `useBackdropStill` in `src/lib/backdropSlot.ts`). Flipping between two themed tabs no longer rebuilds the Nebula's WebGL context, restarts the Atmosphere's canvas or re-decodes a black-hole image. The Nebula also keeps its WebGL context when it pauses, instead of building a new one.
+- **Black-hole backdrops show at once on a later visit.** Baked images are decoded before first use and remembered, so a revisit (even after the backdrop was dropped) paints the image on the first frame without the fade-in (`imageBackdrop.ts`).
+- **Switching pages is a short fade with no flicker.** The old view leaves at once (no more `AnimatePresence mode="wait"`, which held the next view back about 200 ms) and the new one fades in over 400 ms. The fade used to be opacity on the view's wrapper, which cuts off the blur of every glass card inside until it ends, so cards flashed see-through and then snapped back. Now each glass card, and the content beside them, fades on its own (`ViewEnter` in `Index.tsx`, `.view-enter` in `index.css`), and only for the first moments after a switch, so content that appears later does not fade.
+- **Themed glass cards are one rule with per-theme values.** The Archive, Atmosphere, Horizon and Engine set `--glass-card-*` (and `--glass-hover-*`) on their `<main>` instead of each carrying a `.x-root main .glass-card` rule set. They look the same.
+- **Softer blur over moving backdrops.** Glass cards on The Archive and The Atmosphere blur 6 px instead of 12 and 14 px outside performance mode, since every card re-blurs each frame the crystals or the sky move. The panels are tinted enough that the difference is small. In performance mode the backdrop is still and the full radius comes back.
+
 ## [v0.8.4] - 2026-10-04
 
 ### Fixed

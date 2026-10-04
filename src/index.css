@@ -97,23 +97,90 @@
 }
 
 @layer components {
+  /* Glass panels. A themed page restyles them by setting --glass-card-* (and
+     --glass-hover-* for .glass-card-hover) on its <main>, instead of each
+     theme carrying its own `.x-root main .glass-card` rule set: one rule here,
+     values swapped per theme. --glass-card-blur feeds Tailwind's backdrop
+     chain, so backdrop-* utilities on a card still combine with it. */
   .glass-card {
     @apply relative rounded-xl border backdrop-blur-md;
-    background: hsl(var(--glass-bg) / 0.05);
-    border-color: hsl(var(--glass-border) / 0.1);
-    box-shadow: 0 8px 32px hsl(var(--background) / 0.4),
-                inset 0 1px 0 hsl(var(--glass-border) / 0.06);
+    --tw-backdrop-blur: var(--glass-card-blur, blur(12px));
+    background: var(--glass-card-bg, hsl(var(--glass-bg) / 0.05));
+    border-color: var(--glass-card-border, hsl(var(--glass-border) / 0.1));
+    box-shadow: var(--glass-card-shadow, 0 8px 32px hsl(var(--background) / 0.4),
+                inset 0 1px 0 hsl(var(--glass-border) / 0.06));
   }
 
   .glass-card-hover {
-    @apply glass-card transition-all duration-300;
+    @apply relative rounded-xl border backdrop-blur-md transition-all duration-300;
+    --tw-backdrop-blur: var(--glass-card-blur, blur(12px));
+    background: var(--glass-hover-bg, hsl(var(--glass-bg) / 0.05));
+    border-color: var(--glass-hover-border, hsl(var(--glass-border) / 0.1));
+    box-shadow: var(--glass-hover-shadow, 0 8px 32px hsl(var(--background) / 0.4),
+                inset 0 1px 0 hsl(var(--glass-border) / 0.06));
   }
 
   .glass-card-hover:hover {
-    border-color: hsl(var(--glow-indigo) / 0.3);
-    box-shadow: 0 8px 32px hsl(var(--background) / 0.4),
+    border-color: var(--glass-hover-hover-border, hsl(var(--glow-indigo) / 0.3));
+    box-shadow: var(--glass-hover-hover-shadow, 0 8px 32px hsl(var(--background) / 0.4),
                 0 0 20px hsl(var(--glow-indigo) / 0.1),
-                inset 0 1px 0 hsl(var(--glass-border) / 0.1);
+                inset 0 1px 0 hsl(var(--glass-border) / 0.1));
+  }
+
+  /* Desktop sidebar (Navigation.tsx). The shell is a fixed 64px slot in the
+     page row; the panel is positioned over the page and widens on its own,
+     so expanding never re-lays out <main>. `data-expanded` is set on hover
+     without a React render. On the Portal (`data-push`) the slot widens with
+     the panel, because the app's native webview would cover an overlay. */
+  .sidebar-shell {
+    position: relative;
+    z-index: 30;
+    flex-shrink: 0;
+    width: 64px;
+    height: 100vh;
+  }
+
+  .sidebar-shell[data-push] {
+    transition: width 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .sidebar-shell[data-push][data-expanded] {
+    width: 256px;
+  }
+
+  .sidebar-panel {
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: 64px;
+    transition:
+      width 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      color 300ms,
+      background-color 300ms,
+      border-color 300ms;
+  }
+
+  .sidebar-shell[data-expanded] .sidebar-panel {
+    width: 256px;
+  }
+
+  /* Labels and the full header show only while expanded; the "C" only while
+     collapsed. */
+  .sidebar-reveal {
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+
+  .sidebar-shell[data-expanded] .sidebar-reveal {
+    opacity: 1;
+  }
+
+  .sidebar-conceal {
+    transition: opacity 150ms;
+  }
+
+  .sidebar-shell[data-expanded] .sidebar-conceal {
+    opacity: 0;
   }
 
   /* Skeleton placeholder: a tinted glass block with a highlight sweeping across it. */
@@ -1216,14 +1283,22 @@
     color: transparent;
   }
 
-  /* Page panels: tinted amethyst glass. */
-  .obsidian-root main .glass-card {
-    background: linear-gradient(160deg, rgb(46 16 84 / 0.42), rgb(14 6 28 / 0.55));
-    border-color: rgb(192 132 252 / 0.18);
-    box-shadow:
+  /* Page panels: tinted amethyst glass. The crystals and cursor light move
+     behind them, so the blur is redone every frame they do: a smaller radius
+     keeps that cheap, and the tint does most of the work anyway. In
+     performance mode the backdrop is still, so the full radius comes back. */
+  .obsidian-root main {
+    --glass-card-bg: linear-gradient(160deg, rgb(46 16 84 / 0.42), rgb(14 6 28 / 0.55));
+    --glass-card-border: rgb(192 132 252 / 0.18);
+    --glass-card-shadow:
       0 8px 32px rgb(3 0 10 / 0.55),
       0 0 36px rgb(147 51 234 / 0.08),
       inset 0 1px 0 rgb(245 208 254 / 0.08);
+    --glass-card-blur: blur(6px);
+  }
+
+  html.perf-still .obsidian-root main {
+    --glass-card-blur: blur(12px);
   }
 
   .obsidian-chip {
@@ -1600,15 +1675,22 @@
     color: transparent;
   }
 
-  /* Page panels: deep night glass, so text reads over a bright sky or rain. */
-  .atmosphere-root main .glass-card {
-    background: linear-gradient(160deg, rgb(15 23 42 / 0.58), rgb(2 6 23 / 0.66));
-    border-color: rgb(125 211 252 / 0.16);
-    box-shadow:
+  /* Page panels: deep night glass, so text reads over a bright sky or rain.
+     The sky is a canvas redrawn every frame, so every card re-blurs with it:
+     a smaller radius keeps that cheap behind panels this opaque. In
+     performance mode the sky is one still frame and the full radius returns. */
+  .atmosphere-root main {
+    --glass-card-bg: linear-gradient(160deg, rgb(15 23 42 / 0.58), rgb(2 6 23 / 0.66));
+    --glass-card-border: rgb(125 211 252 / 0.16);
+    --glass-card-shadow:
       0 8px 32px rgb(0 4 16 / 0.5),
       0 0 36px rgb(45 212 191 / 0.06),
       inset 0 1px 0 rgb(224 242 254 / 0.07);
-    backdrop-filter: blur(14px) saturate(1.2);
+    --glass-card-blur: blur(6px) saturate(1.2);
+  }
+
+  html.perf-still .atmosphere-root main {
+    --glass-card-blur: blur(14px) saturate(1.2);
   }
 
   .sidebar-atmosphere {
@@ -1755,10 +1837,10 @@
   }
 
   /* Page panels: dark blue glass, so text reads over the bright disk. */
-  .horizon-root main .glass-card {
-    background: linear-gradient(160deg, rgb(12 22 48 / 0.55), rgb(2 5 16 / 0.65));
-    border-color: rgb(147 197 253 / 0.16);
-    box-shadow:
+  .horizon-root main {
+    --glass-card-bg: linear-gradient(160deg, rgb(12 22 48 / 0.55), rgb(2 5 16 / 0.65));
+    --glass-card-border: rgb(147 197 253 / 0.16);
+    --glass-card-shadow:
       0 8px 32px rgb(0 2 12 / 0.55),
       0 0 36px rgb(59 130 246 / 0.07),
       inset 0 1px 0 rgb(219 234 254 / 0.07);
@@ -1782,6 +1864,21 @@
     background-size: cover;
     background-position: center;
     animation: image-backdrop-in 600ms ease-out;
+  }
+
+  .image-backdrop-image[data-instant] {
+    animation: none;
+  }
+
+  /* A page backdrop kept mounted after its tab was left (BackdropSlot.tsx):
+     hidden, and its CSS animations held where they are. Every descendant is
+     hidden too, because a child that sets `visibility: visible` (the lit
+     parts of a crystal under the cursor) would otherwise show through. */
+  .backdrop-slot[data-inactive] *,
+  .backdrop-slot[data-inactive] *::before,
+  .backdrop-slot[data-inactive] *::after {
+    visibility: hidden !important;
+    animation-play-state: paused !important;
   }
 
   @keyframes image-backdrop-in {
@@ -1824,28 +1921,39 @@
 
   /* Page panels: dark ember glass, so text reads over the bright disk. Same
      opacity as the Horizon's panels. */
-  .engine-root main .glass-card,
-  .engine-root main .glass-card-hover {
-    background: linear-gradient(160deg, rgb(48 16 10 / 0.55), rgb(16 4 3 / 0.65));
-    border-color: rgb(253 186 116 / 0.16);
-    box-shadow:
+  .engine-root main {
+    --glass-card-bg: linear-gradient(160deg, rgb(48 16 10 / 0.55), rgb(16 4 3 / 0.65));
+    --glass-card-border: rgb(253 186 116 / 0.16);
+    --glass-card-shadow:
       0 8px 32px rgb(12 2 0 / 0.55),
       0 0 36px rgb(249 115 22 / 0.07),
       inset 0 1px 0 rgb(255 237 213 / 0.07);
-  }
-
-  .engine-root main .glass-card-hover:hover {
-    border-color: rgb(251 146 60 / 0.4);
-    box-shadow:
+    --glass-hover-bg: var(--glass-card-bg);
+    --glass-hover-border: var(--glass-card-border);
+    --glass-hover-shadow: var(--glass-card-shadow);
+    --glass-hover-hover-border: rgb(251 146 60 / 0.4);
+    --glass-hover-hover-shadow:
       0 8px 32px rgb(12 2 0 / 0.55),
       0 0 24px rgb(249 115 22 / 0.18),
       inset 0 1px 0 rgb(255 237 213 / 0.1);
+    /* The list is taller than the board: keep the scrollbar's space so
+       switching views doesn't shift the page sideways. */
+    scrollbar-gutter: stable;
   }
 
-  /* The list is taller than the board: keep the scrollbar's space so
-     switching views doesn't shift the page sideways. */
-  .engine-root main {
-    scrollbar-gutter: stable;
+  /* A newly opened view fades in (ViewEnter in Index.tsx). Never on the
+     wrapper: opacity on an ancestor of a backdrop-filter drops the blur, so
+     each glass card fades on its own, and so does any element beside them
+     with no glass card inside it (headers, toolbars). The fill is backwards
+     only, so once done the animation leaves nothing behind. */
+  .view-enter[data-entering] :is(.glass-card, .glass-card-hover),
+  .view-enter[data-entering] > :not(:has(.glass-card, .glass-card-hover)):not(.glass-card, .glass-card-hover),
+  .view-enter[data-entering] :has(.glass-card, .glass-card-hover) > :not(:has(.glass-card, .glass-card-hover)):not(.glass-card, .glass-card-hover) {
+    animation: view-enter 400ms ease-out backwards;
+  }
+
+  @keyframes view-enter {
+    from { opacity: 0; }
   }
 
   /* List/Board fade (TasksPage.tsx). Each glass card and header fades on its

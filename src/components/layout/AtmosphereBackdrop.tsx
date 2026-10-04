@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import StarCanvas from "@/components/layout/StarCanvas";
 import { useSkyScene } from "@/hooks/useSkyScene";
-import { appActivity, useAppActivity } from "@/lib/appActivity";
+import { appActivity } from "@/lib/appActivity";
+import { useBackdropStill } from "@/lib/backdropSlot";
 import { useAtmosphere } from "@/lib/atmosphereStore";
 import { auroraStrength, moonPath, pineRidge, starVisibility, type SkyWeather } from "@/lib/atmosphereScene";
 
@@ -44,7 +45,7 @@ const CURTAINS = RIBBONS.map((r) => curtainPath(r.seed));
  */
 function PrecipCanvas({ weather, rootRef }: { weather: SkyWeather; rootRef: React.RefObject<HTMLDivElement> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { still } = useAppActivity();
+  const still = useBackdropStill();
   const { precip, intensity, lightning } = weather;
 
   useEffect(() => {
@@ -234,7 +235,7 @@ function PrecipCanvas({ weather, rootRef }: { weather: SkyWeather; rootRef: Reac
  */
 function Aurora() {
   const fieldRef = useRef<HTMLDivElement>(null);
-  const { still } = useAppActivity();
+  const still = useBackdropStill();
 
   useEffect(() => {
     const field = fieldRef.current;

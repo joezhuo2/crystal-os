@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { appActivity, useAppActivity } from "@/lib/appActivity";
+import { appActivity } from "@/lib/appActivity";
+import { useBackdropStill } from "@/lib/backdropSlot";
 
 const STAR_FPS = 12;
 const STARS_PER_PIXEL = 1 / 4500;
@@ -12,7 +13,7 @@ const STARS_PER_PIXEL = 1 / 4500;
  */
 export default function StarCanvas({ rgb, opacity = 0.95, className = "" }: { rgb: string; opacity?: number; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { still } = useAppActivity();
+  const still = useBackdropStill();
 
   useEffect(() => {
     const canvas = canvasRef.current;

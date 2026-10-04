@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-517%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.8.4-6366F1)
+![Version](https://img.shields.io/badge/version-0.8.5-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.8.4** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.8.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -177,7 +177,8 @@ src/
 ├── components/
 │   ├── layout/
 │   │   ├── AppSplash.tsx       # "Crystal OS / Loading…" splash while the session restores
-│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal/Nebula/Atmosphere/Archive/Horizon/Engine restyle the sidebar)
+│   │   ├── Navigation.tsx      # Sidebar + BottomNav (Terminal/Portal/Nebula/Atmosphere/Archive/Horizon/Engine restyle the sidebar); the sidebar expands over the page
+│   │   ├── BackdropSlot.tsx    # Keeps a left tab's backdrop mounted, hidden and paused, so switching back is instant
 │   │   ├── TerminalStatic.tsx  # Static-noise backdrop for the Terminal tab
 │   │   ├── PortalBackdrop.tsx  # Themed backdrop for The Portal
 │   │   ├── AtmosphereBackdrop.tsx # Living Sky for The Atmosphere: sky, sun/moon, aurora, clouds, rain/snow/lightning
@@ -247,7 +248,8 @@ src/
 │   ├── atmosphereImage.ts      # Background image: checks, scaling, baked blur, IndexedDB storage
 │   ├── orbitReview.ts          # Review periods (Mon–Sun, months, ready at 6 PM), stats, trends, agenda, markdown export
 │   ├── orbitStore.ts           # The Orbit's per-device state: auto-export, seen reviews, Weekly/Monthly choice
-│   ├── imageBackdrop.ts        # Horizon, Engine and Orbit backgrounds: bakes the page (15%) and Home box (25%) blurs once per session
+│   ├── imageBackdrop.ts        # Horizon, Engine and Orbit backgrounds: bakes and decodes the page (15%) and Home box (25%) blurs once per session
+│   ├── backdropSlot.ts         # Whether the surrounding backdrop is on screen; useBackdropStill pauses its loops when not
 │   ├── pomodoro.ts             # Module-level Pomodoro store (page + tray agree)
 │   ├── tray.ts                 # Tauri tray events → app, app state → tray menu
 │   ├── hotkey.ts               # Hotkey parsing + combo validation
@@ -482,7 +484,7 @@ This produces an NSIS installer (`Crystal OS_<version>_x64-setup.exe`) in `src-t
 2. Run `npm run build:release`. Next to the installer it writes `<installer>.sig` and `latest.json`, with the notes taken from this version's `CHANGELOG.md` section.
 3. Create a GitHub release tagged `v<version>` (not a pre-release, so `releases/latest` points at it) and attach the installer and `latest.json`.
 
-Or let CI do steps 1 to 3: bump the version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, add its CHANGELOG section, and push a `v<version>` tag. `.github/workflows/release.yml` checks the tag matches `package.json`, runs the tests, builds with `npm run build:release`, and creates a **draft** release with the installer and `latest.json` attached. Review it and click **Publish**; the updater ignores drafts. It needs the repository secret `TAURI_SIGNING_PRIVATE_KEY` (the key file's contents) and, if the key has one, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. For a signed installer also add `CRYSTAL_SIGN_PFX_BASE64` (the `.pfx`, base64-encoded) and `CRYSTAL_SIGN_PFX_PASSWORD`; with those set, an unsigned build fails.
+Or let CI do steps 1 to 3: bump the version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, add its CHANGELOG section, and push a `v<version>` tag. `.github/workflows/release.yml` checks the tag matches `package.json`, runs the tests, builds with `npm run build:release`, and creates a **draft** release with the installer and `latest.json` attached. Review it and click **Publish**; the updater ignores drafts. It needs the repository secrets `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (the values from your `.env.local`; Vite inlines them into the bundle, and without them the installed app never gets past the splash screen, so the workflow stops if either is missing), `TAURI_SIGNING_PRIVATE_KEY` (the key file's contents) and, if the key has one, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. For a signed installer also add `CRYSTAL_SIGN_PFX_BASE64` (the `.pfx`, base64-encoded) and `CRYSTAL_SIGN_PFX_PASSWORD`; with those set, an unsigned build fails.
 
 **Back up the updater key.** It is `%USERPROFILE%\.tauri\crystal-os.key` (plus its password, if any). Keep a copy somewhere other than this machine, such as a password manager. Losing it means installed copies can no longer update in place; they would need a manual install of a build signed with a new key.
 

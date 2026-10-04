@@ -7,6 +7,8 @@
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password, if it has one
 #   CRYSTAL_SIGN_PFX_BASE64             optional code-signing certificate (.pfx, base64)
 #   CRYSTAL_SIGN_PFX_PASSWORD           its password
+#   VITE_SUPABASE_URL                   inlined into the bundle (required; .env.local is git-ignored)
+#   VITE_SUPABASE_ANON_KEY              inlined into the bundle (required)
 name: Release
 
 on:
@@ -59,9 +61,24 @@ jobs:
           echo "CRYSTAL_SIGN_PFX=$RUNNER_TEMP/crystal-sign.pfx" >> "$GITHUB_ENV"
           echo "CRYSTAL_SIGN_REQUIRED=1" >> "$GITHUB_ENV"
 
+      # Without these the bundle throws on its first line and the app never
+      # gets past the splash screen (v0.8.4 shipped that way).
+      - name: Supabase config present
+        shell: bash
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ] || [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "::error::Set the VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY repository secrets"
+            exit 1
+          fi
+
       - name: Build installer and latest.json
         run: npm run build:release
         env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           CRYSTAL_SIGN_PFX_PASSWORD: ${{ secrets.CRYSTAL_SIGN_PFX_PASSWORD }}

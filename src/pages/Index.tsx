@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import LoginPage from "@/components/auth/LoginPage";
 import AppSplash from "@/components/layout/AppSplash";
 import { SidebarNav, BottomNav, type TabId } from "@/components/layout/Navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import TerminalPage from "@/components/views/TerminalPage";
 import PortalPage from "@/components/views/PortalPage";
 import NebulaPage from "@/components/views/NebulaPage";
@@ -15,6 +15,7 @@ import NebulaBackdrop from "@/components/layout/NebulaBackdrop";
 import ObsidianBackdrop from "@/components/layout/ObsidianBackdrop";
 import AtmosphereBackdrop from "@/components/layout/AtmosphereBackdrop";
 import ImageBackdrop from "@/components/layout/ImageBackdrop";
+import BackdropSlot from "@/components/layout/BackdropSlot";
 import { useHarness } from "@/hooks/useHarness";
 import { usePortal } from "@/hooks/usePortal";
 import { isDesktop } from "@/lib/platform";
@@ -39,6 +40,41 @@ const views: Record<TabId, React.ComponentType<ViewProps>> = {
   terminal: TerminalPage,
 };
 
+
+/** Tabs with a page backdrop of their own. */
+const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["terminal", "portal", "nebula", "weather", "archive", "calendar", "tasks", "orbit"]);
+
+/**
+ * How many page backdrops stay mounted: the current one and the last one
+ * left, so flipping between two themed tabs never rebuilds either.
+ */
+const KEPT_BACKDROPS = 2;
+
+/** Long enough for the view's first content (and a preloaded chunk) to fade in. */
+const VIEW_ENTER_MS = 600;
+
+/**
+ * Fades a newly opened view in. Opacity on this wrapper would cut off the
+ * blur of every glass card inside it until the fade ended (opacity on an
+ * ancestor of a backdrop-filter does that), so the cards flashed see-through
+ * and then snapped back. Instead `data-entering` fades each glass card, and
+ * the content beside them, on its own (`.view-enter` in index.css). It is
+ * removed shortly after, so content that appears later does not fade.
+ */
+function ViewEnter({ fade, children }: { fade: boolean; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !fade) return;
+    const timer = window.setTimeout(() => el.removeAttribute("data-entering"), VIEW_ENTER_MS);
+    return () => clearTimeout(timer);
+  }, [fade]);
+  return (
+    <div ref={ref} className="view-enter" data-entering={fade ? "" : undefined}>
+      {children}
+    </div>
+  );
+}
 
 /** Shown for the moment a view's chunk is still loading. */
 function ViewFallback() {
@@ -81,6 +117,13 @@ const Index = () => {
   const { still } = useAppActivity();
   const View = views[activeTab];
   useHomeHotkey(() => setActiveTab("home"));
+
+  // Most recent backdrop tabs first. Updated during render, so the new tab's
+  // backdrop mounts in the same commit as its page.
+  const [keptBackdrops, setKeptBackdrops] = useState<TabId[]>([]);
+  if (BACKDROP_TABS.has(activeTab) && keptBackdrops[0] !== activeTab) {
+    setKeptBackdrops([activeTab, ...keptBackdrops.filter((t) => t !== activeTab)].slice(0, KEPT_BACKDROPS));
+  }
 
   // The search bar lives on Home only. Its shortcuts work from every tab:
   // they switch to Home, and the bar focuses itself once it is mounted.
@@ -154,6 +197,29 @@ const Index = () => {
                   : activeTab === "orbit"
                     ? "orbit-root"
                     : "mesh-gradient-bg";
+  const backdrop = (tab: TabId) => {
+    switch (tab) {
+      case "terminal":
+        return <TerminalStatic />;
+      case "portal":
+        return <PortalBackdrop theme={portalTheme} />;
+      case "nebula":
+        return <NebulaBackdrop theme={nebulaTheme} />;
+      case "weather":
+        return <AtmosphereBackdrop />;
+      case "archive":
+        return <ObsidianBackdrop />;
+      case "calendar":
+        return <ImageBackdrop image="horizon" />;
+      case "tasks":
+        return <ImageBackdrop image="engine" />;
+      case "orbit":
+        return <ImageBackdrop image="orbit" />;
+      default:
+        return null;
+    }
+  };
+
   // The Nebula page, sidebar, and backdrop read their colours from these.
   const rootStyle =
     activeTab === "nebula"
@@ -163,14 +229,14 @@ const Index = () => {
   return (
     <AppProvider>
       <div className={`h-screen flex isolate overflow-hidden ${rootClass}`} style={rootStyle}>
-        {activeTab === "terminal" && <TerminalStatic />}
-        {activeTab === "portal" && <PortalBackdrop theme={portalTheme} />}
-        {activeTab === "nebula" && <NebulaBackdrop theme={nebulaTheme} />}
-        {activeTab === "weather" && <AtmosphereBackdrop />}
-        {activeTab === "archive" && <ObsidianBackdrop />}
-        {activeTab === "calendar" && <ImageBackdrop image="horizon" />}
-        {activeTab === "tasks" && <ImageBackdrop image="engine" />}
-        {activeTab === "orbit" && <ImageBackdrop image="orbit" />}
+        {/* Leaving a tab hides its backdrop instead of unmounting it, so
+            coming back skips the WebGL setup, canvas restart or image decode.
+            Sorted, so switching never moves a backdrop's DOM node. */}
+        {[...keptBackdrops].sort().map((tab) => (
+          <BackdropSlot key={tab} active={tab === activeTab}>
+            {backdrop(tab)}
+          </BackdropSlot>
+        ))}
         <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
         <main className="flex-1 min-h-0 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
           {/* Home only. Its shortcuts are above, so they reach it from any tab. */}
@@ -181,21 +247,13 @@ const Index = () => {
               onFocusRequested={clearPaletteRequest}
             />
           )}
-          {/* Reduced motion (OS setting or performance mode) swaps views
-              without the slide, so the next view is not held back 200 ms. */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={still ? false : { opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={still ? undefined : { opacity: 0, y: -12 }}
-              transition={{ duration: still ? 0 : 0.2 }}
-            >
-              <Suspense fallback={<ViewFallback />}>
-                <View onNavigate={setActiveTab} />
-              </Suspense>
-            </motion.div>
-          </AnimatePresence>
+          {/* The last view leaves at once and the next fades in. Keyed, so
+              each switch mounts a fresh ViewEnter. */}
+          <ViewEnter key={activeTab} fade={!still}>
+            <Suspense fallback={<ViewFallback />}>
+              <View onNavigate={setActiveTab} />
+            </Suspense>
+          </ViewEnter>
         </main>
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
         <GlobalOverlays />

@@ -2,16 +2,40 @@
 - [v0.9.0] vault/banking overhaul - use plaid to connect to banks (store api keys and tokens in secure env variables), themed glassmorphism UI 
 
 - performance on the archive page is still heavy
-- expanding/minimizing the side navbar/switching between sections is very performance heavy on non-performance mode
+
+## Performance audit (2026-10-04)
+
+### Theme switching (left over from v0.8.5)
+- [ ] **Changing the root theme class still restyles the page subtree.** v0.8.5 turned the per-theme `.x-root main .glass-card` rule sets into `--glass-card-*` values on each theme's `<main>`, but `rootClass` and the `body` `horizon-theme`/`engine-theme`/`orbit-theme` classes still change on every switch, and the `portal-theme-*`, `sidebar-*` and `*-title` rules are still per theme. Measure a switch in the Performance panel before going further; if recalc is still a large share, move the remaining palettes to custom properties set from JS on one element.
+
+### Archive page
+- [ ] **Every search or tag change walks the whole vault.** `useVaultNotes` keys the query on `{q, tag}`, so each debounced keystroke and tag click calls `list_vault` (a full directory walk plus a `stat` per file in `src-tauri/src/vault.rs`) before filtering. List once under `["vault","notes"]` and filter with `select`/`useMemo` in JS; the mtime note cache already makes the list cheap to reuse.
+- [ ] **Full-text search runs on the main thread.** `searchNotes` in `src/lib/vaultCore.ts` scans every note's content synchronously after each debounced keystroke. For big vaults move it to a Web Worker or build a small inverted index once per vault change.
+- [ ] **The open note re-parses on every keystroke in the search box.** `ArchivePage` re-renders on each `search` change, so `NoteReader` re-runs `resolveWikilinks` (a `notes.find` per link, O(links × notes)) and `ReactMarkdown` with `remark-gfm` over the full body. Memoize the resolved body on `[note.content, notes]`, build a title/path `Map` once, and wrap the rendered markdown in `useMemo` or a memoized component.
+- [ ] **Note rows are not memoized.** `NoteRow` gets a new `onSelect` closure every render and calls `formatDistanceToNow` per row per render. Wrap it in `React.memo`, pass the path plus a stable handler, and compute relative dates once per list.
+- [ ] **Lists under 80 notes stagger in with framer-motion,** one `motion.div` each, re-running on every filter change. Drop the stagger after the first mount, or lower `VIRTUALIZE_AFTER`.
+- [ ] **Any vault file change invalidates every `["vault"]` query.** `useVaultLiveUpdates` refetches each cached search variant and the open note, so an Obsidian autosave triggers several full walks. Invalidate only the listing and the changed note's path.
+- [ ] **`allTags` is recomputed for every query** (`collectTags(all)` in `queryNotes`), and the tag cloud renders every chip unmemoized. Compute tags once per listing.
+
+### Global state and re-renders
+- [ ] **One `AppContext` holds data and UI state.** Tasks, transactions, categories and transient UI state (`quickAddDraft`, `showQuickAdd`, `showTaskForm`, `selectedNotePath`, …) share one context value, so typing in Quick Add or opening a form re-renders all 20 `useApp()` consumers, including the whole current view. Split it into a data context, an actions context (stable callbacks) and small UI contexts, or move the UI flags into a `useSyncExternalStore` store like `perfSettings`.
+- [ ] **Tasks and transactions live in `useState`, not React Query,** so a single task edit replaces the whole `tasks` array and every consumer recomputes its derived lists. Moving them to React Query with `select` would let views subscribe to the slice they show.
+
+### Bundle and startup
+- [ ] **The entry chunk is 1.17 MB.** Nebula, Terminal and Portal are bundled with the app on purpose, but that pulls `react-markdown` + `remark-gfm` (via `ChatView`), the harness, framer-motion, Supabase and every Radix primitive into the startup parse. Keep the background *stores* eager but lazy-load the page components (`NebulaPage`, `PortalPage`, `TerminalPage` UI), and add `build.rollupOptions.output.manualChunks` for `react`/`supabase`/`framer-motion` so vendor code caches across releases.
+- [ ] **`preloadViews()` fetches every view chunk about 2 s after start,** including `FinancialsPage` (409 KB, mostly Recharts) and the 611 KB CodeMirror `NoteEditor` via Archive's lazy import. Fine on a fast disk, but on startup it competes with the first render. Preload only the tabs the user visits most (track recent tabs) or delay until the first idle after the home view settles.
+- [ ] **Recharts is 400 KB for a few charts.** Orbit already draws its own SVG bars (`OrbitCharts.tsx`). Doing the same for the Financials charts, or switching to a lighter library, would cut most of that chunk.
+- [ ] **framer-motion is used for simple fades and slides in many places.** `LazyMotion` with `domAnimation` and `m.` components would trim the eager bundle by roughly 30 KB gzipped.
+- [ ] **The sidecar is a 93 MB Node executable started on every launch,** even when the vault (native) and calendar are not used. Start it on the first `/api/*` call, or move the calendar proxy into Rust and drop the sidecar.
+
+### Background work
+- [ ] **Throttled rAF loops still wake every frame.** `NebulaBackdrop` caps drawing at 30 fps but its `requestAnimationFrame` callback still runs at the display rate (60–144 Hz) just to skip. A `setTimeout`-paced loop, or skipping alternate frames with a precomputed interval, saves wake-ups on high-refresh monitors. Same pattern in `AtmosphereBackdrop`, `StarCanvas` and `TerminalStatic`.
+- [ ] **Pomodoro ticks every 250 ms while visible.** It only notifies on a changed second, so re-renders are fine, but a timer aligned to the next whole second (`setTimeout(tick, 1000 - (Date.now() % 1000))`) would cut wake-ups by 4x.
 
 - redo portal ui (change to glassmorphism with some background)
 - glassmorphism ui to all home page widget cards (except terminal)
 
 ## To Test
-
-- [ ] v0.8.4 Sidebar. Hover the sidebar on and off, on a few pages including the Terminal: the icons stay put while the header changes.
-- [ ] v0.8.4 Categories dialog. Open and close **Categories** on the Engine and on Financials: the card fades in and out blurred, with no flash.
-- [ ] v0.8.4 Hover cards. Hover chart bars, deltas, agenda rows and paths in The Orbit; events in the Horizon's week and day views; the toolbar, sidebar, token table and Stop button in The Nebula. Each shows the page's glass card, never the plain browser box.
 
 - [ ] v0.7.5 After-completion repeat. Make a task "2 days after done", tick it off on Home: it moves to two days from today with a "Next due" toast instead of disappearing.
 - [ ] v0.7.2 Categories. Sign in with the network off (or let the session expire), then reconnect and reload: the Engine's categories stay one of each.

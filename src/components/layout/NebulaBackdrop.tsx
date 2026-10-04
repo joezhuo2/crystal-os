@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { appActivity, useAppActivity } from "@/lib/appActivity";
+import { appActivity } from "@/lib/appActivity";
+import { useBackdropStill } from "@/lib/backdropSlot";
 import type { NebulaTheme } from "@/lib/harness/types";
 
 const MAX_FPS = 30;
@@ -60,11 +61,17 @@ function hexToRgb(hex: string): [number, number, number] {
 
 
 function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
-  const { still } = useAppActivity();
+  const still = useBackdropStill();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const themeRef = useRef(theme);
   themeRef.current = theme;
   const redrawRef = useRef<() => void>(() => undefined);
+  // Read by the loop rather than restarting the effect, so pausing (reduced
+  // motion, or the backdrop kept hidden after leaving the tab) keeps the GL
+  // context instead of building a new one.
+  const stillRef = useRef(still);
+  stillRef.current = still;
+  const resumeRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -150,18 +157,25 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
       draw();
     };
 
-    const start = () => {
+    // Runs the loop only while moving and visible; otherwise the last frame stays.
+    const resume = () => {
       cancelAnimationFrame(frame);
-      resize();
-      clock = clock || 40;
-      draw();
-      if (!still && appActivity.getState().visible) {
+      if (!stillRef.current && appActivity.getState().visible) {
         lastNow = performance.now();
         frame = requestAnimationFrame(tick);
       }
     };
 
+    const start = () => {
+      cancelAnimationFrame(frame);
+      resize();
+      clock = clock || 40;
+      draw();
+      resume();
+    };
+
     redrawRef.current = draw;
+    resumeRef.current = resume;
 
     if (!initGl()) {
       disposeGl();
@@ -197,18 +211,12 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
     document.addEventListener("visibilitychange", onVisibility);
     // Stop the loop entirely while the window is hidden (tray or minimised),
     // instead of waking every frame to skip drawing.
-    const onActivity = () => {
-      cancelAnimationFrame(frame);
-      if (!still && appActivity.getState().visible) {
-        lastNow = performance.now();
-        frame = requestAnimationFrame(tick);
-      }
-    };
-    const unsubscribe = appActivity.subscribe(onActivity);
+    const unsubscribe = appActivity.subscribe(resume);
     canvas.addEventListener("webglcontextlost", onLost);
     canvas.addEventListener("webglcontextrestored", onRestored);
 
     return () => {
+      resumeRef.current = () => undefined;
       unsubscribe();
       cancelAnimationFrame(frame);
       observer.disconnect();
@@ -219,7 +227,11 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
       // Release the GPU context now instead of waiting for garbage collection.
       (gl as WebGLRenderingContext | null)?.getExtension("WEBGL_lose_context")?.loseContext();
     };
-  }, [onFail, still]);
+  }, [onFail]);
+
+  useEffect(() => {
+    resumeRef.current();
+  }, [still]);
 
   // Without animation (reduced motion) the frame must be redrawn when the colours change.
   useEffect(() => {
@@ -232,7 +244,7 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
 /** Twinkling four-point stars over the nebula. */
 function Stars({ density }: { density: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { still } = useAppActivity();
+  const still = useBackdropStill();
 
   useEffect(() => {
     const canvas = canvasRef.current;

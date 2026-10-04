@@ -9,6 +9,7 @@ import {
   svgPoints,
   type Sparkle,
 } from "@/lib/obsidianScene";
+import { useBackdropActive } from "@/lib/backdropSlot";
 
 /** How long after the last scroll event the crystals start moving again. */
 const SCROLL_SETTLE_MS = 180;
@@ -42,6 +43,9 @@ function sparkleStyle(s: Sparkle): React.CSSProperties {
  */
 export default function ObsidianBackdrop() {
   const rootRef = useRef<HTMLDivElement>(null);
+  // Kept mounted but hidden after leaving The Archive: skip the cursor work.
+  const activeRef = useRef(true);
+  activeRef.current = useBackdropActive();
   // Random once per visit; later renders reuse them.
   const [sparkles] = useState(() => ({
     back: makeSparkles(backSparkleCount(window.devicePixelRatio), Math.random, [10, 22]),
@@ -102,7 +106,7 @@ export default function ObsidianBackdrop() {
     };
 
     const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(apply);
+      if (!frame && activeRef.current) frame = requestAnimationFrame(apply);
     };
 
     const onMove = (e: PointerEvent) => {

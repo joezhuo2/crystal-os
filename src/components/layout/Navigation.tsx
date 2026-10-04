@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useRef } from "react";
 import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings, SquareTerminal, Orbit, Sparkles, AppWindow } from "lucide-react";
 import { motion } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
@@ -95,23 +95,26 @@ const activePillStyle: Record<SidebarMode, React.CSSProperties> = {
   },
 };
 
-function SidebarButton({
+/**
+ * Memoized, and never told whether the sidebar is expanded: the label fades
+ * with CSS off the shell's `data-expanded`, so hovering the sidebar
+ * re-renders no buttons.
+ */
+const SidebarButton = memo(function SidebarButton({
   tab,
   active,
-  expanded,
   mode,
   badge,
   badgeTitle,
-  onClick,
+  onSelect,
 }: {
   tab: Tab;
   active: boolean;
-  expanded: boolean;
   mode: SidebarMode;
   badge?: PortalBadge | null;
   /** Spoken in place of "Unread" for a dot badge. */
   badgeTitle?: string;
-  onClick: () => void;
+  onSelect: (tab: TabId) => void;
 }) {
   const textClass =
     mode === "terminal"
@@ -128,9 +131,8 @@ function SidebarButton({
   const radius = mode === "terminal" ? "rounded-sm" : "rounded-lg";
   return (
     <button
-      onClick={onClick}
+      onClick={() => onSelect(tab.id)}
       className={`relative flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors whitespace-nowrap overflow-hidden ${radius} ${textClass}`}
-      title={!expanded ? tab.label : undefined}
     >
       {active && (
         <motion.div
@@ -152,24 +154,28 @@ function SidebarButton({
           </span>
         )}
       </span>
-      <motion.span
-        className="relative z-10"
-        animate={{ opacity: expanded ? 1 : 0 }}
-        transition={{ duration: 0.15 }}
-      >
-        {tab.label}
-      </motion.span>
+      <span className="sidebar-reveal relative z-10">{tab.label}</span>
     </button>
   );
-}
+});
 
 /**
  * Collapsed, the sidebar is 64px wide with a 1px right border. Padding of 12px
  * left and 11px right leaves a 40px button, so a 16px icon behind 12px of
  * button padding sits exactly centred in its highlight.
+ *
+ * A fixed 64px spacer holds the sidebar's place in the row, and the panel
+ * itself is positioned over the page, so expanding it never re-lays out
+ * <main> or the view. Expanding is a `data-expanded` attribute set straight
+ * on the spacer: no React state, so hovering re-renders nothing, and the
+ * width, labels and headers follow it in CSS (`.sidebar-shell` in index.css).
+ * The Portal is the exception: its apps are native webviews drawn above the
+ * page, which would hide the expanded panel, so there the spacer grows with
+ * the panel (`data-push`) and the app moves aside as before.
  */
 export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
-  const [expanded, setExpanded] = useState(false);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const setExpanded = (on: boolean) => shellRef.current?.toggleAttribute("data-expanded", on);
   const portalBadge = selectBadgeTotal(usePortal());
   const orbitReady = useOrbitReady(useNow());
   const mode: SidebarMode =
@@ -230,85 +236,71 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
       key={tab.id}
       tab={tab}
       active={activeTab === tab.id}
-      expanded={expanded}
       mode={mode}
       badge={badge}
       badgeTitle={badgeTitle}
-      onClick={() => onTabChange(tab.id)}
+      onSelect={onTabChange}
     />
   );
 
   return (
-    <motion.aside
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
-      animate={{ width: expanded ? 256 : 64 }}
-      transition={{ type: "spring", bounce: 0.15, duration: 0.35 }}
-      className={`hidden md:flex flex-col h-screen sticky top-0 glass-card border-r border-t-0 border-b-0 border-l-0 rounded-none pl-3 pr-[11px] pb-4 pt-8 gap-2 overflow-hidden transition-colors duration-300 ${sidebarClass}`}
-    >
-      <button
-        type="button"
-        onClick={() => onTabChange("home")}
-        className={`block w-full text-left mb-8 px-3 whitespace-nowrap overflow-hidden cursor-pointer transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${terminal ? "rounded-sm" : "rounded-lg"}`}
-        aria-label="Go to home"
-        title={!expanded ? "Home" : undefined}
+    <div ref={shellRef} className="sidebar-shell hidden md:block" data-push={mode === "portal" ? "" : undefined}>
+      <aside
+        onMouseEnter={() => setExpanded(true)}
+        onMouseLeave={() => setExpanded(false)}
+        className={`sidebar-panel flex flex-col glass-card border-r border-t-0 border-b-0 border-l-0 rounded-none pl-3 pr-[11px] pb-4 pt-8 gap-2 overflow-hidden ${sidebarClass}`}
       >
-        {/* Both headers stay mounted in one grid cell and cross-fade, so the
-            cell is always the taller (expanded) height: swapping them changed
-            the header's height and nudged every icon below it. */}
-        <div className="grid">
-          <motion.div
-            className="[grid-area:1/1]"
-            aria-hidden={!expanded}
-            initial={false}
-            animate={{ opacity: expanded ? 1 : 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            {terminal ? (
-              <h1 className="text-xl font-bold tracking-tight terminal-font">
-                <span className="terminal-glitch-text" data-text="Crystal">Crystal</span>{" "}
-                <span className="text-neutral-500 font-light">OS</span>
-              </h1>
-            ) : (
-              <h1 className="text-xl font-bold tracking-tight">
-                <span className={gradientClass}>Crystal</span>{" "}
-                <span className="text-muted-foreground font-light">OS</span>
-              </h1>
-            )}
-            <p className={`text-xs mt-1 ${terminal ? "terminal-font text-neutral-500" : "text-muted-foreground"}`}>
-              Productivity Ecosystem
-            </p>
-          </motion.div>
-          <motion.div
-            className="[grid-area:1/1]"
-            aria-hidden={expanded}
-            initial={false}
-            animate={{ opacity: expanded ? 0 : 1 }}
-            transition={{ duration: 0.15 }}
-          >
-            <h1 className={`text-xl font-bold tracking-tight ${terminal ? "terminal-font" : ""}`}>
+        <button
+          type="button"
+          onClick={() => onTabChange("home")}
+          className={`block w-full text-left mb-8 px-3 whitespace-nowrap overflow-hidden cursor-pointer transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${terminal ? "rounded-sm" : "rounded-lg"}`}
+          aria-label="Go to home"
+        >
+          {/* Both headers stay mounted in one grid cell and cross-fade, so the
+              cell is always the taller (expanded) height: swapping them changed
+              the header's height and nudged every icon below it. */}
+          <div className="grid">
+            <div className="sidebar-reveal [grid-area:1/1]">
               {terminal ? (
-                <span className="terminal-glitch-text" data-text="C">C</span>
+                <h1 className="text-xl font-bold tracking-tight terminal-font">
+                  <span className="terminal-glitch-text" data-text="Crystal">Crystal</span>{" "}
+                  <span className="text-neutral-500 font-light">OS</span>
+                </h1>
               ) : (
-                <span className={gradientClass}>C</span>
+                <h1 className="text-xl font-bold tracking-tight">
+                  <span className={gradientClass}>Crystal</span>{" "}
+                  <span className="text-muted-foreground font-light">OS</span>
+                </h1>
               )}
-            </h1>
-          </motion.div>
+              <p className={`text-xs mt-1 ${terminal ? "terminal-font text-neutral-500" : "text-muted-foreground"}`}>
+                Productivity Ecosystem
+              </p>
+            </div>
+            <div className="sidebar-conceal [grid-area:1/1]" aria-hidden>
+              <h1 className={`text-xl font-bold tracking-tight ${terminal ? "terminal-font" : ""}`}>
+                {terminal ? (
+                  <span className="terminal-glitch-text" data-text="C">C</span>
+                ) : (
+                  <span className={gradientClass}>C</span>
+                )}
+              </h1>
+            </div>
+          </div>
+        </button>
+        <nav className="flex flex-col gap-1">
+          {tabs.map((tab) =>
+            tab.id === "orbit" && orbitReady.unseen.length ? button(tab, "dot", readyTitle(orbitReady.unseen)) : button(tab),
+          )}
+        </nav>
+        <div className="mt-auto flex flex-col gap-1">
+          {button(archiveTab)}
+          {isDesktop() && button(nebulaTab)}
+          {button(portalTab, portalBadge)}
+          {isDesktop() && button(terminalTab)}
+          {button(settingsTab)}
         </div>
-      </button>
-      <nav className="flex flex-col gap-1">
-        {tabs.map((tab) =>
-          tab.id === "orbit" && orbitReady.unseen.length ? button(tab, "dot", readyTitle(orbitReady.unseen)) : button(tab),
-        )}
-      </nav>
-      <div className="mt-auto flex flex-col gap-1">
-        {button(archiveTab)}
-        {isDesktop() && button(nebulaTab)}
-        {button(portalTab, portalBadge)}
-        {isDesktop() && button(terminalTab)}
-        {button(settingsTab)}
-      </div>
-    </motion.aside>
+      </aside>
+    </div>
   );
 }
 

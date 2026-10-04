@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { appActivity, useAppActivity } from "@/lib/appActivity";
+import { appActivity } from "@/lib/appActivity";
+import { useBackdropStill } from "@/lib/backdropSlot";
 
 const FPS = 20;
 const PIXEL = 4;
@@ -11,7 +12,7 @@ const PIXEL = 4;
  */
 export default function TerminalStatic() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { still } = useAppActivity();
+  const still = useBackdropStill();
 
   useEffect(() => {
     const canvas = canvasRef.current;

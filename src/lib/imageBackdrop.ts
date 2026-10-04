@@ -25,6 +25,18 @@ export const PAGE_BACKDROP_BLUR = 15;
 export const CARD_BACKDROP_BLUR = 25;
 
 const baked = new Map<string, Promise<string>>();
+/** Bakes that have finished, and decoded, so a remount can show them at once. */
+const ready = new Map<string, string>();
+
+/** Decodes `url` off the main thread, so the first paint that uses it doesn't. */
+function decoded(url: string): Promise<string> {
+  const img = new Image();
+  img.src = url;
+  return img.decode().then(
+    () => url,
+    () => url,
+  );
+}
 
 function bake(image: BackdropImage, amount: number): Promise<string> {
   const key = `${image}:${amount}`;
@@ -36,22 +48,42 @@ function bake(image: BackdropImage, amount: number): Promise<string> {
       .then((blob) => blurImage(blob, amount))
       .then((blob) => URL.createObjectURL(blob))
       // No canvas or fetch: show the sharp image rather than nothing.
-      .catch(() => src);
+      .catch(() => src)
+      .then(decoded)
+      .then((u) => {
+        ready.set(key, u);
+        return u;
+      });
     baked.set(key, url);
   }
   return url;
 }
 
-/** Object URL of `image` blurred by `amount`, or null while it bakes. */
+/** True once `image` at `amount` has been baked and decoded. */
+export function isBackdropReady(image: BackdropImage, amount: number): boolean {
+  return ready.has(`${image}:${amount}`);
+}
+
+/**
+ * Object URL of `image` blurred by `amount`, or null while it bakes. A bake
+ * that already finished is returned on the first render, so revisiting a tab
+ * does not flash an empty backdrop.
+ */
 export function useImageBackdrop(image: BackdropImage, amount: number): string | null {
-  const [url, setUrl] = useState<string | null>(null);
+  const key = `${image}:${amount}`;
+  const [state, setState] = useState(() => ({ key, url: ready.get(key) ?? null }));
+  let current = state;
+  if (state.key !== key) {
+    current = { key, url: ready.get(key) ?? null };
+    setState(current);
+  }
   useEffect(() => {
+    if (ready.has(key)) return;
     let live = true;
-    setUrl(null);
-    bake(image, amount).then((u) => live && setUrl(u));
+    bake(image, amount).then((u) => live && setState({ key, url: u }));
     return () => {
       live = false;
     };
-  }, [image, amount]);
-  return url;
+  }, [key, image, amount]);
+  return current.url;
 }
