@@ -5,6 +5,18 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.11] - 2026-10-04
+
+Pick the weather city from where you are.
+
+### Added
+
+- **Use my location in the city picker.** The weather city picker has a **Use my location** row above the list. It asks the system for a rough position (Windows Location on desktop, the browser's permission prompt on the web) and switches to the nearest Environment Canada city page location, which the Home box and the Living Sky follow as with any other pick. While it looks, the row says "Finding your location…". If location access is off, the request takes over 15 s, or no location is within 100 km (outside Canada, say), the row explains why and the city stays as it was. The position is used once and is never stored or sent; only the chosen location's id is saved, as before.
+
+### Changed
+
+- **The city list now carries each location's coordinates.** It is fetched with its points (about 150 KB instead of 118 KB, still once per session) so the nearest location can be found without another request. `ThemedCombobox` takes an optional `header` rendered between the search box and the list.
+
 ## [v0.8.10] - 2026-10-04
 
 A habit tracker in The Orbit.

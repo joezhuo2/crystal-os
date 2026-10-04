@@ -41,6 +41,7 @@ Uninstalling keeps the config folder and the log folder unless you tick the unin
 | Your Supabase project | Always, while signed in | The rows above, over HTTPS |
 | Google Calendar API | After you connect The Horizon | Calendar reads, and the events you create, edit or delete |
 | Environment Canada (`api.weather.gc.ca`) | Weather and Atmosphere | The location you picked |
+| Your system's location service | **Use my location** in the weather city picker, only when you click it | A request for your rough position, handled by Windows Location (or your browser on the web). Crystal OS uses the position once to pick the nearest Environment Canada location and does not store or send it anywhere; only that location's id is saved, as the weather city |
 | GitHub (`github.com/joezhuo2/crystal-os`) | **Check for updates**, or opening Install & update | A request for the release list and `latest.json`; nothing about you beyond your IP address |
 | Portal apps | When you add one | Whatever you do on that site, exactly as in a browser |
 | Model providers (The Nebula) | When you send a message | See below |

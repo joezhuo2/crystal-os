@@ -20,7 +20,6 @@
 - [ ] **Archive: backlinks and graph.** Show "Linked from" under each note (wikilinks are already parsed) and, later, a small local link graph.
 - [ ] **Archive: recent and pinned notes.** A short "recently opened" list and pinned notes at the top of the rail.
 - [ ] **Atmosphere: hourly forecast and alerts.** A 24-hour strip (temperature, precipitation chance) and Environment Canada weather warnings shown as a banner, also on the Home weather box.
-- [ ] **Atmosphere: use my location.** add a "use my location" option to weather city selection.
 - [ ] **Portal: notification passthrough.** Turn unread badge increases into native notifications (per-app toggle).
 - [ ] **Portal: per-app zoom and mute.** Remember a zoom level per app and a mute toggle for apps that play sounds.
 - [ ] **Nebula: cost and usage view.** Token totals are stored in `harness/state.json`; show them per project and per day, with an estimated cost per tier.

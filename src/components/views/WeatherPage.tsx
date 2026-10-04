@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { m } from "framer-motion";
 import {
   Cloud,
@@ -20,11 +21,18 @@ import {
   Thermometer,
   Wind,
   AlertTriangle,
+  Loader2,
+  LocateFixed,
 } from "lucide-react";
 import {
   useWeather,
   getMoonPhase,
   useCityList,
+  cityListQuery,
+  getPosition,
+  locationErrorMessage,
+  nearestCity,
+  NEAREST_CITY_MAX_KM,
   AVAILABLE_CITIES,
   resolveSuggestions,
   type CityOption,
@@ -146,6 +154,67 @@ function toOption(city: CityOption): ComboboxOption {
   return { value: city.id, label: city.name, hint: city.region ? `${province} · ${city.region}` : province };
 }
 
+/**
+ * The picker's "Use my location" row: asks the system for a rough position
+ * and picks the nearest city page location. The position never leaves the
+ * device; only the chosen location's forecast is fetched.
+ */
+function LocateRow({ onChange, close }: { onChange: (id: string) => void; close: () => void }) {
+  const queryClient = useQueryClient();
+  const [locating, setLocating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const locate = async () => {
+    setLocating(true);
+    setError(null);
+    let position: { lat: number; lon: number };
+    try {
+      position = await getPosition();
+    } catch (err) {
+      setLocating(false);
+      setError(locationErrorMessage(err));
+      return;
+    }
+    try {
+      const cities = await queryClient.fetchQuery(cityListQuery);
+      const city = nearestCity(cities, position.lat, position.lon);
+      if (!city) {
+        setError(`No Environment Canada location within ${NEAREST_CITY_MAX_KM} km of you.`);
+        return;
+      }
+      onChange(city.id);
+      close();
+    } catch {
+      setError("The location list could not be loaded. Try again.");
+    } finally {
+      setLocating(false);
+    }
+  };
+
+  return (
+    <div className="border-b border-border/50 p-1">
+      <button
+        type="button"
+        onClick={locate}
+        disabled={locating}
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground/80 transition-colors hover:bg-primary/20 hover:text-foreground disabled:opacity-60"
+      >
+        {locating ? (
+          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+        ) : (
+          <LocateFixed className="h-3.5 w-3.5 shrink-0" />
+        )}
+        {locating ? "Finding your location…" : "Use my location"}
+      </button>
+      {error && (
+        <p role="alert" className="px-3 pb-2 text-xs text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Searches every city page location; the full list loads the first time it opens. */
 function CityPicker({
   cityId,
@@ -171,6 +240,7 @@ function CityPicker({
       loading={isLoading}
       searchPlaceholder="Search Canadian cities…"
       emptyText="No matching city"
+      header={(close) => <LocateRow onChange={onChange} close={close} />}
       className="w-auto min-w-[8rem] max-w-[16rem] border border-border/50 bg-background/50 px-3 py-1.5 hover:bg-background/70"
     />
   );

@@ -383,6 +383,8 @@ export interface ThemedComboboxProps {
   searchPlaceholder?: string;
   emptyText?: string;
   "aria-label"?: string;
+  /** Extra content between the search box and the list, e.g. a "use my location" row. Gets a way to close the panel. */
+  header?: (close: () => void) => ReactNode;
 }
 
 /** Lowercase with accents removed, so "montreal" finds "Montréal". */
@@ -418,6 +420,7 @@ export function ThemedCombobox({
   searchPlaceholder = "Search…",
   emptyText = "No matches",
   "aria-label": ariaLabel,
+  header,
 }: ThemedComboboxProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -529,6 +532,7 @@ export function ThemedCombobox({
               className="h-10 w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
+          {header?.(close)}
           <div
             ref={listRef}
             id={listId}

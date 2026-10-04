@@ -7,6 +7,9 @@ export interface CityOption {
   name: string;
   /** Forecast region, e.g. "City of Toronto"; only on cities from the full list. */
   region?: string;
+  /** Where the forecast is for; only on cities from the full list. */
+  lat?: number;
+  lon?: number;
 }
 
 /** Location ids are a province or territory code and a number, e.g. "on-85". */
@@ -311,30 +314,99 @@ export function useWeather(cityId: string) {
 // ── Every location the city page API covers ──
 
 async function fetchCities(): Promise<CityOption[]> {
-  // Names and regions only: the full items are ~33 KB each.
-  const res = await fetch(`${API_BASE}?f=json&lang=en&limit=2000&skipGeometry=true&properties=name.en,region.en`);
+  // Names, regions and points only: the full items are ~33 KB each.
+  const res = await fetch(`${API_BASE}?f=json&lang=en&limit=2000&properties=name.en,region.en`);
   if (!res.ok) throw new Error(`Weather API error: ${res.status}`);
   const data = await res.json();
   return (data.features ?? [])
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .map((f: Record<string, any>) => ({
-      id: f.id,
-      name: f.properties?.name?.en ?? f.id,
-      region: f.properties?.region?.en,
-    }))
+    .map((f: Record<string, any>) => {
+      const [lon, lat] = f.geometry?.coordinates ?? [];
+      const city: CityOption = { id: f.id, name: f.properties?.name?.en ?? f.id, region: f.properties?.region?.en };
+      if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        city.lat = lat;
+        city.lon = lon;
+      }
+      return city;
+    })
     .filter((c: CityOption) => isCityId(c.id))
     .sort((a: CityOption, b: CityOption) => a.name.localeCompare(b.name));
 }
 
+/** The full location list's query, for `useCityList` and `queryClient.fetchQuery`. */
+export const cityListQuery = {
+  queryKey: ["weather-cities"],
+  queryFn: fetchCities,
+  staleTime: Infinity,
+  gcTime: Infinity,
+  retry: 2,
+};
+
 /** The full location list, fetched once per session for the city picker. */
 export function useCityList(enabled = true) {
-  return useQuery<CityOption[]>({
-    queryKey: ["weather-cities"],
-    queryFn: fetchCities,
-    enabled,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    retry: 2,
+  return useQuery<CityOption[]>({ ...cityListQuery, enabled });
+}
+
+// ── Use my location ──
+
+/** Farthest a location can be from you and still count as yours. */
+export const NEAREST_CITY_MAX_KM = 100;
+
+/** Great-circle distance in km. */
+export function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad;
+  const dLon = (lon2 - lon1) * rad;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+/**
+ * The location closest to a point, or null if none is within `maxKm` (e.g.
+ * outside Canada) or no location has coordinates.
+ */
+export function nearestCity(
+  cities: CityOption[],
+  lat: number,
+  lon: number,
+  maxKm = NEAREST_CITY_MAX_KM,
+): CityOption | null {
+  let best: CityOption | null = null;
+  let bestKm = maxKm;
+  for (const city of cities) {
+    if (city.lat === undefined || city.lon === undefined) continue;
+    const km = distanceKm(lat, lon, city.lat, city.lon);
+    if (km <= bestKm) {
+      best = city;
+      bestKm = km;
+    }
+  }
+  return best;
+}
+
+/** A readable reason the position could not be had. */
+export function locationErrorMessage(err: unknown): string {
+  const code = (err as GeolocationPositionError | null)?.code;
+  if (code === 1) return "Location access is off. Allow it for Crystal OS in your system settings.";
+  if (code === 3) return "Finding your location took too long. Try again.";
+  return "Your location could not be found.";
+}
+
+/**
+ * Asks the system for a rough position (city-level accuracy is plenty).
+ * Rejects with a GeolocationPositionError-like object on failure.
+ */
+export function getPosition(): Promise<{ lat: number; lon: number }> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      reject({ code: 2 });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      reject,
+      { enableHighAccuracy: false, timeout: 15_000, maximumAge: 10 * 60 * 1000 },
+    );
   });
 }
 
