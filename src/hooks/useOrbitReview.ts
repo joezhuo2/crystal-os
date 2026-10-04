@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAppLoading, useTasks, useTransactions } from "@/contexts/AppContext";
+import { useHabitsData } from "@/hooks/useHabits";
 import { useVaultNotes } from "@/hooks/useVault";
 import { useCalendarEvents, useCalendarStatus } from "@/hooks/useGoogleCalendar";
 import {
@@ -124,6 +125,8 @@ export function useOrbitReview(period: ReviewPeriod): OrbitReviewResult {
   const appLoading = useAppLoading();
   const history = useHistory(dataStart(period), period.end);
   const notes = useAllNotes();
+  // Without the habit tables the review leaves habits out.
+  const habits = useHabitsData();
   const status = useCalendarStatus();
   const connected = status.data?.connected === true;
 
@@ -144,12 +147,15 @@ export function useOrbitReview(period: ReviewPeriod): OrbitReviewResult {
       transactions,
       notes: (notes.data?.notes ?? []).map((n) => ({ title: n.title, path: n.path, created: n.created ?? null })),
       events: events.data?.events ?? [],
+      habits: habits.data?.habits ?? [],
+      habitChecks: habits.data?.checks ?? [],
+      today: toLocalDateStr(),
     };
     return buildReview(period, data);
     // A period is a value: its key names it, so a fresh object with the same
     // key must not rebuild the review.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history.data, history.error, tasks, transactions, notes.data, events.data, period.kind, period.key]);
+  }, [history.data, history.error, tasks, transactions, notes.data, events.data, habits.data, period.kind, period.key]);
 
   return {
     review,
@@ -157,6 +163,7 @@ export function useOrbitReview(period: ReviewPeriod): OrbitReviewResult {
       appLoading ||
       history.isLoading ||
       notes.isLoading ||
+      habits.isLoading ||
       status.isLoading ||
       (connected && events.isLoading),
     historyError: history.error ?? null,

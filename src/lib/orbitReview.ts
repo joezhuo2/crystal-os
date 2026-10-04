@@ -7,6 +7,7 @@
  * "YYYY-MM-DD" strings throughout, compared as strings.
  */
 
+import { overallRate, summarizeHabits, type Habit, type HabitCheck, type HabitSummary } from "@/lib/habits";
 import { addDays, cleanRepeat, taskFallsOnDate, toLocalDateStr, type RepeatRule } from "@/lib/utils";
 
 export type ReviewKind = "weekly" | "monthly";
@@ -203,6 +204,11 @@ export interface ReviewData {
   notes: ReviewNote[];
   /** Calendar events in the period after the reviewed one. */
   events: ReviewEvent[];
+  /** Every habit, archived ones included, and their check-offs. */
+  habits?: Habit[];
+  habitChecks?: HabitCheck[];
+  /** Local day the review is built on; a running period only counts habit days up to it. Defaults to now. */
+  today?: string;
 }
 
 /* ------------------------------------------------------------------ *
@@ -216,7 +222,12 @@ export interface PeriodStats {
   income: number;
   expenses: number;
   notes: number;
+  /** Share of active habit-days done, 0–100 (0 with no habits). */
+  habitRate: number;
 }
+
+const habitSummaries = (period: { start: string; end: string }, data: ReviewData) =>
+  summarizeHabits(period, data.habits ?? [], data.habitChecks ?? [], data.today ?? toLocalDateStr());
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -239,6 +250,7 @@ export function periodStats(period: { start: string; end: string }, data: Review
     income: round2(income),
     expenses: round2(expenses),
     notes: data.notes.filter((n) => inPeriod(n.created, period)).length,
+    habitRate: overallRate(habitSummaries(period, data)),
   };
 }
 
@@ -285,7 +297,7 @@ export interface Trend {
   average: number;
   /** Whether a rise is good news (spending rising is not). */
   higherIsBetter: boolean;
-  format: "count" | "minutes" | "money";
+  format: "count" | "minutes" | "money" | "percent";
 }
 
 export interface Review {
@@ -305,6 +317,9 @@ export interface Review {
   focusPerWeek: number;
   agenda: AgendaItem[];
   next: ReviewPeriod;
+  /** Habits active in the period, in manager order. */
+  habits: HabitSummary[];
+  /** Habit completion is only listed when there are habits to measure. */
   trends: Trend[];
 }
 
@@ -315,6 +330,7 @@ const TREND_DEFS: Omit<Trend, "value" | "previous" | "average">[] = [
   { id: "income", label: "Income", higherIsBetter: true, format: "money" },
   { id: "expenses", label: "Spending", higherIsBetter: false, format: "money" },
   { id: "notes", label: "Vault notes", higherIsBetter: true, format: "count" },
+  { id: "habitRate", label: "Habit completion", higherIsBetter: true, format: "percent" },
 ];
 
 /** The first day a review needs data from: the start of its trend window. */
@@ -346,7 +362,8 @@ export function buildReview(period: ReviewPeriod, data: ReviewData): Review {
     .sort((a, b) => (a.created ?? "").localeCompare(b.created ?? "") || a.title.localeCompare(b.title));
 
   const next = shiftPeriod(period, 1);
-  const trends = TREND_DEFS.map((def) => ({
+  const habits = habitSummaries(period, data);
+  const trends = TREND_DEFS.filter((def) => def.id !== "habitRate" || habits.length > 0).map((def) => ({
     ...def,
     value: stats[def.id],
     previous: previous[def.id],
@@ -367,6 +384,7 @@ export function buildReview(period: ReviewPeriod, data: ReviewData): Review {
     focusPerWeek: Math.round((stats.focusMinutes / days.length) * 7),
     agenda: buildAgenda(next, data),
     next,
+    habits,
     trends,
   };
 }
@@ -391,6 +409,7 @@ export function formatMoney(amount: number): string {
 export function formatTrendValue(trend: Pick<Trend, "format">, value: number): string {
   if (trend.format === "money") return formatMoney(value);
   if (trend.format === "minutes") return formatMinutes(value);
+  if (trend.format === "percent") return `${Math.round(value)}%`;
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
@@ -417,6 +436,8 @@ export type ReflectionPrompt = (typeof REFLECTION_PROMPTS)[number];
 export interface Reflection {
   prompt?: ReflectionPrompt | null;
   note?: string;
+  /** The Habits card's note. */
+  habitNote?: string;
 }
 
 /** The prompt as shown for this kind of review ("Focus for next week"). */
@@ -433,6 +454,25 @@ function trendLine(t: Trend, kind: ReviewKind): string {
   const vsPrev = t.value - t.previous;
   const vsAvg = t.value - t.average;
   return `- **${t.label}:** ${fmt(t.value)} (${arrow(vsPrev)} ${fmt(Math.abs(vsPrev))} vs last ${unitOf(kind)}, ${arrow(vsAvg)} vs ${TREND_WINDOW[kind]}-${unitOf(kind)} average ${fmt(t.average)})`;
+}
+
+/** Pipes would end a table cell early. */
+const cell = (text: string) => text.replace(/\|/g, "\\|");
+
+function habitLines(review: Review, note: string | undefined): string[] {
+  if (!review.habits.length) return [];
+  const lines = [
+    "## Habits",
+    "",
+    `**${review.stats.habitRate}%** of habit days done`,
+    "",
+    "| Habit | Done | Rate | Longest streak | Streak at end |",
+    "| --- | ---: | ---: | ---: | ---: |",
+    ...review.habits.map((h) => `| ${cell(h.name)} | ${h.done}/${h.active} | ${h.rate}% | ${h.longest} | ${h.streakAtEnd} |`),
+    "",
+  ];
+  if (note) lines.push("### Note", "", note, "");
+  return lines;
 }
 
 const bullet = (items: string[]) => (items.length ? items.map((i) => `- ${i}`).join("\n") : "- None");
@@ -456,6 +496,7 @@ export function toMarkdown(review: Review, reflection?: Reflection, now: Date = 
     `expenses: ${stats.expenses}`,
     `net: ${round2(stats.income - stats.expenses)}`,
     `notes_added: ${stats.notes}`,
+    ...(review.habits.length ? [`habits_completion: ${stats.habitRate}`] : []),
     "tags: [review, " + `${period.kind}-review]`,
     "---",
     "",
@@ -487,6 +528,7 @@ export function toMarkdown(review: Review, reflection?: Reflection, now: Date = 
     `| Spending | ${formatMoney(stats.expenses)} | ${formatMoney(previous.expenses)} |`,
     `| Net | ${formatMoney(stats.income - stats.expenses)} | ${formatMoney(previous.income - previous.expenses)} |`,
     "",
+    ...habitLines(review, reflection?.habitNote?.trim()),
     `## Next ${unit}`,
     "",
     review.agenda.length

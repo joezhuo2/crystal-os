@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   BookOpen,
+  CalendarCheck,
   CalendarRange,
   ChevronLeft,
   ChevronRight,
@@ -252,6 +253,93 @@ function TrendsCard({ review }: { review: Review }) {
   );
 }
 
+function HabitsCard({
+  review,
+  inProgress,
+  note,
+  onNote,
+}: {
+  review: Review;
+  inProgress: boolean;
+  note: string;
+  onNote: (note: string) => void;
+}) {
+  const unit = unitOf(review.period.kind);
+  const endLabel = inProgress ? "today" : `on ${agendaDayLabel(review.period.end)}`;
+  return (
+    <section className="orbit-card md:col-span-3" aria-labelledby="orbit-habits">
+      <CardTitle
+        icon={CalendarCheck}
+        aside={
+          <GlassTip label={`${review.stats.habitRate}% of habit days done`} hint={`Across every habit this ${unit}`} tone="orbit">
+            <span className="orbit-stat orbit-stat-sm" tabIndex={0}>
+              {review.stats.habitRate}%
+            </span>
+          </GlassTip>
+        }
+      >
+        <span id="orbit-habits">Habits</span>
+      </CardTitle>
+      <div className="orbit-habit-head" aria-hidden="true">
+        <span>Habit</span>
+        <span>Done</span>
+        <span />
+        <span>Longest</span>
+        <span>{inProgress ? "Now" : "At end"}</span>
+      </div>
+      <ul className="orbit-habit-list">
+        {review.habits.map((h) => (
+          <li key={h.id} className="orbit-habit-line">
+            <span className="flex items-center gap-2 min-w-0">
+              <span className="orbit-habit-dot" style={{ background: h.color }} aria-hidden="true" />
+              <GlassTip label={h.name} tone="orbit">
+                <span className="truncate text-sm">{h.name}</span>
+              </GlassTip>
+            </span>
+            <span className="text-sm tabular-nums text-foreground/90">
+              {h.done}/{h.active}
+              <span className="sr-only"> days</span>
+            </span>
+            <GlassTip label={`${h.rate}%`} hint={`${h.done} of ${h.active} ${h.active === 1 ? "day" : "days"} this ${unit}`} tone="orbit">
+              <span className="orbit-habit-bar" role="img" aria-label={`${h.rate}% done`} tabIndex={0}>
+                <span style={{ width: `${h.rate}%`, background: h.color, color: h.color }} />
+              </span>
+            </GlassTip>
+            <GlassTip label={`${h.longest} ${h.longest === 1 ? "day" : "days"}`} hint={`Longest streak this ${unit}`} tone="orbit">
+              <span className="orbit-habit-streak" tabIndex={0}>
+                <Flame className="w-3 h-3" aria-hidden="true" />
+                {h.longest}
+              </span>
+            </GlassTip>
+            <GlassTip label={`${h.streakAtEnd} ${h.streakAtEnd === 1 ? "day" : "days"}`} hint={`Streak ${endLabel}`} tone="orbit">
+              <span className={`orbit-habit-streak ${h.streakAtEnd ? "orbit-habit-streak-live" : ""}`} tabIndex={0}>
+                {h.streakAtEnd}
+              </span>
+            </GlassTip>
+          </li>
+        ))}
+      </ul>
+      {!inProgress && (
+        <div className="mt-4">
+          <label className="text-xs text-muted-foreground" htmlFor="orbit-habit-note">
+            Habit note (optional)
+          </label>
+          <textarea
+            id="orbit-habit-note"
+            value={note}
+            onChange={(e) => onNote(e.target.value)}
+            rows={2}
+            maxLength={1000}
+            placeholder={`How did your habits go this ${unit}?`}
+            className="orbit-textarea mt-1"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">Goes into the review when you export it.</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function VaultCard({ review, unavailable }: { review: Review; unavailable: boolean }) {
   return (
     <section className="orbit-card" aria-labelledby="orbit-vault">
@@ -351,7 +439,7 @@ function AgendaCard({ review, calendarConnected, wide }: { review: Review; calen
   );
 }
 
-function ReflectionCard({ review }: { review: Review }) {
+function ReflectionCard({ review, habitNote }: { review: Review; habitNote: string }) {
   const [prompt, setPrompt] = useState<ReflectionPrompt | null>(null);
   const [note, setNote] = useState("");
   const [confirm, setConfirm] = useState(false);
@@ -360,7 +448,7 @@ function ReflectionCard({ review }: { review: Review }) {
   const kind = review.period.kind;
 
   const write = (overwrite: boolean) => {
-    const reflection: Reflection = { prompt, note };
+    const reflection: Reflection = { prompt, note, habitNote };
     create.mutate(
       { path, content: toMarkdown(review, reflection), overwrite },
       {
@@ -572,6 +660,9 @@ export default function OrbitPage() {
   }, [frozen, outDone, liveReady, still]);
 
   const shown = frozen ?? live;
+
+  // Habit notes, per review, kept while browsing so switching away and back keeps them.
+  const [habitNotes, setHabitNotes] = useState<Record<string, string>>({});
   const { review, loading, historyError, vaultUnavailable, calendarConnected } = shown.result;
 
   // Seeing the newest review clears its ready badge.
@@ -647,7 +738,7 @@ export default function OrbitPage() {
         </div>
       </header>
 
-      <TodayCard focusOnMount={landing === "today"} />
+      <TodayCard focusOnMount={landing === "today"} kind={target.kind} />
 
       <div className="orbit-view space-y-4" data-fade={fade ?? undefined}>
         {historyError && <HistoryBanner error={historyError} />}
@@ -668,9 +759,21 @@ export default function OrbitPage() {
               <MoneyCard review={review} />
               <TrendsCard review={review} />
               <VaultCard review={review} unavailable={vaultUnavailable} />
+              {review.habits.length > 0 && (
+                <HabitsCard
+                  review={review}
+                  inProgress={inProgress}
+                  note={habitNotes[`${review.period.kind}-${review.period.key}`] ?? ""}
+                  onNote={(n) => setHabitNotes((cur) => ({ ...cur, [`${review.period.kind}-${review.period.key}`]: n }))}
+                />
+              )}
               {/* With no Reflect card, the agenda fills its row. */}
               <AgendaCard review={review} calendarConnected={calendarConnected} wide={inProgress} />
-              {!inProgress && <ReflectionCard key={`${review.period.kind}-${review.period.key}`} review={review} />}
+              {!inProgress && <ReflectionCard
+                  key={`${review.period.kind}-${review.period.key}`}
+                  review={review}
+                  habitNote={habitNotes[`${review.period.kind}-${review.period.key}`] ?? ""}
+                />}
             </div>
           </>
         ) : null}

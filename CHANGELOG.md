@@ -5,6 +5,23 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.10] - 2026-10-04
+
+A habit tracker in The Orbit.
+
+### Added
+
+- **Habits in the Today card.** Below the focus, mood and reflection form, each habit is a chip with its colour; tapping it ticks it off for today (only today can be changed) and saves at once, putting the tick back if the save fails. Hovering a chip shows its streak. Streaks count consecutive days, and today stays open until it ends: an unticked today keeps yesterday's streak instead of dropping to 0.
+- **A day grid that follows the Weekly/Monthly switch.** Weekly shows this week as seven cells, Monday first; Monthly shows this month as a calendar. Each day is lit in the Orbit's ice and mauve by the share of that day's habits done, with the count inside. Hovering a day shows the date, `done/total`, and the first three habits done with their colours, then **+N more**. Today is outlined and days still to come are dashed. A day's total only counts habits that existed then.
+- **The habit manager.** The gear in the Habits header opens an Orbit-glass dialog to add a habit (up to 40 characters), rename one in place, change its colour (nine presets from the Orbit palette, or any hex), drag it by the grip to reorder (or use the arrow keys on the grip), and remove it. Removing archives the habit after a confirmation: it leaves the Today card, and its check-offs still count in reviews of the periods it was tracked in.
+- **A Habits card in weekly and monthly reviews.** Each habit active in the period, in manager order: days done out of the days it was active (up to today for a period still running), the rate as a bar in its colour, the longest streak inside the period, and the streak on the period's last day (or today). The card shows the overall share of habit days done, and has an optional **Habit note** for finished periods. It is left out when no habit was active.
+- **Habit completion in Trends**, against the last period and the 4-week or 3-month average, when there are habits.
+- **Habits in the exported review.** A `habits_completion` frontmatter field and a `## Habits` section with a table per habit and the note under `### Note`. Auto-export writes the section without a note.
+
+### Database
+
+- **Run [`supabase/migrations/0004_habits.sql`](supabase/migrations/0004_habits.sql)** in the Supabase SQL Editor. It adds `habits` (name, colour, position, `archived_at`) and `habit_checks` (one row per habit per local day, unique on `habit_id, day`), with indexes and the usual own-rows RLS; a check can only point at one of your own habits. It is safe to run twice. Until it is applied the Today card says so and reviews leave habits out; everything else works.
+
 ## [v0.8.9] - 2026-10-04
 
 A smaller startup bundle, less work at launch, and no sidecar until something needs it.

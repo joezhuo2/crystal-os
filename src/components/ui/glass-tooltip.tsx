@@ -30,10 +30,13 @@ export function GlassTip({
   tone = "indigo",
   colors,
   side = "top",
+  detail,
   children,
 }: {
   label: string;
   hint?: string;
+  /** Extra content under the label, such as a short list. */
+  detail?: ReactNode;
   tone?: GlassTipTone;
   colors?: [string, string];
   side?: "top" | "bottom" | "left" | "right";
@@ -46,6 +49,7 @@ export function GlassTip({
       <TooltipPortal>
         <TooltipContent side={side} sideOffset={8} className={`glass-tooltip ${TONE_CLASS[tone]}`} style={style}>
           <span className="glass-tooltip-label">{label}</span>
+          {detail}
           {hint && <span className="glass-tooltip-hint">{hint}</span>}
         </TooltipContent>
       </TooltipPortal>

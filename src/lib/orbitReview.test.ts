@@ -112,7 +112,7 @@ describe("period stats", () => {
         { title: "n3", path: "n3.md", created: null },
       ],
     };
-    expect(periodStats(week, data)).toEqual({ done: 2, added: 1, focusMinutes: 51, income: 1000, expenses: 35.75, notes: 1 });
+    expect(periodStats(week, data)).toEqual({ done: 2, added: 1, focusMinutes: 51, income: 1000, expenses: 35.75, notes: 1, habitRate: 0 });
   });
 
   it("compares with last period and the four-week average", () => {

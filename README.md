@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-554%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.8.9-6366F1)
+![Version](https://img.shields.io/badge/version-0.8.10-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.8.9** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.8.10** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -19,7 +19,7 @@ Current release: **v0.8.9** — see [CHANGELOG.md](CHANGELOG.md) for release his
 
 | Feature | Description |
 |---------|-------------|
-| **🪐 The Orbit** | Weekly and monthly reviews, between Home and the Engine. A Weekly/Monthly switch shows the latest finished period (ready Sunday at 6 PM, or 6 PM on the month's last day) with arrows to browse back: tasks completed and added (counts and names, the first five then **+N more**), Pomodoro focus total and per-day (and per-week) averages with a bar per day, income and spending against the last period, the next period's calendar events and tasks as a mini agenda (by day, or by week for a month), new vault notes, and a trend list against the last period and the 4-week or 3-month average. Pick an optional reflection prompt, add a note, and **Export to vault** writes `Reviews/Weekly/2026-W40.md` or `Reviews/Monthly/2026-10.md`, asking before overwriting. A dot on the nav icon and a chip on Home mark a review you have not opened yet; **Settings → The Orbit → Auto-export reviews** writes each one when it is ready. Its own pale black hole backdrop and ice-and-lavender liquid glass, also on the Home greeting card, which opens it |
+| **🪐 The Orbit** | Weekly and monthly reviews, between Home and the Engine. A Weekly/Monthly switch shows the latest finished period (ready Sunday at 6 PM, or 6 PM on the month's last day) with arrows to browse back: tasks completed and added (counts and names, the first five then **+N more**), Pomodoro focus total and per-day (and per-week) averages with a bar per day, income and spending against the last period, the next period's calendar events and tasks as a mini agenda (by day, or by week for a month), new vault notes, and a trend list against the last period and the 4-week or 3-month average. **Habits**: the Today card has a chip per habit to tick off today, a streak on hover, and a grid of this week (or this month, with the Monthly switch) lit by how many were done each day; the gear opens a manager to add, rename, recolour, reorder and remove them. Each review gets a Habits card (days done, rate, longest streak and streak at the end per habit, plus an optional note) and a habit completion trend. Pick an optional reflection prompt, add a note, and **Export to vault** writes `Reviews/Weekly/2026-W40.md` or `Reviews/Monthly/2026-10.md`, asking before overwriting. A dot on the nav icon and a chip on Home mark a review you have not opened yet; **Settings → The Orbit → Auto-export reviews** writes each one when it is ready. Its own pale black hole backdrop and ice-and-lavender liquid glass, also on the Home greeting card, which opens it |
 | **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule. The Engine page has its own red black hole backdrop and ember palette, matching the Horizon's look. Switching between List and Board fades one view out and the other in (instantly in performance mode) |
 | **📅 The Horizon** | Google Calendar, live: month, week, day and agenda views (week and day are hour grids: overlapping events sit side by side, a line marks now, and clicking an empty slot creates an event at that half hour), create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along. The page has its own black hole backdrop and blue palette (see [The Horizon](#-the-horizon-google-calendar-integration)) |
 | **🏠 Home widgets** | A 3×3 grid: the greeting and clock (on The Orbit's black hole, with this week's tasks done and focus time; opens The Orbit), weather, and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Engine, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Engine's red black hole, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device |
@@ -199,6 +199,8 @@ src/
 │   │   ├── OrbitPage.tsx       # The Orbit: weekly/monthly review cards, reflection and vault export
 │   │   ├── orbit/OrbitCharts.tsx # The Orbit's SVG focus bars, money bars and task rings
 │   │   ├── orbit/OrbitAutoExport.tsx # Writes each ready review to the vault when auto-export is on
+│   │   ├── orbit/HabitsToday.tsx # The Today card's habit chips and week/month grid
+│   │   ├── orbit/HabitManager.tsx # Add, rename, recolour, reorder and remove habits
 │   │   ├── HomeSpaces.tsx      # Home's themed Nebula, Portal and Terminal boxes
 │   │   ├── TasksPage.tsx       # Task list, form, filtering, Pomodoro
 │   │   ├── CalendarPage.tsx    # Google Calendar: month, week, day + agenda, event CRUD
@@ -250,6 +252,7 @@ src/
 │   ├── atmosphereStore.ts      # Atmosphere settings: city, weather effects, aurora, background image and its blur
 │   ├── atmosphereImage.ts      # Background image: checks, scaling, baked blur, IndexedDB storage
 │   ├── orbitReview.ts          # Review periods (Mon–Sun, months, ready at 6 PM), stats, trends, agenda, markdown export
+│   ├── habits.ts               # Habit active days, streaks, the Today grid and per-period summaries
 │   ├── orbitStore.ts           # The Orbit's per-device state: auto-export, seen reviews, Weekly/Monthly choice
 │   ├── imageBackdrop.ts        # Horizon, Engine and Orbit backgrounds: bakes and decodes the page (15%) and Home box (25%) blurs once per session
 │   ├── backdropSlot.ts         # Whether the surrounding backdrop is on screen; useBackdropStill pauses its loops when not
@@ -414,6 +417,8 @@ financial_categories (id, user_id, name, color)
 settings             (user_id, key, value)   -- primary key (user_id, key)
 task_completions     (id, user_id, task_id, title, category_id, completed_at)
 focus_sessions       (id, user_id, started_at, ended_at, seconds, task_id)
+habits               (id, user_id, name, color, position, created_at, archived_at)
+habit_checks         (id, user_id, habit_id, day)   -- unique (habit_id, day)
 ```
 
 Row Level Security is enabled on every table, with select/insert/update/delete
@@ -431,6 +436,10 @@ Then apply [`supabase/migrations/0003_orbit_review.sql`](supabase/migrations/000
 (v0.8.0), which adds `task_completions` (a row per tick, kept when the task is renamed or deleted)
 and `focus_sessions` (a row per Pomodoro focus run) for The Orbit. It is safe to run twice. Until it is
 applied The Orbit shows a banner and counts no completions or focus time; everything else works.
+Then apply [`supabase/migrations/0004_habits.sql`](supabase/migrations/0004_habits.sql)
+(v0.8.10), which adds `habits` and `habit_checks` (a row per habit per local day done) for the
+habit tracker. It is safe to run twice. Until it is applied the Today card says so and the reviews
+leave habits out.
 
 ---
 

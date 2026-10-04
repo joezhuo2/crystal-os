@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, PenLine } from "lucide-react";
 import { GlassTip } from "@/components/ui/glass-tooltip";
+import { HabitsToday } from "@/components/views/orbit/HabitsToday";
 import { useNow } from "@/hooks/useOrbitReview";
 import { useCreateNote, useRawNote, useSaveNote, useVaultNotes, vaultErrorCode } from "@/hooks/useVault";
 import { EMPTY_ENTRY, MOODS, dailyNotePath, mergeToday, parseToday, pickDailyFolder, type TodayEntry } from "@/lib/dailyNote";
@@ -19,8 +20,11 @@ const MOOD_LABELS: Record<(typeof MOODS)[number], string> = {
  * Today's focus, mood, and reflection, written into the vault's daily note.
  * The note is the only store: the card reads it on open and merges its own
  * block back in, so whatever else is in the note is left as it was.
+ *
+ * Below it, the habits (Supabase, not the note), with a grid of this week or
+ * this month as the Weekly/Monthly switch shows.
  */
-export function TodayCard({ focusOnMount }: { focusOnMount: boolean }) {
+export function TodayCard({ focusOnMount, kind }: { focusOnMount: boolean; kind: "weekly" | "monthly" }) {
   const now = useNow();
   const day = toLocalDateStr(now);
   // Same query as the review's note count, so the list is shared, not refetched.
@@ -179,6 +183,8 @@ export function TodayCard({ focusOnMount }: { focusOnMount: boolean }) {
           </div>
         </form>
       )}
+
+      <HabitsToday kind={kind} today={day} />
     </section>
   );
 }
