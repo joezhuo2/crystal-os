@@ -6,7 +6,7 @@ import {
   type Transaction,
 } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { toLocalDateStr } from "@/lib/utils";
 import { Plus, Trash2, X, Settings, Pencil } from "lucide-react";
 import { CategoryManagerButton } from "./CategoryManager";
@@ -14,26 +14,19 @@ import { DateField, ThemedSelect } from "@/components/ui/field-controls";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAppActivity } from "@/lib/appActivity";
-import {
-  AreaChart, Area, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip,
-} from "recharts";
+import { DonutChart, LineAreaChart, type Series } from "./financials/FinanceCharts";
 
 /** How long a chart's box must hold one width before the chart draws into it. */
 const SETTLE_MS = 120;
-
-/** One entrance for every chart on the page, so they draw in together. */
-const REVEAL = { animationBegin: 0, animationDuration: 900, animationEasing: "ease-out" } as const;
 
 /**
  * Holds a chart back, behind a skeleton, until its box has kept one width for
  * SETTLE_MS, then draws it at that width.
  *
- * Recharts plays its entrance only on the first render. A resize right after
- * mount restarts it as a morph between two nearly identical shapes, which is
- * how the Area and Line charts could pop in finished while the donut, whose
- * sweep starts 400 ms in by default, still swept. Later resizes pass straight
- * through. Performance mode and reduced motion skip the entrance.
+ * The charts play their entrance once, on mount, so drawing them only after
+ * the page has finished laying out keeps the wipe from running at one width
+ * and landing at another. Later resizes pass straight through. Performance
+ * mode and reduced motion skip the entrance.
  */
 function ChartFrame({ height, children }: { height: number; children: (width: number, animate: boolean) => ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -91,6 +84,12 @@ function cashFlowByMonth(transactions: Transaction[]) {
   return months;
 }
 
+const CASH_FLOW_SERIES: Series<"income" | "expense" | "net">[] = [
+  { key: "income", name: "Income", color: "hsl(160 84% 39%)", fillOpacity: 0.4 },
+  { key: "expense", name: "Expense", color: "hsl(0 72% 51%)", fillOpacity: 0.4 },
+  { key: "net", name: "Net", color: "hsl(239 84% 67%)", fillOpacity: 0.3, dashed: true },
+];
+
 function CashFlowChart() {
   const data = useTransactions(cashFlowByMonth);
 
@@ -99,33 +98,15 @@ function CashFlowChart() {
       <p className="text-xs text-muted-foreground uppercase tracking-widest mb-4">Cash Flow — Last 6 Months</p>
       <ChartFrame height={200}>
         {(width, animate) => (
-          <AreaChart width={width} height={200} data={data}>
-            <defs>
-              <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(160 84% 39%)" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="hsl(160 84% 39%)" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(0 72% 51%)" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="hsl(0 72% 51%)" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="netGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(239 84% 67%)" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="hsl(239 84% 67%)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toFixed(2)} />
-            <Tooltip
-              contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12, color: "hsl(210 40% 96%)" }}
-              labelStyle={{ color: "hsl(210 40% 96%)", fontWeight: 600 }}
-              itemStyle={{ color: "hsl(215 20% 75%)" }}
-              formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name.charAt(0).toUpperCase() + name.slice(1)]}
-            />
-            <Area type="monotone" dataKey="income" stroke="hsl(160 84% 39%)" fill="url(#incomeGrad)" strokeWidth={2} isAnimationActive={animate} {...REVEAL} />
-            <Area type="monotone" dataKey="expense" stroke="hsl(0 72% 51%)" fill="url(#expenseGrad)" strokeWidth={2} isAnimationActive={animate} {...REVEAL} />
-            <Area type="monotone" dataKey="net" stroke="hsl(239 84% 67%)" fill="url(#netGrad)" strokeWidth={2} strokeDasharray="5 3" isAnimationActive={animate} {...REVEAL} />
-          </AreaChart>
+          <LineAreaChart
+            width={width}
+            height={200}
+            data={data}
+            labelKey="label"
+            series={CASH_FLOW_SERIES}
+            animate={animate}
+            label={`Cash flow by month: ${data.map((row) => `${row.label} income $${row.income.toFixed(2)}, expenses $${row.expense.toFixed(2)}`).join("; ")}`}
+          />
         )}
       </ChartFrame>
       <div className="flex flex-wrap gap-4 mt-3">
@@ -167,17 +148,15 @@ function CategoryDonut() {
       <p className="text-xs text-muted-foreground uppercase tracking-widest mb-4">Spending Breakdown</p>
       <ChartFrame height={200}>
         {(width, animate) => (
-          <PieChart width={width} height={200}>
-            <Pie data={data} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="value" stroke="none" isAnimationActive={animate} {...REVEAL}>
-              {data.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-            </Pie>
-            <Tooltip
-              contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12, color: "hsl(210 40% 96%)" }}
-              labelStyle={{ color: "hsl(210 40% 96%)", fontWeight: 600 }}
-              itemStyle={{ color: "hsl(215 20% 75%)" }}
-              formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
-            />
-          </PieChart>
+          <DonutChart
+            width={width}
+            height={200}
+            data={data}
+            inner={55}
+            outer={80}
+            animate={animate}
+            label={`Spending by category: ${data.map((d) => `${d.name} $${d.value.toFixed(2)}`).join(", ")}`}
+          />
         )}
       </ChartFrame>
       <div className="flex flex-wrap gap-3 mt-3">
@@ -207,6 +186,8 @@ function savingsByDay(transactions: Transaction[]) {
     });
 }
 
+const SAVINGS_SERIES: Series<"savings">[] = [{ key: "savings", name: "Savings", color: "hsl(160 84% 39%)" }];
+
 function SavingsTrend() {
   const data = useTransactions(savingsByDay);
 
@@ -215,17 +196,15 @@ function SavingsTrend() {
       <p className="text-xs text-accent uppercase tracking-widest mb-4">Net Savings Trend</p>
       <ChartFrame height={160}>
         {(width, animate) => (
-          <LineChart width={width} height={160} data={data}>
-            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 55%)" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toFixed(2)} />
-            <Tooltip
-              contentStyle={{ background: "hsl(217 33% 15%)", border: "1px solid hsl(217 33% 24%)", borderRadius: 8, fontSize: 12, color: "hsl(210 40% 96%)" }}
-              labelStyle={{ color: "hsl(210 40% 96%)", fontWeight: 600 }}
-              itemStyle={{ color: "hsl(215 20% 75%)" }}
-              formatter={(value: number) => [`$${value.toFixed(2)}`, "Savings"]}
-            />
-            <Line type="monotone" dataKey="savings" stroke="hsl(160 84% 39%)" strokeWidth={2} dot={false} isAnimationActive={animate} {...REVEAL} />
-          </LineChart>
+          <LineAreaChart
+            width={width}
+            height={160}
+            data={data}
+            labelKey="date"
+            series={SAVINGS_SERIES}
+            animate={animate}
+            label={data.length ? `Net savings, ${data[0].date} to ${data[data.length - 1].date}: $${data[data.length - 1].savings.toFixed(2)}` : "Net savings: no transactions yet"}
+          />
         )}
       </ChartFrame>
     </div>
@@ -256,7 +235,7 @@ export function TransactionDrawer({ onClose, editingTransaction }: { onClose: ()
   useEscapeKey(onClose);
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -265,7 +244,7 @@ export function TransactionDrawer({ onClose, editingTransaction }: { onClose: ()
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       {/* Modal */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -299,8 +278,8 @@ export function TransactionDrawer({ onClose, editingTransaction }: { onClose: ()
         <button onClick={submit} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg py-2.5 text-sm font-medium transition-colors">
           {editingTransaction ? "Save Changes" : "Add Transaction"}
         </button>
-      </motion.div>
-    </motion.div>
+      </m.div>
+    </m.div>
   );
 }
 
@@ -315,7 +294,7 @@ function TransactionList() {
       {sorted.map((tx) => {
         const cat = financialCategories.find((c) => c.id === tx.categoryId);
         return (
-          <motion.div key={tx.id} layout className="glass-card p-3 flex items-center gap-3 group">
+          <m.div key={tx.id} layout className="glass-card p-3 flex items-center gap-3 group">
             <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cat?.color }} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{tx.name}</p>
@@ -330,7 +309,7 @@ function TransactionList() {
             <button onClick={() => deleteTransaction(tx.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
-          </motion.div>
+          </m.div>
         );
       })}
     </div>
@@ -341,7 +320,7 @@ export default function FinancialsPage() {
   const { setShowTransactionForm } = appUi;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+    <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CashFlowChart />
         <CategoryDonut />
@@ -357,6 +336,6 @@ export default function FinancialsPage() {
         </div>
       </div>
       <TransactionList />
-    </motion.div>
+    </m.div>
   );
 }

@@ -19,7 +19,7 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn, toLocalDateStr } from "@/lib/utils";
@@ -154,7 +154,7 @@ function Popup({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <motion.div
+        <m.div
           ref={panelRef}
           role={role}
           initial={{ opacity: 0, scale: 0.97, y: offset }}
@@ -171,7 +171,7 @@ function Popup({
           className={cn("z-[120]", PANEL_CLASS)}
         >
           {children}
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>,
     document.body,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, LayoutGrid, RotateCcw } from "lucide-react";
 import {
   clearLayout,
@@ -244,7 +244,7 @@ export default function HomeGrid({ widgets }: { widgets: HomeWidget[] }) {
           const size = layout.sizes[id] ?? widget.defaultSize ?? 1;
           const dragging = draggingId === id;
           return (
-            <motion.div
+            <m.div
               key={id}
               // Always on: switching it off for the dragged tile left framer a stale
               // snapshot, and the dropped tile animated to the wrong place over its
@@ -320,7 +320,7 @@ export default function HomeGrid({ widgets }: { widgets: HomeWidget[] }) {
                   </button>
                 </div>
               )}
-            </motion.div>
+            </m.div>
           );
         })}
       </div>

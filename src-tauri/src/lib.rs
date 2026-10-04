@@ -7,48 +7,12 @@ mod hotkey;
 mod installer;
 mod portal;
 mod settings;
+mod sidecar;
 mod terminal;
 mod tray;
 mod updater;
 mod vault;
 mod window;
-
-/// Handle to the `crystal-api` sidecar, kept so it can be killed on exit.
-/// Only populated in release builds; `dev:desktop` uses the Vite server's
-/// middleware instead.
-#[derive(Default)]
-struct Sidecar(std::sync::Mutex<Option<tauri_plugin_shell::process::CommandChild>>);
-
-/// Launch the Node sidecar that serves `/api/obsidian` and `/api/calendar` for
-/// the packaged app (see server/sidecar.ts). It reads `.env.local` from the
-/// app config dir, e.g. `%APPDATA%\com.crystalos.desktop\.env.local`.
-#[cfg(not(debug_assertions))]
-fn spawn_sidecar(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-  use tauri_plugin_shell::{process::CommandEvent, ShellExt};
-
-  let config_dir = app.path().app_config_dir()?;
-  std::fs::create_dir_all(&config_dir)?;
-
-  let (mut rx, child) = app
-    .shell()
-    .sidecar("crystal-api")?
-    .env("CRYSTAL_CONFIG_DIR", &config_dir)
-    .spawn()?;
-
-  tauri::async_runtime::spawn(async move {
-    while let Some(event) = rx.recv().await {
-      match event {
-        CommandEvent::Stdout(line) => log::info!("{}", String::from_utf8_lossy(&line).trim_end()),
-        CommandEvent::Stderr(line) => log::warn!("{}", String::from_utf8_lossy(&line).trim_end()),
-        CommandEvent::Terminated(status) => log::error!("[crystal-api] exited: {:?}", status.code),
-        _ => {}
-      }
-    }
-  });
-
-  *app.state::<Sidecar>().0.lock().unwrap() = Some(child);
-  Ok(())
-}
 
 /// Stops the processes the app spawned: shells, agents and the sidecar. Runs
 /// on exit, and before an update's installer starts (src-tauri/src/updater.rs)
@@ -56,9 +20,7 @@ fn spawn_sidecar(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 pub(crate) fn stop_children(app: &tauri::AppHandle) {
   terminal::shutdown(app);
   harness::shutdown(app);
-  if let Some(child) = app.state::<Sidecar>().0.lock().unwrap().take() {
-    let _ = child.kill();
-  }
+  sidecar::stop(app);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -95,7 +57,7 @@ pub fn run() {
         }
       }
     })
-    .manage(Sidecar::default())
+    .manage(sidecar::SidecarState::default())
     .manage(hotkey::HotkeyState::default())
     .manage(vault::VaultState::default())
     .manage(terminal::TerminalState::default())
@@ -166,6 +128,7 @@ pub fn run() {
       installer::installer_reveal,
       updater::update_check,
       updater::update_install,
+      sidecar::sidecar_ensure,
     ])
     .setup(|_app| {
       hotkey::init(_app.handle());
@@ -183,12 +146,8 @@ pub fn run() {
         log::error!("[tray] failed to create: {err}");
       }
 
-      #[cfg(not(debug_assertions))]
-      if let Err(err) = spawn_sidecar(_app) {
-        // Not fatal: Supabase-backed views still work; Archive and Calendar
-        // surface the connection error themselves.
-        log::error!("[crystal-api] failed to start: {err}");
-      }
+      // The crystal-api sidecar is not started here: the webview starts it on
+      // its first /api/* request (sidecar.rs).
       Ok(())
     })
     .build(tauri::generate_context!())

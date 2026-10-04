@@ -28,7 +28,7 @@ import {
   Sparkles,
   Orbit,
 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { inTerminal, paletteShortcutLabel } from "@/lib/hotkey";
 import { isDesktop } from "@/lib/platform";
 
@@ -223,7 +223,7 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
         {/* Dropdown Results */}
         <AnimatePresence>
           {showDropdown && (
-            <motion.div
+            <m.div
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
@@ -525,7 +525,7 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                 </div>
                 <span className="text-gradient-indigo font-medium text-xs">Crystal OS</span>
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </Command>

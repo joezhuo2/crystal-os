@@ -1,6 +1,6 @@
 import { memo, useRef } from "react";
 import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings, SquareTerminal, Orbit, Sparkles, AppWindow } from "lucide-react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
 import { usePortal } from "@/hooks/usePortal";
 import { badgeLabel, type PortalBadge } from "@/lib/portalApps";
@@ -135,7 +135,7 @@ const SidebarButton = memo(function SidebarButton({
       className={`relative flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors whitespace-nowrap overflow-hidden ${radius} ${textClass}`}
     >
       {active && (
-        <motion.div
+        <m.div
           layoutId="sidebar-active"
           className={`absolute inset-0 ${radius}`}
           style={activePillStyle[mode]}
@@ -324,7 +324,7 @@ export function BottomNav({ activeTab, onTabChange }: SidebarNavProps) {
             }`}
           >
             {isActive && (
-              <motion.div
+              <m.div
                 layoutId="bottom-active"
                 className="absolute -top-0.5 w-8 h-0.5 rounded-full bg-primary"
                 transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}

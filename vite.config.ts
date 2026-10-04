@@ -72,5 +72,22 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          // Vendor code in chunks of its own, so their file names (content
+          // hashes) only change when the dependency does and an update to the
+          // app does not invalidate them. framer-motion is left to Rollup: one
+          // chunk for it would pull the animation features, which
+          // src/lib/motionFeatures.ts loads after the first render, back into
+          // startup.
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return;
+            if (/node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|@remix-run)[\\/]/.test(id)) return "react";
+            if (id.includes("@supabase")) return "supabase";
+          },
+        },
+      },
+    },
   };
 });

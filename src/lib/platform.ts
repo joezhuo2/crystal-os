@@ -19,7 +19,12 @@ export function isDesktop(): boolean {
  * middleware answers relative paths directly.
  */
 export function apiUrl(path: string, dev: boolean = import.meta.env.DEV): string {
-  return isDesktop() && !dev ? `${SIDECAR_ORIGIN}${path}` : path;
+  return usesSidecar(dev) ? `${SIDECAR_ORIGIN}${path}` : path;
+}
+
+/** True in the packaged desktop app, where `/api/*` is served by the sidecar. */
+export function usesSidecar(dev: boolean = import.meta.env.DEV): boolean {
+  return isDesktop() && !dev;
 }
 
 /**

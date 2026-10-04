@@ -1,7 +1,7 @@
 import { memo, useEffect, useState, useRef } from "react";
 import { useAppActions, useTaskCategories, useTasks, type Task, type Priority } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock } from "lucide-react";
 import {
   cleanRepeat,
@@ -32,7 +32,7 @@ const TaskItem = memo(function TaskItem({ task, draggable, overdue }: { task: Ta
   const cat = taskCategories.find((c) => c.id === task.categoryId);
   const repeatLabel = describeRepeat(task.repeat, task.startDate);
   return (
-    <motion.div
+    <m.div
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
@@ -85,7 +85,7 @@ const TaskItem = memo(function TaskItem({ task, draggable, overdue }: { task: Ta
       <button onClick={() => deleteTask(task.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive">
         <Trash2 className="w-4 h-4" />
       </button>
-    </motion.div>
+    </m.div>
   );
 });
 
@@ -223,7 +223,7 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
   useEscapeKey(onClose);
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -232,7 +232,7 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       {/* Modal */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -340,8 +340,8 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
         <button onClick={submit} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg py-2.5 text-sm font-medium transition-colors">
           {editingTask ? "Save Changes" : "Add Task"}
         </button>
-      </motion.div>
-    </motion.div>
+      </m.div>
+    </m.div>
   );
 }
 
@@ -397,7 +397,7 @@ export default function TasksPage() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+    <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex glass-card p-0.5 rounded-lg">
           <button onClick={() => switchView("list")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${selected === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
@@ -464,6 +464,6 @@ export default function TasksPage() {
           <PomodoroTimer />
         </div>
       </div>
-    </motion.div>
+    </m.div>
   );
 }

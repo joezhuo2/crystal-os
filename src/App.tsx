@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { LazyMotion } from "framer-motion";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { shouldRetry } from "@/lib/apiRequest";
 import { perfSettings } from "@/lib/perfSettings";
@@ -30,18 +31,24 @@ const applyCacheTime = () => {
 applyCacheTime();
 perfSettings.subscribe(applyCacheTime);
 
+// Animation features load in their own chunk after the first render; until
+// then `m` components render in their final state.
+const loadMotionFeatures = () => import("@/lib/motionFeatures").then((mod) => mod.default);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <LazyMotion features={loadMotionFeatures}>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </LazyMotion>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>

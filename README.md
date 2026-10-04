@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-531%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.8.8-6366F1)
+![Tests](https://img.shields.io/badge/tests-554%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.8.9-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.8.8** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.8.9** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -52,7 +52,7 @@ Current release: **v0.8.8** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | **Terminal** | xterm.js + ConPTY in Rust (PowerShell, desktop only) |
 | **The Portal** | Tauri child webviews (WebView2), one data directory per app, throttled and cache-trimmed while off screen (desktop only) |
 | **Markdown** | react-markdown + remark-gfm + `@tailwindcss/typography` |
-| **Animation** | Framer Motion |
+| **Animation** | Framer Motion (slim `m` components; features loaded after first render through `LazyMotion`) |
 | **Date/Time** | date-fns |
 | **Testing** | Vitest + React Testing Library |
 
@@ -204,6 +204,7 @@ src/
 │   │   ├── CalendarPage.tsx    # Google Calendar: month, week, day + agenda, event CRUD
 │   │   ├── TimeGrid.tsx        # Hour-by-hour columns for the week and day views
 │   │   ├── FinancialsPage.tsx  # Transactions, summaries, charts
+│   │   ├── financials/FinanceCharts.tsx # Cash flow, spending donut and savings trend as plain SVG
 │   │   ├── WeatherPage.tsx     # Detailed weather view
 │   │   ├── ArchivePage.tsx     # Vault browser: search, tags, markdown reader, virtualised note list
 │   │   ├── NoteEditor.tsx      # CodeMirror note editor with mtime-checked saves (lazy-loaded)
@@ -256,8 +257,12 @@ src/
 │   ├── pomodoro.ts             # Module-level Pomodoro store (page + tray agree)
 │   ├── tray.ts                 # Tauri tray events → app, app state → tray menu
 │   ├── hotkey.ts               # Hotkey parsing + combo validation
-│   ├── platform.ts             # isDesktop(), apiUrl(), openExternal()
-│   ├── apiRequest.ts           # Authenticated fetch wrapper for server routes
+│   ├── platform.ts             # isDesktop(), apiUrl(), usesSidecar(), openExternal()
+│   ├── apiRequest.ts           # Authenticated fetch wrapper for server routes; starts the desktop sidecar on first use
+│   ├── sidecarNative.ts        # ensureSidecar(): asks src-tauri/src/sidecar.rs to start crystal-api
+│   ├── viewLoader.ts           # Every view as a lazy chunk; preloads the most visited after startup
+│   ├── chartGeometry.ts        # Ticks, scales, monotone curves and donut arcs for the SVG charts
+│   ├── motionFeatures.ts       # framer-motion's domMax features, loaded by App's LazyMotion
 │   ├── seedCategories.ts       # Default task/finance category seeds, only after a successful empty fetch
 │   └── utils.ts                # cn(), useDebouncedValue(), date helpers, formatters
 ├── pages/
@@ -280,7 +285,8 @@ src-tauri/
 │   ├── portal.rs               # Portal child webviews: show/hide/fade, snapshots, per-app data, sign-out, background memory
 │   ├── portal/webview2.rs      # WebView2 page capture, tab-shortcut forwarding, memory level for Portal apps
 │   ├── installer.rs            # GitHub releases, installer download, build:desktop from a checkout
-│   └── updater.rs              # Check for updates and install in place (tauri-plugin-updater)
+│   ├── updater.rs              # Check for updates and install in place (tauri-plugin-updater)
+│   └── sidecar.rs              # Starts crystal-api on the first /api/* request, kills it on exit
 ├── capabilities/
 │   └── default.json            # App command allowlist by name
 └── tauri.conf.json             # Window, tray, bundle config
@@ -477,7 +483,7 @@ This starts Vite on port 8080 and opens a native window on it. HMR works, and th
 npm run build:desktop
 ```
 
-This produces an NSIS installer (`Crystal OS_<version>_x64-setup.exe`) in `src-tauri/target/release/bundle/nsis/`. NSIS is the only bundle target; MSI is no longer built. The packaged app has no Vite server. Instead, Tauri launches `crystal-api`, a Node sidecar that serves the same `/api/obsidian` and `/api/calendar` routes on `127.0.0.1:8787` and exits with the app.
+This produces an NSIS installer (`Crystal OS_<version>_x64-setup.exe`) in `src-tauri/target/release/bundle/nsis/`. NSIS is the only bundle target; MSI is no longer built. The packaged app has no Vite server. Instead, Tauri runs `crystal-api`, a Node sidecar that serves the same `/api/obsidian` and `/api/calendar` routes on `127.0.0.1:8787` and exits with the app. It is not started at launch: the first `/api/*` request asks Rust to start it (`sidecar_ensure` in `src-tauri/src/sidecar.rs`) and waits until it listens, and a request that cannot connect makes the next one start it again. The vault is read natively on desktop, so only the calendar needs it; the Home calendar card asks for the calendar's status only once the calendar has been connected, so a session that never uses the calendar never starts the sidecar.
 
 **Code signing.** Every binary Tauri bundles (the app, the sidecar and the installer) goes through `scripts/sign-windows.mjs` (`bundle.windows.signCommand` in `src-tauri/tauri.bundle.conf.json`). With no certificate configured it leaves them unsigned and the build still succeeds; Windows SmartScreen then shows "unknown publisher". To sign, set `CRYSTAL_SIGN_THUMBPRINT` to the SHA-1 thumbprint of a code-signing certificate in the Windows certificate store, or `CRYSTAL_SIGN_PFX` and `CRYSTAL_SIGN_PFX_PASSWORD` for a `.pfx` file. `signtool.exe` comes from the Windows SDK (or `SIGNTOOL`), timestamps from DigiCert (or `CRYSTAL_SIGN_TIMESTAMP_URL`). `CRYSTAL_SIGN_REQUIRED=1` makes an unconfigured build fail instead.
 
@@ -536,7 +542,7 @@ Or let CI do steps 1 to 3: bump the version in `package.json`, `src-tauri/Cargo.
 
 **Performance.** **Settings → Performance** has two controls.
 
-- **Performance mode** (off by default, applies at once). Pulse, Engine, Horizon, Vault, Atmosphere, Archive and Settings load only the first time you open them, instead of in the background after launch. Data those views fetched is dropped after one minute unused instead of five; each query keeps its own `staleTime`, so a view reopened within the minute shows its data without refetching. Page transitions, CSS animations and the canvas backdrops are turned off (loading spinners keep turning). The Nebula, Terminal and Portal load with the app as before, because they keep work running in the background.
+- **Performance mode** (off by default, applies at once). No view is fetched ahead: each loads the first time you open it. Without it, the three views you open most (counted in `localStorage`, `crystal-os:tab-visits`; Engine and Horizon on a fresh install) are fetched one at a time at the first idle moment after Home has settled. Data those views fetched is dropped after one minute unused instead of five; each query keeps its own `staleTime`, so a view reopened within the minute shows its data without refetching. Page transitions, CSS animations and the canvas backdrops are turned off (loading spinners keep turning). The Nebula, Terminal and Portal pages are lazy chunks like the rest; the work they keep running in the background lives in their stores and in Rust, which load with the app.
 - **Portal unload delay** (desktop), in seconds: see **Keep loaded in background** above.
 
 Whether or not performance mode is on, hiding the window to the tray or minimising it now stops the backdrop animation loops, freezes CSS animations, and pauses polling (weather refresh, calendar and vault refetches); stale data refetches when the window comes back. Closing the window with its **×** now goes through the same path as the tray and hotkey, so it also trims memory.
@@ -655,7 +661,7 @@ Native `<select>`, date, and time inputs are replaced app-wide by `src/component
 ### Adding New Views
 1. Create the component in `src/components/views/`
 2. Add its id to `TabId` and the `tabs` array in `src/components/layout/Navigation.tsx`
-3. Add a lazy loader for it in `src/lib/viewLoader.ts` (so performance mode can defer it), or, if it must keep running in the background, import it directly and register it in the `views` record in `src/pages/Index.tsx`
+3. Add a loader for it to `loaders` in `src/lib/viewLoader.ts`. Every view is a lazy chunk; work that must keep running while the view is closed belongs in a module-level store that `src/pages/Index.tsx` imports, not in the page
 
 Write Tailwind-scanned class names out in full. A class built at runtime, such as `` `portal-theme-${theme}` ``, is purged from the CSS; map values to literal class strings instead (see `PORTAL_THEME_CLASS` in `src/lib/portalStore.ts`).
 

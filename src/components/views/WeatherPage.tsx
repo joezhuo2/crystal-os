@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import {
   Cloud,
   CloudDrizzle,
@@ -208,7 +208,7 @@ function SevenDayForecast({ forecasts }: { forecasts: DayForecast[] }) {
       <p className="text-xs text-muted-foreground uppercase tracking-widest mb-4">Extended Forecast</p>
       <div className="space-y-1">
         {forecasts.map((day, i) => (
-          <motion.div
+          <m.div
             key={day.dayName}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -264,7 +264,7 @@ function SevenDayForecast({ forecasts }: { forecasts: DayForecast[] }) {
                 </span>
               )}
             </div>
-          </motion.div>
+          </m.div>
         ))}
       </div>
     </div>
@@ -304,7 +304,7 @@ function HourlyForecastSection({ hourly }: { hourly: HourlyForecast[] }) {
   const row2 = display.slice(12, 24);
 
   const renderHourCard = (h: HourlyForecast, i: number) => (
-    <motion.div
+    <m.div
       key={h.timestamp}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -328,7 +328,7 @@ function HourlyForecastSection({ hourly }: { hourly: HourlyForecast[] }) {
       <span className="text-[10px] text-muted-foreground">
         {h.windSpeed}<span className="text-[8px]">km/h</span>
       </span>
-    </motion.div>
+    </m.div>
   );
 
   return (
@@ -431,7 +431,7 @@ export default function WeatherPage() {
 
   if (isLoading) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid gap-4">
+      <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid gap-4">
         <div className="glass-card p-6 col-span-full">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 animate-pulse" />
@@ -444,13 +444,13 @@ export default function WeatherPage() {
         {[...Array(3)].map((_, i) => (
           <div key={i} className="glass-card p-6 col-span-full h-32 animate-pulse bg-primary/5 rounded-xl" />
         ))}
-      </motion.div>
+      </m.div>
     );
   }
 
   if (error) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card p-6">
+      <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card p-6">
         <div className="flex items-center gap-3 text-destructive">
           <AlertTriangle className="w-5 h-5" />
           <div>
@@ -458,12 +458,12 @@ export default function WeatherPage() {
             <p className="text-sm text-muted-foreground mt-1">Please check your connection and try again.</p>
           </div>
         </div>
-      </motion.div>
+      </m.div>
     );
   }
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="grid gap-4"
@@ -479,6 +479,6 @@ export default function WeatherPage() {
           Data from Environment and Climate Change Canada
         </p>
       )}
-    </motion.div>
+    </m.div>
   );
 }

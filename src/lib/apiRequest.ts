@@ -1,4 +1,5 @@
-import { apiUrl } from "./platform";
+import { apiUrl, usesSidecar } from "./platform";
+import { ensureSidecar, sidecarLost } from "./sidecarNative";
 import { supabase } from "./supabase";
 
 /** Carries the HTTP status so retry policy can distinguish 401 from 503. */
@@ -46,7 +47,24 @@ export async function apiRequest<T>(
   const headers = new Headers(init?.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(apiUrl(url), { ...init, headers });
+  // The desktop sidecar starts on the first request rather than with the app.
+  const sidecar = usesSidecar();
+  if (sidecar) {
+    try {
+      await ensureSidecar();
+    } catch (err) {
+      throw new ApiError(err instanceof Error ? err.message : String(err), 503);
+    }
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(apiUrl(url), { ...init, headers });
+  } catch (err) {
+    // Connection refused: the sidecar may have exited. The next call checks.
+    if (sidecar) sidecarLost();
+    throw err;
+  }
 
   if (!res.ok) {
     // The middleware always replies with { error } — surface that instead of a

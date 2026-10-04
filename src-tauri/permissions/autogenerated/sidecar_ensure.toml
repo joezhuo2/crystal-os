@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-sidecar-ensure"
+description = "Enables the sidecar_ensure command without any pre-configured scope."
+commands.allow = ["sidecar_ensure"]
+
+[[permission]]
+identifier = "deny-sidecar-ensure"
+description = "Denies the sidecar_ensure command without any pre-configured scope."
+commands.deny = ["sidecar_ensure"]

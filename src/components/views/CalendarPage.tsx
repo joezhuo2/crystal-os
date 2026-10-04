@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/apiRequest";
 import { openExternal } from "@/lib/platform";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { m, AnimatePresence, type Variants } from "framer-motion";
 import {
   AlertTriangle,
   CalendarDays,
@@ -300,7 +300,7 @@ function MonthGrid({
     <div className="glass-card p-6">
       <div className="flex items-center justify-between mb-6">
         <AnimatePresence mode="wait" initial={false} custom={direction}>
-          <motion.h2
+          <m.h2
             key={monthKey}
             custom={direction}
             variants={monthSlide}
@@ -313,7 +313,7 @@ function MonthGrid({
               month: "long",
               year: "numeric",
             })}
-          </motion.h2>
+          </m.h2>
         </AnimatePresence>
         <div className="flex gap-1">
           <button
@@ -342,7 +342,7 @@ function MonthGrid({
       </div>
 
       <AnimatePresence mode="wait" initial={false} custom={direction}>
-        <motion.div
+        <m.div
           key={monthKey}
           custom={direction}
           variants={monthSlide}
@@ -357,7 +357,7 @@ function MonthGrid({
             cascade={cascade}
             onSelectDay={onSelectDay}
           />
-        </motion.div>
+        </m.div>
       </AnimatePresence>
     </div>
   );
@@ -537,7 +537,7 @@ function DayPanel({
     // nothing until the fade ended and then snap in: a flicker on every open
     // and close.
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <motion.div
+      <m.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -545,7 +545,7 @@ function DayPanel({
         className="absolute inset-0"
         style={{ background: "hsl(var(--background) / 0.8)" }}
       />
-      <motion.div
+      <m.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
@@ -593,7 +593,7 @@ function DayPanel({
           <Plus className="w-4 h-4" />
           New event on this day
         </button>
-      </motion.div>
+      </m.div>
     </div>
   );
 }
@@ -705,7 +705,7 @@ function EventForm({
     // Scrim and card fade as siblings, as in DayPanel, so neither blur
     // flickers on open or close.
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <motion.div
+      <m.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -713,7 +713,7 @@ function EventForm({
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={pending ? undefined : onClose}
       />
-      <motion.div
+      <m.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -904,7 +904,7 @@ function EventForm({
           {pending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           {editingEvent ? "Save Changes" : "Add Event"}
         </button>
-      </motion.div>
+      </m.div>
     </div>
   );
 }
@@ -1170,7 +1170,7 @@ export default function CalendarPage() {
 
   if (!connected) {
     return (
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="space-y-4"
@@ -1180,12 +1180,12 @@ export default function CalendarPage() {
           message={status.data?.error ?? status.error?.message}
           isLoading={status.isLoading}
         />
-      </motion.div>
+      </m.div>
     );
   }
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-4"
@@ -1278,7 +1278,7 @@ export default function CalendarPage() {
           snap on at the end (the flicker DayPanel had). Each card applies the
           fade itself instead (.horizon-view in index.css). */}
       <AnimatePresence mode="wait" initial={false}>
-        <motion.div
+        <m.div
           key={view}
           className="horizon-view"
           initial={{ "--view-fade": 0 }}
@@ -1342,7 +1342,7 @@ export default function CalendarPage() {
               onDelete={setDeleteTarget}
             />
           )}
-        </motion.div>
+        </m.div>
       </AnimatePresence>
 
       <AnimatePresence>
@@ -1380,6 +1380,6 @@ export default function CalendarPage() {
           onClose={() => setDeleteTarget(null)}
         />
       )}
-    </motion.div>
+    </m.div>
   );
 }

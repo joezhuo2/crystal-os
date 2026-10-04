@@ -3706,3 +3706,40 @@ html.perf-still .horizon-dot-cascade {
     animation: none;
   }
 }
+
+/* Financials charts (FinanceCharts.tsx): the area and line charts wipe in
+   from the left, the donut sweeps round from twelve o'clock. Played once on
+   mount; the component leaves the class off in performance mode. */
+.fin-chart-wipe {
+  animation: fin-chart-wipe 900ms ease-out both;
+}
+
+.fin-chart-sweep {
+  stroke-dasharray: 1;
+  animation: fin-chart-sweep 900ms ease-out both;
+}
+
+@keyframes fin-chart-wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes fin-chart-sweep {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fin-chart-wipe,
+  .fin-chart-sweep {
+    animation: none;
+  }
+}

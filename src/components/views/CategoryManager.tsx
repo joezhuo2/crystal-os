@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAppActions, useFinancialCategories, useTaskCategories } from "@/contexts/AppContext";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, Settings } from "lucide-react";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 
@@ -49,7 +49,7 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
   // the length of the fade, and it snapped back at the end (a flicker).
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <motion.div
+      <m.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -57,7 +57,7 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
         style={{ background: "hsl(var(--background) / 0.8)" }}
         onClick={onClose}
       />
-      <motion.div
+      <m.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
@@ -152,7 +152,7 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
             <Plus className="w-3.5 h-3.5" /> Add Category
           </button>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

@@ -6,9 +6,6 @@ import LoginPage from "@/components/auth/LoginPage";
 import AppSplash from "@/components/layout/AppSplash";
 import { SidebarNav, BottomNav, type TabId } from "@/components/layout/Navigation";
 import { AnimatePresence } from "framer-motion";
-import TerminalPage from "@/components/views/TerminalPage";
-import PortalPage from "@/components/views/PortalPage";
-import NebulaPage from "@/components/views/NebulaPage";
 import CommandPalette from "@/components/CommandPalette";
 import TerminalStatic from "@/components/layout/TerminalStatic";
 import PortalBackdrop from "@/components/layout/PortalBackdrop";
@@ -30,17 +27,7 @@ import { useVaultLiveUpdates } from "@/hooks/useVault";
 import { useAppActivity } from "@/lib/appActivity";
 import { useOrbitStore } from "@/lib/orbitStore";
 import OrbitAutoExport from "@/components/views/orbit/OrbitAutoExport";
-import { LazyTaskForm, LazyTransactionDrawer, lazyViews, preloadViews, type ViewProps } from "@/lib/viewLoader";
-
-// Nebula, Terminal, and Portal load with the app; the rest are split into
-// chunks (see viewLoader.ts).
-const views: Record<TabId, React.ComponentType<ViewProps>> = {
-  ...lazyViews,
-  portal: PortalPage,
-  nebula: NebulaPage,
-  terminal: TerminalPage,
-};
-
+import { LazyTaskForm, LazyTransactionDrawer, lazyViews as views, preloadViews, recordVisit } from "@/lib/viewLoader";
 
 /** Tabs with a page backdrop of their own. */
 const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["terminal", "portal", "nebula", "weather", "archive", "calendar", "tasks", "orbit"]);
@@ -174,9 +161,13 @@ const Index = () => {
     return () => document.removeEventListener("keydown", handler);
   }, [openPalette]);
 
+  // Runs once: fetches the most used views' chunks after Home has settled.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => preloadViews(activeTab), []);
+
   useEffect(() => {
-    preloadViews();
-  }, []);
+    recordVisit(activeTab);
+  }, [activeTab]);
 
   // Popups (dropdowns, pickers) portal to <body>, outside the page root, so
   // the Horizon's, the Engine's and the Orbit's palettes go on <body> too for

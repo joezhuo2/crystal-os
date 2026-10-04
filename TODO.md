@@ -8,13 +8,6 @@
 ### Theme switching (left over from v0.8.5)
 - [ ] **Changing the root theme class still restyles the page subtree.** v0.8.5 turned the per-theme `.x-root main .glass-card` rule sets into `--glass-card-*` values on each theme's `<main>`, but `rootClass` and the `body` `horizon-theme`/`engine-theme`/`orbit-theme` classes still change on every switch, and the `portal-theme-*`, `sidebar-*` and `*-title` rules are still per theme. Measure a switch in the Performance panel before going further; if recalc is still a large share, move the remaining palettes to custom properties set from JS on one element.
 
-### Bundle and startup
-- [ ] **The entry chunk is 1.17 MB.** Nebula, Terminal and Portal are bundled with the app on purpose, but that pulls `react-markdown` + `remark-gfm` (via `ChatView`), the harness, framer-motion, Supabase and every Radix primitive into the startup parse. Keep the background *stores* eager but lazy-load the page components (`NebulaPage`, `PortalPage`, `TerminalPage` UI), and add `build.rollupOptions.output.manualChunks` for `react`/`supabase`/`framer-motion` so vendor code caches across releases.
-- [ ] **`preloadViews()` fetches every view chunk about 2 s after start,** including `FinancialsPage` (409 KB, mostly Recharts) and the 611 KB CodeMirror `NoteEditor` via Archive's lazy import. Fine on a fast disk, but on startup it competes with the first render. Preload only the tabs the user visits most (track recent tabs) or delay until the first idle after the home view settles.
-- [ ] **Recharts is 400 KB for a few charts.** Orbit already draws its own SVG bars (`OrbitCharts.tsx`). Doing the same for the Financials charts, or switching to a lighter library, would cut most of that chunk.
-- [ ] **framer-motion is used for simple fades and slides in many places.** `LazyMotion` with `domAnimation` and `m.` components would trim the eager bundle by roughly 30 KB gzipped.
-- [ ] **The sidecar is a 93 MB Node executable started on every launch,** even when the vault (native) and calendar are not used. Start it on the first `/api/*` call, or move the calendar proxy into Rust and drop the sidecar.
-
 - redo portal ui (change to glassmorphism with some background)
 - glassmorphism ui to all home page widget cards (except terminal)
 

@@ -5,6 +5,18 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.9] - 2026-10-04
+
+A smaller startup bundle, less work at launch, and no sidecar until something needs it.
+
+### Changed
+
+- **The startup JavaScript is down from 1,197 KB to 807 KB (371 KB to 255 KB gzipped).** The Nebula, Portal and Terminal pages are lazy chunks like every other view (`src/lib/viewLoader.ts`), which takes `react-markdown`, `remark-gfm` and the chat UI out of the entry chunk. Their background work stays eager: the harness, Portal and terminal stores are still imported by `Index.tsx`, and the shells and agents run in Rust. React (with the router) and Supabase are split into `react` and `supabase` vendor chunks (`build.rollupOptions.output.manualChunks`), preloaded beside the entry chunk, so their file names only change when the dependency does.
+- **framer-motion loads its animation code after the first render.** Components use the slim `m` component, and `App.tsx` wraps the app in `<LazyMotion>` with the `domMax` features in their own chunk (`src/lib/motionFeatures.ts`, about 82 KB). `domMax` rather than `domAnimation`, because the nav indicator, the transaction list and the Home grid use layout animations. framer-motion has no vendor chunk of its own: one would have pulled those features back into startup.
+- **Only the views you use are fetched ahead.** `preloadViews()` fetched every view chunk about 2 s after start, Financials and its charts included. Each opened tab is now counted (`crystal-os:tab-visits` in `localStorage`), and after startup the three most visited views are fetched one at a time, at the first idle moment 1.5 s after Home has mounted. A fresh install fetches the Engine and the Horizon. Performance mode still fetches nothing ahead.
+- **The Financials charts are plain SVG.** Recharts was 400 KB of the 419 KB Financials chunk, for three charts. The cash flow areas, spending donut and savings line are now drawn by `src/components/views/financials/FinanceCharts.tsx`, from scales, round axis ticks, monotone curves and donut arcs in `src/lib/chartGeometry.ts`; the chunk is 15 KB. They keep the same colours, hover tooltips and 900 ms entrance (a CSS wipe and sweep, skipped in performance mode and with reduced motion), and each chart now has a text alternative for screen readers. The donut starts at twelve o'clock and runs clockwise. `recharts` is removed from the dependencies.
+- **The desktop sidecar starts on the first `/api/*` request instead of at launch.** The 93 MB `crystal-api` executable started with the app even though the desktop vault is read natively and only the calendar uses it. `apiRequest` now calls the new `sidecar_ensure` command (`src-tauri/src/sidecar.rs`) first, which starts the sidecar if it is not running and returns once its port accepts connections (or fails after 15 s with a 503 the view shows). A request that cannot connect makes the next one check again, so a sidecar that exited is restarted. The Home calendar card only asks for the calendar's status once the calendar has been connected (remembered as `crystal-os:calendar-connected`), so a session that never opens the Horizon never starts the sidecar. `dev:desktop` and the web app are unchanged.
+
 ## [v0.8.8] - 2026-10-04
 
 Fewer re-renders from global state.

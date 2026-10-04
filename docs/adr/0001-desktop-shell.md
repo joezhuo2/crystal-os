@@ -57,5 +57,6 @@ On desktop, Google consent opens in the system browser, because Google blocks OA
 - The installer grows by roughly 100 MB, because the sidecar embeds a Node runtime. Phase 1.4 can shrink this or remove the sidecar.
 - Port 8787 is fixed. If another process already holds it, Archive and Calendar show a connection error. Dynamic port assignment over IPC is deferred.
 - `dev:desktop` does not start the sidecar; the Vite middleware serves the API, as it does on the web.
+- Since v0.8.9 the sidecar is not started at launch. The first `/api/*` request calls the `sidecar_ensure` command (`src-tauri/src/sidecar.rs`), which starts it and waits until it listens. With the vault read natively, a session that never uses the calendar never starts it.
 - Google OAuth for the packaged app needs a second authorized redirect URI: `http://127.0.0.1:8787/api/calendar/auth/callback`.
 - Only Windows is built and verified in 1.1. macOS and Linux are covered by the 1.5 exit criteria.

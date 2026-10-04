@@ -2,7 +2,7 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState
 import { useVirtualizer } from "@tanstack/react-virtual";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -173,7 +173,7 @@ function NoteList({
       ) : (
         <div className="space-y-1">
           {notes.map((note, i) => (
-            <motion.div
+            <m.div
               key={note.path}
               initial={stagger ? { opacity: 0, y: 6 } : false}
               animate={{ opacity: 1, y: 0 }}
@@ -185,7 +185,7 @@ function NoteList({
                 active={selectedPath === note.path}
                 onSelect={onSelect}
               />
-            </motion.div>
+            </m.div>
           ))}
         </div>
       )}
@@ -273,7 +273,7 @@ function NoteReader({ linkTargets }: { linkTargets: Map<string, string> }) {
   const extras = Object.entries(note.frontmatter);
 
   return (
-    <motion.div
+    <m.div
       key={note.path}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
@@ -350,7 +350,7 @@ function NoteReader({ linkTargets }: { linkTargets: Map<string, string> }) {
         </div>
         </>
       )}
-    </motion.div>
+    </m.div>
   );
 }
 

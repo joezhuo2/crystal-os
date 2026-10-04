@@ -118,13 +118,43 @@ export function parseRecurrence(recurrence: string[] | null): {
 
 /* ── Queries ── */
 
+const CONNECTED_KEY = "crystal-os:calendar-connected";
+
+/**
+ * Whether the last status check found the calendar connected. In the
+ * packaged desktop app the Home card checks status only when it was, so a
+ * session that never uses the calendar never starts the sidecar
+ * (src-tauri/src/sidecar.rs).
+ */
+export function calendarWasConnected(): boolean {
+  try {
+    return localStorage.getItem(CONNECTED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberConnected(connected: boolean) {
+  try {
+    if (connected) localStorage.setItem(CONNECTED_KEY, "1");
+    else localStorage.removeItem(CONNECTED_KEY);
+  } catch {
+    /* storage blocked: Home just keeps checking */
+  }
+}
+
 /** Whether the integration is configured and connected. Drives the whole tab. */
-export function useCalendarStatus() {
+export function useCalendarStatus(enabled = true) {
   return useQuery<CalendarStatus>({
     queryKey: ["gcal", "status"],
-    queryFn: () => request<CalendarStatus>(`${API_BASE}/status`),
+    queryFn: async () => {
+      const status = await request<CalendarStatus>(`${API_BASE}/status`);
+      rememberConnected(status.connected);
+      return status;
+    },
     staleTime: 60 * 1000,
     retry: 0,
+    enabled,
   });
 }
 

@@ -11,15 +11,17 @@ import {
   type Transaction,
 } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { isTaskOverdue, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 import { useSkyScene } from "@/hooks/useSkyScene";
 import { useAtmosphere } from "@/lib/atmosphereStore";
 import { auroraStrength, pineRidge } from "@/lib/atmosphereScene";
 import { useVaultNotes } from "@/hooks/useVault";
+import { usesSidecar } from "@/lib/platform";
 import { CARD_BACKDROP_BLUR, useImageBackdrop } from "@/lib/imageBackdrop";
 import {
   useCalendarEvents,
+  calendarWasConnected,
   useCalendarStatus,
   type CalendarEvent,
 } from "@/hooks/useGoogleCalendar";
@@ -264,7 +266,7 @@ function ArchiveWidget({ onClick }: { onClick?: () => void }) {
                 <p className="text-xs text-muted-foreground">No notes for this tag.</p>
               )}
               {data.notes.map((note, i) => (
-                <motion.button
+                <m.button
                   key={note.path}
                   initial={{ opacity: 0, x: -6 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -285,7 +287,7 @@ function ArchiveWidget({ onClick }: { onClick?: () => void }) {
                       addSuffix: true,
                     })}
                   </span>
-                </motion.button>
+                </m.button>
               ))}
             </div>
 
@@ -322,7 +324,9 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
     }
   })();
 
-  const status = useCalendarStatus();
+  // On desktop, asking for the status starts the sidecar, so the card only
+  // asks once the calendar has been connected (from the Horizon tab).
+  const status = useCalendarStatus(!usesSidecar() || calendarWasConnected());
   const connected = status.data?.connected === true;
   const backdropUrl = useImageBackdrop("horizon", CARD_BACKDROP_BLUR);
 
@@ -391,7 +395,7 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
             ) : (
               <div className="space-y-1.5">
                 {todayEvents.map((event, i) => (
-                  <motion.div
+                  <m.div
                     key={event.id}
                     initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -408,7 +412,7 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
                     <span className="ml-auto text-xs text-muted-foreground tabular-nums shrink-0">
                       {timeLabel(event)}
                     </span>
-                  </motion.div>
+                  </m.div>
                 ))}
               </div>
             )}
@@ -522,7 +526,7 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
             ) : (
               <div className="space-y-1.5">
                 {topRows.map(({ task, label }, i) => (
-                  <motion.div
+                  <m.div
                     key={task.id}
                     initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -545,7 +549,7 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
                     <span className={`ml-auto text-[10px] font-semibold shrink-0 ${PRIORITY_CLASS[task.priority]}`}>
                       {label}
                     </span>
-                  </motion.div>
+                  </m.div>
                 ))}
               </div>
             )}
@@ -650,8 +654,8 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
   ];
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+    <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <HomeGrid widgets={widgets} />
-    </motion.div>
+    </m.div>
   );
 }
