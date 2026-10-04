@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 import TimeGrid from "./TimeGrid";
+
+/** Event blocks carry a GlassTip, which needs the app's TooltipProvider. */
+const render = (ui: ReactElement) => rtlRender(<TooltipProvider>{ui}</TooltipProvider>);
 
 const base: CalendarEvent = {
   id: "e1",

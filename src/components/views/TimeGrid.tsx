@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { GlassTip } from "@/components/ui/glass-tooltip";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 import { toLocalDateStr } from "@/lib/utils";
 import { MINUTES_PER_DAY, fromMinutes, layoutDay, snapMinutes } from "@/lib/timeGrid";
@@ -14,6 +15,11 @@ const HOURS = Array.from({ length: 24 }, (_, h) => h);
 function hourLabel(hour: number): string {
   if (hour === 0) return "";
   return new Date(2000, 0, 1, hour).toLocaleTimeString("en-US", { hour: "numeric" });
+}
+
+function timeRange(event: CalendarEvent): string {
+  if (!event.startTime) return "";
+  return event.endTime ? `${shortTime(event.startTime)} – ${shortTime(event.endTime)}` : shortTime(event.startTime);
 }
 
 function shortTime(time: string): string {
@@ -43,6 +49,7 @@ export default function TimeGrid({
   dates,
   events,
   color,
+  tipColors,
   onCreateAt,
   onEdit,
   onSelectDate,
@@ -53,6 +60,8 @@ export default function TimeGrid({
   dates: string[];
   events: CalendarEvent[];
   color: string;
+  /** Gradient stops for the hover card; defaults to the event colour. */
+  tipColors?: [string, string];
   onCreateAt: (date: string, time: string) => void;
   onEdit: (event: CalendarEvent) => void;
   /** Clicking a day's heading, e.g. to open it in the day view. */
@@ -61,6 +70,7 @@ export default function TimeGrid({
   const today = toLocalDateStr();
   const now = useNowMinutes();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const tip = tipColors ?? [color, color];
 
   const days = useMemo(
     () => dates.map((date) => ({ date, ...layoutDay(events, date) })),
@@ -120,16 +130,16 @@ export default function TimeGrid({
           {days.map(({ date, allDay }) => (
             <div key={date} className="space-y-0.5 px-0.5 min-w-0">
               {allDay.map((event) => (
-                <button
-                  key={event.id}
-                  type="button"
-                  onClick={() => onEdit(event)}
-                  title={event.summary}
-                  className="w-full text-left text-[11px] px-1.5 py-0.5 rounded truncate"
-                  style={{ background: `color-mix(in srgb, ${color} 30%, transparent)` }}
-                >
-                  {event.summary}
-                </button>
+                <GlassTip key={event.id} label={event.summary} hint="All day" colors={tip}>
+                  <button
+                    type="button"
+                    onClick={() => onEdit(event)}
+                    className="w-full text-left text-[11px] px-1.5 py-0.5 rounded truncate"
+                    style={{ background: `color-mix(in srgb, ${color} 30%, transparent)` }}
+                  >
+                    {event.summary}
+                  </button>
+                </GlassTip>
               ))}
             </div>
           ))}
@@ -187,32 +197,29 @@ export default function TimeGrid({
               {timed.map(({ event, startMin, endMin, column, columns: lanes }) => {
                 const height = (endMin - startMin) * PX_PER_MIN;
                 return (
-                  <button
-                    key={event.id}
-                    type="button"
-                    title={event.summary}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(event);
-                    }}
-                    className="absolute rounded-md px-1.5 py-0.5 text-left overflow-hidden text-[11px] leading-tight border hover:brightness-125 transition-[filter]"
-                    style={{
-                      top: startMin * PX_PER_MIN,
-                      height: Math.max(height - 1, 14),
-                      left: `calc(${(column / lanes) * 100}% + 1px)`,
-                      width: `calc(${100 / lanes}% - 2px)`,
-                      background: `color-mix(in srgb, ${color} 28%, transparent)`,
-                      borderColor: `color-mix(in srgb, ${color} 55%, transparent)`,
-                    }}
-                  >
-                    <span className="font-medium block truncate">{event.summary}</span>
-                    {height >= 30 && event.startTime && (
-                      <span className="text-muted-foreground block truncate">
-                        {shortTime(event.startTime)}
-                        {event.endTime && ` – ${shortTime(event.endTime)}`}
-                      </span>
-                    )}
-                  </button>
+                  <GlassTip key={event.id} label={event.summary} hint={timeRange(event)} colors={tip}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(event);
+                      }}
+                      className="absolute rounded-md px-1.5 py-0.5 text-left overflow-hidden text-[11px] leading-tight border hover:brightness-125 transition-[filter]"
+                      style={{
+                        top: startMin * PX_PER_MIN,
+                        height: Math.max(height - 1, 14),
+                        left: `calc(${(column / lanes) * 100}% + 1px)`,
+                        width: `calc(${100 / lanes}% - 2px)`,
+                        background: `color-mix(in srgb, ${color} 28%, transparent)`,
+                        borderColor: `color-mix(in srgb, ${color} 55%, transparent)`,
+                      }}
+                    >
+                      <span className="font-medium block truncate">{event.summary}</span>
+                      {height >= 30 && event.startTime && (
+                        <span className="text-muted-foreground block truncate">{timeRange(event)}</span>
+                      )}
+                    </button>
+                  </GlassTip>
                 );
               })}
             </div>

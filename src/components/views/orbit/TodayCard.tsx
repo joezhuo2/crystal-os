@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, PenLine } from "lucide-react";
+import { GlassTip } from "@/components/ui/glass-tooltip";
 import { useNow } from "@/hooks/useOrbitReview";
 import { useCreateNote, useRawNote, useSaveNote, useVaultNotes, vaultErrorCode } from "@/hooks/useVault";
 import { EMPTY_ENTRY, MOODS, dailyNotePath, mergeToday, parseToday, pickDailyFolder, type TodayEntry } from "@/lib/dailyNote";
@@ -168,10 +169,12 @@ export function TodayCard({ focusOnMount }: { focusOnMount: boolean }) {
               Save to daily note
             </button>
             {path && (
-              <p className="text-[11px] text-muted-foreground truncate max-w-full" title={path}>
-                {dirty ? "Unsaved · " : ""}
-                {path}
-              </p>
+              <GlassTip label={path} hint={dirty ? "Unsaved changes" : "Daily note"} tone="orbit">
+                <p className="text-[11px] text-muted-foreground truncate max-w-full">
+                  {dirty ? "Unsaved · " : ""}
+                  {path}
+                </p>
+              </GlassTip>
             )}
           </div>
         </form>

@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { GlassTip } from "@/components/ui/glass-tooltip";
 import { FocusBars, MoneyBars, TaskOrbit } from "@/components/views/orbit/OrbitCharts";
 import { TodayCard } from "@/components/views/orbit/TodayCard";
 import { OrbitHistoryError, useNow, useOrbitReview, type OrbitReviewResult } from "@/hooks/useOrbitReview";
@@ -101,9 +102,9 @@ function NameList({ names, empty }: { names: string[]; empty: string }) {
   return (
     <ul className="orbit-names">
       {shown.map((name, i) => (
-        <li key={`${name}-${i}`} className="truncate" title={name}>
-          {name}
-        </li>
+        <GlassTip key={`${name}-${i}`} label={name} tone="orbit">
+          <li className="truncate">{name}</li>
+        </GlassTip>
       ))}
       {hidden > 0 && (
         <li>
@@ -131,11 +132,13 @@ function Delta({ trend, against, unit }: { trend: Trend; against: number; unit: 
   const good = diff === 0 ? null : diff > 0 === trend.higherIsBetter;
   const Icon = diff > 0 ? TrendingUp : diff < 0 ? TrendingDown : Minus;
   return (
-    <span className={`orbit-delta ${good === null ? "" : good ? "orbit-delta-good" : "orbit-delta-bad"}`} title={`vs ${unit}: ${formatTrendValue(trend, against)}`}>
-      <Icon className="w-3 h-3" aria-hidden="true" />
-      {diff === 0 ? "same" : formatTrendValue(trend, Math.abs(diff))}
-      <span className="sr-only"> {diff > 0 ? "up" : diff < 0 ? "down" : ""} vs {unit}</span>
-    </span>
+    <GlassTip label={`vs ${unit}: ${formatTrendValue(trend, against)}`} tone="orbit">
+      <span className={`orbit-delta ${good === null ? "" : good ? "orbit-delta-good" : "orbit-delta-bad"}`}>
+        <Icon className="w-3 h-3" aria-hidden="true" />
+        {diff === 0 ? "same" : formatTrendValue(trend, Math.abs(diff))}
+        <span className="sr-only"> {diff > 0 ? "up" : diff < 0 ? "down" : ""} vs {unit}</span>
+      </span>
+    </GlassTip>
   );
 }
 
@@ -274,10 +277,12 @@ function AgendaRow({ item }: { item: AgendaItem }) {
     <li className="orbit-agenda-row">
       <span className={`orbit-agenda-dot ${item.kind === "task" ? "orbit-agenda-dot-task" : ""}`} aria-hidden="true" />
       <span className="orbit-agenda-time">{item.time ? formatClockTime(item.time) : item.kind === "task" ? "Task" : "All day"}</span>
-      <span className="truncate" title={item.title}>
-        {item.title}
-        {item.repeats && <span className="orbit-agenda-tag">repeats</span>}
-      </span>
+      <GlassTip label={item.title} hint={item.repeats ? "Repeats" : undefined} tone="orbit">
+        <span className="truncate">
+          {item.title}
+          {item.repeats && <span className="orbit-agenda-tag">repeats</span>}
+        </span>
+      </GlassTip>
     </li>
   );
 }
@@ -411,9 +416,9 @@ function ReflectionCard({ review }: { review: Review }) {
         {create.isPending ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Download className="w-4 h-4" aria-hidden="true" />}
         Export to vault
       </button>
-      <p className="mt-1.5 text-[11px] text-muted-foreground truncate" title={path}>
-        {path}
-      </p>
+      <GlassTip label={path} hint="Vault path" tone="orbit">
+        <p className="mt-1.5 text-[11px] text-muted-foreground truncate">{path}</p>
+      </GlassTip>
 
       <AlertDialog open={confirm} onOpenChange={(open) => !create.isPending && setConfirm(open)}>
         <AlertDialogContent className="orbit-dialog">
@@ -612,7 +617,6 @@ export default function OrbitPage() {
               onClick={() => go({ kind: target.kind, offset: 0 })}
               disabled={atReady}
               aria-label="Latest review"
-              title="Latest review"
             >
               <span className="text-xs font-medium px-1">Latest</span>
             </button>

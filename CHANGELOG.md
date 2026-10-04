@@ -5,6 +5,16 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.4] - 2026-10-04
+
+### Fixed
+
+- **Sidebar icons no longer shift when it expands.** The header swapped a one-line "C" for the two-line "Crystal OS / Productivity Ecosystem", so its height changed and every icon below moved a few pixels down and back. Both headers now stay mounted in one grid cell and cross-fade, keeping the taller height in both states (`Navigation.tsx`).
+- **The Engine's Categories dialog no longer flickers when it opens or closes.** The overlay faded its own opacity with the glass card inside it, and opacity on an ancestor of a `backdrop-filter` drops the blur until the fade ends, so the card flashed see-through and then snapped back. The scrim and the card now fade side by side (`CategoryManager.tsx`). The Financials page uses the same dialog.
+- **Themed hover cards in The Orbit.** The focus and money chart bars, the change badges, agenda rows, names lists and vault paths (review and Today card) show a `GlassTip` in the Orbit's ice and mauve instead of the browser's `title` box. The redundant `title` on **Latest** is gone.
+- **Themed hover cards on Horizon events.** In the week and day views, timed and all-day events show a `GlassTip` in the Horizon's blues with the event's time range, instead of the browser's `title` box (`TimeGrid.tsx`, new `tipColors` prop).
+- **Themed hover cards in The Nebula.** The project folder, model tier, auto-mode dot, context meter, token chip, sidebar project and **New chat** buttons, token table and **Stop** button use a new `NebulaTip`, a `GlassTip` in the user's Nebula palette. The colours are read from the theme because the card renders into `<body>`, outside the page root that holds the `--nebula-*` variables. The tier and context tooltips were the default shadcn popover before.
+
 ## [v0.8.3] - 2026-10-04
 
 No app changes: this release is about building, checking and documenting it.

@@ -4,6 +4,7 @@
  * theme. Each has a text alternative for screen readers.
  */
 import { useId } from "react";
+import { GlassTip } from "@/components/ui/glass-tooltip";
 import { formatMinutes, formatMoney } from "@/lib/orbitReview";
 
 const WEEKDAY_INITIAL = ["S", "M", "T", "W", "T", "F", "S"];
@@ -42,26 +43,27 @@ export function FocusBars({ days }: { days: { day: string; minutes: number }[] }
         const date = new Date(`${d.day}T12:00:00`);
         const showLabel = !monthly || date.getDate() === 1 || date.getDay() === 1;
         return (
-          <g key={d.day}>
-            <title>{`${dayLabel(d.day)}: ${formatMinutes(d.minutes)}`}</title>
-            <rect x={x} y={0} width={barWidth} height={plot} rx={Math.min(3, barWidth / 2)} className="orbit-chart-track" />
-            {h > 0 && (
-              <rect
-                x={x}
-                y={plot - h}
-                width={barWidth}
-                height={h}
-                rx={Math.min(3, barWidth / 2)}
-                fill={`url(#${gradient})`}
-                className={d.minutes === best ? "orbit-chart-best" : undefined}
-              />
-            )}
-            {showLabel && (
-              <text x={x + barWidth / 2} y={height - 2} textAnchor="middle" className="orbit-chart-label">
-                {monthly ? date.getDate() : WEEKDAY_INITIAL[date.getDay()]}
-              </text>
-            )}
-          </g>
+          <GlassTip key={d.day} label={dayLabel(d.day)} hint={formatMinutes(d.minutes)} tone="orbit">
+            <g>
+              <rect x={x} y={0} width={barWidth} height={plot} rx={Math.min(3, barWidth / 2)} className="orbit-chart-track" />
+              {h > 0 && (
+                <rect
+                  x={x}
+                  y={plot - h}
+                  width={barWidth}
+                  height={h}
+                  rx={Math.min(3, barWidth / 2)}
+                  fill={`url(#${gradient})`}
+                  className={d.minutes === best ? "orbit-chart-best" : undefined}
+                />
+              )}
+              {showLabel && (
+                <text x={x + barWidth / 2} y={height - 2} textAnchor="middle" className="orbit-chart-label">
+                  {monthly ? date.getDate() : WEEKDAY_INITIAL[date.getDay()]}
+                </text>
+              )}
+            </g>
+          </GlassTip>
         );
       })}
     </svg>
@@ -110,11 +112,12 @@ export function MoneyBars({
             {bars.map((b) => {
               const h = b.value ? Math.max(3, (b.value / max) * (plot - 4)) : 0;
               return (
-                <g key={b.title}>
-                  <title>{`${g.label}, ${b.title.toLowerCase()}: ${formatMoney(b.value)}`}</title>
-                  <rect x={b.x} y={0} width={bar} height={plot} rx={4} className="orbit-chart-track" />
-                  {h > 0 && <rect x={b.x} y={plot - h} width={bar} height={h} rx={4} className={b.cls} />}
-                </g>
+                <GlassTip key={b.title} label={`${g.label}, ${b.title.toLowerCase()}`} hint={formatMoney(b.value)} tone="orbit">
+                  <g>
+                    <rect x={b.x} y={0} width={bar} height={plot} rx={4} className="orbit-chart-track" />
+                    {h > 0 && <rect x={b.x} y={plot - h} width={bar} height={h} rx={4} className={b.cls} />}
+                  </g>
+                </GlassTip>
               );
             })}
             <text x={cx} y={height - 2} textAnchor="middle" className="orbit-chart-label">

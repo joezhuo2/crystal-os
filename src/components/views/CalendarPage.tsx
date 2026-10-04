@@ -1301,6 +1301,7 @@ export default function CalendarPage() {
               dates={gridDates}
               events={events}
               color={color}
+              tipColors={HORIZON_TIP}
               onCreateAt={openCreate}
               onEdit={openEdit}
               onSelectDate={view === "week" ? openDay : undefined}

@@ -2,23 +2,16 @@
 - [v0.9.0] vault/banking overhaul - use plaid to connect to banks (store api keys and tokens in secure env variables), themed glassmorphism UI 
 
 - performance on the archive page is still heavy
-- when expanding the navbar to show names/desc, do not move the icons (currently the top col. of icons move down/up slightly because of description getting added/removed)
-- glassmorphism ui to all home page widget cards (except terminal)
+- expanding/minimizing the side navbar/switching between sections is very performance heavy on non-performance mode
+
 - redo portal ui (change to glassmorphism with some background)
-- hover texts in the orbit are not themed
-- clicking the categories in the engine creates flickers
-- hovering events in week/day view in the horizon creates un-themed hover texts
-- hover texts in the nebula are not themed
+- glassmorphism ui to all home page widget cards (except terminal)
 
 ## To Test
 
-- [ ] v0.8.3 CI. Push a branch and open a PR: the **CI** workflow goes green (lint, typecheck, tests, web build, cargo check).
-- [ ] v0.8.3 Release workflow. Add the `TAURI_SIGNING_PRIVATE_KEY` secret (and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if set), push tag `v0.8.3`: a draft release appears with `Crystal.OS_0.8.3_x64-setup.exe` and `latest.json`. Publish it and check **Check for updates** from a v0.8.2 install.
-- [ ] v0.8.3 E2E smoke test. Create the test user, set `E2E_EMAIL`/`E2E_PASSWORD` in `.env.local`, and run `npm run test:e2e`.
-- [ ] v0.8.3 Removed UI components. Click through every page and dialog once. Typecheck and build pass, so nothing imports the deleted shadcn files, but this confirms it.
-
-- [ ] v0.8.2 Check for updates. Publish a test release with `npm run build:release` (installer + `latest.json`, not a pre-release) at a version above the installed one. In Settings → Install & update, **Check for updates** offers it; **Update to vX** shows progress, closes the app, runs the installer and reopens on the new version. Task Manager shows no leftover `crystal-api` from the old one. With no newer release it says "You have the latest release".
-- [ ] v0.8.2 Unsigned build. `npm run build:desktop` with no `CRYSTAL_SIGN_*` set prints "leaving … unsigned" for each binary and still produces only `bundle/nsis/Crystal OS_0.8.2_x64-setup.exe`.
+- [ ] v0.8.4 Sidebar. Hover the sidebar on and off, on a few pages including the Terminal: the icons stay put while the header changes.
+- [ ] v0.8.4 Categories dialog. Open and close **Categories** on the Engine and on Financials: the card fades in and out blurred, with no flash.
+- [ ] v0.8.4 Hover cards. Hover chart bars, deltas, agenda rows and paths in The Orbit; events in the Horizon's week and day views; the toolbar, sidebar, token table and Stop button in The Nebula. Each shows the page's glass card, never the plain browser box.
 
 - [ ] v0.7.5 After-completion repeat. Make a task "2 days after done", tick it off on Home: it moves to two days from today with a "Next due" toast instead of disappearing.
 - [ ] v0.7.2 Categories. Sign in with the network off (or let the session expire), then reconnect and reload: the Engine's categories stay one of each.
@@ -49,13 +42,11 @@
 ## Before first release (v1.0.0)
 
 ### Blockers
-- [ ] **Fix the open bugs above.** The heavy Archive page.
 - [ ] **First-run setup without hand-editing files.** The packaged app reads Supabase, vault and Google credentials from `%APPDATA%\com.crystalos.desktop\.env.local`. A fresh install needs a setup screen (or the onboarding checklist idea above) that writes these, plus a clear error when they are missing.
 - [ ] **Publish a GitHub release.** The repo has no tags or releases yet, so Settings → Installer has nothing to download or update to. Build with `npm run build:release`, tag `v1.0.0`, attach the installer and `latest.json`, and check the Installer section picks it up as the default.
 
 ### Packaging and distribution
 - [ ] **Code-signing certificate.** Get an OV certificate (or Azure Trusted Signing), then set `CRYSTAL_SIGN_THUMBPRINT` locally, or the `CRYSTAL_SIGN_PFX_BASE64`/`CRYSTAL_SIGN_PFX_PASSWORD` secrets for the release workflow.
-- [ ] **Back up the updater key** (`%USERPROFILE%\.tauri\crystal-os.key`) somewhere off this machine.
 - [ ] **Breaking dependency upgrades** left by the v0.8.3 audit: `react-router-dom` 7, `vite` 8, `vitest` 5, `tailwindcss` 4.
 - [ ] **Clean-machine install test.** Install on a Windows machine (or VM) with no dev tools: WebView2 present, the `crystal-api` sidecar starts, tray, hotkeys and launch-at-login work, and uninstall leaves nothing behind except user data.
 

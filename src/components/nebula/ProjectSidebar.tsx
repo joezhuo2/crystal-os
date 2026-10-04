@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { nebula, useHarness } from "@/hooks/useHarness";
 import { harness, selectProjectChats } from "@/lib/harness/store";
 import NewProjectDialog from "./NewProjectDialog";
+import NebulaTip from "./NebulaTip";
 
 type Confirm = { kind: "chat"; id: string; title: string } | { kind: "project"; id: string; title: string; path: string } | null;
 
@@ -59,21 +60,24 @@ export default function ProjectSidebar() {
                 >
                   <ChevronRight className={`h-3.5 w-3.5 transition-transform ${isCollapsed ? "" : "rotate-90"}`} />
                 </button>
-                <button
-                  type="button"
-                  className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left text-sm font-medium"
-                  onClick={() => {
-                    setCollapsed((c) => ({ ...c, [project.id]: false }));
-                    harness.openProjectChat(project.id);
-                  }}
-                  title={`New chat in ${project.path}`}
-                >
-                  <Folder className="h-3.5 w-3.5 shrink-0 text-[var(--nebula-a)]" />
-                  <span className="truncate">{project.name}</span>
-                </button>
-                <button type="button" className="rounded p-1 text-white/50 opacity-0 hover:text-white group-hover:opacity-100" title="New chat" onClick={() => harness.createChat(project.id)}>
-                  <MessageSquarePlus className="h-3.5 w-3.5" />
-                </button>
+                <NebulaTip label={`Open ${project.name}`} hint={project.path} side="right">
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left text-sm font-medium"
+                    onClick={() => {
+                      setCollapsed((c) => ({ ...c, [project.id]: false }));
+                      harness.openProjectChat(project.id);
+                    }}
+                  >
+                    <Folder className="h-3.5 w-3.5 shrink-0 text-[var(--nebula-a)]" />
+                    <span className="truncate">{project.name}</span>
+                  </button>
+                </NebulaTip>
+                <NebulaTip label="New chat" hint={`In ${project.name}`}>
+                  <button type="button" className="rounded p-1 text-white/50 opacity-0 hover:text-white group-hover:opacity-100" aria-label="New chat" onClick={() => harness.createChat(project.id)}>
+                    <MessageSquarePlus className="h-3.5 w-3.5" />
+                  </button>
+                </NebulaTip>
                 <DropdownMenu>
                   <DropdownMenuTrigger className="rounded p-1 text-white/50 opacity-0 hover:text-white group-hover:opacity-100 data-[state=open]:opacity-100" aria-label="Project actions">
                     <MoreHorizontal className="h-3.5 w-3.5" />

@@ -43,21 +43,24 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
 
   useEscapeKey(onClose);
 
+  // The scrim and the card fade side by side, never one inside the other:
+  // opacity on an ancestor of the card's backdrop-filter drops the blur for
+  // the length of the fade, and it snapped back at the end (a flicker).
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "hsl(var(--background) / 0.8)" }}
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0"
+        style={{ background: "hsl(var(--background) / 0.8)" }}
+        onClick={onClose}
+      />
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="glass-card p-6 w-full max-w-md max-h-[80vh] overflow-y-auto scrollbar-thin"
-        onClick={(e) => e.stopPropagation()}
+        className="glass-card relative p-6 w-full max-w-md max-h-[80vh] overflow-y-auto scrollbar-thin"
       >
         <div className="flex items-center justify-between mb-5">
           <div>
@@ -149,7 +152,7 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
           </button>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
 

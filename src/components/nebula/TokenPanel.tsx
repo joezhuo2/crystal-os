@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { formatTokens, totalOf } from "@/lib/harness/tokenLedger";
 import type { Ledger } from "@/lib/harness/types";
 import { harness } from "@/lib/harness/store";
+import NebulaTip from "./NebulaTip";
 
 function Table({ ledger, empty }: { ledger: Ledger; empty: string }) {
   const rows = Object.entries(ledger).sort(([, a], [, b]) => b.input + b.output - (a.input + a.output));
@@ -23,9 +24,9 @@ function Table({ ledger, empty }: { ledger: Ledger; empty: string }) {
       <tbody className="divide-y divide-white/[0.06]">
         {rows.map(([model, c]) => (
           <tr key={model}>
-            <td className="max-w-[20rem] truncate px-2 py-1.5" title={model}>
-              {model}
-            </td>
+            <NebulaTip label={model} side="left">
+              <td className="max-w-[20rem] truncate px-2 py-1.5">{model}</td>
+            </NebulaTip>
             <td className={cell}>{approx(c.estimated) + formatTokens(c.input)}</td>
             <td className={cell}>{approx(c.estimated) + formatTokens(c.output)}</td>
             <td className={`${cell} text-muted-foreground`}>{formatTokens(c.cacheRead + c.cacheWrite)}</td>
@@ -62,9 +63,9 @@ export default function TokenPanel({ chatTokens, projectTokens, projectName, all
         <Table ledger={chatTokens} empty="No tokens used yet." />
       </div>
       <div>
-        <p className="truncate text-xs font-medium uppercase tracking-wider text-muted-foreground" title={projectName}>
-          Project · {projectName}
-        </p>
+        <NebulaTip label={projectName} side="left">
+          <p className="truncate text-xs font-medium uppercase tracking-wider text-muted-foreground">Project · {projectName}</p>
+        </NebulaTip>
         <Table ledger={projectTokens} empty="No tokens used in this project yet." />
       </div>
       <div>

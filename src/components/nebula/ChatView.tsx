@@ -9,6 +9,7 @@ import { nebula } from "@/hooks/useHarness";
 import { stripAnsi } from "@/lib/harness/sanitize";
 import { harness } from "@/lib/harness/store";
 import type { Block, ChatMessage, ChatMeta } from "@/lib/harness/types";
+import NebulaTip from "./NebulaTip";
 
 const ENGINE_LABEL = { dsh: "DeepSeek Harness", claude: "Claude Code" } as const;
 
@@ -243,16 +244,17 @@ export default function ChatView({ chat, messages, running, stopping, loaded, ba
             className="max-h-48 min-h-[2.5rem] resize-none border-0 bg-transparent text-sm shadow-none focus-visible:ring-0"
           />
           {running ? (
-            <Button
-              type="button"
-              size="icon"
-              onClick={() => void nebula.stop(chat.id)}
-              aria-label={stopping ? "Force stop" : "Stop"}
-              title={stopping ? "Stopping… click again to force stop" : "Stop (Esc)"}
-              className="bg-red-500/85 text-white hover:bg-red-600"
-            >
-              {stopping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-3.5 w-3.5 fill-current" />}
-            </Button>
+            <NebulaTip label={stopping ? "Stopping…" : "Stop"} hint={stopping ? "Click again to force stop" : "Esc"}>
+              <Button
+                type="button"
+                size="icon"
+                onClick={() => void nebula.stop(chat.id)}
+                aria-label={stopping ? "Force stop" : "Stop"}
+                className="bg-red-500/85 text-white hover:bg-red-600"
+              >
+                {stopping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-3.5 w-3.5 fill-current" />}
+              </Button>
+            </NebulaTip>
           ) : (
             <Button type="submit" size="icon" disabled={!draft.trim()} aria-label="Send" className="nebula-send">
               <Send className="h-4 w-4" />

@@ -1,12 +1,12 @@
 import { Coins, Folder, Gauge, Settings2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { nebula } from "@/hooks/useHarness";
 import { harness } from "@/lib/harness/store";
 import { formatTokens, totalOf } from "@/lib/harness/tokenLedger";
 import { EFFORTS, MODES, TIERS, type ChatMeta, type ContextUsage, type Effort, type Ledger, type Tier } from "@/lib/harness/types";
 import NebulaThemeControls from "./NebulaThemeControls";
+import NebulaTip from "./NebulaTip";
 import TokenPanel from "./TokenPanel";
 
 interface Props {
@@ -32,22 +32,19 @@ function ContextMeter({ context }: { context: ContextUsage | null }) {
     ? "No model step has run in this chat yet."
     : `${context.model}: ${context.used.toLocaleString()} tokens in context${context.size ? ` of ${context.size.toLocaleString()} (${pct!.toFixed(1)}%)` : " (window size unknown)"}.`;
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="nebula-chip cursor-default" role="meter" aria-label="Context window used" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct === null ? undefined : Math.round(pct)}>
-          <Gauge className="h-3.5 w-3.5" />
-          <span className="text-white/50">Context</span>
-          <span className="relative h-1.5 w-12 overflow-hidden rounded-full bg-white/10" aria-hidden>
-            <span className={`absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ${tone}`} style={{ width: `${pct ?? 0}%` }} />
-          </span>
-          <span className="tabular-nums">
-            {context ? formatTokens(context.used) : "—"}
-            {context?.size ? <span className="text-white/50"> / {formatTokens(context.size)}</span> : null}
-          </span>
+    <NebulaTip label="Context window" hint={detail} side="bottom">
+      <span className="nebula-chip cursor-default" role="meter" aria-label="Context window used" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct === null ? undefined : Math.round(pct)}>
+        <Gauge className="h-3.5 w-3.5" />
+        <span className="text-white/50">Context</span>
+        <span className="relative h-1.5 w-12 overflow-hidden rounded-full bg-white/10" aria-hidden>
+          <span className={`absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ${tone}`} style={{ width: `${pct ?? 0}%` }} />
         </span>
-      </TooltipTrigger>
-      <TooltipContent>{detail}</TooltipContent>
-    </Tooltip>
+        <span className="tabular-nums">
+          {context ? formatTokens(context.used) : "—"}
+          {context?.size ? <span className="text-white/50"> / {formatTokens(context.size)}</span> : null}
+        </span>
+      </span>
+    </NebulaTip>
   );
 }
 
@@ -66,29 +63,33 @@ export default function NebulaToolbar({ chat, projectPath, projectName, running,
 
   return (
     <div className="nebula-panel flex flex-wrap items-center gap-2 px-3 py-2">
-      <div className="flex min-w-0 items-center gap-1.5 text-xs text-white/60" title={projectPath}>
-        <Folder className="h-3.5 w-3.5 shrink-0 text-[var(--nebula-a)]" />
-        <span className="max-w-[16rem] truncate">{projectPath}</span>
-      </div>
+      <NebulaTip label={projectName} hint={projectPath} side="bottom">
+        <div className="flex min-w-0 items-center gap-1.5 text-xs text-white/60">
+          <Folder className="h-3.5 w-3.5 shrink-0 text-[var(--nebula-a)]" />
+          <span className="max-w-[16rem] truncate">{projectPath}</span>
+        </div>
+      </NebulaTip>
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
         <div className="nebula-segmented" role="radiogroup" aria-label="Model tier">
           {TIERS.map((tier) => (
-            <Tooltip key={tier.id}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={chat.tier === tier.id}
-                  disabled={running}
-                  data-active={chat.tier === tier.id || undefined}
-                  onClick={() => setTier(tier.id)}
-                >
-                  {tier.label}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{running ? "Wait for the turn to finish" : tier.id === "high" ? `Claude Code (${claudeModel})` : tier.id === "medium" ? mediumChain : tier.hint}</TooltipContent>
-            </Tooltip>
+            <NebulaTip
+              key={tier.id}
+              label={running ? "Wait for the turn to finish" : tier.label}
+              hint={running ? undefined : tier.id === "high" ? `Claude Code (${claudeModel})` : tier.id === "medium" ? mediumChain : tier.hint}
+              side="bottom"
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={chat.tier === tier.id}
+                disabled={running}
+                data-active={chat.tier === tier.id || undefined}
+                onClick={() => setTier(tier.id)}
+              >
+                {tier.label}
+              </button>
+            </NebulaTip>
           ))}
         </div>
 
@@ -108,7 +109,11 @@ export default function NebulaToolbar({ chat, projectPath, projectName, running,
         <Select value={chat.mode} onValueChange={(v) => void nebula.setMode(chat.id, v as ChatMeta["mode"])}>
           <SelectTrigger className="h-8 w-[7.5rem] text-xs" aria-label="Permission mode">
             <span className="flex items-center gap-1.5">
-              {chat.mode === "auto" && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" title="Runs tools without asking" />}
+              {chat.mode === "auto" && (
+                <NebulaTip label="Runs tools without asking" side="bottom">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                </NebulaTip>
+              )}
               <SelectValue />
             </span>
           </SelectTrigger>
@@ -125,14 +130,16 @@ export default function NebulaToolbar({ chat, projectPath, projectName, running,
         <ContextMeter context={context} />
 
         <Popover>
-          <PopoverTrigger className="nebula-chip" aria-label={showProject ? "Project token usage" : "Chat token usage"} title={showProject ? `Tokens used in ${projectName}` : "Tokens used in this chat"}>
-            <Coins className="h-3.5 w-3.5" />
-            <span className="text-white/50">{showProject ? "Project" : "Chat"}</span>
-            <span className="tabular-nums">
-              {total.estimated ? "≈" : ""}
-              {formatTokens(total.input + total.output)}
-            </span>
-          </PopoverTrigger>
+          <NebulaTip label={showProject ? `Tokens used in ${projectName}` : "Tokens used in this chat"} hint="Click for the breakdown" side="bottom">
+            <PopoverTrigger className="nebula-chip" aria-label={showProject ? "Project token usage" : "Chat token usage"}>
+              <Coins className="h-3.5 w-3.5" />
+              <span className="text-white/50">{showProject ? "Project" : "Chat"}</span>
+              <span className="tabular-nums">
+                {total.estimated ? "≈" : ""}
+                {formatTokens(total.input + total.output)}
+              </span>
+            </PopoverTrigger>
+          </NebulaTip>
           <PopoverContent
             align="end"
             collisionPadding={12}

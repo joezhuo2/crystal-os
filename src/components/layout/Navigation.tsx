@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings, SquareTerminal, Orbit, Sparkles, AppWindow } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
 import { usePortal } from "@/hooks/usePortal";
 import { badgeLabel, type PortalBadge } from "@/lib/portalApps";
@@ -253,36 +253,48 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
         aria-label="Go to home"
         title={!expanded ? "Home" : undefined}
       >
-        <AnimatePresence mode="wait">
-          {expanded ? (
-            <motion.div key="full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-              {terminal ? (
-                <h1 className="text-xl font-bold tracking-tight terminal-font">
-                  <span className="terminal-glitch-text" data-text="Crystal">Crystal</span>{" "}
-                  <span className="text-neutral-500 font-light">OS</span>
-                </h1>
-              ) : (
-                <h1 className="text-xl font-bold tracking-tight">
-                  <span className={gradientClass}>Crystal</span>{" "}
-                  <span className="text-muted-foreground font-light">OS</span>
-                </h1>
-              )}
-              <p className={`text-xs mt-1 ${terminal ? "terminal-font text-neutral-500" : "text-muted-foreground"}`}>
-                Productivity Ecosystem
-              </p>
-            </motion.div>
-          ) : (
-            <motion.div key="icon" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-              <h1 className={`text-xl font-bold tracking-tight ${terminal ? "terminal-font" : ""}`}>
-                {terminal ? (
-                  <span className="terminal-glitch-text" data-text="C">C</span>
-                ) : (
-                  <span className={gradientClass}>C</span>
-                )}
+        {/* Both headers stay mounted in one grid cell and cross-fade, so the
+            cell is always the taller (expanded) height: swapping them changed
+            the header's height and nudged every icon below it. */}
+        <div className="grid">
+          <motion.div
+            className="[grid-area:1/1]"
+            aria-hidden={!expanded}
+            initial={false}
+            animate={{ opacity: expanded ? 1 : 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            {terminal ? (
+              <h1 className="text-xl font-bold tracking-tight terminal-font">
+                <span className="terminal-glitch-text" data-text="Crystal">Crystal</span>{" "}
+                <span className="text-neutral-500 font-light">OS</span>
               </h1>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            ) : (
+              <h1 className="text-xl font-bold tracking-tight">
+                <span className={gradientClass}>Crystal</span>{" "}
+                <span className="text-muted-foreground font-light">OS</span>
+              </h1>
+            )}
+            <p className={`text-xs mt-1 ${terminal ? "terminal-font text-neutral-500" : "text-muted-foreground"}`}>
+              Productivity Ecosystem
+            </p>
+          </motion.div>
+          <motion.div
+            className="[grid-area:1/1]"
+            aria-hidden={expanded}
+            initial={false}
+            animate={{ opacity: expanded ? 0 : 1 }}
+            transition={{ duration: 0.15 }}
+          >
+            <h1 className={`text-xl font-bold tracking-tight ${terminal ? "terminal-font" : ""}`}>
+              {terminal ? (
+                <span className="terminal-glitch-text" data-text="C">C</span>
+              ) : (
+                <span className={gradientClass}>C</span>
+              )}
+            </h1>
+          </motion.div>
+        </div>
       </button>
       <nav className="flex flex-col gap-1">
         {tabs.map((tab) =>
