@@ -14,6 +14,7 @@ import { appUi } from "@/lib/appUi";
 import { m } from "framer-motion";
 import { isTaskOverdue, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 import { useSkyScene } from "@/hooks/useSkyScene";
+import { weatherNudge } from "@/lib/weatherNudge";
 import { useAtmosphere } from "@/lib/atmosphereStore";
 import { auroraStrength, pineRidge } from "@/lib/atmosphereScene";
 import { useVaultNotes } from "@/hooks/useVault";
@@ -145,6 +146,9 @@ function WeatherWidget({ onClick }: { onClick?: () => void }) {
   // Find today's high/low from daily forecasts
   const todayHigh = data?.dailyForecasts?.[0]?.high ?? data?.dailyForecasts?.[1]?.high ?? null;
   const todayLow = data?.dailyForecasts?.[0]?.low ?? data?.dailyForecasts?.[1]?.low ?? null;
+  // Worked out on each render (the forecast refreshes every 10 minutes), so
+  // "Rain from 4 PM" turns into "Rain until 6 PM" once it starts.
+  const nudge = weatherNudge(data);
 
   if (!data) {
     return <WeatherWidgetSkeleton />;
@@ -180,10 +184,10 @@ function WeatherWidget({ onClick }: { onClick?: () => void }) {
         {effects && weather.lightning && <span className="home-atmo-flash" />}
       </span>
       <div className="home-card-atmosphere h-full p-6 flex items-center gap-4 cursor-pointer" onClick={onClick}>
-        <div className="p-3 rounded-xl bg-white/[0.08]">
-          <HomeWeatherIcon code={data.current.iconCode} className="w-6 h-6 text-primary" />
+        <div className="p-3 rounded-xl bg-white/[0.08] shrink-0">
+          <HomeWeatherIcon code={data.current.iconCode} className="w-8 h-8 text-primary" />
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="flex items-baseline gap-2">
             <p className="text-2xl font-semibold">{Math.round(data.current.temperature)}°C</p>
             {todayHigh !== null && todayLow !== null && (
@@ -193,6 +197,11 @@ function WeatherWidget({ onClick }: { onClick?: () => void }) {
             )}
           </div>
           <p className="text-xs text-muted-foreground">{data.current.condition} · {data.cityName}</p>
+          {nudge && (
+            <p className="text-xs text-primary/90 mt-1 truncate" title={nudge}>
+              {nudge}
+            </p>
+          )}
         </div>
       </div>
     </div>

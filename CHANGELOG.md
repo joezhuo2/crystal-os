@@ -5,6 +5,18 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.13] - 2026-10-04
+
+Weather that tells you what to do about it.
+
+### Added
+
+- **Weather nudges on The Pulse.** The Home weather box gains a third line, under the condition and city, when the hourly forecast is worth acting on: rain, snow, freezing rain or thunderstorms starting within 12 hours ("Rain from 4 PM, take an umbrella", "Freezing rain from 9 PM, roads may be icy"), or when rain already falling will stop ("Rain until 6 PM"); a windchill or temperature of −20 °C or below within 24 hours ("−23 °C windchill tomorrow morning"); or 30 °C or above ("Up to 33 °C this afternoon, drink water"). "Chance of …" hours count from 40%. Freezing rain and thunderstorms win over cold, cold over rain or snow, and those over heat; when nothing applies the line is not shown. The rules live in `src/lib/weatherNudge.ts`.
+
+### Changed
+
+- **Bigger weather icon on Home.** The condition icon in the Home weather box goes from 24 px to 32 px, and its loading skeleton grows to match.
+
 ## [v0.8.12] - 2026-10-04
 
 Saves that wait out a lost connection.

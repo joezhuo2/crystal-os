@@ -18,22 +18,19 @@
 ### New features
 - [ ] **Task notes and subtasks.** A `notes` text field and a checklist of subtasks on each task. 
     - [ ] option to make an existing note another note's subtask
-    - [ ] Optionally link a task to a vault note so the details live in Obsidian. 
+    - [ ] Optionally link a task to a vault note so the details live in Obsidian. (v2)
 - [ ] **Native notifications.** Desktop toasts for task due times, calendar events (`configurable time` (default 30) min before), Pomodoro phase changes and budget alerts. Tauri has `tauri-plugin-notification`; respect a Do Not Disturb toggle in Settings.
     - [ ] **Portal: notification passthrough.** Turn unread badge increases into native notifications (per-app toggle).
 
 ### Improvements to existing sections
 - [ ] **Archive: Connections and Graph** Show a list of connected notes that are clickable (click loads the note that was clicked) (v1). 
     - [ ] Implement the entire obsidian graph feature directly into the vault (v2)
-- [ ] **Archive: recent and pinned notes.** A short "recently opened" list and pinned notes at the top of the rail.
-- [ ] **Portal: per-app zoom and mute.** Remember a zoom level per app and a mute toggle for apps that play sounds.
 - [ ] **Nebula: cost and usage view.** Token totals are stored in `harness/state.json`; show them per project and per day, with an estimated cost per tier.
-- [ ] **Onboarding checklist.** First-run card listing what is not set up yet (vault folder, Google Calendar, NIM key, launch at login) with a button for each.
 
 ## Before first release (v1.0.0)
 
 ### Blockers
-- [ ] **First-run setup without hand-editing files.** The packaged app reads Supabase, vault and Google credentials from `%APPDATA%\com.crystalos.desktop\.env.local`. A fresh install needs a setup screen (or the onboarding checklist idea above) that writes these, plus a clear error when they are missing.
+- [ ] **Onboarding checklist.** First-run card listing what is not set up yet (vault folder, Google Calendar, NIM key, launch at login) with a button for each. The packaged app reads Supabase, vault and Google credentials from `%APPDATA%\com.crystalos.desktop\.env.local`. A fresh install needs a setup screen (or the onboarding checklist idea above) that writes these, plus a clear error when they are missing.
 - [ ] **Publish a GitHub release.** The repo has no tags or releases yet, so Settings → Installer has nothing to download or update to. Build with `npm run build:release`, tag `v1.0.0`, attach the installer and `latest.json`, and check the Installer section picks it up as the default.
 
 ### Packaging and distribution
@@ -48,19 +45,23 @@
 ### Docs
 - [ ] **CHANGELOG 1.0.0 entry** summarising what ships.
 
+## Planned List
+
 - [ ] **[High] Engine: time estimates and capacity.** An estimate per task and a "fits today?" bar comparing the total against free time in the calendar.
-- [ ] **[Med] Pulse: Now / Next strip.** Countdown to the next event and, when it has a location, a leave-by time. (calculate from current location)
-- [ ] **[Med] Orbit: year in review.**
-- [ ] **[Med] Pulse: weather nudges.** "Rain from 4 PM, take an umbrella", "−20 °C windchill tomorrow".
+
 - [ ] **[Med] Snooze / defer tasks.** Hide a task until a chosen date, plus a "Someday" bucket to keep the Engine short.
 - [ ] **[Med] Pomodoro linked to a task.** Start a focus session on a specific task and track time per task, so The Orbit shows where focus went. Focus mode also mutes Portal badges.
+
+- [ ] **[Low-Med] Customisable navbar.** Reorder and hide sidebar sections.
+- [ ] **[Low-Med] Pulse: Now / Next strip.** Countdown to the next event and, when it has a location, a leave-by time. (calculate from current location)
+- [ ] **[Low-Med] Orbit: year in review.**
+
 - [ ] **[Low] Undo toast.** A 5 s "Undo" after deleting, completing or rescheduling a task, event or transaction.
-- [ ] **[Low] Customisable navbar.** Reorder and hide sidebar sections.
 - [ ] **[Low] Atmosphere: AQHI, UV, sunrise / sunset.** Air quality from Environment Canada, UV index and daylight times.
 
+## Will Consider List
 ### Cross-app features
-- [ ] **[High] Morning plan and evening shutdown.** On the first open of the day, one card with weather, today's events, overdue tasks and habits, where you pick the day's top 3 tasks. In the evening, a shutdown step rolls unfinished tasks to tomorrow and writes a summary to the daily note.
-- [ ] **[Low] XP / levels.** A light gamification layer over habits and tasks.
+- [ ] **[Med] Morning plan and evening shutdown.** On the first open of the day, one card with weather, today's events, overdue tasks and habits, where you pick the day's top 3 tasks. In the evening, a shutdown step rolls unfinished tasks to tomorrow and writes a summary to the daily note.
 
 ### Improvements to existing sections
 - [ ] **[Med] Horizon: meeting note from an event.** A button on an event that creates a vault note from a template, linked to the event.
@@ -70,12 +71,8 @@
 - [ ] **[Med] Orbit: correlations.** Mood against habits done or focus time.
 
 ### New navbar sections
-- [ ] **[High] The Comet (inbox).** A hotkey captures anything instantly; triage it later into a task, event, note or transaction.
-- [ ] **[High] The Hangar (lists).** Reusable checklists: groceries, packing, the weekly shop. Usable from a phone through the web build.
-- [ ] **[Med] The Observatory (goals).** Yearly and quarterly goals with milestones, linked tasks and habits, and automatic progress. Referenced by Orbit reviews.
-- [ ] **[Med] The Launchpad (projects).** Groups tasks, a vault note and a Nebula folder under one project, with a progress bar.
-- [ ] **[Med] The Constellation (people).** Birthdays, last contacted and gift ideas, with reminders in the Horizon.
-- [ ] **[Med] The Biosphere (health).** Sleep, workouts, weight and water, entered by hand at first, feeding Orbit trends.
-- [ ] **[Med] The Stardock (life admin).** Car service, filter changes, passport and licence renewals, warranties, and where documents live.
-- [ ] **[Low] The Galley (meals).** Meal plan and recipes stored in the vault, feeding the Hangar grocery list.
+- [ ] **[High] The Constellation (people).** Birthdays, last contacted and gift ideas, with reminders in the Horizon.
+- [ ] **[Med] The Comet (inbox).** A hotkey captures anything instantly; triage it later into a task, event, note or transaction.
+- [ ] **[Low] The Biosphere (health).** Sleep, workouts, weight and water, entered by hand at first, feeding Orbit trends.
+- [ ] **[Low] The Gallery.** place to dump any images/photos/notes/etc.
 - [ ] **[Low] The Satellite (media).** Books, shows and games backlog with ratings.

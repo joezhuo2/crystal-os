@@ -71,7 +71,7 @@ function SkeletonLabel() {
 export function WeatherWidgetSkeleton() {
   return (
     <SkeletonCard label="Loading the weather" className="flex items-center gap-4">
-      <Skeleton className="h-12 w-12 shrink-0 rounded-xl" />
+      <Skeleton className="h-14 w-14 shrink-0 rounded-xl" />
       <div className="space-y-2">
         <Skeleton className="h-7 w-24 rounded" />
         <Skeleton className="h-3 w-36 rounded" />
