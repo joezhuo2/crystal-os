@@ -76,6 +76,8 @@ export interface ForecastPeriod {
   humidity: number;
   precipitation: string | null;
   uv: string | null;
+  /** The period's UV index; only daytime periods have one. */
+  uvIndex: number | null;
 }
 
 export interface DayForecast {
@@ -115,6 +117,9 @@ export interface SunTimes {
 export interface WeatherData {
   cityName: string;
   cityId: string;
+  /** Where the forecast is for, or null if the feed has no point. */
+  lat: number | null;
+  lon: number | null;
   current: CurrentConditions;
   forecasts: ForecastPeriod[];
   dailyForecasts: DayForecast[];
@@ -165,7 +170,7 @@ export function getMoonPhase(date: Date = new Date()): {
 // ── Parse API response ──
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseWeatherData(feature: Record<string, any>): WeatherData {
+export function parseWeatherData(feature: Record<string, any>): WeatherData {
   const props = feature.properties;
   const cc = props.currentConditions;
   const fg = props.forecastGroup;
@@ -188,6 +193,7 @@ function parseWeatherData(feature: Record<string, any>): WeatherData {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const forecasts: ForecastPeriod[] = (fg?.forecasts ?? []).map((f: Record<string, any>) => {
     const temp = f.temperatures?.temperature?.[0];
+    const uvIndex = Number.parseFloat(f.uv?.index?.en ?? f.uv?.index?.value?.en);
     return {
       name: f.period?.textForecastName?.en ?? "",
       isNight: (f.period?.textForecastName?.en ?? "").toLowerCase().includes("night") ||
@@ -204,6 +210,7 @@ function parseWeatherData(feature: Record<string, any>): WeatherData {
       humidity: f.relativeHumidity?.value?.en ?? 0,
       precipitation: f.precipitation?.precipPeriods?.[0]?.value?.en ?? null,
       uv: f.uv ? `${f.uv.index?.en ?? f.uv.index?.value?.en ?? ""} (${f.uv.category?.en ?? ""})` : null,
+      uvIndex: Number.isFinite(uvIndex) ? uvIndex : null,
     };
   });
 
@@ -277,9 +284,13 @@ function parseWeatherData(feature: Record<string, any>): WeatherData {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const lowNormal = normals.find((t: Record<string, any>) => t.class?.en === "low")?.value?.en ?? 0;
 
+  const [lon, lat] = feature.geometry?.coordinates ?? [];
+
   return {
     cityName: props.name?.en ?? "Unknown",
     cityId: feature.id,
+    lat: Number.isFinite(lat) ? lat : null,
+    lon: Number.isFinite(lon) ? lon : null,
     current,
     forecasts,
     dailyForecasts,

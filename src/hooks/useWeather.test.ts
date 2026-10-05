@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { AVAILABLE_CITIES, distanceKm, locationErrorMessage, nearestCity, resolveSuggestions } from "./useWeather";
+import {
+  AVAILABLE_CITIES,
+  distanceKm,
+  locationErrorMessage,
+  nearestCity,
+  parseWeatherData,
+  resolveSuggestions,
+} from "./useWeather";
 
 describe("resolveSuggestions", () => {
   it("returns the hard-coded suggestions before the list loads", () => {
@@ -64,5 +71,39 @@ describe("locationErrorMessage", () => {
     expect(locationErrorMessage({ code: 1 })).toMatch(/off/);
     expect(locationErrorMessage({ code: 3 })).toMatch(/too long/);
     expect(locationErrorMessage(new Error("x"))).toMatch(/could not be found/);
+  });
+});
+
+describe("parseWeatherData", () => {
+  const feature = (geometry: unknown) => ({
+    id: "on-85",
+    geometry,
+    properties: {
+      name: { en: "Markham" },
+      currentConditions: {},
+      forecastGroup: {
+        forecasts: [
+          { period: { textForecastName: { en: "Tonight" } } },
+          {
+            period: { textForecastName: { en: "Monday" } },
+            uv: { index: { en: "4" }, category: { en: "moderate" } },
+          },
+        ],
+      },
+    },
+  });
+
+  it("reads the city's point and each period's UV index", () => {
+    const data = parseWeatherData(feature({ type: "Point", coordinates: [-79.26, 43.88] }));
+    expect(data.lat).toBe(43.88);
+    expect(data.lon).toBe(-79.26);
+    expect(data.forecasts.map((f) => f.uvIndex)).toEqual([null, 4]);
+    expect(data.forecasts[1].uv).toBe("4 (moderate)");
+  });
+
+  it("leaves the point null when the feed has none", () => {
+    const data = parseWeatherData(feature(null));
+    expect(data.lat).toBeNull();
+    expect(data.lon).toBeNull();
   });
 });

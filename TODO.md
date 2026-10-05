@@ -1,5 +1,13 @@
 # Planned Features
-- [v0.9.0] vault/banking overhaul - use plaid to connect to banks (store api keys and tokens in secure .env variables), themed glassmorphism UI 
+- [v0.9.0] Current features
+- [v0.10.0] - engine options update
+- [ ]**Engine: time estimates and capacity.** An estimate per task and a "fits today?" bar comparing the total against free time in the calendar.
+- [ ] **Task notes and subtasks.** A `notes` text field and a checklist of subtasks on each task. 
+    - [ ] option to make an existing note another note's subtask
+    - [ ] Optionally link a task to a vault note so the details live in Obsidian. (v2)
+- [ ] **Snooze / defer tasks.** Hide a task until a chosen date, plus a "Someday" bucket to keep the Engine short.
+- [ ] **Pomodoro linked to a task.** Start a focus session on a specific task and track time per task, so The Orbit shows where focus went. Focus mode also mutes Portal badges.
+- [v0.11.0] vault/banking overhaul - use plaid to connect to banks (store api keys and tokens in secure .env variables), themed glassmorphism UI 
     - [ ] **Data export / backup.** One button in Settings that exports tasks, transactions, categories and settings to JSON/CSV, and an import to restore them. Useful before schema changes like Plaid.
     - [ ] **Vault: budgets.** Monthly budget per category with progress bars and a warning at 80%. Send the 80% warning as a native notification too (src/lib/notifications.ts), with its own switch in Settings → Notifications.
     - [ ] **Vault: subscriptions and bills.** Recurring charges with their next dates, shown in the Horizon and the Engine.
@@ -12,6 +20,7 @@
 
 - redo portal/obsidian/nebula ui (change to glassmorphism with some background)
 - glassmorphism ui to all home page widget cards (except terminal)
+- glassmorphism ui loading/login screen
 
 ## Before first release (v1.0.0)
 
@@ -32,20 +41,11 @@
 
 ## Planned List
 
-- [ ] **[High] Engine: time estimates and capacity.** An estimate per task and a "fits today?" bar comparing the total against free time in the calendar.
-- [ ] **[High] Task notes and subtasks.** A `notes` text field and a checklist of subtasks on each task. 
-    - [ ] option to make an existing note another note's subtask
-    - [ ] Optionally link a task to a vault note so the details live in Obsidian. (v2)
-
-- [ ] **[Med] Snooze / defer tasks.** Hide a task until a chosen date, plus a "Someday" bucket to keep the Engine short.
-- [ ] **[Med] Pomodoro linked to a task.** Start a focus session on a specific task and track time per task, so The Orbit shows where focus went. Focus mode also mutes Portal badges.
-
 - [ ] **[Low-Med] Customisable navbar.** Reorder and hide sidebar sections.
 - [ ] **[Low-Med] Pulse: Now / Next strip.** Countdown to the next event and, when it has a location, a leave-by time. (calculate from current location)
 - [ ] **[Low-Med] Orbit: year in review.**
 
 - [ ] **[Low] Undo toast.** A 5 s "Undo" after deleting, completing or rescheduling a task, event or transaction.
-- [ ] **[Low] Atmosphere: AQHI, UV, sunrise / sunset.** Air quality from Environment Canada, UV index and daylight times.
 
 ## Will Consider List
 ### Cross-app features
@@ -66,4 +66,4 @@
 - [ ] **[Med] The Comet (inbox).** A hotkey captures anything instantly; triage it later into a task, event, note or transaction.
 - [ ] **[Low] The Biosphere (health).** Sleep, workouts, weight and water, entered by hand at first, feeding Orbit trends.
 - [ ] **[Low] The Gallery.** place to dump any images/photos/notes/etc.
-- [ ] **[Low] The Satellite (media).** Books, shows and games backlog with ratings.
+- [ ] **[Low] The Satellite.** Books, shows and games backlog with ratings.

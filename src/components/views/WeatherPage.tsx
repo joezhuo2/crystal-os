@@ -38,10 +38,12 @@ import {
   type CityOption,
   type DayForecast,
   type HourlyForecast,
+  type WeatherData,
 } from "@/hooks/useWeather";
 import { ThemedCombobox, type ComboboxOption } from "@/components/ui/field-controls";
 import { atmosphere, useAtmosphere } from "@/lib/atmosphereStore";
 import { GlassTip } from "@/components/ui/glass-tooltip";
+import { AirQualityCard, DaylightBar, UvCard } from "@/components/views/weather/AirSunCards";
 
 // ── Weather icon mapping ──
 
@@ -444,7 +446,7 @@ function HourlyForecastSection({ hourly }: { hourly: HourlyForecast[] }) {
 
 // ── Detailed Info Cards ──
 
-function DetailCards({ data }: { data: ReturnType<typeof useWeather>["data"] }) {
+function DetailCards({ data }: { data: WeatherData | undefined }) {
   if (!data) return null;
   const moonData = getMoonPhase();
   const { sunTimes } = data;
@@ -458,6 +460,9 @@ function DetailCards({ data }: { data: ReturnType<typeof useWeather>["data"] }) 
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 col-span-full">
+      <AirQualityCard data={data} />
+      <UvCard data={data} />
+
       {/* Sun & Moon */}
       <div className="glass-card p-6">
         <p className="text-xs text-muted-foreground uppercase tracking-widest mb-4">Sun & Moon</p>
@@ -483,6 +488,7 @@ function DetailCards({ data }: { data: ReturnType<typeof useWeather>["data"] }) 
             <span className="text-[10px] text-muted-foreground">{moonData.illumination}% illuminated</span>
           </div>
         </div>
+        <DaylightBar data={data} />
       </div>
 
       {/* Wind Details */}

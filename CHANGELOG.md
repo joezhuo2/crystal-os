@@ -5,6 +5,44 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.0] - 2026-10-04 - Daily Rhythm (Release Summary)
+
+*This release rounds out The Atmosphere: the Air Quality Health Index from the nearest Environment Canada station, the UV index with advice, and a daylight bar that says how much of the day is left and how fast the days are changing.*
+
+It also caps the development arc from `v0.8.0` through `v0.8.14`. Over that period Crystal OS gained a place to look back (The Orbit's weekly and monthly reviews, a Today card and a habit tracker), ways to reach you outside the window (native notifications and weather nudges), saves that survive a lost connection, a release pipeline with in-place updates, and several passes that took work out of startup, re-renders and background loops.
+
+### Highlights
+
+- **The Orbit (`v0.8.0`, `v0.8.1`, `v0.8.10`)** — weekly and monthly reviews of tasks, focus, money, notes and trends with a vault export, a Today card that writes focus, mood and a reflection into the daily note, and habits with streaks, a day grid and their own review card
+- **Reminders and nudges (`v0.8.13`, `v0.8.14`)** — desktop toasts for task due times, calendar events, Pomodoro phases and new Portal messages, with Settings → Notifications and Do Not Disturb; a one-line weather nudge on Home for rain, snow, ice, cold and heat
+- **Weather that knows where you are (`v0.8.11`, `v0.9.0`)** — **Use my location** in the city picker, then air quality, UV and daylight on The Atmosphere
+- **Offline queue (`v0.8.12`)** — task and transaction changes made without a connection are kept on the device and replayed in order, with ids made on the device so offline rows can be edited before they reach the server
+- **Shipping it (`v0.8.2`, `v0.8.3`, `v0.8.5`)** — **Check for updates** in Settings with signed in-place installs, `npm run build:release`, CI and a tag-driven release workflow, `docs/PRIVACY.md`, and a cleared-down dependency tree
+- **Performance (`v0.8.4`–`v0.8.9`)** — the sidebar expands over the page, backdrops stay mounted between tabs, capped animation loops sleep between frames, a faster Archive, UI state out of `AppContext`, a startup bundle down from 1,197 KB to 807 KB, plain-SVG Financials charts, and a sidecar that starts on first use
+- **Air, UV and daylight (`v0.9.0`)** — detailed below
+
+### Added
+
+- **Air Quality card on The Atmosphere.** The Air Quality Health Index from the Environment Canada AQHI station nearest the chosen city (`useAirQuality` in `src/hooks/useAirQuality.ts`), refreshed every 20 minutes.
+  - Reading: the latest hourly value as a whole number (10+ above 10), its risk band in colour (1–3 low, 4–6 moderate, 7–10 high, above 10 very high) and the advice for the general public, over a ten-step scale.
+  - Forecast: the highest hour of the station's newest forecast run in the next 24 hours ("Next 24 h: up to 3 (low risk) around 10 PM"). Older runs are ignored, and a station with no forecast still shows its reading.
+  - Source: the station's name, its distance and the time it was measured. Stations are found with one `aqhi-observations-realtime` request (`latest=true`, a box around the city's point); only one within 75 km counts, so small and northern locations say there is no station nearby instead of borrowing a far city's air.
+- **UV Index card.** The forecast's UV index for the next daytime period ("Today's max", or tomorrow's after dark, since night periods have none) with its band (0–2 low, 3–5 moderate, 6–7 high, 8–10 very high, 11+ extreme) and advice, the current hour's value when the hourly forecast has one, and the hour it peaks (`uvOutlook` in `src/lib/airQuality.ts`).
+- **Daylight bar in Sun & Moon.** By day, how much daylight is left and how far through the day it is; by night, the time to sunrise and how far through the night (`daylightState` in `src/lib/daylight.ts`). Beside it, how much longer or shorter today is than yesterday ("2m 59s shorter than yesterday"), from the city's point and the sunrise equation (`dayLengthChangeSeconds`), so it needs no extra request. It updates every minute on the device clock.
+- `src/lib/airQuality.ts` (AQHI and UV bands, nearest station, forecast run and peak, UV outlook) and `src/lib/daylight.ts`, both unit-tested, and `src/components/views/weather/AirSunCards.tsx` for the three new pieces.
+
+### Changed
+
+- **The Atmosphere's detail cards are a 2 × 2 grid:** Air Quality, UV Index, Sun & Moon, Wind Details.
+- **`WeatherData` carries the city's `lat` and `lon`** (null if the feed has no point), and each `ForecastPeriod` a numeric `uvIndex` beside the existing `uv` text. `parseWeatherData` is exported for tests.
+- **Dependencies:** `tauri` 2.11.3 → 2.12.1, `@tauri-apps/api` 2.11.1 → 2.12.1, `tauri-build` 2.6.3 → 2.7.1, `tauri-plugin-notification` pinned to 2.5.1, and the WebView2 bindings `webview2-com` 0.38 → 0.39 and `windows` 0.61 → 0.62 to match wry.
+- **`TODO.md`:** *Atmosphere: AQHI, UV, sunrise / sunset* is done and removed. v0.10.0 is now the Engine update (time estimates, notes and subtasks, snooze, Pomodoro per task), and the Vault and Plaid overhaul moves to v0.11.0.
+
+### Notes
+
+- The CSP needs no change: air quality comes from `api.weather.gc.ca`, which `connect-src` already allows. `docs/PRIVACY.md` lists what the AQHI requests send.
+- Budget alerts, mentioned under v0.8.14 as coming in v0.9.0, now come with **Vault: budgets** in v0.11.0.
+
 ## [v0.8.14] - 2026-10-04
 
 Reminders that reach you outside the window.

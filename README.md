@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-629%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.8.14-6366F1)
+![Version](https://img.shields.io/badge/version-0.9.0-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.8.14** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.9.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -25,7 +25,7 @@ Current release: **v0.8.14** — see [CHANGELOG.md](CHANGELOG.md) for release hi
 | **🏠 Home widgets** | A 3×3 grid: the greeting and clock (on The Orbit's black hole, with this week's tasks done and focus time; opens The Orbit), weather (with a one-line nudge such as "Rain from 4 PM, take an umbrella"), and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Engine, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Engine's red black hole, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **📶 Offline saves** | Task and transaction changes made while Supabase is unreachable are kept on the device and replayed in order once it answers again (on reconnect, every 30 s, and at the next start), instead of failing the save. See [Offline queue](#-offline-queue) |
-| **🌤️ Weather** | Current conditions + 7-day forecast for any of ~840 Canadian locations (searchable city picker, or **Use my location** for the nearest one), over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
+| **🌤️ Weather** | Current conditions + 7-day forecast for any of ~840 Canadian locations (searchable city picker, or **Use my location** for the nearest one), the Air Quality Health Index from the nearest station with its 24 h peak, the UV index with advice, and how much daylight is left, over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
 | **📖 The Archive** | Browse, search, read and edit your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown, and a CodeMirror markdown editor that refuses to overwrite a note changed on disk since you opened it. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
 | **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, a context-window meter, per-model token counts, and a swirling three-colour nebula |
 | **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges, and three themes (desktop; the web build opens apps in new tabs) |
@@ -210,6 +210,7 @@ src/
 │   │   ├── FinancialsPage.tsx  # Transactions, summaries, charts
 │   │   ├── financials/FinanceCharts.tsx # Cash flow, spending donut and savings trend as plain SVG
 │   │   ├── WeatherPage.tsx     # Detailed weather view
+│   │   ├── weather/AirSunCards.tsx # Atmosphere cards: air quality (AQHI), UV index, daylight bar
 │   │   ├── ArchivePage.tsx     # Vault browser: search, tags, markdown reader, virtualised note list
 │   │   ├── NoteEditor.tsx      # CodeMirror note editor with mtime-checked saves (lazy-loaded)
 │   │   ├── TerminalPage.tsx    # Up to 5 PowerShell terminals in tabs, up to 4 split on screen (xterm.js, desktop only)
@@ -233,6 +234,7 @@ src/
 │   ├── useTrayQuickAdd.ts      # Tray Quick Add events
 │   ├── useEscapeKey.ts         # Stacked Escape-to-close for overlays (topmost closes first)
 │   ├── useWeather.ts           # Weather API integration + searchable city list
+│   ├── useAirQuality.ts        # AQHI at the station nearest the city, with its 24 h forecast
 │   ├── useSkyScene.ts          # Living Sky state: phase of day, weather look, moon, for the chosen city
 │   ├── use-toast.ts            # Toast notifications (Sonner)
 │   └── use-mobile.tsx          # Responsive breakpoint hook
@@ -240,6 +242,8 @@ src/
 │   ├── supabase.ts             # Supabase client + helpers
 │   ├── offlineQueue.ts         # Task/transaction writes kept in localStorage while Supabase is unreachable, replayed in order
 │   ├── weatherNudge.ts         # One-line weather nudge for the Home weather box, from the hourly forecast
+│   ├── airQuality.ts           # AQHI and UV risk bands and advice, nearest AQHI station, forecast peak, UV outlook
+│   ├── daylight.ts             # Daylight left / time to sunrise, and day length change (sunrise equation)
 │   ├── notifications.ts        # Desktop toasts: what to say and when (tasks, events, Pomodoro, Portal), delivery, Do Not Disturb
 │   ├── notifySettings.ts       # Notification switches and the event reminder lead time (localStorage)
 │   ├── appUi.ts                # Transient UI store: open forms, Quick Add draft, selected note (useAppUi(selector))
@@ -367,6 +371,12 @@ The weather tab draws a Living Sky behind its panels (`src/components/layout/Atm
 - **Image blur** (0–100%, default 50%). How much the glass frosts the image, up to a 40 px blur. The store bakes a blurred 1600 px copy on a canvas whenever the image or the setting changes (the slider commits on release), and the page shows that copy as a plain image. There is no live CSS blur and no blend mode on the aurora: together with the aurora's large moving layers, they could make the desktop WebView drop the photo on high-DPI screens.
 
 Both switches work together or apart; with both off you get the background image under the sky's tint for the time of day (the plain sky only if the image cannot load). The city picked on the page is shared with the Home box and the backdrop (`src/lib/atmosphereStore.ts`, same `crystal-os-weather-city` key as before). The picker searches every Environment Canada city page location by name or forecast region, and suggests the nine GTA-area cities before you type. **Use my location**, at the top of the picker, asks the system for a rough position (Windows Location on desktop, so location services must be on) and picks the nearest location within 100 km (`nearestCity` in `src/hooks/useWeather.ts`); the position is used once and never stored or sent. If access is off, the request times out, or you are outside Canada, the row says so and the city is left as it was. Every canvas pauses while the window is hidden, and performance mode or reduced motion shows a still frame with no lightning.
+
+**Air, UV and daylight.** Under the hourly and 7-day forecasts, The Atmosphere has four cards: Air Quality, UV Index, Sun & Moon and Wind Details.
+
+- **Air Quality** shows the Air Quality Health Index from the Environment Canada AQHI station nearest the city (`useAirQuality` in `src/hooks/useAirQuality.ts`): the latest hourly reading as a whole number (10+ above 10), its risk band in colour (1–3 low, 4–6 moderate, 7–10 high, above 10 very high) with the advice for the general public, a ten-step scale, the highest hour of the station's newest forecast in the next 24 hours, and which station it is, how far away and when it was measured. Stations are looked up in a box around the city's point with `latest=true`, and only one within 75 km counts, so a small or northern location says there is no station nearby rather than borrowing a far city's air. It refreshes every 20 minutes; the forecast is optional, so a station without one still shows its reading.
+- **UV Index** shows the UV index from the forecast for the next daytime period (today, or tomorrow after dark, since night periods have none) with its band (0–2 low, 3–5 moderate, 6–7 high, 8–10 very high, 11+ extreme) and advice, the current hour's value when the hourly forecast has one, and the hour it peaks (`uvOutlook` in `src/lib/airQuality.ts`).
+- **Sun & Moon** gains a daylight bar under sunrise, sunset, day length and the moon: by day how much daylight is left and how far through the day it is, by night the time to sunrise and how far through the night (`daylightState` in `src/lib/daylight.ts`), and how much longer or shorter today is than yesterday, worked out from the city's point with the sunrise equation (`dayLengthChangeSeconds`). Times on these cards use the device clock and update every minute.
 
 **Weather nudges on Home.** Under the condition and city, the Home weather box adds one line when the hourly forecast calls for it (`weatherNudge` in `src/lib/weatherNudge.ts`): rain, snow, freezing rain or thunderstorms starting in the next 12 hours ("Rain from 4 PM, take an umbrella", "Snow from 1 AM tomorrow, wear boots") or, when it is already falling, when it stops ("Rain until 6 PM"); a windchill (or temperature) of −20 °C or below in the next 24 hours ("−23 °C windchill tomorrow morning"); or 30 °C or above ("Up to 33 °C this afternoon, drink water"). A "Chance of …" hour counts only at 40% or more. Freezing rain and thunderstorms come first, then cold, then rain or snow, then heat; with nothing to say the line is left out. Times use the device clock and are worked out again whenever the box renders, so a start time turns into an end time once it begins.
 
