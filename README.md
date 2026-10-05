@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-676%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.9.2-6366F1)
+![Version](https://img.shields.io/badge/version-0.9.3-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.9.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.9.3** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -20,7 +20,7 @@ Current release: **v0.9.2** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | Feature | Description |
 |---------|-------------|
 | **🪐 The Orbit** | Weekly and monthly reviews, between Home and the Engine. A Weekly/Monthly switch shows the latest finished period (ready Sunday at 6 PM, or 6 PM on the month's last day) with arrows to browse back: tasks completed and added (counts and names, the first five then **+N more**), Pomodoro focus total and per-day (and per-week) averages with a bar per day, income and spending against the last period, the next period's calendar events and tasks as a mini agenda (by day, or by week for a month), new vault notes, and a trend list against the last period and the 4-week or 3-month average. **Habits**: the Today card has a chip per habit to tick off today, a streak on hover, and a grid of this week (or this month, with the Monthly switch) lit by how many were done each day; the gear opens a manager to add, rename, recolour, reorder and remove them. Each review gets a Habits card (days done, rate, longest streak and streak at the end per habit, plus an optional note) and a habit completion trend. Pick an optional reflection prompt, add a note, and **Export to vault** writes `Reviews/Weekly/2026-W40.md` or `Reviews/Monthly/2026-10.md`, asking before overwriting. A dot on the nav icon and a chip on Home mark a review you have not opened yet; **Settings → The Orbit → Auto-export reviews** writes each one when it is ready. Its own pale black hole backdrop and ice-and-lavender liquid glass, also on the Home greeting card, which opens it |
-| **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule. Each task can carry a time estimate (15m, 30m, 1h, 2h, 4h or any number of minutes), shown on its card, and a **Fits today?** bar at the top of the page weighs today's open estimates against the free time left in your work day, minus timed events in your Horizon calendar. See [Time estimates and capacity](#-time-estimates-and-capacity). The Engine page has its own red black hole backdrop and ember palette, matching the Horizon's look. Switching between List and Board fades one view out and the other in (instantly in performance mode) |
+| **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule. Each task can carry a time estimate (15m, 30m, 1h, 2h, 4h or any number of minutes), shown on its card, and a **Fits today?** bar at the top of the page weighs today's open estimates against the free time left in your work day, minus timed events in your Horizon calendar. See [Time estimates and capacity](#-time-estimates-and-capacity). Tasks also carry notes and subtasks: a checklist on the task, and other tasks nested under it, with a **+N subtasks** count on the card. See [Notes and subtasks](#-notes-and-subtasks). The Engine page has its own red black hole backdrop and ember palette, matching the Horizon's look. Switching between List and Board fades one view out and the other in (instantly in performance mode) |
 | **📅 The Horizon** | Google Calendar, live: month, week, day and agenda views (week and day are hour grids: overlapping events sit side by side, a line marks now, and clicking an empty slot creates an event at that half hour), create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along. The page has its own black hole backdrop and blue palette (see [The Horizon](#-the-horizon-google-calendar-integration)) |
 | **🏠 Home widgets** | A 3×3 grid: the greeting and clock (on The Orbit's black hole, with this week's tasks done and focus time; opens The Orbit), weather (with a one-line nudge such as "Rain from 4 PM, take an umbrella"), and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, a free-time bar with today's planned work and a nudge toward the next task ("Want to start Write report?"), or once today is clear the next 14 days' tasks, highest priority first, with a nudge to get a head start on one), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Engine, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Engine's red black hole, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
@@ -463,12 +463,35 @@ Home's Engine card shows the same numbers as a free-time bar (the rest of the wo
 
 The bar is green while the work fits, amber past 85% of free time, and red with the part that does not fit striped once it is over ("Over by 45m"). It updates every minute on the device clock and reuses the Home Horizon card's cached events, so it makes no extra calendar request.
 
+## 📝 Notes and subtasks
+
+**Notes.** The task form has a **Notes** box for free text (up to 10,000 characters). A task with notes shows a note icon on its card.
+
+**Subtasks.** A task has two kinds of subtask, counted together:
+
+- **Checklist items**, light rows that live on the task. Add, tick, rename (click the text), drag to reorder and delete them in the task form or straight on the card.
+- **Child tasks**, full tasks nested under another task, each with its own dates, priority and estimate. Nesting is one level deep: a child cannot have children, and a task with children cannot be nested.
+
+Each card shows **+3 subtasks** while any are open, then **All 4 done** in green. The parent does not complete itself; you tick it. Click a card (or its chevron) to expand it: its notes, its checklist, and its child tasks, each with a tick, an edit button and a **move to top level** button.
+
+**Nesting.** Three ways to make a task a subtask: the **Subtask of** picker in the task form, dragging its card onto another card (in List or Board; a card that would take it lights up), or searching for it in the command bar and choosing **Make "…" a subtask of…**. To take it back out: **Subtask of → None**, the move-to-top-level button, dragging it out of its parent onto the list or a Board column, or **Move "…" to top level** in the command bar.
+
+**Rules.**
+
+- Child tasks show only inside their parent, in The Engine's List and Board and on Home's Engine card. The **Fits today?** bar still counts their estimates on their own dates; a parent's estimate is its own work, never a sum.
+- Completing a parent ticks its checklist and completes its open child tasks. Unticking it leaves them as they are.
+- A repeat that moves on when done ("N days after done") starts its checklist over, unticked, for the next date.
+- Deleting a parent keeps its child tasks and moves them back to the top level; its checklist goes with it.
+
+Stored in `tasks.notes`, `tasks.checklist` (JSON) and `tasks.parent_id` ([migration 0006](supabase/migrations/0006_task_notes_subtasks.sql)). The rules live in `src/lib/subtasks.ts` (unit-tested).
+
 ## 🗄️ Database Schema (Supabase)
 
 ```sql
 tasks                (id, user_id, name, start_date, start_time, end_date,
                       end_time, priority, category_id, completed, repeat_days,
-                      repeat_kind, repeat_weekdays, estimate_minutes)
+                      repeat_kind, repeat_weekdays, estimate_minutes,
+                      notes, checklist, parent_id)
 transactions         (id, user_id, name, amount, type, category_id, date)
 task_categories      (id, user_id, name, color)
 financial_categories (id, user_id, name, color)
@@ -501,6 +524,11 @@ leave habits out.
 Then apply [`supabase/migrations/0005_task_estimates.sql`](supabase/migrations/0005_task_estimates.sql)
 (v0.9.1), which adds `tasks.estimate_minutes` (1 to 1440, null for no estimate). It is safe to run twice.
 Until it is applied, saving a task with an estimate fails; tasks without one save as before.
+Then apply [`supabase/migrations/0006_task_notes_subtasks.sql`](supabase/migrations/0006_task_notes_subtasks.sql)
+(v0.9.3), which adds `tasks.notes`, `tasks.checklist` (a JSON array of `{id, text, done}`) and
+`tasks.parent_id` (`on delete set null`, so deleting a parent keeps its child tasks). It is safe to
+run twice. Until it is applied, saving a task with notes, a checklist or a parent fails; other tasks
+save as before.
 
 ---
 

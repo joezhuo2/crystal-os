@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useFinancialCategories, useTaskCategories, useTasks, useTransactions } from "@/contexts/AppContext";
+import { useAppActions, useFinancialCategories, useTaskCategories, useTasks, useTransactions, type Task } from "@/contexts/AppContext";
+import { nestTargets } from "@/lib/subtasks";
+import { toast } from "sonner";
 import { appUi } from "@/lib/appUi";
 import { toLocalDateStr, useDebouncedValue } from "@/lib/utils";
 import { useVaultNotes } from "@/hooks/useVault";
@@ -27,6 +29,9 @@ import {
   SquareTerminal,
   Sparkles,
   Orbit,
+  ListTree,
+  CornerLeftUp,
+  X,
 } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
 import { inTerminal, paletteShortcutLabel } from "@/lib/hotkey";
@@ -45,6 +50,9 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const tasks = useTasks();
+  const { updateTask } = useAppActions();
+  // "Make subtask of…": the task being nested while the bar lists parents for it.
+  const [nestChild, setNestChild] = useState<Task | null>(null);
   const transactions = useTransactions();
   const taskCategories = useTaskCategories();
   const financialCategories = useFinancialCategories();
@@ -66,7 +74,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
   // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !inTerminal(e)) setFocused(false);
+      if (e.key === "Escape" && !inTerminal(e)) {
+        setFocused(false);
+        setNestChild(null);
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -75,6 +86,7 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
   const close = useCallback(() => {
     setFocused(false);
     setSearch("");
+    setNestChild(null);
   }, []);
 
   // ---------- Focus shortcuts ----------
@@ -165,6 +177,27 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
     handleNavigate("archive");
   };
 
+  const startNesting = (task: Task) => {
+    setNestChild(task);
+    setSearch("");
+    inputRef.current?.focus();
+  };
+
+  const handleNest = (parent: Task) => {
+    if (!nestChild) return;
+    updateTask(nestChild.id, { parentId: parent.id });
+    toast.success(`${nestChild.name} is now a subtask of ${parent.name}`);
+    close();
+  };
+
+  const handleUnnest = (task: Task) => {
+    updateTask(task.id, { parentId: undefined });
+    toast.success(`${task.name} moved to the top level`);
+    close();
+  };
+
+  const parentChoices = nestChild ? nestTargets(nestChild.id, tasks) : [];
+
   const handleAddTask = () => {
     close();
     setShowTaskForm(true);
@@ -211,7 +244,7 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
             value={search}
             onValueChange={setSearch}
             onFocus={() => setFocused(true)}
-            placeholder="Search, 'add …' or 'log …'"
+            placeholder={nestChild ? `Make "${nestChild.name}" a subtask of…` : "Search, 'add …' or 'log …'"}
             wrapperClassName="border-0 px-0 flex-1 min-w-0"
             className="h-8 text-base bg-transparent border-0 outline-none placeholder:text-muted-foreground/40 focus:ring-0"
           />
@@ -239,8 +272,43 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
             >
               <CommandList className="max-h-[340px] overflow-y-auto scrollbar-thin px-2 py-2">
                 <CommandEmpty className="py-6 text-center text-sm text-muted-foreground/70">
-                  No results found. Try "add Buy milk" or "log 25 for Lunch".
+                  {nestChild ? "No task to nest it under." : 'No results found. Try "add Buy milk" or "log 25 for Lunch".'}
                 </CommandEmpty>
+
+                {nestChild ? (
+                  <CommandGroup heading={`Subtask of… (${nestChild.name})`}>
+                    {parentChoices.map((parent) => (
+                      <CommandItem
+                        key={parent.id}
+                        value={`parent-${parent.id}-${parent.name}`}
+                        onSelect={() => handleNest(parent)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
+                          <ListTree className="w-4 h-4 text-indigo-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{parent.name}</p>
+                          <p className="text-xs text-muted-foreground">{parent.startDate}</p>
+                        </div>
+                      </CommandItem>
+                    ))}
+                    <CommandItem
+                      value="parent-cancel"
+                      onSelect={() => {
+                        setNestChild(null);
+                        setSearch("");
+                      }}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                    >
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5">
+                        <X className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm font-medium">Cancel</p>
+                    </CommandItem>
+                  </CommandGroup>
+                ) : (
+                <>
 
                 {/* ── Quick Add to the vault — always the first row ── */}
                 <CommandGroup heading="Vault">
@@ -337,6 +405,37 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                         );
                       })}
                     </CommandGroup>
+                    {/* Nest or un-nest the best match: one action per row would crowd the list. */}
+                    {matchedTasks[0] && !matchedTasks[0].completed && (
+                      <CommandGroup heading="Subtasks">
+                        {matchedTasks[0].parentId ? (
+                          <CommandItem
+                            value={`unnest-${matchedTasks[0].name}`}
+                            onSelect={() => handleUnnest(matchedTasks[0])}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                          >
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
+                              <CornerLeftUp className="w-4 h-4 text-indigo-400" />
+                            </div>
+                            <p className="flex-1 min-w-0 text-sm font-medium truncate">Move "{matchedTasks[0].name}" to top level</p>
+                          </CommandItem>
+                        ) : (
+                          nestTargets(matchedTasks[0].id, tasks).length > 0 && (
+                            <CommandItem
+                              value={`nest-${matchedTasks[0].name}`}
+                              onSelect={() => startNesting(matchedTasks[0])}
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                            >
+                              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
+                                <ListTree className="w-4 h-4 text-indigo-400" />
+                              </div>
+                              <p className="flex-1 min-w-0 text-sm font-medium truncate">Make "{matchedTasks[0].name}" a subtask of…</p>
+                              <ArrowRight className="w-4 h-4 text-muted-foreground/40" />
+                            </CommandItem>
+                          )
+                        )}
+                      </CommandGroup>
+                    )}
                   </>
                 )}
 
@@ -508,6 +607,8 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                       )}
                     </CommandGroup>
                   </>
+                )}
+                </>
                 )}
               </CommandList>
 

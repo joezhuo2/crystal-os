@@ -7,9 +7,12 @@ const updateTask = vi.fn();
 
 const taskCategories = [{ id: "c1", name: "Work", color: "hsl(0 0% 50%)" }];
 
+let tasks: Task[] = [];
+
 vi.mock("@/contexts/AppContext", () => ({
   useAppActions: () => ({ addTask, updateTask }),
   useTaskCategories: () => taskCategories,
+  useTasks: () => tasks,
 }));
 
 // jsdom has no layout, so ThemedSelect's keep-the-active-row-visible call needs a stub.
@@ -110,5 +113,78 @@ describe("TaskForm estimates", () => {
     const updates = updateTask.mock.calls[0][1];
     expect("estimateMinutes" in updates).toBe(true);
     expect(updates.estimateMinutes).toBeUndefined();
+  });
+});
+
+describe("TaskForm notes and subtasks", () => {
+  const parent: Task = { ...editing, id: "p1", name: "Move house" };
+
+  beforeEach(() => {
+    addTask.mockClear();
+    updateTask.mockClear();
+    tasks = [editing, parent];
+  });
+
+  function pickParent(label: string) {
+    fireEvent.click(screen.getByRole("combobox", { name: "Subtask of" }));
+    fireEvent.click(screen.getByRole("option", { name: label }));
+  }
+
+  it("saves notes, a checklist and a parent on a new task", () => {
+    render(<TaskForm onClose={() => {}} />);
+    fireEvent.change(screen.getByPlaceholderText("Task name..."), { target: { value: "Pack books" } });
+    fireEvent.change(screen.getByLabelText("Notes"), { target: { value: "Boxes in the garage" } });
+    const add = screen.getByRole("textbox", { name: "Add checklist item" });
+    fireEvent.change(add, { target: { value: "Get tape" } });
+    fireEvent.keyDown(add, { key: "Enter" });
+    pickParent("Move house");
+    fireEvent.click(screen.getByRole("button", { name: "Add Task" }));
+    expect(addTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Pack books",
+        notes: "Boxes in the garage",
+        checklist: [expect.objectContaining({ text: "Get tape", done: false })],
+        parentId: "p1",
+      }),
+    );
+  });
+
+  it("clears notes, checklist and parent when emptied", () => {
+    render(
+      <TaskForm
+        onClose={() => {}}
+        editingTask={{ ...editing, notes: "Old", checklist: [{ id: "i1", text: "Step", done: false }], parentId: "p1" }}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Notes"), { target: { value: "  " } });
+    fireEvent.click(screen.getByRole("button", { name: "Delete Step" }));
+    pickParent("None (top level)");
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    const updates = updateTask.mock.calls[0][1];
+    for (const key of ["notes", "checklist", "parentId"]) {
+      expect(key in updates).toBe(true);
+      expect(updates[key]).toBeUndefined();
+    }
+  });
+
+  it("ticks and renames checklist items", () => {
+    render(<TaskForm onClose={() => {}} editingTask={{ ...editing, checklist: [{ id: "i1", text: "Step", done: false }] }} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Step" }));
+    fireEvent.click(screen.getByText("Step"));
+    const rename = screen.getByRole("textbox", { name: "Rename item" });
+    fireEvent.change(rename, { target: { value: "First step" } });
+    fireEvent.keyDown(rename, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    expect(updateTask).toHaveBeenCalledWith(
+      "t1",
+      expect.objectContaining({ checklist: [{ id: "i1", text: "First step", done: true }] }),
+    );
+  });
+
+  it("does not offer nesting for a task that has subtasks", () => {
+    tasks = [parent, { ...editing, parentId: "p1" }];
+    render(<TaskForm onClose={() => {}} editingTask={parent} />);
+    expect(screen.queryByRole("combobox", { name: "Subtask of" })).not.toBeInTheDocument();
+    expect(screen.getByText(/has subtasks of its own/)).toBeInTheDocument();
   });
 });

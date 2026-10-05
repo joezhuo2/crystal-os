@@ -15,6 +15,7 @@ import {
 import { ascNullsLast, loadInPages, mergePage } from "@/lib/pagedLoad";
 import { appUi } from "@/lib/appUi";
 import { clampEstimate } from "@/lib/capacity";
+import { cleanChecklist, cleanNotes, tickAll, untickAll, type ChecklistItem } from "@/lib/subtasks";
 import {
   isRetryable,
   offlineQueue,
@@ -45,6 +46,12 @@ export type Task = {
   repeat?: RepeatRule;
   /** Expected effort in minutes (1–1440), or undefined for no estimate. */
   estimateMinutes?: number;
+  /** Free-text notes, or undefined for none. */
+  notes?: string;
+  /** The task's checklist, or undefined for none. */
+  checklist?: ChecklistItem[];
+  /** The task this one is nested under (one level deep), or undefined at the top level. */
+  parentId?: string;
   /** When the task was added (ISO). Read-only: set by the database. */
   createdAt?: string;
 };
@@ -201,7 +208,14 @@ function cacheSetters(client: QueryClient) {
 
 // ── helpers to map between Supabase snake_case and app camelCase ──
 
-type TaskRow = ReturnType<typeof mapTaskToDb> & { id: string; created_at?: string; estimate_minutes?: number | null };
+type TaskRow = ReturnType<typeof mapTaskToDb> & {
+  id: string;
+  created_at?: string;
+  estimate_minutes?: number | null;
+  notes?: string | null;
+  checklist?: ChecklistItem[] | null;
+  parent_id?: string | null;
+};
 type TransactionRow = ReturnType<typeof mapTransactionToDb> & { id: string };
 type CategoryRow = ReturnType<typeof mapCategoryToDb> & { id: string };
 
@@ -218,6 +232,9 @@ function mapTaskFromDb(row: TaskRow): Task {
     completed: row.completed,
     repeat: normalizeRepeat(row.repeat_kind, row.repeat_days, row.repeat_weekdays),
     estimateMinutes: clampEstimate(row.estimate_minutes),
+    notes: cleanNotes(row.notes),
+    checklist: cleanChecklist(row.checklist),
+    parentId: row.parent_id || undefined,
     createdAt: row.created_at,
   };
 }
@@ -236,6 +253,10 @@ function mapTaskToDb(task: Omit<Task, "id">) {
     // Only sent when there is one, so a database without migration 0005 still
     // takes every task saved without an estimate.
     ...(clampEstimate(task.estimateMinutes) ? { estimate_minutes: clampEstimate(task.estimateMinutes) } : {}),
+    // The same for migration 0006's columns.
+    ...(cleanNotes(task.notes) ? { notes: cleanNotes(task.notes) } : {}),
+    ...(cleanChecklist(task.checklist) ? { checklist: cleanChecklist(task.checklist) } : {}),
+    ...(task.parentId ? { parent_id: task.parentId } : {}),
   };
 }
 
@@ -636,13 +657,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Like `repeat` below, an explicit undefined clears it; but a cleared
     // estimate on a task that never had one sends nothing, for the same reason
     // mapTaskToDb leaves the column out.
+    // Notes, checklist and parent (migration 0006) follow the same rule.
+    const current = queryClient.getQueryData<Task[]>(APP_DATA_KEYS.tasks)?.find((t) => t.id === id);
     const estimate = clampEstimate(updates.estimateMinutes);
     const estimateChanged = "estimateMinutes" in updates;
-    if (estimateChanged) {
-      const had = queryClient
-        .getQueryData<Task[]>(APP_DATA_KEYS.tasks)
-        ?.find((t) => t.id === id)?.estimateMinutes !== undefined;
-      if (estimate !== undefined || had) dbUpdates.estimate_minutes = estimate ?? null;
+    if (estimateChanged && (estimate !== undefined || current?.estimateMinutes !== undefined)) {
+      dbUpdates.estimate_minutes = estimate ?? null;
+    }
+    const notes = cleanNotes(updates.notes);
+    const notesChanged = "notes" in updates;
+    if (notesChanged && (notes !== undefined || current?.notes !== undefined)) dbUpdates.notes = notes ?? null;
+    const checklist = cleanChecklist(updates.checklist);
+    const checklistChanged = "checklist" in updates;
+    if (checklistChanged && (checklist !== undefined || current?.checklist !== undefined)) {
+      dbUpdates.checklist = checklist ?? null;
+    }
+    const parentId = updates.parentId || undefined;
+    const parentChanged = "parentId" in updates;
+    if (parentChanged && (parentId !== undefined || current?.parentId !== undefined)) {
+      dbUpdates.parent_id = parentId ?? null;
     }
     // Unlike the other fields, an explicit `repeat` key is written even when
     // it is undefined: that is how a repeat is turned off, and the columns have
@@ -660,6 +693,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               ...updates,
               ...(repeatChanged ? { repeat } : {}),
               ...(estimateChanged ? { estimateMinutes: estimate } : {}),
+              ...(notesChanged ? { notes } : {}),
+              ...(checklistChanged ? { checklist } : {}),
+              ...(parentChanged ? { parentId } : {}),
             }
           : t,
       ),
@@ -670,21 +706,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [forgetCompletion, queryClient, saveWrite, setTasks]);
 
   const completeTask = useCallback(
-    (task: Task) => {
-      const updates = completionUpdates(task, toLocalDateStr());
+    function complete(task: Task) {
+      const timing = completionUpdates(task, toLocalDateStr());
+      const rolled = "startDate" in timing;
+      // Completing a task ticks its checklist; a repeat moving on to its next
+      // date starts the checklist over instead.
+      const updates: Partial<Task> = task.checklist
+        ? { ...timing, checklist: rolled ? untickAll(task.checklist) : tickAll(task.checklist) }
+        : timing;
       updateTask(task.id, updates);
       void recordCompletion(task);
-      if ("startDate" in updates) {
-        const next = new Date(`${updates.startDate}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      if (rolled) {
+        const next = new Date(`${timing.startDate}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
         toast.success(`${task.name} done`, { description: `Next due ${next}` });
       }
+      // Its open child tasks are done with it. Nesting is one level deep, so
+      // this never recurses further.
+      const children = queryClient
+        .getQueryData<Task[]>(APP_DATA_KEYS.tasks)
+        ?.filter((t) => t.parentId === task.id && !t.completed && t.id !== task.id) ?? [];
+      for (const child of children) complete(child);
     },
-    [updateTask, recordCompletion],
+    [queryClient, updateTask, recordCompletion],
   );
 
   const deleteTask = useCallback(async (id: string) => {
     if (!(await saveWrite({ op: "delete", table: "tasks", id }, "delete the task"))) return;
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    // The database moves its child tasks back to the top level (on delete set
+    // null); the cache follows.
+    setTasks((prev) =>
+      prev.filter((t) => t.id !== id).map((t) => (t.parentId === id ? { ...t, parentId: undefined } : t)),
+    );
   }, [saveWrite, setTasks]);
 
   // ── Transactions ──

@@ -36,6 +36,8 @@ import {
 } from "@/components/ui/dashboard-skeletons";
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { PRIORITY_RANK, upcomingTasks } from "@/lib/homeTasks";
+import { splitByParent, subtaskProgress } from "@/lib/subtasks";
+import { SubtaskChip } from "./TaskSubtasks";
 import { NebulaSpace, PortalSpace, TerminalSpace } from "./HomeSpaces";
 import HomeGrid, { type HomeWidget } from "./HomeGrid";
 import { CapacityStrip } from "./CapacityBar";
@@ -463,7 +465,10 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
   // Selected from the cache, so an edit to a task this card does not show
   // leaves both lists (and the card) as they were.
   const selectRows = useCallback(
-    (tasks: Task[]) => {
+    (all: Task[]) => {
+      // Child tasks show inside their parent in The Engine, not here; the
+      // parent carries a "+N subtasks" count instead.
+      const { top: tasks, children } = splitByParent(all);
       // Open work for today plus anything overdue, most pressing first.
       const open = tasks
         .filter((t) => !t.completed && (taskFallsOnDate(t, today) || isTaskOverdue(t, today)))
@@ -474,11 +479,16 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
         });
       // Once today is clear, show what comes next: each open task's next date
       // within UPCOMING_DAYS, highest priority first, then soonest.
-      return { open, upcoming: open.length > 0 ? [] : upcomingTasks(tasks, today) };
+      const upcoming = open.length > 0 ? [] : upcomingTasks(tasks, today);
+      const progress: Record<string, { open: number; total: number }> = {};
+      for (const task of [...open, ...upcoming.map((u) => u.task)]) {
+        progress[task.id] = subtaskProgress(task, children.get(task.id));
+      }
+      return { open, upcoming, progress };
     },
     [today],
   );
-  const { open: openTasks, upcoming } = useTasks(selectRows);
+  const { open: openTasks, upcoming, progress } = useTasks(selectRows);
 
   const showingUpcoming = openTasks.length === 0 && upcoming.length > 0;
   const rows: TaskRow[] = showingUpcoming
@@ -565,6 +575,7 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
                       </button>
                     </GlassTip>
                     <span className="text-sm truncate">{task.name}</span>
+                    {progress[task.id] && <SubtaskChip {...progress[task.id]} />}
                     <span className={`ml-auto text-[10px] font-semibold shrink-0 ${PRIORITY_CLASS[task.priority]}`}>
                       {label}
                     </span>

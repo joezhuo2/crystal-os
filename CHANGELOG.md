@@ -5,6 +5,28 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.3] - 2026-10-05
+
+Notes and subtasks on tasks.
+
+### Added
+
+- **Notes on tasks.** The task form has a **Notes** box for free text (up to 10,000 characters). Cards with notes show a note icon, and an expanded card shows the notes in full.
+- **Checklists.** Each task can carry a checklist. In the task form and on an expanded card: type in **Add checklist item** and press Enter, tick an item, click its text to rename it, drag its grip to reorder, or delete it with the X. Stored on the task as JSON.
+- **Child tasks.** Any task can be nested under another, one level deep (a child cannot have children, and a task with children cannot be nested). Three ways in: the **Subtask of** picker in the task form, dragging a card onto another card in List or Board (the card that would take it lights up), or searching for the task in the command bar and choosing **Make "…" a subtask of…**, then the parent. Three ways out: **Subtask of → None**, the move-to-top-level button on the child's row, or dragging it out of its parent onto the list or a Board column (also **Move "…" to top level** in the command bar).
+- **Subtask count on cards.** "+3 subtasks" counts open checklist items and open child tasks together, and turns green as "All 4 done" once none are open. Shown in The Engine's List and Board and on Home's Engine card.
+- **Expandable cards.** Click a task's name or its chevron in The Engine to show its notes, checklist and child tasks inline. Child tasks can be ticked, edited and moved to the top level from there. The details slide open and closed on a 200 ms ease with no spring, and the cards below glide along on the same ease (the card animates its position only, so its content never stretches).
+- `supabase/migrations/0006_task_notes_subtasks.sql`, `src/lib/subtasks.ts` (unit-tested) and `src/components/views/TaskSubtasks.tsx`.
+
+### Changed
+
+- **Child tasks show inside their parent only.** The Engine's List and Board and Home's Engine card (today's tasks, upcoming tasks and the nudges) list top-level tasks; the **Fits today?** bar still counts every task's own estimate on its own date, children included, with no rollup.
+- **Completing a parent completes its subtasks.** It ticks the checklist and completes each open child task (which records them in The Orbit). The parent never completes itself when its last subtask is done. A repeat that moves on when done starts its checklist over, unticked.
+- **Deleting a parent keeps its children**, moved back to the top level (`on delete set null`).
+- **`Task` carries optional `notes`, `checklist` and `parentId`.** `updateTask` clears each when its key is present and undefined, and, like `estimateMinutes`, never sends a column a task has never used, so a database without migration 0006 still saves everything else.
+- **The task form scrolls** when it is taller than the window.
+- **`TODO.md`:** *Task notes and subtasks* is done and removed.
+
 ## [v0.9.2] - 2026-10-05
 
 A next step once today is done.

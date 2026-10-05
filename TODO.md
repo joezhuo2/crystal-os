@@ -1,10 +1,10 @@
 # Planned Features
 - [v0.10.0] - engine options update
-- [ ] **Task notes and subtasks.** A `notes` text field and a checklist of subtasks on each task, option to make an existing note another note's subtask
-    - [ ] Optionally link a task to a vault note so the details live in Obsidian. (v2)
 - [ ] **Snooze / defer tasks.** Hide a task until a chosen date, plus a "Someday" bucket to keep the Engine short.
 - [ ] **Pomodoro linked to a task.** Start a focus session on a specific task and track time per task, so The Orbit shows where focus went. Focus mode also mutes Portal badges.
-- [v0.11.0] vault/banking overhaul - use plaid to connect to banks (store api keys and tokens in secure .env variables), themed glassmorphism UI 
+- [v0.11.0] vault/banking overhaul
+    - [ ]  use plaid to connect to banks (store api keys and tokens in secure .env variables)
+    - [ ] themed glassmorphism UI 
     - [ ] **Data export / backup.** One button in Settings that exports tasks, transactions, categories and settings to JSON/CSV, and an import to restore them. Useful before schema changes like Plaid.
     - [ ] **Vault: budgets.** Monthly budget per category with progress bars and a warning at 80%. Send the 80% warning as a native notification too (src/lib/notifications.ts), with its own switch in Settings → Notifications.
     - [ ] **Vault: subscriptions and bills.** Recurring charges with their next dates, shown in the Horizon and the Engine.
@@ -42,6 +42,7 @@
 - [ ] **[Low-Med] Customisable navbar.** Reorder and hide sidebar sections.
 - [ ] **[Low-Med] Pulse: Now / Next strip.** Countdown to the next event and, when it has a location, a leave-by time. (calculate from current location)
 - [ ] **[Low-Med] Orbit: year in review.**
+- [ ] [Low-Med] Optionally link a task to a vault note so the details live in Obsidian. (v2)
 
 - [ ] **[Low] Undo toast.** A 5 s "Undo" after deleting, completing or rescheduling a task, event or transaction.
 
