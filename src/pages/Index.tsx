@@ -27,6 +27,7 @@ import { useVaultLiveUpdates } from "@/hooks/useVault";
 import { useAppActivity } from "@/lib/appActivity";
 import { useOrbitStore } from "@/lib/orbitStore";
 import OrbitAutoExport from "@/components/views/orbit/OrbitAutoExport";
+import NotificationScheduler from "@/components/NotificationScheduler";
 import { LazyTaskForm, LazyTransactionDrawer, lazyViews as views, preloadViews, recordVisit } from "@/lib/viewLoader";
 
 /** Tabs with a page backdrop of their own. */
@@ -110,6 +111,7 @@ function GlobalOverlays() {
   return (
     <>
       {autoExport && <OrbitAutoExport />}
+      <NotificationScheduler />
       <Suspense fallback={null}>
         <TaskFormOverlay />
         <TransactionFormOverlay />

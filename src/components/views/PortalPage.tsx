@@ -407,6 +407,7 @@ export default function PortalPage() {
         onRemove={remove}
         onKeepLiveChange={setKeepLive}
         onKeepLoadedChange={setKeepLoaded}
+        onNotifyChange={(app, notify) => portal.setNotify(app.id, notify)}
       />
 
       <div className="portal-frame flex-1 min-h-0 mx-2 mb-2">

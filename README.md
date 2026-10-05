@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-604%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.8.13-6366F1)
+![Tests](https://img.shields.io/badge/tests-629%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.8.14-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.8.13** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.8.14** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -31,8 +31,9 @@ Current release: **v0.8.13** — see [CHANGELOG.md](CHANGELOG.md) for release hi
 | **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges, and three themes (desktop; the web build opens apps in new tabs) |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
 | **⏱️ Pomodoro** | Customizable focus/break intervals, session tracking, audio notifications, and tray controls (Tasks view) |
+| **🔔 Notifications** | Desktop toasts when a task reaches its end time, before each timed calendar event (30 minutes by default, set in Settings), when a Pomodoro focus or break runs out, and when a Portal app's unread count goes up while Crystal OS is not focused (per app, from its right-click menu). A switch per kind and a Do Not Disturb switch in **Settings → Notifications**. See [Notifications](#-notifications) |
 | **🖥️ Desktop shell** | Native Tauri window with PowerShell terminal, tray (Pomodoro + Quick Add), always-on global hotkeys, and launch-at-login — the web build is unaffected |
-| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, vault folder, Nebula keys, models and look, Portal theme, and downloading or building an installer. A search box (Ctrl+F) hides sections that don't match and unfolds the ones that do. Click a section's header to fold it away (remembered on this device); switches and sliders glide instead of snapping. **Diagnostics** copies recent errors (unhandled rejections, uncaught errors, failed Supabase saves) with the app version for a bug report; on desktop they are also logged to `diagnostics.log` |
+| **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, notifications, vault folder, Nebula keys, models and look, Portal theme, and downloading or building an installer. A search box (Ctrl+F) hides sections that don't match and unfolds the ones that do. Click a section's header to fold it away (remembered on this device); switches and sliders glide instead of snapping. **Diagnostics** copies recent errors (unhandled rejections, uncaught errors, failed Supabase saves) with the app version for a bug report; on desktop they are also logged to `diagnostics.log` |
 | **⌨️ Command Palette** | Global search over tasks, transactions, and vault note bodies, plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
 | **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar |
@@ -213,11 +214,12 @@ src/
 │   │   ├── NoteEditor.tsx      # CodeMirror note editor with mtime-checked saves (lazy-loaded)
 │   │   ├── TerminalPage.tsx    # Up to 5 PowerShell terminals in tabs, up to 4 split on screen (xterm.js, desktop only)
 │   │   ├── PortalPage.tsx      # The Portal: places the active app's webview over its frame
-│   │   ├── SettingsPage.tsx    # Hotkeys, launch at login, vault folder, Portal theme, Atmosphere effects and image, Install & update
+│   │   ├── SettingsPage.tsx    # Hotkeys, launch at login, notifications, vault folder, Portal theme, Atmosphere effects and image, Install & update
 │   │   ├── InstallerSection.tsx # Check for updates, release picker, installer download, build-from-source log
 │   │   ├── PomodoroTimer.tsx   # Focus timer component
 │   │   └── CategoryManager.tsx # Category CRUD for tasks/finances
 │   ├── CommandPalette.tsx      # Search, NL commands, vault note results
+│   ├── NotificationScheduler.tsx # Checks task due times and calendar reminders every 30 s while signed in
 │   ├── QuickAddDialog.tsx      # Append a capture to a vault note
 │   └── NavLink.tsx
 ├── contexts/
@@ -238,6 +240,8 @@ src/
 │   ├── supabase.ts             # Supabase client + helpers
 │   ├── offlineQueue.ts         # Task/transaction writes kept in localStorage while Supabase is unreachable, replayed in order
 │   ├── weatherNudge.ts         # One-line weather nudge for the Home weather box, from the hourly forecast
+│   ├── notifications.ts        # Desktop toasts: what to say and when (tasks, events, Pomodoro, Portal), delivery, Do Not Disturb
+│   ├── notifySettings.ts       # Notification switches and the event reminder lead time (localStorage)
 │   ├── appUi.ts                # Transient UI store: open forms, Quick Add draft, selected note (useAppUi(selector))
 │   ├── vaultCore.ts            # Shared vault logic: parsing, search index, tags, quick-add formatting
 │   ├── wikilinks.ts            # Archive reader: wikilink targets mapped once per listing
@@ -421,6 +425,17 @@ Every task, transaction and completion write goes through `saveWrite` in `src/co
 
 Categories, habits, focus sessions and settings are not queued and still report a failed save.
 
+## 🔔 Notifications
+
+Crystal OS shows native toasts (Windows notifications on desktop through `tauri-plugin-notification`, the browser's Notification API on the web). The first one asks for permission. **Settings → Notifications** has a switch for each kind, the reminder lead time, a **Do Not Disturb** switch that silences them all without touching the others, and **Send test**.
+
+- **Task due times.** When an open task reaches its end time ("Due now: File taxes", with the priority if it is high or urgent), including each occurrence of a repeating task. A due time is still announced up to 10 minutes late, so a sleeping timer or opening the app just after it does not lose it.
+- **Calendar reminders.** Before each timed event in the Google calendar picked in The Horizon: 30 minutes by default, 0 (as it starts) to 1440. Opening the app inside that window still reminds, with the time actually left ("In 8 min, at 3:00 PM · Main St"). All-day events get none. The next 50 hours of events are fetched every 10 minutes, also while the window is hidden in the tray; on desktop nothing is fetched until the calendar has been connected once, so the sidecar is not started for nothing.
+- **Pomodoro.** When a focus session or a break runs out, from the Tasks page or the tray. Pausing and resetting stay quiet.
+- **Portal messages.** When a Portal app's unread count goes up while Crystal OS is not focused ("Discord: 2 new · 5 unread", or "New activity" for a site that only shows a dot). The count an app opens with is not announced. Only loaded apps report, so an app with **Keep loaded in background** off stays quiet once it closes. Turn it off for one app with **Notify on new messages** in its right-click menu.
+
+What to say and when lives in `src/lib/notifications.ts` (pure, tested); `src/components/NotificationScheduler.tsx` checks tasks and events every 30 s while signed in, and the Pomodoro and Portal stores are watched from `main.tsx`. Each task and event reminder is shown once: its key is kept in `localStorage` (`crystal-os-notified`, two days), so a restart does not repeat it. Settings are saved in `crystal-os-notifications`.
+
 ## 🗄️ Database Schema (Supabase)
 
 ```sql
@@ -554,7 +569,7 @@ Or let CI do steps 1 to 3: bump the version in `package.json`, `src-tauri/Cargo.
 
 - **Connect an app** with **+** in the Portal's navbar: pick a preset (Discord, Instagram, LinkedIn, Spotify, X, Reddit, Gmail, Outlook) or add any `https://` site by name and address. Two presets carry WebView2 limits: Google blocks sign-in from embedded webviews, so Gmail may send you to a real browser for the password step, and Spotify's web player needs Widevine DRM that WebView2 does not ship, so it browses but does not play.
 - **Use it like a browser tab.** Click a pill to switch apps (the pages cross-fade). **Back**, **Forward**, **Reload**, and **Open in browser** act on the app on screen. Links to other sites open in your default browser.
-- **Organise.** Drag pills to reorder them. Right-click a pill to reload it, return to its home page, open it in the browser, toggle **Keep loaded in background** or **Keep live in background**, **Sign out…**, or **Remove…**.
+- **Organise.** Drag pills to reorder them. Right-click a pill to reload it, return to its home page, open it in the browser, toggle **Keep loaded in background**, **Keep live in background** or **Notify on new messages**, **Sign out…**, or **Remove…**.
 - **Sessions.** Each app keeps its cookies and storage in its own folder, `%APPDATA%\com.crystalos.desktop\portal\<app id>\`, so you stay signed in across restarts and apps never share a login. **Sign out** clears that app's cookies and storage; **Remove** deletes its folder too.
 - **Loading.** While an app's page loads (first open, **Reload**, **Back to home page**, **Sign out**), the frame shows a skeleton of a web app in the theme's colours with "Loading <app>…". The page appears, fading in, once it has finished loading, or after 20 seconds if it never reports that.
 - **Always on.** Apps load the first time you open The Portal after launching Crystal OS, then keep running while you use other tabs. Unread counts from their page titles show on each pill and on the sidebar's Portal icon.

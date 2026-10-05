@@ -41,6 +41,7 @@ import {
 } from "@/hooks/useWeather";
 import { ThemedCombobox, type ComboboxOption } from "@/components/ui/field-controls";
 import { atmosphere, useAtmosphere } from "@/lib/atmosphereStore";
+import { GlassTip } from "@/components/ui/glass-tooltip";
 
 // ── Weather icon mapping ──
 
@@ -368,37 +369,60 @@ function TempBar({ high, low }: { high: number | null; low: number | null }) {
 
 // ── Hourly Forecast ──
 
+/** The hour's full reading, for its tooltip: the box itself only fits the numbers. */
+function HourDetail({ hour }: { hour: HourlyForecast }) {
+  const rows: string[] = [`${Math.round(hour.temperature)}°C`];
+  if (hour.windChill !== null && hour.windChill !== hour.temperature) rows.push(`Feels like ${Math.round(hour.windChill)}°`);
+  rows.push(hour.lop > 0 ? `${hour.lop}% chance of precipitation` : "No precipitation expected");
+  rows.push(`Wind ${hour.windDirection ? `${hour.windDirection} ` : ""}${hour.windSpeed} km/h`);
+  if (hour.uv != null) rows.push(`UV ${hour.uv}`);
+  return (
+    <span className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+      {rows.map((row) => (
+        <span key={row}>{row}</span>
+      ))}
+    </span>
+  );
+}
+
 function HourlyForecastSection({ hourly }: { hourly: HourlyForecast[] }) {
   const display = hourly.slice(0, 24);
   const row1 = display.slice(0, 12);
   const row2 = display.slice(12, 24);
 
   const renderHourCard = (h: HourlyForecast, i: number) => (
-    <m.div
+    <GlassTip
       key={h.timestamp}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: i * 0.02 }}
-      className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-background/20 flex-1 min-w-0"
+      label={`${formatHour(h.timestamp)} · ${h.condition || "No condition"}`}
+      detail={<HourDetail hour={h} />}
     >
-      <span className="text-[10px] text-muted-foreground">{formatHour(h.timestamp)}</span>
-      <WeatherIcon code={h.iconCode} className="w-5 h-5 text-primary" />
-      <span className="text-sm font-semibold">{Math.round(h.temperature)}°</span>
-      {h.windChill !== null && h.windChill !== h.temperature && (
+      <m.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: i * 0.02 }}
+        tabIndex={0}
+        aria-label={`${formatHour(h.timestamp)}: ${Math.round(h.temperature)}°, ${h.condition}`}
+        className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-background/20 flex-1 min-w-0 cursor-default transition-colors hover:bg-background/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className="text-[10px] text-muted-foreground">{formatHour(h.timestamp)}</span>
+        <WeatherIcon code={h.iconCode} className="w-5 h-5 text-primary" />
+        <span className="text-sm font-semibold">{Math.round(h.temperature)}°</span>
+        {h.windChill !== null && h.windChill !== h.temperature && (
+          <span className="text-[10px] text-muted-foreground">
+            FL {Math.round(h.windChill)}°
+          </span>
+        )}
+        {h.lop > 0 && (
+          <span className="text-[10px] text-blue-400 flex items-center gap-0.5">
+            <Droplets className="w-2.5 h-2.5" />
+            {h.lop}%
+          </span>
+        )}
         <span className="text-[10px] text-muted-foreground">
-          FL {Math.round(h.windChill)}°
+          {h.windSpeed}<span className="text-[8px]">km/h</span>
         </span>
-      )}
-      {h.lop > 0 && (
-        <span className="text-[10px] text-blue-400 flex items-center gap-0.5">
-          <Droplets className="w-2.5 h-2.5" />
-          {h.lop}%
-        </span>
-      )}
-      <span className="text-[10px] text-muted-foreground">
-        {h.windSpeed}<span className="text-[8px]">km/h</span>
-      </span>
-    </m.div>
+      </m.div>
+    </GlassTip>
   );
 
   return (

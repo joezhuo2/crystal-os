@@ -146,6 +146,28 @@ describe("portal store", () => {
     unsubscribe();
   });
 
+  it("stores notify only while it is off, and survives a reload", () => {
+    portal.add(discord);
+    portal.setNotify("discord", false);
+    expect(saved()).toEqual([{ ...discord, notify: false }]);
+    portal._reset();
+    expect(portal.getState().apps[0].notify).toBe(false);
+    portal.setNotify("discord", true);
+    expect(saved()).toEqual([discord]);
+  });
+
+  it("marks an app reported on its first title, even with no badge, until it is cleared", () => {
+    portal.add(discord);
+    const listener = vi.fn();
+    const unsubscribe = portal.subscribe(listener);
+    portal.setTitle("discord", "Discord");
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(portal.getState().reported).toEqual({ discord: true });
+    portal.clearBadge("discord");
+    expect(portal.getState().reported).toEqual({});
+    unsubscribe();
+  });
+
   it("persists the theme and ignores unknown values", () => {
     portal.setTheme("stargate");
     expect(localStorage.getItem(THEME_KEY)).toBe("stargate");

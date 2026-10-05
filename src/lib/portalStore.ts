@@ -61,6 +61,12 @@ export interface PortalState {
   apps: PortalApp[];
   activeId: string | null;
   badges: Record<string, PortalBadge>;
+  /**
+   * Apps whose page has reported a title since it last loaded. The first
+   * title carries whatever was already unread, so notifications only count
+   * rises after it (src/lib/notifications.ts).
+   */
+  reported: Record<string, true>;
   theme: PortalTheme;
   /**
    * Open overlays (dialogs, menus) that the native webviews would cover.
@@ -98,6 +104,7 @@ function load(): PortalState {
     apps,
     activeId: apps.some((app) => app.id === active) ? active : (apps[0]?.id ?? null),
     badges: {},
+    reported: {},
     theme: isTheme(theme) ? theme : DEFAULT_PORTAL_THEME,
     occluders: 0,
   };
@@ -112,17 +119,18 @@ function set(next: PortalState) {
 }
 
 function saveApps(apps: PortalApp[]) {
-  // Both flags are left out at their defaults, so apps that never changed them
+  // The flags are left out at their defaults, so apps that never changed them
   // are stored exactly as they were before the settings existed.
   write(
     APPS_KEY,
     JSON.stringify(
-      apps.map(({ id, name, url, keepLive, keepLoaded }) => ({
+      apps.map(({ id, name, url, keepLive, keepLoaded, notify }) => ({
         id,
         name,
         url,
         ...(keepLive ? { keepLive } : {}),
         ...(keepLoaded === false ? { keepLoaded } : {}),
+        ...(notify === false ? { notify } : {}),
       })),
     ),
   );
@@ -160,9 +168,11 @@ export const portal = {
     if (activeId === id) activeId = apps[Math.min(index, apps.length - 1)]?.id ?? null;
     const badges = { ...state.badges };
     delete badges[id];
+    const reported = { ...state.reported };
+    delete reported[id];
     saveApps(apps);
     saveActive(activeId);
-    set({ ...state, apps, activeId, badges });
+    set({ ...state, apps, activeId, badges, reported });
   },
 
   /** Applies a new order. Ignored unless it holds exactly the current apps. */
@@ -221,23 +231,45 @@ export const portal = {
     set({ ...state, apps });
   },
 
+  /**
+   * Turns desktop notifications for one app's unread count on or off. Applies
+   * straight away, loaded or not.
+   */
+  setNotify(id: string, notify: boolean) {
+    const app = state.apps.find((a) => a.id === id);
+    if (!app || (app.notify ?? true) === notify) return;
+    const apps = state.apps.map((a) => {
+      if (a.id !== id) return a;
+      const next = { ...a };
+      if (notify) delete next.notify;
+      else next.notify = false;
+      return next;
+    });
+    saveApps(apps);
+    set({ ...state, apps });
+  },
+
   /** Drops an app's badge, for when its webview is unloaded and stops reporting titles. */
   clearBadge(id: string) {
-    if (!(id in state.badges)) return;
+    if (!(id in state.badges) && !(id in state.reported)) return;
     const badges = { ...state.badges };
     delete badges[id];
-    set({ ...state, badges });
+    const reported = { ...state.reported };
+    delete reported[id];
+    set({ ...state, badges, reported });
   },
 
   /** Records a page title change and updates that app's badge. */
   setTitle(id: string, title: string) {
     if (!state.apps.some((a) => a.id === id)) return;
     const badge = parseBadge(title);
-    if (state.badges[id] === (badge ?? undefined)) return;
+    const firstReport = !(id in state.reported);
+    if (!firstReport && state.badges[id] === (badge ?? undefined)) return;
     const badges = { ...state.badges };
     if (badge === null) delete badges[id];
     else badges[id] = badge;
-    set({ ...state, badges });
+    const reported = firstReport ? { ...state.reported, [id]: true as const } : state.reported;
+    set({ ...state, badges, reported });
   },
 
   /** Marks an overlay as open. Call the returned function when it closes. */

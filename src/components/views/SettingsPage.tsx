@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { AppWindow, Bug, Check, ChevronDown, ClipboardCopy, CloudSun, Download, FolderOpen, Gauge, ImagePlus, Keyboard, Orbit, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
+import { AppWindow, Bell, Bug, Check, ChevronDown, ClipboardCopy, CloudSun, Download, FolderOpen, Gauge, ImagePlus, Keyboard, Orbit, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 import NebulaSettingsSection from "@/components/nebula/NebulaSettingsSection";
 import InstallerSection from "@/components/views/InstallerSection";
@@ -19,6 +19,8 @@ import { MAX_UNLOAD_DELAY, perfSettings, usePerfSettings } from "@/lib/perfSetti
 import { atmosphere, useAtmosphere } from "@/lib/atmosphereStore";
 import { IMAGE_TYPES } from "@/lib/atmosphereImage";
 import { buildDiagnosticsReport } from "@/lib/diagnostics";
+import { MAX_EVENT_LEAD, notifySettings, useNotifySettings } from "@/lib/notifySettings";
+import { notify } from "@/lib/notifications";
 
 const COLLAPSED_KEY = "crystal-os-settings-collapsed";
 
@@ -303,6 +305,53 @@ function UnloadDelayInput({ value }: { value: number }) {
   );
 }
 
+function EventLeadInput({ value, disabled }: { value: number; disabled: boolean }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft !== null) notifySettings.setEventLead(draft);
+    setDraft(null);
+  };
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        max={MAX_EVENT_LEAD}
+        step={1}
+        disabled={disabled}
+        value={draft ?? String(value)}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setDraft(null);
+        }}
+        className="h-8 w-24 text-right"
+        aria-label="Minutes before an event to remind"
+      />
+      <span className="text-xs text-muted-foreground">minutes</span>
+    </div>
+  );
+}
+
+function TestNotificationButton() {
+  const [sending, setSending] = useState(false);
+  const send = () => {
+    setSending(true);
+    notify({ title: "Crystal OS", body: "Notifications are working." }, true)
+      .then((shown) => {
+        if (!shown) toast.error("Notifications are blocked. Allow them for Crystal OS in your system settings.");
+      })
+      .finally(() => setSending(false));
+  };
+  return (
+    <Button variant="outline" size="sm" disabled={sending} onClick={send}>
+      Send test
+    </Button>
+  );
+}
+
 export default function SettingsPage() {
   const desktop = isDesktop();
   const hotkeys = useGlobalHotkeys();
@@ -312,6 +361,7 @@ export default function SettingsPage() {
   const perf = usePerfSettings();
   const sky = useAtmosphere();
   const orbit = useOrbitStore();
+  const notifications = useNotifySettings();
 
   const vaultStatus = useVaultStatus();
   const pickVault = usePickVault();
@@ -463,6 +513,42 @@ export default function SettingsPage() {
             </div>
           </Section>
         )}
+
+        <Section id="notifications" icon={Bell} title="Notifications">
+          <Row
+            title="Do Not Disturb"
+            description="Silences every notification below while it is on, without changing their switches."
+          >
+            <Switch checked={notifications.doNotDisturb} onCheckedChange={(on) => notifySettings.setFlag("doNotDisturb", on)} />
+          </Row>
+          <Row title="Task due times" description="When an open task reaches its end time, including each repeat.">
+            <Switch checked={notifications.tasks} onCheckedChange={(on) => notifySettings.setFlag("tasks", on)} />
+          </Row>
+          <Row
+            title="Calendar reminders"
+            description="Before each timed event in the Google calendar picked in The Horizon. All-day events get no reminder."
+          >
+            <Switch checked={notifications.calendar} onCheckedChange={(on) => notifySettings.setFlag("calendar", on)} />
+          </Row>
+          <Row
+            title="Remind before events"
+            description={`How many minutes before an event its reminder shows. 0 reminds as it starts. Up to ${MAX_EVENT_LEAD} (a day).`}
+          >
+            <EventLeadInput value={notifications.eventLead} disabled={!notifications.calendar} />
+          </Row>
+          <Row title="Pomodoro" description="When a focus session or a break runs out.">
+            <Switch checked={notifications.pomodoro} onCheckedChange={(on) => notifySettings.setFlag("pomodoro", on)} />
+          </Row>
+          <Row
+            title="Portal messages"
+            description="When a Portal app's unread count goes up while Crystal OS is not focused. Turn it off for one app by right-clicking its tab. Only apps that are loaded can report."
+          >
+            <Switch checked={notifications.portal} onCheckedChange={(on) => notifySettings.setFlag("portal", on)} />
+          </Row>
+          <Row title="Test" description="Shows a notification now, even with Do Not Disturb on. The first one asks for permission.">
+            <TestNotificationButton />
+          </Row>
+        </Section>
 
         <Section id="orbit" icon={Orbit} title="The Orbit">
           <Row

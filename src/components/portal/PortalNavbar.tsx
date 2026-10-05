@@ -108,6 +108,7 @@ interface PortalNavbarProps {
   onRemove: (app: PortalApp) => void;
   onKeepLiveChange: (app: PortalApp, keepLive: boolean) => void;
   onKeepLoadedChange: (app: PortalApp, keepLoaded: boolean) => void;
+  onNotifyChange: (app: PortalApp, notify: boolean) => void;
 }
 
 /**
@@ -131,6 +132,7 @@ export default function PortalNavbar({
   onRemove,
   onKeepLiveChange,
   onKeepLoadedChange,
+  onNotifyChange,
 }: PortalNavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   usePortalOcclusion(menuOpen || confirm !== null);
@@ -216,6 +218,12 @@ export default function PortalNavbar({
                       onCheckedChange={(checked) => onKeepLiveChange(app, checked === true)}
                     >
                       Keep live in background
+                    </ContextMenuCheckboxItem>
+                    <ContextMenuCheckboxItem
+                      checked={app.notify !== false}
+                      onCheckedChange={(checked) => onNotifyChange(app, checked === true)}
+                    >
+                      Notify on new messages
                     </ContextMenuCheckboxItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem onSelect={() => onConfirmChange({ kind: "signout", app })}>

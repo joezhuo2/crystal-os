@@ -5,6 +5,24 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.14] - 2026-10-04
+
+Reminders that reach you outside the window.
+
+### Added
+
+- **Native notifications.** Desktop toasts (through `tauri-plugin-notification`; the browser's Notification API on the web) when an open task reaches its end time, including each repeat; before each timed event in the Google calendar picked in The Horizon (30 minutes by default); when a Pomodoro focus session or break runs out; and when a Portal app's unread count goes up while Crystal OS is not focused. Task due times are still announced up to 10 minutes late, and an event reminder still shows if the app opens inside its window, with the time actually left. Each reminder is shown once, even across a restart. The planning lives in `src/lib/notifications.ts`; `NotificationScheduler` checks tasks and events every 30 seconds while signed in, and fetches the next 50 hours of events every 10 minutes, window hidden or not.
+- **Settings → Notifications.** A switch for task due times, calendar reminders, Pomodoro and Portal messages, the minutes before an event to remind (0 to 1440), a **Do Not Disturb** switch that silences everything without changing the others, and **Send test**.
+- **Portal: Notify on new messages.** A per-app switch in each pill's right-click menu, on by default. The unread count an app opens with sets its baseline and is not announced.
+
+### Fixed
+
+- **Hourly forecast boxes respond to the pointer.** Each hour on The Atmosphere now highlights on hover and keyboard focus, and shows a tooltip with the condition, temperature, feels-like, chance of precipitation, wind direction and speed, and UV when known.
+
+### Notes
+
+- Budget alerts are not included: there are no budgets yet. They will come with **Vault: budgets** in v0.9.0.
+
 ## [v0.8.13] - 2026-10-04
 
 Weather that tells you what to do about it.

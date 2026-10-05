@@ -27,6 +27,11 @@ export interface PortalApp {
    * Left out (meaning on) unless it is off.
    */
   keepLoaded?: false;
+  /**
+   * False when a rise in this app's unread count should not become a desktop
+   * notification. Left out (meaning on) unless it is off.
+   */
+  notify?: false;
 }
 
 export interface PortalPreset extends PortalApp {
@@ -127,7 +132,7 @@ export function parseStoredApps(raw: string | null): PortalApp[] {
   const apps: PortalApp[] = [];
   for (const item of data) {
     if (!item || typeof item !== "object") continue;
-    const { id, name, url, keepLive, keepLoaded } = item as Record<string, unknown>;
+    const { id, name, url, keepLive, keepLoaded, notify } = item as Record<string, unknown>;
     if (typeof id !== "string" || typeof name !== "string" || typeof url !== "string") continue;
     const href = normalizeUrl(url);
     if (!isValidId(id) || seen.has(id) || !name.trim() || !href) continue;
@@ -137,6 +142,7 @@ export function parseStoredApps(raw: string | null): PortalApp[] {
     const app: PortalApp = { id, name: name.trim(), url: href };
     if (keepLive === true) app.keepLive = true;
     if (keepLoaded === false) app.keepLoaded = false;
+    if (notify === false) app.notify = false;
     apps.push(app);
   }
   return apps;

@@ -15,6 +15,7 @@ import "@fontsource/cascadia-mono/symbols2-400.css";
 import "@fontsource/cascadia-mono/symbols2-700.css";
 import "./index.css";
 import { initTrayBridge } from "./lib/tray";
+import { initNotificationBridges } from "./lib/notifications";
 import { startAppActivity } from "./lib/appActivity";
 import { installGlobalErrorHandlers } from "./lib/diagnostics";
 
@@ -22,6 +23,8 @@ import { installGlobalErrorHandlers } from "./lib/diagnostics";
 installGlobalErrorHandlers();
 // Outside React: the Pomodoro store and tray outlive every view and sign-in.
 initTrayBridge();
+// Pomodoro phase and Portal unread toasts, for the same reason.
+initNotificationBridges();
 // Pauses animation and polling while the window is hidden.
 startAppActivity();
 

@@ -40,6 +40,10 @@ pub fn run() {
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_shell::init())
     .plugin(tauri_plugin_dialog::init())
+    // Desktop toasts for task due times, calendar reminders, Pomodoro phase
+    // changes and Portal unread counts, scheduled by the webview
+    // (src/lib/notifications.ts).
+    .plugin(tauri_plugin_notification::init())
     .plugin(hotkey::plugin())
     .plugin(autostart::plugin())
     .plugin(tauri_plugin_updater::Builder::new().build())
