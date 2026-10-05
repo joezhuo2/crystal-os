@@ -5,6 +5,14 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.2] - 2026-10-05
+
+A next step once today is done.
+
+### Added
+
+- **Home's Engine card nudges toward upcoming tasks once today is clear.** When every task for today is done (or none was due), the card keeps its free-time bar and the line under it offers the first upcoming task that fits the free time, in the card's own upcoming order: highest priority first, then earliest date. Like the nudge for today's tasks, it takes the first task whose estimate fits, or else the first without an estimate, and shows nothing once the day's free time is gone. Four wordings, picked by the task, the day and the hour ("Today's clear. Get a head start on Taxes?", "All done for today. Taxes is up on Thu.", "3h free and nothing due. Start on Taxes early?", and for estimated tasks "Today's done. Taxes (1h) would fit now."). `suggestUpcomingTask` in `src/lib/capacity.ts`, unit-tested.
+
 ## [v0.9.1] - 2026-10-05
 
 Time estimates, and whether today's work fits the day.

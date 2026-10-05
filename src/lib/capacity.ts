@@ -105,10 +105,12 @@ function hash(text: string): number {
   return Math.abs(h);
 }
 
-type SuggestionContext = { name: string; estimate?: string; free: string };
+/** `when` is set for upcoming tasks: "Tomorrow", "Thu" or "Oct 14". */
+type SuggestionContext = { name: string; estimate?: string; free: string; when?: string };
+type Wording = { needsEstimate: boolean; text: (c: SuggestionContext) => string };
 
 /** The ways the Home Engine card offers the next task. Some need an estimate. */
-const SUGGESTIONS: { needsEstimate: boolean; text: (c: SuggestionContext) => string }[] = [
+const SUGGESTIONS: Wording[] = [
   { needsEstimate: false, text: (c) => `Want to start ${c.name}?` },
   { needsEstimate: false, text: (c) => `${c.free} free. How about ${c.name}?` },
   { needsEstimate: false, text: (c) => `Next up: ${c.name}. Ready when you are.` },
@@ -128,17 +130,49 @@ export type TaskSuggestion = { task: Task; text: string };
  * through the day.
  */
 export function suggestNextTask(tasks: Task[], freeMinutes: number, seed: string): TaskSuggestion | null {
+  return suggestFrom(tasks.map((task) => ({ task })), SUGGESTIONS, freeMinutes, seed);
+}
+
+/** The ways the card offers an upcoming task once today is clear. */
+const UPCOMING_SUGGESTIONS: Wording[] = [
+  { needsEstimate: false, text: (c) => `Today's clear. Get a head start on ${c.name}?` },
+  { needsEstimate: false, text: (c) => `All done for today. ${c.name} is up ${c.when === "Tomorrow" ? "tomorrow" : `on ${c.when}`}.` },
+  { needsEstimate: false, text: (c) => `${c.free} free and nothing due. Start on ${c.name} early?` },
+  { needsEstimate: true, text: (c) => `Today's done. ${c.name} (${c.estimate}) would fit now.` },
+];
+
+/**
+ * The same nudge once today's tasks are all done: `upcoming` is the card's
+ * upcoming list (highest priority first, then earliest date), and the pick
+ * follows the same fit rule as suggestNextTask.
+ */
+export function suggestUpcomingTask(
+  upcoming: { task: Task; when: string }[],
+  freeMinutes: number,
+  seed: string,
+): TaskSuggestion | null {
+  return suggestFrom(upcoming, UPCOMING_SUGGESTIONS, freeMinutes, seed);
+}
+
+function suggestFrom(
+  items: { task: Task; when?: string }[],
+  wordings: Wording[],
+  freeMinutes: number,
+  seed: string,
+): TaskSuggestion | null {
   if (freeMinutes <= 0) return null;
-  const task =
-    tasks.find((t) => t.estimateMinutes !== undefined && t.estimateMinutes <= freeMinutes) ??
-    tasks.find((t) => t.estimateMinutes === undefined);
-  if (!task) return null;
-  const options = SUGGESTIONS.filter((s) => !s.needsEstimate || task.estimateMinutes !== undefined);
+  const item =
+    items.find(({ task: t }) => t.estimateMinutes !== undefined && t.estimateMinutes <= freeMinutes) ??
+    items.find(({ task: t }) => t.estimateMinutes === undefined);
+  if (!item) return null;
+  const { task, when } = item;
+  const options = wordings.filter((s) => !s.needsEstimate || task.estimateMinutes !== undefined);
   const pick = options[hash(`${task.id}|${seed}`) % options.length];
   return {
     task,
     text: pick.text({
       name: task.name,
+      when,
       estimate: task.estimateMinutes !== undefined ? formatEstimate(task.estimateMinutes) : undefined,
       free: formatEstimate(freeMinutes),
     }),

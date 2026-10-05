@@ -531,7 +531,14 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
               </span>
             </div>
 
-            {!showingUpcoming && openTasks.length > 0 && <CapacityStrip openTasks={openTasks} />}
+            {openTasks.length > 0 && <CapacityStrip openTasks={openTasks} />}
+            {/* Today is clear: the same bar, nudging toward an upcoming task. */}
+            {showingUpcoming && (
+              <CapacityStrip
+                openTasks={[]}
+                upcoming={upcoming.map(({ task, date }) => ({ task, when: formatUpcomingDay(date, today) }))}
+              />
+            )}
 
             {topRows.length === 0 ? (
               <p className="text-sm text-muted-foreground">All clear. Nothing left to run.</p>

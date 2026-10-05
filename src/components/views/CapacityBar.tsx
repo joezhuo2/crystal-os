@@ -1,6 +1,6 @@
 import { Gauge } from "lucide-react";
 import type { Task } from "@/contexts/AppContext";
-import { formatEstimate, suggestNextTask } from "@/lib/capacity";
+import { formatEstimate, suggestNextTask, suggestUpcomingTask } from "@/lib/capacity";
 import { useCapacitySettings } from "@/lib/capacitySettings";
 import { useTodayCapacity, type TodayCapacityState } from "@/hooks/useTodayCapacity";
 
@@ -161,12 +161,23 @@ function FreeTimeTrack({ capacity }: { capacity: TodayCapacityState }) {
 /**
  * The compact bar on Home's Engine card: free time left today, the planned
  * work against it, and a nudge toward the next task. `openTasks` are the
- * card's open tasks, most pressing first.
+ * card's open tasks, most pressing first. Once they are all done, the nudge
+ * offers one of `upcoming` instead (highest priority first, then earliest
+ * date), with `when` its day as the card labels it.
  */
-export function CapacityStrip({ openTasks }: { openTasks: Task[] }) {
+export function CapacityStrip({
+  openTasks,
+  upcoming = [],
+}: {
+  openTasks: Task[];
+  upcoming?: { task: Task; when: string }[];
+}) {
   const capacity = useTodayCapacity();
   const tone = toneOf(capacity);
-  const suggestion = suggestNextTask(openTasks, capacity.freeMinutes, capacity.hourKey);
+  const suggestion =
+    openTasks.length > 0
+      ? suggestNextTask(openTasks, capacity.freeMinutes, capacity.hourKey)
+      : suggestUpcomingTask(upcoming, capacity.freeMinutes, capacity.hourKey);
   return (
     <div className="mb-3 space-y-1">
       <FreeTimeTrack capacity={capacity} />

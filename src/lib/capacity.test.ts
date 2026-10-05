@@ -8,6 +8,7 @@ import {
   MAX_ESTIMATE,
   mergeIntervals,
   suggestNextTask,
+  suggestUpcomingTask,
   timeToMinutes,
   todayCapacity,
 } from "./capacity";
@@ -243,5 +244,32 @@ describe("suggestNextTask", () => {
       Array.from({ length: 24 }, (_, h) => suggestNextTask([t], 120, `2026-10-05T${h}`)?.text),
     );
     expect(texts.size).toBeGreaterThan(1);
+  });
+});
+
+describe("suggestUpcomingTask", () => {
+  it("keeps the upcoming order and offers the first that fits", () => {
+    const s = suggestUpcomingTask(
+      [
+        { task: task({ name: "Urgent big", priority: "urgent", estimateMinutes: 600 }), when: "Tomorrow" },
+        { task: task({ name: "High small", priority: "high", estimateMinutes: 45 }), when: "Thu" },
+        { task: task({ name: "Low loose", priority: "low" }), when: "Tomorrow" },
+      ],
+      120,
+      "2026-10-05T10",
+    );
+    expect(s?.task.name).toBe("High small");
+    expect(s?.text).toContain("High small");
+  });
+
+  it("names the day in its own wording", () => {
+    const t = task({ id: "fixed-upcoming", name: "Taxes" });
+    const texts = Array.from({ length: 48 }, (_, h) => suggestUpcomingTask([{ task: t, when: "Thu" }], 120, `s${h}`)?.text);
+    expect(texts).toContain("All done for today. Taxes is up on Thu.");
+    expect(suggestUpcomingTask([{ task: t, when: "Tomorrow" }], 120, "x")).not.toBeNull();
+  });
+
+  it("offers nothing without free time", () => {
+    expect(suggestUpcomingTask([{ task: task(), when: "Tomorrow" }], 0, "seed")).toBeNull();
   });
 });
