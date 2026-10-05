@@ -14,6 +14,7 @@ import {
 } from "@/lib/seedCategories";
 import { ascNullsLast, loadInPages, mergePage } from "@/lib/pagedLoad";
 import { appUi } from "@/lib/appUi";
+import { clampEstimate } from "@/lib/capacity";
 import {
   isRetryable,
   offlineQueue,
@@ -42,6 +43,8 @@ export type Task = {
   categoryId: string;
   completed: boolean;
   repeat?: RepeatRule;
+  /** Expected effort in minutes (1–1440), or undefined for no estimate. */
+  estimateMinutes?: number;
   /** When the task was added (ISO). Read-only: set by the database. */
   createdAt?: string;
 };
@@ -198,7 +201,7 @@ function cacheSetters(client: QueryClient) {
 
 // ── helpers to map between Supabase snake_case and app camelCase ──
 
-type TaskRow = ReturnType<typeof mapTaskToDb> & { id: string; created_at?: string };
+type TaskRow = ReturnType<typeof mapTaskToDb> & { id: string; created_at?: string; estimate_minutes?: number | null };
 type TransactionRow = ReturnType<typeof mapTransactionToDb> & { id: string };
 type CategoryRow = ReturnType<typeof mapCategoryToDb> & { id: string };
 
@@ -214,6 +217,7 @@ function mapTaskFromDb(row: TaskRow): Task {
     categoryId: row.category_id,
     completed: row.completed,
     repeat: normalizeRepeat(row.repeat_kind, row.repeat_days, row.repeat_weekdays),
+    estimateMinutes: clampEstimate(row.estimate_minutes),
     createdAt: row.created_at,
   };
 }
@@ -229,6 +233,9 @@ function mapTaskToDb(task: Omit<Task, "id">) {
     category_id: task.categoryId,
     completed: task.completed,
     ...mapRepeatToDb(task.repeat),
+    // Only sent when there is one, so a database without migration 0005 still
+    // takes every task saved without an estimate.
+    ...(clampEstimate(task.estimateMinutes) ? { estimate_minutes: clampEstimate(task.estimateMinutes) } : {}),
   };
 }
 
@@ -626,6 +633,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
     if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
     if (updates.completed !== undefined) dbUpdates.completed = updates.completed;
+    // Like `repeat` below, an explicit undefined clears it; but a cleared
+    // estimate on a task that never had one sends nothing, for the same reason
+    // mapTaskToDb leaves the column out.
+    const estimate = clampEstimate(updates.estimateMinutes);
+    const estimateChanged = "estimateMinutes" in updates;
+    if (estimateChanged) {
+      const had = queryClient
+        .getQueryData<Task[]>(APP_DATA_KEYS.tasks)
+        ?.find((t) => t.id === id)?.estimateMinutes !== undefined;
+      if (estimate !== undefined || had) dbUpdates.estimate_minutes = estimate ?? null;
+    }
     // Unlike the other fields, an explicit `repeat` key is written even when
     // it is undefined: that is how a repeat is turned off, and the columns have
     // to be cleared to null for it to stay off after a reload.
@@ -635,12 +653,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (!(await saveWrite({ op: "update", table: "tasks", id, row: dbUpdates }, "update the task"))) return;
     setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updates, ...(repeatChanged ? { repeat } : {}) } : t)),
+      prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              ...updates,
+              ...(repeatChanged ? { repeat } : {}),
+              ...(estimateChanged ? { estimateMinutes: estimate } : {}),
+            }
+          : t,
+      ),
     );
     // Unticking takes back the tick's history row, so a misclick is not
     // counted as done in The Orbit.
     if (updates.completed === false) void forgetCompletion(id);
-  }, [forgetCompletion, saveWrite, setTasks]);
+  }, [forgetCompletion, queryClient, saveWrite, setTasks]);
 
   const completeTask = useCallback(
     (task: Task) => {

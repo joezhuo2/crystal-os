@@ -38,6 +38,7 @@ import { GlassTip } from "@/components/ui/glass-tooltip";
 import { PRIORITY_RANK, upcomingTasks } from "@/lib/homeTasks";
 import { NebulaSpace, PortalSpace, TerminalSpace } from "./HomeSpaces";
 import HomeGrid, { type HomeWidget } from "./HomeGrid";
+import { CapacityStrip } from "./CapacityBar";
 import { useOrbitReady, useOrbitTeaser } from "@/hooks/useOrbitReview";
 import { formatMinutes } from "@/lib/orbitReview";
 import { orbitStore } from "@/lib/orbitStore";
@@ -529,6 +530,8 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
                   : `open task${openTasks.length !== 1 ? "s" : ""} today`}
               </span>
             </div>
+
+            {!showingUpcoming && openTasks.length > 0 && <CapacityStrip openTasks={openTasks} />}
 
             {topRows.length === 0 ? (
               <p className="text-sm text-muted-foreground">All clear. Nothing left to run.</p>

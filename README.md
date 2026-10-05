@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-629%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.9.0-6366F1)
+![Tests](https://img.shields.io/badge/tests-673%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.9.1-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.9.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.9.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -20,9 +20,9 @@ Current release: **v0.9.0** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | Feature | Description |
 |---------|-------------|
 | **🪐 The Orbit** | Weekly and monthly reviews, between Home and the Engine. A Weekly/Monthly switch shows the latest finished period (ready Sunday at 6 PM, or 6 PM on the month's last day) with arrows to browse back: tasks completed and added (counts and names, the first five then **+N more**), Pomodoro focus total and per-day (and per-week) averages with a bar per day, income and spending against the last period, the next period's calendar events and tasks as a mini agenda (by day, or by week for a month), new vault notes, and a trend list against the last period and the 4-week or 3-month average. **Habits**: the Today card has a chip per habit to tick off today, a streak on hover, and a grid of this week (or this month, with the Monthly switch) lit by how many were done each day; the gear opens a manager to add, rename, recolour, reorder and remove them. Each review gets a Habits card (days done, rate, longest streak and streak at the end per habit, plus an optional note) and a habit completion trend. Pick an optional reflection prompt, add a note, and **Export to vault** writes `Reviews/Weekly/2026-W40.md` or `Reviews/Monthly/2026-10.md`, asking before overwriting. A dot on the nav icon and a chip on Home mark a review you have not opened yet; **Settings → The Orbit → Auto-export reviews** writes each one when it is ready. Its own pale black hole backdrop and ice-and-lavender liquid glass, also on the Home greeting card, which opens it |
-| **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule. The Engine page has its own red black hole backdrop and ember palette, matching the Horizon's look. Switching between List and Board fades one view out and the other in (instantly in performance mode) |
+| **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule. Each task can carry a time estimate (15m, 30m, 1h, 2h, 4h or any number of minutes), shown on its card, and a **Fits today?** bar at the top of the page weighs today's open estimates against the free time left in your work day, minus timed events in your Horizon calendar. See [Time estimates and capacity](#-time-estimates-and-capacity). The Engine page has its own red black hole backdrop and ember palette, matching the Horizon's look. Switching between List and Board fades one view out and the other in (instantly in performance mode) |
 | **📅 The Horizon** | Google Calendar, live: month, week, day and agenda views (week and day are hour grids: overlapping events sit side by side, a line marks now, and clicking an empty slot creates an event at that half hour), create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along. The page has its own black hole backdrop and blue palette (see [The Horizon](#-the-horizon-google-calendar-integration)) |
-| **🏠 Home widgets** | A 3×3 grid: the greeting and clock (on The Orbit's black hole, with this week's tasks done and focus time; opens The Orbit), weather (with a one-line nudge such as "Rain from 4 PM, take an umbrella"), and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Engine, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Engine's red black hole, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device |
+| **🏠 Home widgets** | A 3×3 grid: the greeting and clock (on The Orbit's black hole, with this week's tasks done and focus time; opens The Orbit), weather (with a one-line nudge such as "Rain from 4 PM, take an umbrella"), and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, a free-time bar with today's planned work and a nudge toward the next task ("Want to start Write report?"), or once today is clear the next 14 days' tasks, highest priority first), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Engine, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Engine's red black hole, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **📶 Offline saves** | Task and transaction changes made while Supabase is unreachable are kept on the device and replayed in order once it answers again (on reconnect, every 30 s, and at the next start), instead of failing the save. See [Offline queue](#-offline-queue) |
 | **🌤️ Weather** | Current conditions + 7-day forecast for any of ~840 Canadian locations (searchable city picker, or **Use my location** for the nearest one), the Air Quality Health Index from the nearest station with its 24 h peak, the UV index with advice, and how much daylight is left, over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
@@ -204,7 +204,8 @@ src/
 │   │   ├── orbit/HabitsToday.tsx # The Today card's habit chips and week/month grid
 │   │   ├── orbit/HabitManager.tsx # Add, rename, recolour, reorder and remove habits
 │   │   ├── HomeSpaces.tsx      # Home's themed Nebula, Portal and Terminal boxes
-│   │   ├── TasksPage.tsx       # Task list, form, filtering, Pomodoro
+│   │   ├── TasksPage.tsx       # Task list, form (with estimates), filtering, Pomodoro
+│   │   ├── CapacityBar.tsx     # Fits today? card for The Engine and the slim strip on Home's Engine card
 │   │   ├── CalendarPage.tsx    # Google Calendar: month, week, day + agenda, event CRUD
 │   │   ├── TimeGrid.tsx        # Hour-by-hour columns for the week and day views
 │   │   ├── FinancialsPage.tsx  # Transactions, summaries, charts
@@ -235,6 +236,7 @@ src/
 │   ├── useEscapeKey.ts         # Stacked Escape-to-close for overlays (topmost closes first)
 │   ├── useWeather.ts           # Weather API integration + searchable city list
 │   ├── useAirQuality.ts        # AQHI at the station nearest the city, with its 24 h forecast
+│   ├── useTodayCapacity.ts     # Today's estimates against the work window and calendar, on a minute clock
 │   ├── useSkyScene.ts          # Living Sky state: phase of day, weather look, moon, for the chosen city
 │   ├── use-toast.ts            # Toast notifications (Sonner)
 │   └── use-mobile.tsx          # Responsive breakpoint hook
@@ -257,6 +259,8 @@ src/
 │   ├── portalNative.ts         # Desktop Portal bridge (portal_* commands)
 │   ├── installerNative.ts      # Desktop installer bridge (installer_* and update_* commands, version helpers)
 │   ├── homeTasks.ts            # Home Engine ordering: priority ranks, upcoming tasks
+│   ├── capacity.ts             # Task estimates, busy intervals from events, today's planned vs free time
+│   ├── capacitySettings.ts     # The Engine's work window (localStorage)
 │   ├── homeLayout.ts           # Home grid order, hidden widgets and sizes, saved in localStorage
 │   ├── timeGrid.ts             # Week/day view dates and overlapping-event layout
 │   ├── atmosphereScene.ts      # Living Sky maths: sky phase, weather codes → effects, aurora/star strength, moon, pine ridge
@@ -446,12 +450,25 @@ Crystal OS shows native toasts (Windows notifications on desktop through `tauri-
 
 What to say and when lives in `src/lib/notifications.ts` (pure, tested); `src/components/NotificationScheduler.tsx` checks tasks and events every 30 s while signed in, and the Pomodoro and Portal stores are watched from `main.tsx`. Each task and event reminder is shown once: its key is kept in `localStorage` (`crystal-os-notified`, two days), so a restart does not repeat it. Settings are saved in `crystal-os-notifications`.
 
+## ⏱️ Time estimates and capacity
+
+**Estimates.** The task form has an **Estimate** row: chips for 15m, 30m, 1h, 2h and 4h (tap the lit one again to clear it) and a minutes box for anything else, up to 1440. It is effort, not scheduling: start and end still say when a task is due. Estimates are stored in `tasks.estimate_minutes` ([migration 0005](supabase/migrations/0005_task_estimates.sql)).
+
+**Fits today?** A card at the top of The Engine, and a slim bar on Home's Engine card, compare two numbers (`todayCapacity` in `src/lib/capacity.ts`):
+
+- **Planned:** the estimates of today's open tasks, repeats included. Overdue tasks are left out. Tasks without an estimate add nothing and are counted instead ("2 tasks without an estimate").
+- **Free:** the work window (**Settings → The Engine**, 9 AM to 5 PM by default, per device) from now until it ends, minus timed events in the Google calendar picked in The Horizon. Overlapping events count once, events that cross midnight are clipped to today, and all-day events are ignored. Without a connected calendar, free time is the window alone and the card says so.
+
+Home's Engine card shows the same numbers as a free-time bar (the rest of the work day, its free part, and the planned work over it) with a one-line nudge toward the next task that fits, in one of six wordings that change hourly (`suggestNextTask`).
+
+The bar is green while the work fits, amber past 85% of free time, and red with the part that does not fit striped once it is over ("Over by 45m"). It updates every minute on the device clock and reuses the Home Horizon card's cached events, so it makes no extra calendar request.
+
 ## 🗄️ Database Schema (Supabase)
 
 ```sql
 tasks                (id, user_id, name, start_date, start_time, end_date,
                       end_time, priority, category_id, completed, repeat_days,
-                      repeat_kind, repeat_weekdays)
+                      repeat_kind, repeat_weekdays, estimate_minutes)
 transactions         (id, user_id, name, amount, type, category_id, date)
 task_categories      (id, user_id, name, color)
 financial_categories (id, user_id, name, color)
@@ -481,6 +498,9 @@ Then apply [`supabase/migrations/0004_habits.sql`](supabase/migrations/0004_habi
 (v0.8.10), which adds `habits` and `habit_checks` (a row per habit per local day done) for the
 habit tracker. It is safe to run twice. Until it is applied the Today card says so and the reviews
 leave habits out.
+Then apply [`supabase/migrations/0005_task_estimates.sql`](supabase/migrations/0005_task_estimates.sql)
+(v0.9.1), which adds `tasks.estimate_minutes` (1 to 1440, null for no estimate). It is safe to run twice.
+Until it is applied, saving a task with an estimate fails; tasks without one save as before.
 
 ---
 

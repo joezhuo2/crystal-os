@@ -47,20 +47,27 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
   // The scrim and the card fade side by side, never one inside the other:
   // opacity on an ancestor of the card's backdrop-filter drops the blur for
   // the length of the fade, and it snapped back at the end (a flicker).
+  // The card also runs a short tween rather than Motion's default spring on
+  // `scale`, and keeps its compositor layer (will-change): the spring's
+  // overshoot, then Motion resetting the transform to none when it settled,
+  // re-rasterised the blur in WebView2 and flashed the card on desktop.
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <m.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
         className="absolute inset-0"
         style={{ background: "hsl(var(--background) / 0.8)" }}
         onClick={onClose}
       />
       <m.div
-        initial={{ scale: 0.95, opacity: 0 }}
+        initial={{ scale: 0.96, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
+        exit={{ scale: 0.96, opacity: 0 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
+        style={{ willChange: "transform, opacity" }}
         className="glass-card relative p-6 w-full max-w-md max-h-[80vh] overflow-y-auto scrollbar-thin"
       >
         <div className="flex items-center justify-between mb-5">

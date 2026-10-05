@@ -5,6 +5,36 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.1] - 2026-10-05
+
+Time estimates, and whether today's work fits the day.
+
+### Added
+
+- **Time estimates on tasks.** The task form has an **Estimate** row: chips for 15m, 30m, 1h, 2h and 4h (tap the lit one again to clear it) and a minutes box for anything else, from 1 to 1440. An estimate is effort, not scheduling: start and end still say when a task is due. Stored in the new `tasks.estimate_minutes` column.
+- **Fits today? on The Engine.** A card at the top of the task list weighs today's planned work against today's free time (`todayCapacity` in `src/lib/capacity.ts`, fed by `useTodayCapacity`).
+  - Planned: the estimates of today's open tasks, repeats included; overdue tasks are left out. Tasks without an estimate add nothing and are counted instead ("2 tasks without an estimate").
+  - Free: the work window from now until it ends, minus the timed events in the Google calendar picked in The Horizon. Overlapping events count once, events crossing midnight are clipped to today, and all-day events are ignored. Without a connected calendar, free time is the window alone and the card says so.
+  - The verdict reads "Fits · 1h 20m spare", "Just fits" or "Over by 45m". The bar is green while the work fits, amber past 85% of free time, and red once it is over, with the part that does not fit striped. It updates every minute on the device clock.
+- **Estimates on task cards.** Each task in The Engine's list and board shows its estimate after the priority, repeat and category ("Med Learning 3h", with a clock icon). Tasks without one show nothing extra.
+- **Free time on Home's Engine card**, under the open-task count while today has open tasks. The bar is what is left of the work day: the pale part is free time (events take the rest) and today's planned work sits over it in green, amber or red. Under it, "3h 50m free · 2h 30m planned · Fits · 1h 20m spare · 1 unestimated", then a nudge toward the next task: the most pressing open task whose estimate fits the free time, or else the first without an estimate. The nudge has six wordings ("Want to start Write report?", "3h 50m free. How about Write report?", "Next up: Write report. Ready when you are.", "Good moment to knock out Write report.", and for estimated tasks "Write report takes about 1h. It fits, want to start?" and "You have time for Write report (1h). Go?"), picked by the task, the day and the hour, so it holds for an hour and changes through the day. No nudge once the day's free time is gone (`suggestNextTask` in `src/lib/capacity.ts`).
+- **Settings → The Engine.** **Work day starts** and **Work day ends** (9 AM and 5 PM by default, quarter-hour steps), saved per device in `localStorage` (`crystal-os-capacity`). A window that does not end after it starts is refused with a toast.
+- `supabase/migrations/0005_task_estimates.sql`, `src/lib/capacity.ts` and `src/lib/capacitySettings.ts` (both unit-tested), `src/hooks/useTodayCapacity.ts` and `src/components/views/CapacityBar.tsx`.
+
+### Changed
+
+- **`Task` carries an optional `estimateMinutes`.** `updateTask` clears it when the key is present and undefined, as it does for `repeat`.
+- **`TODO.md`:** *Engine: time estimates and capacity* is done and removed.
+
+### Fixed
+
+- **The Categories dialog flickered again on desktop** (The Engine and The Vault). The card scaled in on Motion's default spring, which overshoots, and when it settled Motion reset the transform, so WebView2 dropped the card's compositor layer and re-rasterised its blur in a visible flash. It now runs the same short 180 ms tween as the Horizon day panel and keeps its layer (`will-change`), in `CategoryManager.tsx`.
+
+### Notes
+
+- **Apply `supabase/migrations/0005_task_estimates.sql`** in the Supabase SQL Editor. It is safe to run twice. Until it is applied, saving a task with an estimate fails; the app only sends `estimate_minutes` for tasks that have one, so everything else saves as before.
+- The capacity bar reuses the Home Horizon card's cached query for today's events, so it adds no calendar requests. On desktop it only asks for calendar status once the calendar has been connected, as the Horizon card does, so it never starts the sidecar on its own.
+
 ## [v0.9.0] - 2026-10-04 - Daily Rhythm (Release Summary)
 
 *This release rounds out The Atmosphere: the Air Quality Health Index from the nearest Environment Canada station, the UV index with advice, and a daylight bar that says how much of the day is left and how fast the days are changing.*

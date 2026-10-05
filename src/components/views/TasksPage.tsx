@@ -2,7 +2,7 @@ import { memo, useEffect, useState, useRef } from "react";
 import { useAppActions, useTaskCategories, useTasks, type Task, type Priority } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
 import { m, AnimatePresence } from "framer-motion";
-import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock } from "lucide-react";
+import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock, Clock } from "lucide-react";
 import {
   cleanRepeat,
   describeRepeat,
@@ -19,6 +19,8 @@ import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useAppActivity } from "@/lib/appActivity";
 import PomodoroTimer from "./PomodoroTimer";
 import { CategoryManagerButton } from "./CategoryManager";
+import { CapacityCard } from "./CapacityBar";
+import { clampEstimate, ESTIMATE_PRESETS, formatEstimate, MAX_ESTIMATE } from "@/lib/capacity";
 
 const priorityLabel: Record<Priority, string> = { low: "Low", medium: "Med", high: "High", urgent: "Urgent" };
 const priorityClass: Record<Priority, string> = { low: "priority-low", medium: "priority-medium", high: "priority-high", urgent: "priority-urgent" };
@@ -64,6 +66,11 @@ const TaskItem = memo(function TaskItem({ task, draggable, overdue }: { task: Ta
           {cat && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: `${cat.color}22`, color: cat.color }}>
               {cat.name}
+            </span>
+          )}
+          {task.estimateMinutes && (
+            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 tabular-nums" title="Estimate">
+              <Clock className="w-2.5 h-2.5" />{formatEstimate(task.estimateMinutes)}
             </span>
           )}
         </div>
@@ -194,6 +201,34 @@ function buildRepeat(r: ReturnType<typeof initialRepeat>): RepeatRule | undefine
   }
 }
 
+/** Quick picks for how long a task takes, plus a minutes box for anything else. Tapping the lit chip clears it. */
+function EstimatePicker({ value, onChange }: { value: number | undefined; onChange: (v: number | undefined) => void }) {
+  return (
+    <div>
+      <label className="text-xs text-muted-foreground mb-1 block" id="estimate-label">Estimate</label>
+      <div className="flex items-center gap-1" role="group" aria-labelledby="estimate-label">
+        {ESTIMATE_PRESETS.map((minutes) => {
+          const on = value === minutes;
+          return (
+            <button key={minutes} type="button" aria-pressed={on}
+              onClick={() => onChange(on ? undefined : minutes)}
+              className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors ${
+                on ? "bg-primary text-primary-foreground" : "bg-secondary/50 text-muted-foreground hover:text-foreground"
+              }`}>
+              {formatEstimate(minutes)}
+            </button>
+          );
+        })}
+        <input type="number" min={1} max={MAX_ESTIMATE} inputMode="numeric" placeholder="min"
+          aria-label="Estimate in minutes"
+          value={value ?? ""}
+          onChange={(e) => onChange(clampEstimate(e.target.value))}
+          className="w-16 bg-secondary/50 rounded-lg px-2 py-1.5 text-sm outline-none" />
+      </div>
+    </div>
+  );
+}
+
 export function TaskForm({ onClose, editingTask }: { onClose: () => void; editingTask?: Task | null }) {
   const { addTask, updateTask } = useAppActions();
   const taskCategories = useTaskCategories();
@@ -208,15 +243,17 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
     priority: (editingTask?.priority || "medium") as Priority,
     categoryId: editingTask?.categoryId || taskCategories[0]?.id || "",
   });
+  const [estimate, setEstimate] = useState<number | undefined>(editingTask?.estimateMinutes);
 
   const submit = () => {
     if (!form.name.trim()) return;
     const rule = buildRepeat(repeat);
     if (editingTask) {
       // Always send repeat, undefined included: updateTask clears the repeat for it.
-      updateTask(editingTask.id, { ...form, repeat: rule, completed: editingTask.completed });
+      // Same for estimateMinutes: undefined clears it.
+      updateTask(editingTask.id, { ...form, repeat: rule, estimateMinutes: estimate, completed: editingTask.completed });
     } else {
-      addTask({ ...form, completed: false, repeat: rule });
+      addTask({ ...form, completed: false, repeat: rule, estimateMinutes: estimate });
     }
     onClose();
   };
@@ -290,6 +327,7 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
             options={taskCategories.map((c) => ({ value: c.id, label: c.name, color: c.color }))}
             className="flex-1" />
         </div>
+        <EstimatePicker value={estimate} onChange={setEstimate} />
         <div className="space-y-2">
           <ThemedSelect value={repeat.kind} aria-label="Repeat"
             onChange={(v) => setRepeat((r) => ({ ...r, kind: v as RepeatChoice }))}
@@ -415,6 +453,7 @@ export default function TasksPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4">
         <div className="space-y-4">
+          <CapacityCard />
           {/* Switching List/Board fades the old view out, then the new one in;
               reduced motion (OS setting or performance mode) swaps at once. The
               fade runs on each glass card and header (data-fade on .engine-view,

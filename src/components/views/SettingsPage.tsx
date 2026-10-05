@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { AppWindow, Bell, Bug, Check, ChevronDown, ClipboardCopy, CloudSun, Download, FolderOpen, Gauge, ImagePlus, Keyboard, Orbit, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
+import { AppWindow, Bell, Bug, Check, ChevronDown, ClipboardCopy, CloudSun, Download, FolderOpen, Gauge, ImagePlus, Keyboard, ListTodo, Orbit, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 import NebulaSettingsSection from "@/components/nebula/NebulaSettingsSection";
 import InstallerSection from "@/components/views/InstallerSection";
@@ -21,6 +21,8 @@ import { IMAGE_TYPES } from "@/lib/atmosphereImage";
 import { buildDiagnosticsReport } from "@/lib/diagnostics";
 import { MAX_EVENT_LEAD, notifySettings, useNotifySettings } from "@/lib/notifySettings";
 import { notify } from "@/lib/notifications";
+import { capacitySettings, useCapacitySettings } from "@/lib/capacitySettings";
+import { TimeField } from "@/components/ui/field-controls";
 
 const COLLAPSED_KEY = "crystal-os-settings-collapsed";
 
@@ -362,6 +364,7 @@ export default function SettingsPage() {
   const sky = useAtmosphere();
   const orbit = useOrbitStore();
   const notifications = useNotifySettings();
+  const capacity = useCapacitySettings();
 
   const vaultStatus = useVaultStatus();
   const pickVault = usePickVault();
@@ -513,6 +516,35 @@ export default function SettingsPage() {
             </div>
           </Section>
         )}
+
+        <Section id="engine" icon={ListTodo} title="The Engine">
+          <Row
+            title="Work day starts"
+            description="Free time for the Fits today? bar counts from here, or from now once the day has started."
+          >
+            <TimeField
+              value={capacity.dayStart}
+              aria-label="Work day starts"
+              onChange={(v) => {
+                if (!capacitySettings.setTime("dayStart", v)) toast.error("The work day has to start before it ends.");
+              }}
+              className="w-32 px-2"
+            />
+          </Row>
+          <Row
+            title="Work day ends"
+            description="Free time stops here. Timed events in the Google calendar picked in The Horizon are taken out of it."
+          >
+            <TimeField
+              value={capacity.dayEnd}
+              aria-label="Work day ends"
+              onChange={(v) => {
+                if (!capacitySettings.setTime("dayEnd", v)) toast.error("The work day has to end after it starts.");
+              }}
+              className="w-32 px-2"
+            />
+          </Row>
+        </Section>
 
         <Section id="notifications" icon={Bell} title="Notifications">
           <Row

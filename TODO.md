@@ -1,9 +1,6 @@
 # Planned Features
-- [v0.9.0] Current features
 - [v0.10.0] - engine options update
-- [ ]**Engine: time estimates and capacity.** An estimate per task and a "fits today?" bar comparing the total against free time in the calendar.
-- [ ] **Task notes and subtasks.** A `notes` text field and a checklist of subtasks on each task. 
-    - [ ] option to make an existing note another note's subtask
+- [ ] **Task notes and subtasks.** A `notes` text field and a checklist of subtasks on each task, option to make an existing note another note's subtask
     - [ ] Optionally link a task to a vault note so the details live in Obsidian. (v2)
 - [ ] **Snooze / defer tasks.** Hide a task until a chosen date, plus a "Someday" bucket to keep the Engine short.
 - [ ] **Pomodoro linked to a task.** Start a focus session on a specific task and track time per task, so The Orbit shows where focus went. Focus mode also mutes Portal badges.
@@ -21,6 +18,7 @@
 - redo portal/obsidian/nebula ui (change to glassmorphism with some background)
 - glassmorphism ui to all home page widget cards (except terminal)
 - glassmorphism ui loading/login screen
+- global search bar should be an overlay on any screen, and fully themed to current page
 
 ## Before first release (v1.0.0)
 

@@ -79,3 +79,36 @@ describe("TaskForm repeats", () => {
     expect(addTask).toHaveBeenCalledWith(expect.objectContaining({ repeat: undefined }));
   });
 });
+
+describe("TaskForm estimates", () => {
+  beforeEach(() => {
+    addTask.mockClear();
+    updateTask.mockClear();
+  });
+
+  it("saves a quick-pick estimate on a new task", () => {
+    render(<TaskForm onClose={() => {}} />);
+    fireEvent.change(screen.getByPlaceholderText("Task name..."), { target: { value: "Write report" } });
+    fireEvent.click(screen.getByRole("button", { name: "1h" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add Task" }));
+    expect(addTask).toHaveBeenCalledWith(expect.objectContaining({ name: "Write report", estimateMinutes: 60 }));
+  });
+
+  it("takes a custom number of minutes", () => {
+    render(<TaskForm onClose={() => {}} editingTask={editing} />);
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Estimate in minutes" }), { target: { value: "50" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    expect(updateTask).toHaveBeenCalledWith("t1", expect.objectContaining({ estimateMinutes: 50 }));
+  });
+
+  it("clears an estimate when its lit chip is tapped again", () => {
+    render(<TaskForm onClose={() => {}} editingTask={{ ...editing, estimateMinutes: 30 }} />);
+    const chip = screen.getByRole("button", { name: "30m" });
+    expect(chip).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(chip);
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    const updates = updateTask.mock.calls[0][1];
+    expect("estimateMinutes" in updates).toBe(true);
+    expect(updates.estimateMinutes).toBeUndefined();
+  });
+});
