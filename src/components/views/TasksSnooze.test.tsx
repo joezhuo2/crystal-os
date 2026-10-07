@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { Task } from "@/contexts/AppContext";
 import { toLocalDateStr, addDays } from "@/lib/utils";
 
@@ -55,14 +55,14 @@ describe("The Engine with snoozed tasks", () => {
     expect(screen.getByText("Woke")).toBeTruthy();
     expect(screen.queryByText("Later")).toBeNull();
     expect(screen.queryByText("Dream")).toBeNull();
-    const toggle = screen.getByRole("button", { name: /Snoozed/ });
+    const toggle = screen.getByRole("button", { name: "Show 2 snoozed" });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(within(toggle).getByText("2")).toBeTruthy();
   });
 
   it("opens the section, and Unsnooze clears the snooze", () => {
     render(<TasksPage />);
-    fireEvent.click(screen.getByRole("button", { name: /Snoozed/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Show 2 snoozed" }));
+    expect(screen.getByRole("button", { name: "Hide 2 snoozed" }).getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByText("Later")).toBeTruthy();
     expect(screen.getByText("Dream")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Unsnooze Dream" }));
@@ -105,6 +105,43 @@ describe("The Engine with snoozed tasks", () => {
   it("hides the section when nothing is snoozed", () => {
     tasks = [base({ id: "a", name: "Awake" })];
     render(<TasksPage />);
-    expect(screen.queryByRole("button", { name: /Snoozed/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /snoozed/ })).toBeNull();
+  });
+});
+
+describe("The Engine with completed tasks", () => {
+  beforeEach(() => {
+    tasks = [
+      base({ id: "a", name: "Open" }),
+      base({ id: "b", name: "Done one", completed: true }),
+      base({ id: "c", name: "Done two", completed: true }),
+      base({ id: "d", name: "Napping", snoozedUntil: addDays(today, 2) }),
+    ];
+  });
+
+  it("folds completed tasks under a button above the snoozed one", () => {
+    render(<TasksPage />);
+    expect(screen.getByText("Open")).toBeTruthy();
+    expect(screen.queryByText("Done one")).toBeNull();
+    expect(screen.queryByText("Done two")).toBeNull();
+    const completed = screen.getByRole("button", { name: "Show 2 completed" });
+    const snoozed = screen.getByRole("button", { name: "Show 1 snoozed" });
+    expect(completed.compareDocumentPosition(snoozed) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("shows the completed tasks when expanded, and folds them again", () => {
+    render(<TasksPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Show 2 completed" }));
+    expect(screen.getByText("Done one")).toBeTruthy();
+    expect(screen.getByText("Done two")).toBeTruthy();
+    expect(screen.queryByText("Napping")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Hide 2 completed" }));
+    expect(screen.getByRole("button", { name: "Show 2 completed" }).getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("has no button when nothing is completed", () => {
+    tasks = [base({ id: "a", name: "Open" })];
+    render(<TasksPage />);
+    expect(screen.queryByRole("button", { name: /completed/ })).toBeNull();
   });
 });

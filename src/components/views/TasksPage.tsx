@@ -617,6 +617,63 @@ function useSplitTasks(tasks: Task[]) {
  * The collapsed "Snoozed (n)" section under the List and Board: dated snoozes
  * soonest first, then Someday. Opens and closes on the card's expand ease.
  */
+/**
+ * A "Show 3 completed" button over a list that stays folded away until it is
+ * pressed. Opens and closes on the same ease as a card's details.
+ */
+function CollapsedGroup({
+  id,
+  label,
+  icon,
+  count,
+  open,
+  onToggle,
+  children,
+}: {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  if (!count) return null;
+  return (
+    <section aria-labelledby={`${id}-heading`} className="space-y-2">
+      <button
+        data-fade-unit
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={`${id}-list`}
+        className="flex w-full items-center gap-2 px-1 py-1 rounded-md text-left text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {icon}
+        <h2 id={`${id}-heading`} className="text-xs uppercase tracking-widest">
+          {open ? "Hide" : "Show"} {count} {label}
+        </h2>
+        <ChevronDown className={`ml-auto w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <m.div
+            id={`${id}-list`}
+            key={id}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={EXPAND_TRANSITION}
+            className="overflow-hidden"
+          >
+            <div className="space-y-2 pb-1">{children}</div>
+          </m.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
 function SnoozedSection({
   tasks,
   childrenOf,
@@ -630,50 +687,28 @@ function SnoozedSection({
 }) {
   const [open, setOpen] = useState(false);
   const { dated, someday } = useMemo(() => snoozedSections(tasks), [tasks]);
-  const count = dated.length + someday.length;
-  if (!count) return null;
   const card = (task: Task) => (
     <TaskItem key={task.id} task={task} subtasks={childrenOf.get(task.id)} nesting={nesting} today={today} />
   );
   return (
-    <section aria-labelledby="snoozed-heading" className="mt-4 space-y-2">
-      <button
-        data-fade-unit
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-controls="snoozed-list"
-        className="flex w-full items-center gap-2 px-1 py-1 rounded-md text-left text-muted-foreground hover:text-foreground transition-colors"
+    <div className="mt-2">
+      <CollapsedGroup
+        id="snoozed"
+        label="snoozed"
+        icon={<AlarmClock className="w-3.5 h-3.5" />}
+        count={dated.length + someday.length}
+        open={open}
+        onToggle={() => setOpen((v) => !v)}
       >
-        <AlarmClock className="w-3.5 h-3.5" />
-        <h2 id="snoozed-heading" className="text-xs uppercase tracking-widest">Snoozed</h2>
-        <span className="text-[10px]">{count}</span>
-        <ChevronDown className={`ml-auto w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <m.div
-            id="snoozed-list"
-            key="snoozed"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={EXPAND_TRANSITION}
-            className="overflow-hidden"
-          >
-            <div className="space-y-2 pb-1">
-              <AnimatePresence initial={false}>{dated.map(card)}</AnimatePresence>
-              {someday.length > 0 && (
-                <>
-                  <p className="px-1 pt-2 text-[10px] uppercase tracking-widest text-muted-foreground/70">Someday</p>
-                  <AnimatePresence initial={false}>{someday.map(card)}</AnimatePresence>
-                </>
-              )}
-            </div>
-          </m.div>
+        <AnimatePresence initial={false}>{dated.map(card)}</AnimatePresence>
+        {someday.length > 0 && (
+          <>
+            <p className="px-1 pt-2 text-[10px] uppercase tracking-widest text-muted-foreground/70">Someday</p>
+            <AnimatePresence initial={false}>{someday.map(card)}</AnimatePresence>
+          </>
         )}
-      </AnimatePresence>
-    </section>
+      </CollapsedGroup>
+    </div>
   );
 }
 
@@ -697,6 +732,8 @@ export default function TasksPage() {
     return { top: allTop.filter((t) => !hidden.has(t.id)), snoozedTasks: snoozed };
   }, [tasks, today, allTop]);
   const [unnestTarget, setUnnestTarget] = useState(false);
+  // Held here, not in the list, which remounts on every Sort & Filter change.
+  const [showCompleted, setShowCompleted] = useState(false);
   // `selected` lights the toggle at once; `view` is what's on screen, which
   // trails it by the fade-out.
   const [selected, setSelected] = useState<View>("list");
@@ -761,7 +798,10 @@ export default function TasksPage() {
   // default, otherwise in the chosen sort order.
   const overdueTasks = sortedTasks.filter((t) => isTaskOverdue(t, today));
   if (shownPrefs.sort.key === "default") overdueTasks.sort((a, b) => a.endDate.localeCompare(b.endDate));
-  const otherTasks = sortedTasks.filter((t) => !isTaskOverdue(t, today));
+  // Completed tasks fold away under a "Show n completed" button at the foot
+  // of the List.
+  const otherTasks = sortedTasks.filter((t) => !t.completed && !isTaskOverdue(t, today));
+  const completedTasks = sortedTasks.filter((t) => t.completed);
 
   const rescheduleAll = () => {
     for (const task of overdueTasks) updateTask(task.id, rescheduleToToday(task, today));
@@ -884,6 +924,20 @@ export default function TasksPage() {
                     ))}
                   </AnimatePresence>
                 </div>
+                <CollapsedGroup
+                  id="completed"
+                  label="completed"
+                  icon={<Check className="w-3.5 h-3.5" />}
+                  count={completedTasks.length}
+                  open={showCompleted}
+                  onToggle={() => setShowCompleted((v) => !v)}
+                >
+                  <AnimatePresence initial={false}>
+                    {completedTasks.map((task) => (
+                      <TaskItem key={task.id} task={task} subtasks={childrenOf.get(task.id)} nesting={nesting} today={today} />
+                    ))}
+                  </AnimatePresence>
+                </CollapsedGroup>
               </div>
             ) : (
               <KanbanBoard key={viewKey} tasks={sortedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />

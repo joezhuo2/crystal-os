@@ -5,6 +5,23 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.7] - 2026-10-07 - Completed tasks tucked away.
+
+### Changed
+
+- **Completed tasks are hidden in The Engine's List view.** A **Show N completed** button (check icon, chevron) at the foot of the list expands them in place, and reads **Hide N completed** while open. It is absent when there are none.
+- **The Snoozed section's header is now a matching button.** It reads **Show N snoozed** / **Hide N snoozed** instead of "Snoozed (n)", sits under the completed button, and is absent when nothing is snoozed. It still appears under the Board.
+- **Both buttons open and close on the same 200 ms ease as card expansion.**
+- **Completed tasks always group at the bottom of the List, whatever the Sort & Filter sort order.** Under a non-default sort they used to be mixed into the list.
+- **The completed group stays open across Sort & Filter changes.** It is not saved across reloads.
+- **The Board is unchanged:** its Done column still shows completed tasks. The **Hide done** filter still exists; with it on, the completed button does not appear.
+- **`src/components/views/TasksPage.tsx`** carries the change; `src/components/views/TasksSnooze.test.tsx` is updated to match.
+- **`TODO.md`:** the matching item is done and removed.
+
+### Notes
+
+- No database change and no migration.
+
 ## [v0.9.6] - 2026-10-07 - Sort and filter The Engine.
 
 ### Added

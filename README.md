@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-778%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.9.6-6366F1)
+![Version](https://img.shields.io/badge/version-0.9.7-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.9.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.9.7** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -503,7 +503,7 @@ Stored in `tasks.notes`, `tasks.checklist` (JSON) and `tasks.parent_id` ([migrat
 
 A snoozed task is never overdue. When it wakes it returns as normal, overdue if its due date has passed. Today's date updates at local midnight and when the window regains focus, so tasks wake without a reload.
 
-**The Snoozed section.** A collapsed "Snoozed (n)" section at the bottom of both List and Board (opening and closing on the same 200 ms ease as card expansion) lists them: dated snoozes soonest first, then a **Someday** group. A snoozed card shows an "Until Mon, Oct 12" or "Someday" chip (click it to change the snooze) and an **Unsnooze** button in place of the snooze button.
+**The Snoozed section.** At the bottom of both List and Board, a **Show N snoozed** button (it reads **Hide N snoozed** while open) opens the section on the same 200 ms ease as card expansion. It lists them: dated snoozes soonest first, then a **Someday** group. The button is absent when nothing is snoozed. A snoozed card shows an "Until Mon, Oct 12" or "Someday" chip (click it to change the snooze) and an **Unsnooze** button in place of the snooze button.
 
 **Command bar.** Search for a task and choose **Snooze "…"…**, then a preset or Someday (no date picker there), or **Unsnooze "…"** when it is snoozed.
 
@@ -535,6 +535,7 @@ Stored in `tasks.snoozed_until` and `tasks.someday` ([migration 0007](supabase/m
 - The sort and filters apply to both List and Board.
 - The Overdue group stays on top: oldest first under the Default sort, otherwise in the chosen sort.
 - The Snoozed section is not affected.
+- In the List, completed tasks are hidden behind a **Show N completed** button (**Hide N completed** while open) at the foot of the list, above the snoozed button. They always group at the bottom, whatever the sort order. The group opens and closes on the same 200 ms ease, stays open when you change the sort or filters, and is not saved across reloads. The button is absent when there are none, or when **Hide done** is on. The Board's Done column is unchanged.
 - Filters look only at top-level tasks, and a parent that matches keeps all its subtasks.
 
 Saved per device in `localStorage` (`crystal-os-task-view`). The rules live in `src/lib/taskView.ts` (unit-tested).
