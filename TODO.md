@@ -1,6 +1,5 @@
 # Planned Features
 - [v0.10.0] - engine options update
-- [ ] [v0.9.6] **task list** (the engine sort/filter button) (new themed button directly right of categories, with sort options (date, priority, estimated time, etc.), (ascending/descending), and filter by (category, priority, estimated time (<=,>=,==), name, etc.), with open/close smooth animations)
 - [v0.9.7] show a configurable amount of completed tasks (others are hidden until expanded. (eg. "show xx more" button), and a "show xx snoozed" button under this one)
 - [v0.9.8] when changing start time to (eg. 9:00AM), end time should also be adjusted to 1h after (eg. 10:00AM for the earlier example)
 - [v0.9.9] animations when completing/uncompleting a task

@@ -159,6 +159,9 @@ export function Popup({
         <m.div
           ref={panelRef}
           role={role}
+          // Lets a popup that holds other controls tell their portalled panels
+          // apart from an outside click (see TaskViewMenu).
+          data-popup=""
           initial={{ opacity: 0, scale: 0.97, y: offset }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.97, y: offset }}

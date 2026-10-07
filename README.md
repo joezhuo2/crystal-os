@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-762%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.9.5-6366F1)
+![Tests](https://img.shields.io/badge/tests-778%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.9.6-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.9.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.9.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -20,7 +20,7 @@ Current release: **v0.9.5** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | Feature | Description |
 |---------|-------------|
 | **🪐 The Orbit** | Weekly and monthly reviews, between Home and the Engine. A Weekly/Monthly switch shows the latest finished period (ready Sunday at 6 PM, or 6 PM on the month's last day) with arrows to browse back: tasks completed and added (counts and names, the first five then **+N more**), Pomodoro focus total and per-day (and per-week) averages with a bar per day and a donut of focus by task (a slice per linked task, the rest as **Other**, unlinked time as **No task**; hover for time, share and sessions), income and spending against the last period, the next period's calendar events and tasks as a mini agenda (by day, or by week for a month), new vault notes, and a trend list against the last period and the 4-week or 3-month average. **Habits**: the Today card has a chip per habit to tick off today, a streak on hover, and a grid of this week (or this month, with the Monthly switch) lit by how many were done each day; the gear opens a manager to add, rename, recolour, reorder and remove them. Each review gets a Habits card (days done, rate, longest streak and streak at the end per habit, plus an optional note) and a habit completion trend. Pick an optional reflection prompt, add a note, and **Export to vault** writes `Reviews/Weekly/2026-W40.md` or `Reviews/Monthly/2026-10.md`, asking before overwriting. A dot on the nav icon and a chip on Home mark a review you have not opened yet; **Settings → The Orbit → Auto-export reviews** writes each one when it is ready. Its own pale black hole backdrop and ice-and-lavender liquid glass, also on the Home greeting card, which opens it |
-| **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule. Each task can carry a time estimate (15m, 30m, 1h, 2h, 4h or any number of minutes), shown on its card, and a **Fits today?** bar at the top of the page weighs today's open estimates against the free time left in your work day, minus timed events in your Horizon calendar. See [Time estimates and capacity](#-time-estimates-and-capacity). Tasks also carry notes and subtasks: a checklist on the task, and other tasks nested under it, with a **+N subtasks** count on the card. See [Notes and subtasks](#-notes-and-subtasks). Any open task can be snoozed until a later date or to Someday, and stays out of the way until it wakes. See [Snoozing tasks](#-snoozing-tasks). The Engine page has its own red black hole backdrop and ember palette, matching the Horizon's look. Switching between List and Board fades one view out and the other in (instantly in performance mode) |
+| **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule. Each task can carry a time estimate (15m, 30m, 1h, 2h, 4h or any number of minutes), shown on its card, and a **Fits today?** bar at the top of the page weighs today's open estimates against the free time left in your work day, minus timed events in your Horizon calendar. See [Time estimates and capacity](#-time-estimates-and-capacity). Tasks also carry notes and subtasks: a checklist on the task, and other tasks nested under it, with a **+N subtasks** count on the card. See [Notes and subtasks](#-notes-and-subtasks). Any open task can be snoozed until a later date or to Someday, and stays out of the way until it wakes. See [Snoozing tasks](#-snoozing-tasks). A **Sort & Filter** button next to Categories sorts List and Board (due date, start date, priority, estimate, name, created) and filters them by name, category, priority, estimate, due date and status. See [Sorting and filtering](#-sorting-and-filtering). Changing the sort or a filter fades the list out and back in (instantly in performance mode). The Engine page has its own red black hole backdrop and ember palette, matching the Horizon's look. Switching between List and Board fades one view out and the other in (instantly in performance mode) |
 | **📅 The Horizon** | Google Calendar, live: month, week, day and agenda views (week and day are hour grids: overlapping events sit side by side, a line marks now, and clicking an empty slot creates an event at that half hour), create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along. The page has its own black hole backdrop and blue palette (see [The Horizon](#-the-horizon-google-calendar-integration)) |
 | **🏠 Home widgets** | A 3×3 grid: the greeting and clock (on The Orbit's black hole, with this week's tasks done and focus time; opens The Orbit), weather (with a one-line nudge such as "Rain from 4 PM, take an umbrella"), and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, a free-time bar with today's planned work and a nudge toward the next task ("Want to start Write report?"), or once today is clear the next 14 days' tasks, highest priority first, with a nudge to get a head start on one), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Engine, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Engine's red black hole, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
@@ -206,6 +206,7 @@ src/
 │   │   ├── orbit/HabitManager.tsx # Add, rename, recolour, reorder and remove habits
 │   │   ├── HomeSpaces.tsx      # Home's themed Nebula, Portal and Terminal boxes
 │   │   ├── TasksPage.tsx       # Task list, form (with estimates), filtering, Pomodoro
+│   │   ├── TaskViewMenu.tsx    # The Engine's Sort & Filter button and popover
 │   │   ├── CapacityBar.tsx     # Fits today? card for The Engine and the slim strip on Home's Engine card
 │   │   ├── CalendarPage.tsx    # Google Calendar: month, week, day + agenda, event CRUD
 │   │   ├── TimeGrid.tsx        # Hour-by-hour columns for the week and day views
@@ -263,6 +264,7 @@ src/
 │   ├── homeTasks.ts            # Home Engine ordering: priority ranks, upcoming tasks
 │   ├── capacity.ts             # Task estimates, busy intervals from events, today's planned vs free time
 │   ├── capacitySettings.ts     # The Engine's work window (localStorage)
+│   ├── taskView.ts             # The Engine's sort and filters, applied to List and Board, saved per device in localStorage
 │   ├── homeLayout.ts           # Home grid order, hidden widgets and sizes, saved in localStorage
 │   ├── timeGrid.ts             # Week/day view dates and overlapping-event layout
 │   ├── atmosphereScene.ts      # Living Sky maths: sky phase, weather codes → effects, aurora/star strength, moon, pine ridge
@@ -511,6 +513,31 @@ A snoozed task is never overdue. When it wakes it returns as normal, overdue if 
 - Completed tasks cannot be snoozed. Completing a snoozed task clears its snooze, and so does an "N days after done" repeat moving to its next date.
 
 Stored in `tasks.snoozed_until` and `tasks.someday` ([migration 0007](supabase/migrations/0007_task_snooze.sql)). The rules live in `src/lib/snooze.ts` (unit-tested).
+
+## 🔽 Sorting and filtering
+
+**Sort & Filter.** A themed button directly right of **Categories** on The Engine's toolbar opens a glass popover (it fades and scales open and closed, like the themed selects). Click outside or press Escape to close it; Escape closes a select inside it first. The button shows the active sort ("· Name ↓") when it is not the default, and a badge with the number of active filters.
+
+**Sort.** Default (open before done, then priority: the old order), Due date, Start date, Priority, Estimate, Name or Created, ascending or descending. Tasks with no estimate or no created date always sort last.
+
+**Filters.** All of them apply together (AND):
+
+- **Name** contains, ignoring case.
+- **Category** and **Priority**, as multi-select chips.
+- **Estimate** in minutes with ≤, ≥ or =. Tasks with no estimate are left out while it is active.
+- **Due:** Any, Today, This week (Mon–Sun), Overdue, or a Custom from–to range. A repeating task counts if one of its occurrences falls in the range.
+- **Status:** Hide done, Has checklist, Has notes, Has subtasks.
+
+**Reset** clears the filters and keeps the sort. If the filters hide everything, the page says "No tasks match the filters" with a **Reset filters** link.
+
+**Rules.**
+
+- The sort and filters apply to both List and Board.
+- The Overdue group stays on top: oldest first under the Default sort, otherwise in the chosen sort.
+- The Snoozed section is not affected.
+- Filters look only at top-level tasks, and a parent that matches keeps all its subtasks.
+
+Saved per device in `localStorage` (`crystal-os-task-view`). The rules live in `src/lib/taskView.ts` (unit-tested).
 
 ## 🍅 Pomodoro and tasks
 

@@ -5,6 +5,36 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.6] - 2026-10-07 - Sort and filter The Engine.
+
+### Added
+
+- **A "Sort & Filter" button right of Categories on The Engine's toolbar** (`src/components/views/TaskViewMenu.tsx`, mounted in `TasksPage.tsx`). It opens a glass popover on the same animated `Popup` as the themed selects (fade and scale on open and close). It closes on an outside click or Escape; with a themed select open inside it, Escape closes the select first. The button shows the active sort ("· Name ↓") when it is not the default, and a badge with the number of active filters.
+- **Sort keys:** Default (open before done, then priority: the old order), Due date, Start date, Priority, Estimate, Name and Created, with an ascending/descending toggle. Tasks with no estimate or no created date always sort last, in either direction.
+- **Filters, combined with AND:**
+  - **Name** contains (case-insensitive).
+  - **Category** and **Priority**, each a multi-select of chips.
+  - **Estimate** in minutes with ≤, ≥ or =. While it is active, tasks with no estimate are left out.
+  - **Due:** Any, Today, This week (Mon–Sun), Overdue, or a Custom from–to range. A repeating task counts when one of its occurrences falls in the range.
+  - **Status:** Hide done, Has checklist, Has notes, Has subtasks.
+  - A **Reset** link clears the filters and keeps the sort.
+- **Both views.** The sort and filters apply to List and Board. The Overdue group stays pinned on top: oldest first under the Default sort, otherwise in the chosen sort. The Snoozed section is not affected. Filters look at top-level tasks only, and a parent that matches keeps all its subtasks.
+- **An empty state** when the filters hide every task: "No tasks match the filters. Reset filters".
+- **Remembered per device** in `localStorage` under `crystal-os-task-view`.
+- `src/lib/taskView.ts` (the pure sort and filter logic, the persisted store and the `useTaskView` hook), `src/components/views/TaskViewMenu.tsx`, and their tests.
+
+### Changed
+
+- **`Popup` in `src/components/ui/field-controls.tsx` carries a `data-popup` attribute**, so a popover that hosts other themed controls can ignore clicks inside their portalled panels instead of closing.
+- **`src/components/views/TasksPage.tsx`** orders and filters tasks through `taskView.ts` for both List and Board.
+- **Changing the sort or a filter fades the list out and back in (150 ms each way), swapping it in between**, with no per-card animations. In performance mode, or with the OS reduced-motion setting, it swaps at once. Leaving cards used to hold their space during their exit, then the rest slid up while new ones slid in, which read as a bounce. Task cards also fade in and out on a short tween now, instead of framer's default spring, which overshot.
+- **`TODO.md`:** *task list sort/filter button* is done and removed.
+
+### Notes
+
+- No database change and no migration: the sort and filters live on the device only.
+- Tests: `src/lib/taskView.test.ts` (sorting, each filter, combining, the persisted store) and `src/components/views/TaskViewMenu.test.tsx` (the button, popover and Escape handling). All 778 tests pass.
+
 ## [v0.9.5] - 2026-10-07 - Pomodoro linked to a task.
 
 ### Added

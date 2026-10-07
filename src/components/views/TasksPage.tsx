@@ -26,11 +26,19 @@ import { ChecklistEditor, ChildTaskRow, SubtaskChip } from "./TaskSubtasks";
 import { SnoozeButton, SnoozeChip, UnsnoozeButton } from "./TaskSnooze";
 import { canSnooze, ownSnoozed, snoozedSections, splitSnoozed } from "@/lib/snooze";
 import { useToday } from "@/hooks/useToday";
+import { activeFilterCount, applyTaskView, taskView, useTaskView } from "@/lib/taskView";
+import { TaskViewMenu } from "./TaskViewMenu";
 
 const NO_CHILDREN: Task[] = [];
 
 /** Expanding or collapsing a task card: a short ease, no spring, so nothing bounces. */
 const EXPAND_TRANSITION = { type: "tween", duration: 0.2, ease: [0.4, 0, 0.2, 1] } as const;
+/**
+ * A card fading in or out. Tweens too: framer's default spring on x/y
+ * overshoots, which bounced every card at once when Sort & Filter added or
+ * removed a batch of them.
+ */
+const CARD_TRANSITION = { type: "tween", duration: 0.16, ease: "easeOut" } as const;
 
 /** Nesting by drag, shared by every card: whether a drop would nest, and doing it. */
 type NestHandlers = {
@@ -79,7 +87,7 @@ const TaskItem = memo(function TaskItem({
       // (and overshoots) and stretches the card's content while it scales.
       // The details panel below grows its own height instead.
       layout="position"
-      transition={{ layout: EXPAND_TRANSITION }}
+      transition={{ default: CARD_TRANSITION, layout: EXPAND_TRANSITION }}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
@@ -715,16 +723,44 @@ export default function TasksPage() {
     }, VIEW_FADE_MS);
   };
 
-  // Child tasks show inside their parent, not in the lists.
-  const sortedTasks = [...top].sort((a, b) => {
-    if (a.completed !== b.completed) return a.completed ? 1 : -1;
-    const prio = { urgent: 0, high: 1, medium: 2, low: 3 };
-    return prio[a.priority] - prio[b.priority];
-  });
-  // Overdue work gets its own group at the top of the list, oldest first.
-  const overdueTasks = sortedTasks
-    .filter((t) => isTaskOverdue(t, today))
-    .sort((a, b) => a.endDate.localeCompare(b.endDate));
+  // Child tasks show inside their parent, not in the lists. Sort & Filter
+  // (src/lib/taskView.ts) picks and orders the top-level tasks for both views.
+  // `shownPrefs` is what's on screen: a change fades the list out, swaps it,
+  // and fades it back in, like the List/Board switch. Reduced motion swaps at
+  // once.
+  const viewPrefs = useTaskView();
+  const [shownPrefs, setShownPrefs] = useState(viewPrefs);
+  const prefsTimer = useRef<number>();
+  useEffect(() => () => window.clearTimeout(prefsTimer.current), []);
+  useEffect(() => {
+    if (viewPrefs === shownPrefs) return;
+    window.clearTimeout(prefsTimer.current);
+    if (still) {
+      setShownPrefs(viewPrefs);
+      return;
+    }
+    // Another change during the fade-out (typing a name) restarts the wait,
+    // so the list swaps once, to the latest choice.
+    setFade("out");
+    prefsTimer.current = window.setTimeout(() => {
+      setShownPrefs(viewPrefs);
+      setFade("in");
+      prefsTimer.current = window.setTimeout(() => setFade(null), VIEW_FADE_MS);
+    }, VIEW_FADE_MS);
+  }, [viewPrefs, shownPrefs, still]);
+  const sortedTasks = useMemo(
+    () => applyTaskView(top, shownPrefs, { today, childrenOf }),
+    [top, shownPrefs, today, childrenOf],
+  );
+  const filtering = activeFilterCount(shownPrefs.filters) > 0;
+  // A swap remounts the list, so no card runs an exit or layout animation:
+  // those held the leaving cards' space, then slid the rest up while new ones
+  // slid in, which read as a bounce.
+  const viewKey = useMemo(() => JSON.stringify(shownPrefs), [shownPrefs]);
+  // Overdue work gets its own group at the top of the list: oldest first by
+  // default, otherwise in the chosen sort order.
+  const overdueTasks = sortedTasks.filter((t) => isTaskOverdue(t, today));
+  if (shownPrefs.sort.key === "default") overdueTasks.sort((a, b) => a.endDate.localeCompare(b.endDate));
   const otherTasks = sortedTasks.filter((t) => !isTaskOverdue(t, today));
 
   const rescheduleAll = () => {
@@ -769,6 +805,7 @@ export default function TasksPage() {
           </button>
         </div>
         <CategoryManagerButton mode="task" />
+        <TaskViewMenu />
         <button onClick={() => setShowTaskForm(true)} className="ml-auto glass-card-hover px-3 py-1.5 rounded-lg text-xs font-medium text-primary hover:text-primary-foreground hover:bg-primary transition-colors flex items-center gap-1">
           <Plus className="w-3.5 h-3.5" /> Add Task
         </button>
@@ -786,8 +823,17 @@ export default function TasksPage() {
               fade-in (initial={false} on each AnimatePresence). New tasks still
               fade in. */}
           <div className="engine-view" data-fade={fade ?? undefined}>
+            {filtering && sortedTasks.length === 0 && (
+              <p data-fade-unit className="glass-card rounded-xl px-4 py-6 mb-4 text-center text-xs text-muted-foreground">
+                No tasks match the filters.{" "}
+                <button onClick={() => taskView.resetFilters()} className="text-primary hover:underline">
+                  Reset filters
+                </button>
+              </p>
+            )}
             {view === "list" ? (
               <div
+                key={viewKey}
                 {...listDropProps}
                 className={`space-y-4 min-h-[120px] rounded-xl transition-colors ${unnestTarget ? "bg-primary/5 ring-1 ring-primary/20" : ""}`}
               >
@@ -840,7 +886,7 @@ export default function TasksPage() {
                 </div>
               </div>
             ) : (
-              <KanbanBoard tasks={sortedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />
+              <KanbanBoard key={viewKey} tasks={sortedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />
             )}
             <SnoozedSection tasks={snoozedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />
           </div>
