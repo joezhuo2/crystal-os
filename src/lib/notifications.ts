@@ -19,6 +19,7 @@ import { isDesktop } from "@/lib/platform";
 import { pomodoro, type PomodoroState } from "@/lib/pomodoro";
 import { portal, type PortalState } from "@/lib/portalStore";
 import { cleanRepeat, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
+import { awakeTasks } from "@/lib/snooze";
 
 export interface PlannedAlert {
   /** Stable id for one reminder, so it is shown once however often plans run. */
@@ -68,7 +69,8 @@ export function taskEndsOnDate(task: Pick<Task, "startDate" | "endDate" | "repea
 export function taskDueAlerts(tasks: Task[], now: Date): PlannedAlert[] {
   const today = toLocalDateStr(now);
   const alerts: PlannedAlert[] = [];
-  for (const task of tasks) {
+  // A snoozed task stays quiet until it wakes.
+  for (const task of awakeTasks(tasks, today)) {
     if (task.completed || !/^\d{2}:\d{2}$/.test(task.endTime)) continue;
     for (const date of [addDays(today, -1), today]) {
       const due = new Date(`${date}T${task.endTime}:00`);

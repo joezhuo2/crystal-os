@@ -116,6 +116,21 @@ describe("busy time", () => {
 });
 
 describe("todayCapacity", () => {
+  it("leaves snoozed tasks and their children out until they wake", () => {
+    const parent = task({ id: "p", estimateMinutes: 60, snoozedUntil: "2026-10-06" });
+    const tasks = [
+      parent,
+      task({ parentId: "p", estimateMinutes: 30 }),
+      task({ estimateMinutes: 15, someday: true }),
+      task({ estimateMinutes: 45 }),
+    ];
+    const args = { events: [], nowMinutes: 8 * 60, window: WINDOW };
+    expect(todayCapacity({ tasks, today: TODAY, ...args }).plannedMinutes).toBe(45);
+    // On the snooze day the parent and its child are back (dated today), Someday is not.
+    const next = tasks.map((t) => ({ ...t, startDate: "2026-10-06", endDate: "2026-10-06" }));
+    expect(todayCapacity({ tasks: next, today: "2026-10-06", ...args }).plannedMinutes).toBe(135);
+  });
+
   it("adds up today's open estimates and counts the ones without", () => {
     const c = todayCapacity({
       tasks: [

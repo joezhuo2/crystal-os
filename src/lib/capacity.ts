@@ -9,6 +9,7 @@
 import type { Task } from "@/contexts/AppContext";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 import { taskFallsOnDate } from "@/lib/utils";
+import { awakeTasks } from "@/lib/snooze";
 
 /** The quick picks in the task form, in minutes. */
 export const ESTIMATE_PRESETS = [15, 30, 60, 120, 240] as const;
@@ -181,7 +182,8 @@ function suggestFrom(
 
 /** Today's open tasks: not completed and falling on `today`, repeats included. */
 export function todaysOpenTasks(tasks: Task[], today: string): Task[] {
-  return tasks.filter((t) => !t.completed && taskFallsOnDate(t, today));
+  // Snoozed tasks (and the children of snoozed parents) wait until they wake.
+  return awakeTasks(tasks, today).filter((t) => !t.completed && taskFallsOnDate(t, today));
 }
 
 /**

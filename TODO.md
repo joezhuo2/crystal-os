@@ -1,7 +1,10 @@
 # Planned Features
 - [v0.10.0] - engine options update
-- [ ] **Snooze / defer tasks.** Hide a task until a chosen date, plus a "Someday" bucket to keep the Engine short.
-- [ ] **Pomodoro linked to a task.** Start a focus session on a specific task and track time per task, so The Orbit shows where focus went. Focus mode also mutes Portal badges.
+- [ ] **Pomodoro linked to a task.** Start a focus session on a specific task and track time per task, so The Orbit shows where focus went. Focus mode also mutes Portal badges. (new dropwdown under the start/reset buttons, can drag a task into the field, should be themed)
+- [ ] animations when completing/uncompleting a task
+- [ ] task list (the engine sort/filter button) (new themed button directly right of categories, with sort options (date, priority, estimated time, etc.), (ascending/descending), and filter by (category, priority, estimated time (<=,>=,==), name, etc.), with open/close smooth animations)
+- when changing start time to (eg. 9:00AM), end time should also be adjusted to 1h after (eg. 10:00AM for the earlier example)
+- show a configurable amount of completed tasks (others are hidden until expanded. (eg. "show xx more" button), and a "show xx snoozed" button under this one)
 - [v0.11.0] vault/banking overhaul
     - [ ]  use plaid to connect to banks (store api keys and tokens in secure .env variables)
     - [ ] themed glassmorphism UI 

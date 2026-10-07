@@ -5,9 +5,32 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.9.3] - 2026-10-05
+## [v0.9.4] - 2026-10-07 - Snooze tasks, and a Someday bucket.
 
-Notes and subtasks on tasks.
+### Added
+
+- **Snooze button on Engine cards.** An alarm clock icon on each open, top-level task, to the right of the expand/collapse chevron and left of edit and delete. It opens a themed popover with **Tomorrow**, **This weekend** (the coming Saturday, or next week's when today is a Saturday or Sunday), **Next week** (the coming Monday), **Next month** (the same day, clamped to the end of a shorter month), **Pick a date…** (a calendar from tomorrow onward) and **Someday** (no date). Each preset shows the date it picks.
+- **Snoozed tasks are hidden, not rescheduled.** A snoozed task keeps its own start and end dates and stays out of sight until the start of the snooze day on the device clock, or indefinitely for Someday. While hidden it is left out of The Engine's List and Board, Home's Engine card and its nudges, the **Fits today?** bar, and due-time notifications. It has no overdue state while snoozed; when it wakes it returns as normal, overdue if its due date has already passed.
+- **A collapsed Snoozed section** at the bottom of both List and Board, headed "Snoozed (n)". It opens and closes on the same 200 ms ease as card expansion. Dated snoozes come first, soonest first, followed by a **Someday** group. Snoozed cards show an "Until Mon, Oct 12" or "Someday" chip (click it to change the snooze) and an **Unsnooze** button where the snooze button was.
+- **Tasks wake on their own.** Today's date updates at local midnight and when the window regains focus (`useToday` in `src/hooks/useToday.ts`), so a task that wakes overnight is back on the list without a reload.
+- **Snooze from the command bar.** Searching for a task offers **Snooze "…"…**, then the presets and Someday (no date picker here), or **Unsnooze "…"** when it is already snoozed.
+- `supabase/migrations/0007_task_snooze.sql`, `src/lib/snooze.ts` (unit-tested) and `src/components/views/TaskSnooze.tsx`.
+
+### Changed
+
+- **Child tasks follow their parent.** A child cannot be snoozed on its own; it is hidden and shown exactly when its parent is.
+- **Completed tasks cannot be snoozed**, and completing a snoozed task clears its snooze. So does an "after completion" repeat moving on to its next date.
+- **The command bar's task group is now "Task actions"**, renamed from "Subtasks" since it holds snoozing as well.
+- **`Task` carries optional `snoozedUntil` and `someday`.** `updateTask` clears them when the keys are present and undefined, and, like `estimateMinutes`, only sends the columns for tasks that are or were snoozed, so a database without migration 0007 still saves everything else. `todaysOpenTasks` in `src/lib/capacity.ts` and `taskDueAlerts` in `src/lib/notifications.ts` skip snoozed tasks.
+- **`Popup`, `usePopupPosition` and `useDismiss` are exported from `src/components/ui/field-controls.tsx`**, so the snooze popover shares the form pickers' look. `usePopupPosition` takes an optional `remeasureKey`.
+- **`TODO.md`:** *Snooze / defer tasks* is done and removed.
+
+### Notes
+
+- **Apply `supabase/migrations/0007_task_snooze.sql`** in the Supabase SQL Editor. It adds `tasks.snoozed_until` (a date) and `tasks.someday` (boolean, not null, default false), and is safe to run twice. Until it is applied, snoozing a task fails; the app only sends these columns for tasks that are or were snoozed, so everything else saves as before.
+- Tests: `src/lib/snooze.test.ts`, `src/components/views/TasksSnooze.test.tsx`, and snooze cases in `capacity.test.ts` and `notifications.test.ts`.
+
+## [v0.9.3] - 2026-10-05 - Notes and subtasks on tasks.
 
 ### Added
 
@@ -27,17 +50,13 @@ Notes and subtasks on tasks.
 - **The task form scrolls** when it is taller than the window.
 - **`TODO.md`:** *Task notes and subtasks* is done and removed.
 
-## [v0.9.2] - 2026-10-05
-
-A next step once today is done.
+## [v0.9.2] - 2026-10-05 - A next step once today is done.
 
 ### Added
 
 - **Home's Engine card nudges toward upcoming tasks once today is clear.** When every task for today is done (or none was due), the card keeps its free-time bar and the line under it offers the first upcoming task that fits the free time, in the card's own upcoming order: highest priority first, then earliest date. Like the nudge for today's tasks, it takes the first task whose estimate fits, or else the first without an estimate, and shows nothing once the day's free time is gone. Four wordings, picked by the task, the day and the hour ("Today's clear. Get a head start on Taxes?", "All done for today. Taxes is up on Thu.", "3h free and nothing due. Start on Taxes early?", and for estimated tasks "Today's done. Taxes (1h) would fit now."). `suggestUpcomingTask` in `src/lib/capacity.ts`, unit-tested.
 
-## [v0.9.1] - 2026-10-05
-
-Time estimates, and whether today's work fits the day.
+## [v0.9.1] - 2026-10-05 - Time estimates, and whether today's work fits the day.
 
 ### Added
 

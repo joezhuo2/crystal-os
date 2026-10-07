@@ -16,6 +16,7 @@ import { ascNullsLast, loadInPages, mergePage } from "@/lib/pagedLoad";
 import { appUi } from "@/lib/appUi";
 import { clampEstimate } from "@/lib/capacity";
 import { cleanChecklist, cleanNotes, tickAll, untickAll, type ChecklistItem } from "@/lib/subtasks";
+import { cleanSnoozeDate, clearedSnooze } from "@/lib/snooze";
 import {
   isRetryable,
   offlineQueue,
@@ -52,6 +53,10 @@ export type Task = {
   checklist?: ChecklistItem[];
   /** The task this one is nested under (one level deep), or undefined at the top level. */
   parentId?: string;
+  /** Hidden until the start of this day ("YYYY-MM-DD"), or undefined. See src/lib/snooze.ts. */
+  snoozedUntil?: string;
+  /** Hidden with no date, until unsnoozed by hand. */
+  someday?: boolean;
   /** When the task was added (ISO). Read-only: set by the database. */
   createdAt?: string;
 };
@@ -215,6 +220,8 @@ type TaskRow = ReturnType<typeof mapTaskToDb> & {
   notes?: string | null;
   checklist?: ChecklistItem[] | null;
   parent_id?: string | null;
+  snoozed_until?: string | null;
+  someday?: boolean | null;
 };
 type TransactionRow = ReturnType<typeof mapTransactionToDb> & { id: string };
 type CategoryRow = ReturnType<typeof mapCategoryToDb> & { id: string };
@@ -235,6 +242,8 @@ function mapTaskFromDb(row: TaskRow): Task {
     notes: cleanNotes(row.notes),
     checklist: cleanChecklist(row.checklist),
     parentId: row.parent_id || undefined,
+    snoozedUntil: cleanSnoozeDate(row.snoozed_until),
+    someday: row.someday === true || undefined,
     createdAt: row.created_at,
   };
 }
@@ -257,6 +266,9 @@ function mapTaskToDb(task: Omit<Task, "id">) {
     ...(cleanNotes(task.notes) ? { notes: cleanNotes(task.notes) } : {}),
     ...(cleanChecklist(task.checklist) ? { checklist: cleanChecklist(task.checklist) } : {}),
     ...(task.parentId ? { parent_id: task.parentId } : {}),
+    // And for migration 0007's.
+    ...(cleanSnoozeDate(task.snoozedUntil) ? { snoozed_until: cleanSnoozeDate(task.snoozedUntil) } : {}),
+    ...(task.someday ? { someday: true } : {}),
   };
 }
 
@@ -657,7 +669,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Like `repeat` below, an explicit undefined clears it; but a cleared
     // estimate on a task that never had one sends nothing, for the same reason
     // mapTaskToDb leaves the column out.
-    // Notes, checklist and parent (migration 0006) follow the same rule.
+    // Notes, checklist and parent (migration 0006) and the snooze (0007)
+    // follow the same rule.
     const current = queryClient.getQueryData<Task[]>(APP_DATA_KEYS.tasks)?.find((t) => t.id === id);
     const estimate = clampEstimate(updates.estimateMinutes);
     const estimateChanged = "estimateMinutes" in updates;
@@ -677,6 +690,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (parentChanged && (parentId !== undefined || current?.parentId !== undefined)) {
       dbUpdates.parent_id = parentId ?? null;
     }
+    const snoozedUntil = cleanSnoozeDate(updates.snoozedUntil);
+    const snoozeChanged = "snoozedUntil" in updates;
+    if (snoozeChanged && (snoozedUntil !== undefined || current?.snoozedUntil !== undefined)) {
+      dbUpdates.snoozed_until = snoozedUntil ?? null;
+    }
+    const someday = updates.someday === true || undefined;
+    const somedayChanged = "someday" in updates;
+    if (somedayChanged && (someday || current?.someday)) dbUpdates.someday = someday ?? false;
     // Unlike the other fields, an explicit `repeat` key is written even when
     // it is undefined: that is how a repeat is turned off, and the columns have
     // to be cleared to null for it to stay off after a reload.
@@ -696,6 +717,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               ...(notesChanged ? { notes } : {}),
               ...(checklistChanged ? { checklist } : {}),
               ...(parentChanged ? { parentId } : {}),
+              ...(snoozeChanged ? { snoozedUntil } : {}),
+              ...(somedayChanged ? { someday } : {}),
             }
           : t,
       ),
@@ -710,10 +733,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const timing = completionUpdates(task, toLocalDateStr());
       const rolled = "startDate" in timing;
       // Completing a task ticks its checklist; a repeat moving on to its next
-      // date starts the checklist over instead.
-      const updates: Partial<Task> = task.checklist
-        ? { ...timing, checklist: rolled ? untickAll(task.checklist) : tickAll(task.checklist) }
-        : timing;
+      // date starts the checklist over instead. Either way a snooze is over.
+      const updates: Partial<Task> = {
+        ...timing,
+        ...clearedSnooze(task),
+        ...(task.checklist ? { checklist: rolled ? untickAll(task.checklist) : tickAll(task.checklist) } : {}),
+      };
       updateTask(task.id, updates);
       void recordCompletion(task);
       if (rolled) {

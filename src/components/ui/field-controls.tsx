@@ -52,11 +52,13 @@ interface PopupPos {
  * Pin a portalled panel to its trigger using fixed coordinates, flipping above
  * the trigger when the viewport has no room below.
  */
-function usePopupPosition(
+export function usePopupPosition(
   open: boolean,
   triggerRef: RefObject<HTMLElement>,
   panelRef: RefObject<HTMLElement>,
   matchTriggerWidth: boolean,
+  /** Re-measures when it changes, for a panel whose content changes size while open. */
+  remeasureKey?: unknown,
 ): PopupPos | null {
   const [pos, setPos] = useState<PopupPos | null>(null);
 
@@ -103,13 +105,13 @@ function usePopupPosition(
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
-  }, [open, update]);
+  }, [open, update, remeasureKey]);
 
   return pos;
 }
 
 /** Close on outside pointer-down or Escape. */
-function useDismiss(
+export function useDismiss(
   open: boolean,
   onClose: () => void,
   refs: RefObject<HTMLElement>[],
@@ -137,7 +139,7 @@ function useDismiss(
 }
 
 /** The portalled, animated panel shared by every control below. */
-function Popup({
+export function Popup({
   open,
   pos,
   panelRef,

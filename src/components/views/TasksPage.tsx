@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useAppActions, useTaskCategories, useTasks, type Task, type Priority } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
 import { m, AnimatePresence } from "framer-motion";
-import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock, Clock, ChevronDown, StickyNote } from "lucide-react";
+import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock, Clock, ChevronDown, StickyNote, AlarmClock } from "lucide-react";
 import {
   cleanRepeat,
   describeRepeat,
@@ -23,6 +23,9 @@ import { CapacityCard } from "./CapacityBar";
 import { clampEstimate, ESTIMATE_PRESETS, formatEstimate, MAX_ESTIMATE } from "@/lib/capacity";
 import { canNest, MAX_NOTES, nestTargets, splitByParent, subtaskProgress, taskDrag, type ChecklistItem } from "@/lib/subtasks";
 import { ChecklistEditor, ChildTaskRow, SubtaskChip } from "./TaskSubtasks";
+import { SnoozeButton, SnoozeChip, UnsnoozeButton } from "./TaskSnooze";
+import { canSnooze, ownSnoozed, snoozedSections, splitSnoozed } from "@/lib/snooze";
+import { useToday } from "@/hooks/useToday";
 
 const NO_CHILDREN: Task[] = [];
 
@@ -46,12 +49,15 @@ const TaskItem = memo(function TaskItem({
   nesting,
   draggable,
   overdue,
+  today,
 }: {
   task: Task;
   subtasks?: Task[];
   nesting: NestHandlers;
   draggable?: boolean;
   overdue?: boolean;
+  /** Today's date, live: a snoozed card wakes when it passes the snooze day. */
+  today: string;
 }) {
   const { updateTask, completeTask, deleteTask } = useAppActions();
   const taskCategories = useTaskCategories();
@@ -61,6 +67,7 @@ const TaskItem = memo(function TaskItem({
   const cat = taskCategories.find((c) => c.id === task.categoryId);
   const repeatLabel = describeRepeat(task.repeat, task.startDate);
   const progress = subtaskProgress(task, subtasks);
+  const snoozed = ownSnoozed(task, today);
   const toggle = (t: Task) => (t.completed ? updateTask(t.id, { completed: false }) : completeTask(t));
   const edit = (t: Task) => {
     setEditingTask(t);
@@ -138,6 +145,7 @@ const TaskItem = memo(function TaskItem({
               </span>
             )}
             <SubtaskChip {...progress} />
+            {snoozed && <SnoozeChip task={task} today={today} />}
             {task.notes && (
               <span className="text-muted-foreground" title="Has notes">
                 <StickyNote className="w-2.5 h-2.5" />
@@ -166,6 +174,7 @@ const TaskItem = memo(function TaskItem({
         >
           <ChevronDown className="w-4 h-4" />
         </button>
+        {snoozed ? <UnsnoozeButton task={task} /> : canSnooze(task) && <SnoozeButton task={task} today={today} />}
         <button onClick={() => edit(task)} aria-label={`Edit ${task.name}`} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary">
           <Pencil className="w-4 h-4" />
         </button>
@@ -213,10 +222,12 @@ function KanbanBoard({
   tasks,
   childrenOf,
   nesting,
+  today,
 }: {
   tasks: Task[];
   childrenOf: Map<string, Task[]>;
   nesting: NestHandlers;
+  today: string;
 }) {
   const taskCategories = useTaskCategories();
   const { updateTask } = useAppActions();
@@ -285,6 +296,7 @@ function KanbanBoard({
                   subtasks={childrenOf.get(task.id)}
                   nesting={nesting}
                   draggable={col.id !== "__done__"}
+                  today={today}
                 />
               ))}
             </AnimatePresence>
@@ -593,6 +605,70 @@ function useSplitTasks(tasks: Task[]) {
   }, [tasks]);
 }
 
+/**
+ * The collapsed "Snoozed (n)" section under the List and Board: dated snoozes
+ * soonest first, then Someday. Opens and closes on the card's expand ease.
+ */
+function SnoozedSection({
+  tasks,
+  childrenOf,
+  nesting,
+  today,
+}: {
+  tasks: Task[];
+  childrenOf: Map<string, Task[]>;
+  nesting: NestHandlers;
+  today: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const { dated, someday } = useMemo(() => snoozedSections(tasks), [tasks]);
+  const count = dated.length + someday.length;
+  if (!count) return null;
+  const card = (task: Task) => (
+    <TaskItem key={task.id} task={task} subtasks={childrenOf.get(task.id)} nesting={nesting} today={today} />
+  );
+  return (
+    <section aria-labelledby="snoozed-heading" className="mt-4 space-y-2">
+      <button
+        data-fade-unit
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="snoozed-list"
+        className="flex w-full items-center gap-2 px-1 py-1 rounded-md text-left text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <AlarmClock className="w-3.5 h-3.5" />
+        <h2 id="snoozed-heading" className="text-xs uppercase tracking-widest">Snoozed</h2>
+        <span className="text-[10px]">{count}</span>
+        <ChevronDown className={`ml-auto w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <m.div
+            id="snoozed-list"
+            key="snoozed"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={EXPAND_TRANSITION}
+            className="overflow-hidden"
+          >
+            <div className="space-y-2 pb-1">
+              <AnimatePresence initial={false}>{dated.map(card)}</AnimatePresence>
+              {someday.length > 0 && (
+                <>
+                  <p className="px-1 pt-2 text-[10px] uppercase tracking-widest text-muted-foreground/70">Someday</p>
+                  <AnimatePresence initial={false}>{someday.map(card)}</AnimatePresence>
+                </>
+              )}
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
 /** Length of each half of the List/Board fade: out, then in. Matches .engine-view in index.css. */
 const VIEW_FADE_MS = 150;
 
@@ -601,7 +677,17 @@ export default function TasksPage() {
   const { updateTask } = useAppActions();
   const { setShowTaskForm } = appUi;
   const nesting = useNesting(tasks);
-  const { top, children: childrenOf } = useSplitTasks(tasks);
+  // Live, so snoozed tasks wake at midnight (or on focus) without a reload.
+  const today = useToday();
+  const { top: allTop, children: childrenOf } = useSplitTasks(tasks);
+  // Snoozed tasks, and the children of snoozed parents, leave the List and
+  // Board for the Snoozed section until they wake.
+  const { top, snoozedTasks } = useMemo(() => {
+    const { snoozed } = splitSnoozed(tasks, today);
+    if (!snoozed.length) return { top: allTop, snoozedTasks: snoozed };
+    const hidden = new Set(snoozed.map((t) => t.id));
+    return { top: allTop.filter((t) => !hidden.has(t.id)), snoozedTasks: snoozed };
+  }, [tasks, today, allTop]);
   const [unnestTarget, setUnnestTarget] = useState(false);
   // `selected` lights the toggle at once; `view` is what's on screen, which
   // trails it by the fade-out.
@@ -628,7 +714,6 @@ export default function TasksPage() {
       fadeTimer.current = window.setTimeout(() => setFade(null), VIEW_FADE_MS);
     }, VIEW_FADE_MS);
   };
-  const today = toLocalDateStr();
 
   // Child tasks show inside their parent, not in the lists.
   const sortedTasks = [...top].sort((a, b) => {
@@ -733,6 +818,7 @@ export default function TasksPage() {
                           nesting={nesting}
                           draggable={!task.completed}
                           overdue
+                          today={today}
                         />
                       ))}
                     </AnimatePresence>
@@ -747,14 +833,16 @@ export default function TasksPage() {
                         subtasks={childrenOf.get(task.id)}
                         nesting={nesting}
                         draggable={!task.completed}
+                        today={today}
                       />
                     ))}
                   </AnimatePresence>
                 </div>
               </div>
             ) : (
-              <KanbanBoard tasks={sortedTasks} childrenOf={childrenOf} nesting={nesting} />
+              <KanbanBoard tasks={sortedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />
             )}
+            <SnoozedSection tasks={snoozedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />
           </div>
         </div>
         <div className="hidden lg:block">

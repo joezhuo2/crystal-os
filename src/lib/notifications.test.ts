@@ -83,6 +83,12 @@ describe("taskDueAlerts", () => {
     expect(taskDueAlerts([t], late)).toEqual([]);
   });
 
+  it("stays quiet for a snoozed task", () => {
+    expect(taskDueAlerts([task({ someday: true })], at("2026-10-05T17:01:00"))).toEqual([]);
+    expect(taskDueAlerts([task({ snoozedUntil: "2026-10-06" })], at("2026-10-05T17:01:00"))).toEqual([]);
+    expect(taskDueAlerts([task({ snoozedUntil: "2026-10-05" })], at("2026-10-05T17:01:00"))).toHaveLength(1);
+  });
+
   it("skips completed tasks and names high priority", () => {
     expect(taskDueAlerts([task({ completed: true })], at("2026-10-05T17:01:00"))).toEqual([]);
     const [alert] = taskDueAlerts([task({ priority: "urgent" })], at("2026-10-05T17:01:00"));

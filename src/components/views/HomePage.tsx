@@ -14,6 +14,8 @@ import { appUi } from "@/lib/appUi";
 import { m } from "framer-motion";
 import { isTaskOverdue, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 import { useSkyScene } from "@/hooks/useSkyScene";
+import { useToday } from "@/hooks/useToday";
+import { awakeTasks } from "@/lib/snooze";
 import { weatherNudge } from "@/lib/weatherNudge";
 import { useAtmosphere } from "@/lib/atmosphereStore";
 import { auroraStrength, pineRidge } from "@/lib/atmosphereScene";
@@ -457,7 +459,8 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
   const { completeTask } = useAppActions();
   const { setEditingTask, setShowTaskForm } = appUi;
   const loading = useAppLoading();
-  const today = toLocalDateStr();
+  // Live, so snoozed tasks wake at midnight without a reload.
+  const today = useToday();
   const backdropUrl = useImageBackdrop("engine", CARD_BACKDROP_BLUR);
 
   const isOverdue = (t: Task) => isTaskOverdue(t, today);
@@ -467,8 +470,9 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
   const selectRows = useCallback(
     (all: Task[]) => {
       // Child tasks show inside their parent in The Engine, not here; the
-      // parent carries a "+N subtasks" count instead.
-      const { top: tasks, children } = splitByParent(all);
+      // parent carries a "+N subtasks" count instead. Snoozed tasks (and
+      // their children) stay off the card until they wake.
+      const { top: tasks, children } = splitByParent(awakeTasks(all, today));
       // Open work for today plus anything overdue, most pressing first.
       const open = tasks
         .filter((t) => !t.completed && (taskFallsOnDate(t, today) || isTaskOverdue(t, today)))

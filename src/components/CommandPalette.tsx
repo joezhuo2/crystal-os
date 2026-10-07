@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useAppActions, useFinancialCategories, useTaskCategories, useTasks, useTransactions, type Task } from "@/contexts/AppContext";
 import { nestTargets } from "@/lib/subtasks";
+import { canSnooze, formatSnoozeDate, ownSnoozed, snoozePresets, snoozeUpdates, UNSNOOZE } from "@/lib/snooze";
 import { toast } from "sonner";
 import { appUi } from "@/lib/appUi";
 import { toLocalDateStr, useDebouncedValue } from "@/lib/utils";
@@ -31,6 +32,9 @@ import {
   Orbit,
   ListTree,
   CornerLeftUp,
+  AlarmClock,
+  Sunrise,
+  Infinity as InfinityIcon,
   X,
 } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
@@ -53,6 +57,8 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
   const { updateTask } = useAppActions();
   // "Make subtask of…": the task being nested while the bar lists parents for it.
   const [nestChild, setNestChild] = useState<Task | null>(null);
+  // "Snooze…": the task being snoozed while the bar lists the snooze picks.
+  const [snoozeTask, setSnoozeTask] = useState<Task | null>(null);
   const transactions = useTransactions();
   const taskCategories = useTaskCategories();
   const financialCategories = useFinancialCategories();
@@ -77,6 +83,7 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
       if (e.key === "Escape" && !inTerminal(e)) {
         setFocused(false);
         setNestChild(null);
+        setSnoozeTask(null);
       }
     };
     document.addEventListener("keydown", handler);
@@ -87,6 +94,7 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
     setFocused(false);
     setSearch("");
     setNestChild(null);
+    setSnoozeTask(null);
   }, []);
 
   // ---------- Focus shortcuts ----------
@@ -196,6 +204,29 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
     close();
   };
 
+  const startSnoozing = (task: Task) => {
+    setSnoozeTask(task);
+    setSearch("");
+    inputRef.current?.focus();
+  };
+
+  const handleSnooze = (until: string | "someday") => {
+    if (!snoozeTask) return;
+    updateTask(snoozeTask.id, snoozeUpdates(until));
+    toast.success(
+      until === "someday"
+        ? `${snoozeTask.name} moved to Someday`
+        : `${snoozeTask.name} snoozed until ${formatSnoozeDate(until, toLocalDateStr())}`,
+    );
+    close();
+  };
+
+  const handleUnsnooze = (task: Task) => {
+    updateTask(task.id, UNSNOOZE);
+    toast.success(`${task.name} is back`);
+    close();
+  };
+
   const parentChoices = nestChild ? nestTargets(nestChild.id, tasks) : [];
 
   const handleAddTask = () => {
@@ -244,7 +275,13 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
             value={search}
             onValueChange={setSearch}
             onFocus={() => setFocused(true)}
-            placeholder={nestChild ? `Make "${nestChild.name}" a subtask of…` : "Search, 'add …' or 'log …'"}
+            placeholder={
+              nestChild
+                ? `Make "${nestChild.name}" a subtask of…`
+                : snoozeTask
+                  ? `Snooze "${snoozeTask.name}" until…`
+                  : "Search, 'add …' or 'log …'"
+            }
             wrapperClassName="border-0 px-0 flex-1 min-w-0"
             className="h-8 text-base bg-transparent border-0 outline-none placeholder:text-muted-foreground/40 focus:ring-0"
           />
@@ -272,7 +309,7 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
             >
               <CommandList className="max-h-[340px] overflow-y-auto scrollbar-thin px-2 py-2">
                 <CommandEmpty className="py-6 text-center text-sm text-muted-foreground/70">
-                  {nestChild ? "No task to nest it under." : 'No results found. Try "add Buy milk" or "log 25 for Lunch".'}
+                  {nestChild ? "No task to nest it under." : snoozeTask ? "No matching snooze." : 'No results found. Try "add Buy milk" or "log 25 for Lunch".'}
                 </CommandEmpty>
 
                 {nestChild ? (
@@ -297,6 +334,47 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                       value="parent-cancel"
                       onSelect={() => {
                         setNestChild(null);
+                        setSearch("");
+                      }}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                    >
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5">
+                        <X className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm font-medium">Cancel</p>
+                    </CommandItem>
+                  </CommandGroup>
+                ) : snoozeTask ? (
+                  <CommandGroup heading={`Snooze until… (${snoozeTask.name})`}>
+                    {snoozePresets(toLocalDateStr()).map((preset) => (
+                      <CommandItem
+                        key={preset.id}
+                        value={`snooze-${preset.id}-${preset.label}`}
+                        onSelect={() => handleSnooze(preset.date)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
+                          <AlarmClock className="w-4 h-4 text-indigo-400" />
+                        </div>
+                        <p className="flex-1 min-w-0 text-sm font-medium truncate">{preset.label}</p>
+                        <span className="text-xs text-muted-foreground">{formatSnoozeDate(preset.date, toLocalDateStr())}</span>
+                      </CommandItem>
+                    ))}
+                    <CommandItem
+                      value="snooze-someday-Someday"
+                      onSelect={() => handleSnooze("someday")}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                    >
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
+                        <InfinityIcon className="w-4 h-4 text-indigo-400" />
+                      </div>
+                      <p className="flex-1 min-w-0 text-sm font-medium truncate">Someday</p>
+                      <span className="text-xs text-muted-foreground">No date</span>
+                    </CommandItem>
+                    <CommandItem
+                      value="snooze-cancel"
+                      onSelect={() => {
+                        setSnoozeTask(null);
                         setSearch("");
                       }}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
@@ -407,7 +485,7 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                     </CommandGroup>
                     {/* Nest or un-nest the best match: one action per row would crowd the list. */}
                     {matchedTasks[0] && !matchedTasks[0].completed && (
-                      <CommandGroup heading="Subtasks">
+                      <CommandGroup heading="Task actions">
                         {matchedTasks[0].parentId ? (
                           <CommandItem
                             value={`unnest-${matchedTasks[0].name}`}
@@ -434,6 +512,32 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                             </CommandItem>
                           )
                         )}
+                        {/* Snooze or wake the best match. Children follow their parent. */}
+                        {canSnooze(matchedTasks[0]) &&
+                          (ownSnoozed(matchedTasks[0], toLocalDateStr()) ? (
+                            <CommandItem
+                              value={`unsnooze-${matchedTasks[0].name}`}
+                              onSelect={() => handleUnsnooze(matchedTasks[0])}
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                            >
+                              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
+                                <Sunrise className="w-4 h-4 text-indigo-400" />
+                              </div>
+                              <p className="flex-1 min-w-0 text-sm font-medium truncate">Unsnooze "{matchedTasks[0].name}"</p>
+                            </CommandItem>
+                          ) : (
+                            <CommandItem
+                              value={`snooze-task-${matchedTasks[0].name}`}
+                              onSelect={() => startSnoozing(matchedTasks[0])}
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                            >
+                              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
+                                <AlarmClock className="w-4 h-4 text-indigo-400" />
+                              </div>
+                              <p className="flex-1 min-w-0 text-sm font-medium truncate">Snooze "{matchedTasks[0].name}"…</p>
+                              <ArrowRight className="w-4 h-4 text-muted-foreground/40" />
+                            </CommandItem>
+                          ))}
                       </CommandGroup>
                     )}
                   </>
