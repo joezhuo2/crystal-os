@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { addDays, toLocalDateStr } from "@/lib/utils";
 import { fromMinutes, toMinutes, weekDates } from "@/lib/timeGrid";
+import { withStartTime } from "@/lib/autoEndTime";
 import TimeGrid from "./TimeGrid";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
 import { GlassTip } from "@/components/ui/glass-tooltip";
@@ -807,7 +808,7 @@ function EventForm({
                 <TimeField
                   value={form.startTime}
                   aria-label="Start time"
-                  onChange={(v) => setForm((f) => ({ ...f, startTime: v }))}
+                  onChange={(v) => setForm((f) => withStartTime(f, v))}
                   className="flex-1 px-2"
                 />
               )}

@@ -188,3 +188,35 @@ describe("TaskForm notes and subtasks", () => {
     expect(screen.getByText(/has subtasks of its own/)).toBeInTheDocument();
   });
 });
+
+function pickTime(label: string, option: string | RegExp) {
+  fireEvent.click(screen.getByRole("combobox", { name: label }));
+  fireEvent.click(screen.getByRole("option", { name: option }));
+}
+
+describe("TaskForm end time follows start time", () => {
+  beforeEach(() => {
+    updateTask.mockClear();
+  });
+
+  it("sets the end an hour after a new start", () => {
+    render(<TaskForm onClose={() => {}} editingTask={editing} />);
+    pickTime("Start time", /^8:00\s?AM$/i);
+    expect(screen.getByRole("combobox", { name: "End time" })).toHaveTextContent(/9:00\s?AM/i);
+  });
+
+  it("still lets the end be changed on its own afterwards", () => {
+    render(<TaskForm onClose={() => {}} editingTask={editing} />);
+    pickTime("Start time", /^8:00\s?AM$/i);
+    pickTime("End time", /^11:30\s?AM$/i);
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    expect(updateTask).toHaveBeenCalledWith("t1", expect.objectContaining({ startTime: "08:00", endTime: "11:30" }));
+  });
+
+  it("rolls the end date past midnight", () => {
+    render(<TaskForm onClose={() => {}} editingTask={editing} />);
+    pickTime("Start time", /^11:30\s?PM$/i);
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    expect(updateTask).toHaveBeenCalledWith("t1", expect.objectContaining({ endDate: "2026-09-02", endTime: "00:30" }));
+  });
+});

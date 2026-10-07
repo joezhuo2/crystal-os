@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-778%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.9.7-6366F1)
+![Tests](https://img.shields.io/badge/tests-789%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.9.8-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.9.7** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.9.8** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -456,6 +456,8 @@ Crystal OS shows native toasts (Windows notifications on desktop through `tauri-
 What to say and when lives in `src/lib/notifications.ts` (pure, tested); `src/components/NotificationScheduler.tsx` checks tasks and events every 30 s while signed in, and the Pomodoro and Portal stores are watched from `main.tsx`. Each task and event reminder is shown once: its key is kept in `localStorage` (`crystal-os-notified`, two days), so a restart does not repeat it. Settings are saved in `crystal-os-notifications`.
 
 ## ⏱️ Time estimates and capacity
+
+**End time follows start time.** In the task form and the Horizon's event form, picking a new start time moves the end to one hour later (9:00 AM start, 10:00 AM end). Past midnight the end rolls to the next day (11:30 PM start, 12:30 AM the next day). Clearing the start leaves the end alone, and the end can still be changed on its own afterwards. The rule lives in `src/lib/autoEndTime.ts` (unit-tested).
 
 **Estimates.** The task form has an **Estimate** row: chips for 15m, 30m, 1h, 2h and 4h (tap the lit one again to clear it) and a minutes box for anything else, up to 1440. It is effort, not scheduling: start and end still say when a task is due. Estimates are stored in `tasks.estimate_minutes` ([migration 0005](supabase/migrations/0005_task_estimates.sql)).
 

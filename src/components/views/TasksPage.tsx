@@ -17,6 +17,7 @@ import {
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useAppActivity } from "@/lib/appActivity";
+import { withStartTime } from "@/lib/autoEndTime";
 import PomodoroTimer from "./PomodoroTimer";
 import { CategoryManagerButton } from "./CategoryManager";
 import { CapacityCard } from "./CapacityBar";
@@ -469,7 +470,7 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
                 onChange={(v) => setForm((f) => ({ ...f, startDate: v, endDate: f.endDate < v ? v : f.endDate }))}
                 className="flex-1" />
               <TimeField value={form.startTime} aria-label="Start time"
-                onChange={(v) => setForm((f) => ({ ...f, startTime: v }))}
+                onChange={(v) => setForm((f) => withStartTime(f, v))}
                 className="flex-1 px-2" />
             </div>
           </div>

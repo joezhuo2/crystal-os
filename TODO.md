@@ -1,6 +1,5 @@
 # Planned Features
 - [v0.10.0] - engine options update
-- [v0.9.8] when changing start time to (eg. 9:00AM), end time should also be adjusted to 1h after (eg. 10:00AM for the earlier example)
 - [v0.9.9] animations when completing/uncompleting a task
 - [v0.9.10] the engine board view: drag tasks between categories on task view to change their categories, show all categories (including empty ones, overdue category, and done category), pomodoro should always show on the right, categories should be scrollable left/right
 - [v0.9.11] glassmorphism ui loading/login screen with background image

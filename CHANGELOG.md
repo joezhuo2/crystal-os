@@ -5,6 +5,20 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.8] - 2026-10-07 - End time follows start time.
+
+### Changed
+
+- **Changing a start time moves the end time to one hour later.** Pick 9:00 AM as the start and the end becomes 10:00 AM. It applies in the task form and in the Horizon's event form (not for all-day events, which have no times).
+- **Past midnight the end rolls to the next day.** A 11:30 PM start gives 12:30 AM on the following date.
+- **Clearing the start time leaves the end alone,** and the end time can still be changed on its own after the start.
+- **`src/lib/autoEndTime.ts`** holds the rule, with tests in `src/lib/autoEndTime.test.ts` and `src/components/views/TaskForm.test.tsx`. `TasksPage.tsx` and `CalendarPage.tsx` use it.
+- **`TODO.md`:** the matching item is done and removed.
+
+### Notes
+
+- No database change and no migration.
+
 ## [v0.9.7] - 2026-10-07 - Completed tasks tucked away.
 
 ### Changed
