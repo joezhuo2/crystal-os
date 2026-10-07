@@ -5,6 +5,36 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.5] - 2026-10-07 - Pomodoro linked to a task.
+
+### Added
+
+- **A "Focusing on" task picker under Start and Reset** (`src/components/views/PomodoroTask.tsx`, mounted in `PomodoroTimer.tsx`). It is a themed, searchable combobox (`ThemedCombobox` from `field-controls`) listing open, non-snoozed tasks, overdue and today first, then by date, priority and name, each with an Overdue, Today or date hint, plus **No task**. It follows the page theme (the Engine palette).
+- **Drag a task onto the timer.** The picker is also a drop target: drag a task card from The Engine's List or Board onto it to link it. It lights with a primary ring and reads "Drop to focus on this task".
+- **The link follows the task list** (`reconcileFocusTask` and `focusTaskOptions` in `src/lib/focusTask.ts`, wired in `src/contexts/AppContext.tsx`). Completing the linked task (including a repeating task rolling to its next date) or deleting it logs its share and unlinks it, and the timer keeps running unlinked. Renaming it updates the name shown and logged. Changes made from the tray or another device count too. Signing out clears the link.
+- **Focus mode mutes The Portal.** While a focus phase is running (not paused, not on a break), Portal unread badges are hidden in the sidebar and in the Portal navbar, and Portal desktop notifications are suppressed. Badges keep updating underneath and reappear on pause, Reset or a break. `useFocusMuted` in `src/hooks/usePomodoro.ts`.
+- **Focus by task on The Orbit** (`src/components/views/orbit/FocusPie.tsx`). A donut chart under the daily Focus bars in the Focus card, with a legend. There is a slice per task, largest first; past 7 tasks the rest fold into **Other** (an 8th task alone is shown on its own rather than as an Other of one), and unlinked focus is a muted **No task** slice. Hovering a slice or legend row lifts it, dims the others and shows its percent and name in the ring's center; the slice opens a themed Orbit glass tooltip with its time, share of focus and session count, and for Other the list of folded tasks. Styles are `.orbit-pie*` in `src/index.css`.
+- **The Orbit's markdown export** gains a "### By task" list in its Focus section, such as "- Write report: 30 min (75%)".
+- `supabase/migrations/0008_focus_task_title.sql`, `src/lib/focusTask.ts` (unit-tested) and `src/components/views/PomodoroTask.tsx`.
+
+### Changed
+
+- **The Pomodoro state carries a task.** `task: {id, title} | null` is kept across focus and break phases. `src/lib/pomodoro.ts` gains `setTask`, `unlinkTask`, `renameTask` and `selectFocusMuted`.
+- **Changing the task mid-focus splits the run.** The time so far is logged to the old task (when it is at least 1 minute, the same rule as Reset) and the clock keeps running for the new one.
+- **`FocusSession` carries `taskId` and `taskTitle`.** Focus runs are saved with `task_id` and `task_title` in `focus_sessions`. Before migration 0008 the insert retries without `task_title` (the run is linked by id only), and The Orbit's history fetch (`src/hooks/useOrbitReview.ts`) falls back to selecting without it.
+- **Focus time is grouped by task** in `focusByTask` in `src/lib/orbitReview.ts`: by task id, or by the saved title once the task is deleted, labelled with the latest title.
+- **Portal notifications respect focus mode.** `src/lib/notifications.ts` skips Portal toasts while focus mode is muting the Portal.
+- **`TODO.md`:** *Pomodoro linked to a task* is done and removed.
+
+### Fixed
+
+- **Drag and drop in the desktop app (Windows).** The main window in `src-tauri/tauri.conf.json` now sets `"dragDropEnabled": false`. Tauri's native file-drop handler had been intercepting HTML5 drag and drop, so drop targets showed a blocked cursor.
+
+### Notes
+
+- **Apply `supabase/migrations/0008_focus_task_title.sql`** in the Supabase SQL Editor. It adds `focus_sessions.task_title` (text) and an index on `focus_sessions(task_id)`, and is safe to run twice. `focus_sessions.task_id` has existed since 0003 but was never filled. Until the migration is applied, focus still saves: a linked run is stored by task id only, and the per-task breakdown names it from the task list while the task exists.
+- Tests: `src/lib/pomodoro.test.ts` (linked task, splits, unlink, rename, focus muted), `src/lib/focusTask.test.ts`, `src/lib/orbitReview.test.ts` (focus by task and the export), `src/components/views/PomodoroTask.test.tsx`, and an updated `notifications.test.ts`. All 762 tests pass.
+
 ## [v0.9.4] - 2026-10-07 - Snooze tasks, and a Someday bucket.
 
 ### Added

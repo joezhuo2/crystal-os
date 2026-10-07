@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Play, Pause, RotateCcw } from "lucide-react";
 import { pomodoro } from "@/lib/pomodoro";
 import { usePomodoro } from "@/hooks/usePomodoro";
+import PomodoroTask from "./PomodoroTask";
 
 export default function PomodoroTimer() {
   // Timer state lives in a shared store so it survives leaving this page and
@@ -96,10 +97,11 @@ export default function PomodoroTimer() {
         >
           {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
         </button>
-        <button onClick={pomodoro.reset}className="p-2.5 rounded-full bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors">
+        <button onClick={pomodoro.reset} className="p-2.5 rounded-full bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors">
           <RotateCcw className="w-4 h-4" />
         </button>
       </div>
+      <PomodoroTask />
     </div>
   );
 }

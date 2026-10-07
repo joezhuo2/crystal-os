@@ -56,6 +56,20 @@ interface History {
   focus: FocusRecord[];
 }
 
+/** Postgres "column does not exist", or PostgREST's version of it. */
+function isMissingColumn(error: { code?: string; message?: string }): boolean {
+  return error.code === "42703" || error.code === "PGRST204" || /column .* does not exist/i.test(error.message ?? "");
+}
+
+/** Focus runs with their linked task; without 0008's task_title, by id only. */
+async function fetchFocus(min: string, max: string) {
+  const query = (columns: string) =>
+    supabase.from("focus_sessions").select(columns).gte("ended_at", min).lt("ended_at", max).order("ended_at").limit(10_000);
+  const result = await query("ended_at, seconds, task_id, task_title");
+  if (!result.error || !isMissingColumn(result.error)) return result;
+  return await query("ended_at, seconds, task_id");
+}
+
 /** Completions and focus runs from `from` through `to` (local days, inclusive). */
 async function fetchHistory(from: string, to: string): Promise<History> {
   const min = startOfDay(from);
@@ -68,19 +82,18 @@ async function fetchHistory(from: string, to: string): Promise<History> {
       .lt("completed_at", max)
       .order("completed_at")
       .limit(10_000),
-    supabase
-      .from("focus_sessions")
-      .select("ended_at, seconds")
-      .gte("ended_at", min)
-      .lt("ended_at", max)
-      .order("ended_at")
-      .limit(10_000),
+    fetchFocus(min, max),
   ]);
   const error = completions.error ?? focus.error;
   if (error) throw new OrbitHistoryError(error.message, isMissingTable(error));
   return {
     completions: (completions.data ?? []).map((r) => ({ title: r.title as string, completedAt: r.completed_at as string })),
-    focus: (focus.data ?? []).map((r) => ({ endedAt: r.ended_at as string, seconds: Number(r.seconds) })),
+    focus: ((focus.data ?? []) as unknown as Record<string, unknown>[]).map((r) => ({
+      endedAt: r.ended_at as string,
+      seconds: Number(r.seconds),
+      taskId: (r.task_id as string | null) ?? null,
+      taskTitle: (r.task_title as string | null | undefined) ?? null,
+    })),
   };
 }
 

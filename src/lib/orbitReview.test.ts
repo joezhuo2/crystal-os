@@ -3,6 +3,7 @@ import {
   buildAgenda,
   buildReview,
   exportPath,
+  focusByTask,
   inProgressPeriod,
   isoWeek,
   latestReadyPeriod,
@@ -140,6 +141,77 @@ describe("period stats", () => {
     expect(review.focusByDay).toHaveLength(7);
     expect(review.focusByDay.find((d) => d.day === "2026-10-01")?.minutes).toBe(60);
     expect(review.focusPerDay).toBe(9);
+  });
+});
+
+describe("focus by task", () => {
+  const week = periodContaining("weekly", "2026-10-01");
+  const run = (seconds: number, taskId: string | null, taskTitle: string | null, day = "2026-10-01") => ({
+    endedAt: iso(day),
+    seconds,
+    taskId,
+    taskTitle,
+  });
+
+  it("groups the period's focus by task, largest first, with No task last", () => {
+    const slices = focusByTask(week, [
+      run(600, "a", "Write report"),
+      run(1200, "b", "Review PR"),
+      run(1200, "a", "Write report"),
+      run(900, null, null),
+      run(6000, "a", "Write report", "2026-09-20"),
+    ]);
+    expect(slices.map((s) => [s.kind, s.label, s.minutes, s.sessions])).toEqual([
+      ["task", "Write report", 30, 2],
+      ["task", "Review PR", 20, 1],
+      ["none", "No task", 15, 1],
+    ]);
+    expect(slices.reduce((sum, s) => sum + s.share, 0)).toBeCloseTo(1);
+    expect(slices[0].share).toBeCloseTo(1800 / 3900);
+  });
+
+  it("labels a renamed task with its latest title", () => {
+    const slices = focusByTask(week, [run(600, "a", "Old name", "2026-09-29"), run(600, "a", "New name", "2026-10-02")]);
+    expect(slices[0].label).toBe("New name");
+  });
+
+  it("keeps a deleted task's runs together by title", () => {
+    const slices = focusByTask(week, [run(600, null, "Gone task"), run(600, null, "Gone task")]);
+    expect(slices).toHaveLength(1);
+    expect(slices[0]).toMatchObject({ kind: "task", label: "Gone task", sessions: 2 });
+  });
+
+  it("names a run saved without a title from the task list", () => {
+    const slices = focusByTask(week, [run(600, "a", null)], [{ id: "a", name: "From list" }]);
+    expect(slices[0].label).toBe("From list");
+    expect(focusByTask(week, [run(600, "z", null)])[0].label).toBe("Untitled task");
+  });
+
+  it("folds tasks past the seventh into Other, listing them", () => {
+    const records = Array.from({ length: 10 }, (_, i) => run((20 - i) * 60, `t${i}`, `Task ${i}`));
+    const slices = focusByTask(week, records);
+    expect(slices).toHaveLength(8);
+    const other = slices[7];
+    expect(other).toMatchObject({ kind: "other", label: "Other", minutes: 11 + 12 + 13, sessions: 3 });
+    expect(other.members?.map((m) => m.label)).toEqual(["Task 7", "Task 8", "Task 9"]);
+  });
+
+  it("shows an eighth task on its own rather than an Other of one", () => {
+    const records = Array.from({ length: 8 }, (_, i) => run((20 - i) * 60, `t${i}`, `Task ${i}`));
+    expect(focusByTask(week, records).map((s) => s.kind)).not.toContain("other");
+  });
+
+  it("is empty with no focus", () => {
+    expect(focusByTask(week, [])).toEqual([]);
+  });
+
+  it("is part of the review and its export", () => {
+    const review = buildReview(week, { ...empty, focus: [run(1800, "a", "Write report"), run(600, null, null)] });
+    expect(review.focusByTask.map((s) => s.label)).toEqual(["Write report", "No task"]);
+    const md = toMarkdown(review);
+    expect(md).toContain("### By task");
+    expect(md).toContain("- Write report: 30 min (75%)");
+    expect(md).toContain("- No task: 10 min (25%)");
   });
 });
 

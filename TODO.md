@@ -1,10 +1,11 @@
 # Planned Features
 - [v0.10.0] - engine options update
-- [ ] **Pomodoro linked to a task.** Start a focus session on a specific task and track time per task, so The Orbit shows where focus went. Focus mode also mutes Portal badges. (new dropwdown under the start/reset buttons, can drag a task into the field, should be themed)
-- [ ] animations when completing/uncompleting a task
-- [ ] task list (the engine sort/filter button) (new themed button directly right of categories, with sort options (date, priority, estimated time, etc.), (ascending/descending), and filter by (category, priority, estimated time (<=,>=,==), name, etc.), with open/close smooth animations)
-- when changing start time to (eg. 9:00AM), end time should also be adjusted to 1h after (eg. 10:00AM for the earlier example)
-- show a configurable amount of completed tasks (others are hidden until expanded. (eg. "show xx more" button), and a "show xx snoozed" button under this one)
+- [ ] [v0.9.6] **task list** (the engine sort/filter button) (new themed button directly right of categories, with sort options (date, priority, estimated time, etc.), (ascending/descending), and filter by (category, priority, estimated time (<=,>=,==), name, etc.), with open/close smooth animations)
+- [v0.9.7] show a configurable amount of completed tasks (others are hidden until expanded. (eg. "show xx more" button), and a "show xx snoozed" button under this one)
+- [v0.9.8] when changing start time to (eg. 9:00AM), end time should also be adjusted to 1h after (eg. 10:00AM for the earlier example)
+- [v0.9.9] animations when completing/uncompleting a task
+- [v0.9.10] the engine board view: drag tasks between categories on task view to change their categories, show all categories (including empty ones, overdue category, and done category), pomodoro should always show on the right, categories should be scrollable left/right
+- [v0.9.11] glassmorphism ui loading/login screen with background image
 - [v0.11.0] vault/banking overhaul
     - [ ]  use plaid to connect to banks (store api keys and tokens in secure .env variables)
     - [ ] themed glassmorphism UI 
@@ -20,7 +21,6 @@
 
 - redo portal/obsidian/nebula ui (change to glassmorphism with some background)
 - glassmorphism ui to all home page widget cards (except terminal)
-- glassmorphism ui loading/login screen
 - global search bar should be an overlay on any screen, and fully themed to current page
 
 ## Before first release (v1.0.0)

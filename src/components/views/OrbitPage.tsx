@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { FocusBars, MoneyBars, TaskOrbit } from "@/components/views/orbit/OrbitCharts";
+import { FocusPie } from "@/components/views/orbit/FocusPie";
 import { TodayCard } from "@/components/views/orbit/TodayCard";
 import { OrbitHistoryError, useNow, useOrbitReview, type OrbitReviewResult } from "@/hooks/useOrbitReview";
 import { useCreateNote, vaultErrorCode } from "@/hooks/useVault";
@@ -188,6 +189,7 @@ function FocusCard({ review }: { review: Review }) {
         {monthly && <Stat value={formatMinutes(review.focusPerWeek)} label="per week" tone="mauve" />}
       </div>
       <FocusBars days={review.focusByDay} />
+      {review.focusByTask.length > 0 && <FocusPie slices={review.focusByTask} />}
     </section>
   );
 }

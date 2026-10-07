@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Crystal OS",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "identifier": "com.crystalos.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -23,6 +23,7 @@
         "backgroundColor": "#0f172a",
         "resizable": true,
         "fullscreen": false,
+        "dragDropEnabled": false,
         "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,BackForwardCache"
       }
     ],

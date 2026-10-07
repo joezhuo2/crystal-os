@@ -11,6 +11,12 @@ export const DEFAULT_BREAK = 5 * 60;
 
 export type PomodoroPhase = "focus" | "break";
 
+/** The task a focus run counts toward. The title is kept for the history row. */
+export interface FocusTask {
+  id: string;
+  title: string;
+}
+
 export interface PomodoroState {
   phase: PomodoroPhase;
   running: boolean;
@@ -18,6 +24,8 @@ export interface PomodoroState {
   remaining: number;
   workDuration: number;
   breakDuration: number;
+  /** The task focus is linked to, or null for unlinked focus. Kept across phases. */
+  task: FocusTask | null;
 }
 
 const INITIAL: PomodoroState = {
@@ -26,6 +34,7 @@ const INITIAL: PomodoroState = {
   remaining: DEFAULT_WORK,
   workDuration: DEFAULT_WORK,
   breakDuration: DEFAULT_BREAK,
+  task: null,
 };
 
 /** A finished stretch of focus, for The Orbit's focus totals. */
@@ -33,6 +42,8 @@ export interface FocusSession {
   startedAt: Date;
   endedAt: Date;
   seconds: number;
+  taskId: string | null;
+  taskTitle: string | null;
 }
 
 /** Focus shorter than this is not logged when a run is reset or resized. */
@@ -42,6 +53,8 @@ let state: PomodoroState = INITIAL;
 let endsAt: number | null = null;
 /** When the current focus phase was first started; null until it is. */
 let focusStartedAt: number | null = null;
+/** Focus seconds of this phase already handed over by an earlier task switch. */
+let focusLogged = 0;
 let recorder: ((session: FocusSession) => void) | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 const listeners = new Set<() => void>();
@@ -70,17 +83,36 @@ function stopTimer() {
 }
 
 /**
- * Hands the focus done so far in this phase to the recorder, if there is
- * enough of it. `whole` logs a finished phase whatever its length.
+ * Hands the focus done since the last hand-over to the recorder, if there is
+ * enough of it, against the linked task. `whole` logs the end of a finished
+ * phase whatever its length. `split` keeps the phase going for the next task
+ * instead of closing it.
  */
-function logFocus(remaining: number, whole = false) {
-  if (state.phase !== "focus" || focusStartedAt === null) return;
-  const seconds = state.workDuration - remaining;
+function logFocus(remaining: number, whole = false, split = false) {
+  if (state.phase !== "focus" || focusStartedAt === null) {
+    if (!split) focusLogged = 0;
+    return;
+  }
+  const elapsed = state.workDuration - remaining;
+  const seconds = elapsed - focusLogged;
   const startedAt = focusStartedAt;
-  focusStartedAt = null;
+  if (split) {
+    focusLogged = elapsed;
+    // A paused run picks up its new start time when it resumes.
+    focusStartedAt = state.running ? Date.now() : null;
+  } else {
+    focusLogged = 0;
+    focusStartedAt = null;
+  }
   if (seconds <= 0 || (!whole && seconds < MIN_LOGGED_FOCUS)) return;
   try {
-    recorder?.({ startedAt: new Date(startedAt), endedAt: new Date(), seconds });
+    recorder?.({
+      startedAt: new Date(startedAt),
+      endedAt: new Date(),
+      seconds,
+      taskId: state.task?.id ?? null,
+      taskTitle: state.task?.title ?? null,
+    });
   } catch {
     // A failing recorder must not stop the timer.
   }
@@ -150,6 +182,29 @@ export const pomodoro = {
     set({ ...state, [key]: seconds, remaining: seconds });
   },
 
+  /**
+   * Link focus to a task, or null to unlink. Mid-run, the focus so far is
+   * logged to the old task and the clock carries on for the new one.
+   */
+  setTask(task: FocusTask | null) {
+    if ((state.task?.id ?? null) === (task?.id ?? null)) {
+      if (task && state.task && task.title !== state.task.title) set({ ...state, task: { ...task } });
+      return;
+    }
+    logFocus(secondsLeft(), false, true);
+    set({ ...state, task: task ? { ...task } : null });
+  },
+
+  /** The linked task was completed or deleted: log its share and unlink. */
+  unlinkTask(id: string) {
+    if (state.task?.id === id) pomodoro.setTask(null);
+  },
+
+  /** The linked task was renamed: show and log the new name. */
+  renameTask(id: string, title: string) {
+    if (state.task?.id === id && state.task.title !== title) set({ ...state, task: { id, title } });
+  },
+
   /** Where finished focus goes (AppContext saves it to Supabase). Null to stop. */
   setRecorder(next: ((session: FocusSession) => void) | null) {
     recorder = next;
@@ -159,9 +214,15 @@ export const pomodoro = {
   _reset() {
     stopTimer();
     focusStartedAt = null;
+    focusLogged = 0;
     set(INITIAL);
   },
 };
+
+/** Portal badges and notifications stay quiet while focus is running. */
+export function selectFocusMuted(s: PomodoroState): boolean {
+  return s.running && s.phase === "focus";
+}
 
 export function formatClock(seconds: number): string {
   const m = Math.floor(seconds / 60);

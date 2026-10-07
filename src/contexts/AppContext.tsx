@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useCallback, useMemo, useEffect } from "react";
-import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { hashKey, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { pomodoro } from "@/lib/pomodoro";
 import { ORBIT_QUERY_KEY } from "@/lib/orbitReview";
@@ -17,6 +17,7 @@ import { appUi } from "@/lib/appUi";
 import { clampEstimate } from "@/lib/capacity";
 import { cleanChecklist, cleanNotes, tickAll, untickAll, type ChecklistItem } from "@/lib/subtasks";
 import { cleanSnoozeDate, clearedSnooze } from "@/lib/snooze";
+import { reconcileFocusTask } from "@/lib/focusTask";
 import {
   isRetryable,
   offlineQueue,
@@ -129,6 +130,14 @@ export const APP_DATA_KEYS = {
   financialCategories: ["app", "financialCategories"],
   loading: ["app", "loading"],
 } as const;
+
+const TASKS_HASH = hashKey(APP_DATA_KEYS.tasks);
+const LOADING_HASH = hashKey(APP_DATA_KEYS.loading);
+
+/** PostgREST "column not in schema cache", or Postgres "column does not exist". */
+function isMissingColumn(error: { code?: string; message?: string }): boolean {
+  return error.code === "PGRST204" || error.code === "42703" || /column/i.test(error.message ?? "");
+}
 
 const EMPTY_TASKS: Task[] = [];
 const EMPTY_TRANSACTIONS: Transaction[] = [];
@@ -590,20 +599,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ── Focus history for The Orbit ──
   // The Pomodoro store lives outside React; while someone is signed in, each
-  // finished focus run is saved as a focus_sessions row.
+  // finished focus run is saved as a focus_sessions row, with its linked task.
   useEffect(() => {
     if (!user) return;
-    pomodoro.setRecorder(({ startedAt, endedAt, seconds }) => {
-      void supabase
-        .from("focus_sessions")
-        .insert({ started_at: startedAt.toISOString(), ended_at: endedAt.toISOString(), seconds })
-        .then(({ error }) => {
-          if (reportError("save your focus time", error)) return;
-          queryClient.invalidateQueries({ queryKey: ORBIT_QUERY_KEY });
-        });
+    pomodoro.setRecorder(({ startedAt, endedAt, seconds, taskId, taskTitle }) => {
+      const row = { started_at: startedAt.toISOString(), ended_at: endedAt.toISOString(), seconds };
+      const linked = taskId ? { ...row, task_id: taskId, task_title: taskTitle } : row;
+      void (async () => {
+        let { error } = await supabase.from("focus_sessions").insert(linked);
+        // Before 0008_focus_task_title.sql there is no task_title column; the
+        // run still saves, linked by id only.
+        if (error && taskId && isMissingColumn(error)) {
+          ({ error } = await supabase.from("focus_sessions").insert({ ...row, task_id: taskId }));
+        }
+        if (reportError("save your focus time", error)) return;
+        queryClient.invalidateQueries({ queryKey: ORBIT_QUERY_KEY });
+      })();
     });
     return () => pomodoro.setRecorder(null);
   }, [user, queryClient]);
+
+  // The Pomodoro's linked task follows the task list from every source (this
+  // window, the tray, another device): deleted or completed unlinks it,
+  // renamed renames it. Skipped while loading, when the list is still empty.
+  useEffect(() => {
+    const sync = () => {
+      if (queryClient.getQueryData<boolean>(APP_DATA_KEYS.loading) !== false) return;
+      const tasks = queryClient.getQueryData<Task[]>(APP_DATA_KEYS.tasks) ?? EMPTY_TASKS;
+      const linked = pomodoro.getState().task;
+      const change = reconcileFocusTask(linked, tasks);
+      if (!linked || change.action === "keep") return;
+      if (change.action === "unlink") pomodoro.unlinkTask(linked.id);
+      else pomodoro.renameTask(linked.id, change.title);
+    };
+    sync();
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === "updated" && (event.query.queryHash === TASKS_HASH || event.query.queryHash === LOADING_HASH)) sync();
+    });
+    // Signing out drops the link with the rest of the account's data.
+    return () => {
+      unsubscribe();
+      if (!user) pomodoro.setTask(null);
+    };
+  }, [queryClient, user]);
 
   // ── Completion history for The Orbit ──
   const recordCompletion = useCallback(
@@ -739,6 +777,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...clearedSnooze(task),
         ...(task.checklist ? { checklist: rolled ? untickAll(task.checklist) : tickAll(task.checklist) } : {}),
       };
+      // Focus on it so far counts toward it; the timer carries on unlinked.
+      // (A repeat rolling on stays open, so the list sync would not unlink it.)
+      pomodoro.unlinkTask(task.id);
       updateTask(task.id, updates);
       void recordCompletion(task);
       if (rolled) {

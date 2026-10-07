@@ -16,7 +16,7 @@ import type { Task } from "@/contexts/AppContext";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 import { notifySettings } from "@/lib/notifySettings";
 import { isDesktop } from "@/lib/platform";
-import { pomodoro, type PomodoroState } from "@/lib/pomodoro";
+import { pomodoro, selectFocusMuted, type PomodoroState } from "@/lib/pomodoro";
 import { portal, type PortalState } from "@/lib/portalStore";
 import { cleanRepeat, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 import { awakeTasks } from "@/lib/snooze";
@@ -273,8 +273,10 @@ export function initNotificationBridges(): () => void {
     const next = portal.getState();
     const alerts = portalAlerts(lastPortal, next);
     lastPortal = next;
-    // While Crystal OS has focus the sidebar badge already says it.
+    // While Crystal OS has focus the sidebar badge already says it, and a
+    // running focus session mutes the Portal altogether.
     if (alerts.length === 0 || !notifySettings.getState().portal || document.hasFocus()) return;
+    if (selectFocusMuted(pomodoro.getState())) return;
     for (const alert of alerts) void notify(alert);
   });
 

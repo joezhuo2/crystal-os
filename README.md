@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-729%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.9.4-6366F1)
+![Tests](https://img.shields.io/badge/tests-762%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.9.5-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.9.4** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.9.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -19,7 +19,7 @@ Current release: **v0.9.4** — see [CHANGELOG.md](CHANGELOG.md) for release his
 
 | Feature | Description |
 |---------|-------------|
-| **🪐 The Orbit** | Weekly and monthly reviews, between Home and the Engine. A Weekly/Monthly switch shows the latest finished period (ready Sunday at 6 PM, or 6 PM on the month's last day) with arrows to browse back: tasks completed and added (counts and names, the first five then **+N more**), Pomodoro focus total and per-day (and per-week) averages with a bar per day, income and spending against the last period, the next period's calendar events and tasks as a mini agenda (by day, or by week for a month), new vault notes, and a trend list against the last period and the 4-week or 3-month average. **Habits**: the Today card has a chip per habit to tick off today, a streak on hover, and a grid of this week (or this month, with the Monthly switch) lit by how many were done each day; the gear opens a manager to add, rename, recolour, reorder and remove them. Each review gets a Habits card (days done, rate, longest streak and streak at the end per habit, plus an optional note) and a habit completion trend. Pick an optional reflection prompt, add a note, and **Export to vault** writes `Reviews/Weekly/2026-W40.md` or `Reviews/Monthly/2026-10.md`, asking before overwriting. A dot on the nav icon and a chip on Home mark a review you have not opened yet; **Settings → The Orbit → Auto-export reviews** writes each one when it is ready. Its own pale black hole backdrop and ice-and-lavender liquid glass, also on the Home greeting card, which opens it |
+| **🪐 The Orbit** | Weekly and monthly reviews, between Home and the Engine. A Weekly/Monthly switch shows the latest finished period (ready Sunday at 6 PM, or 6 PM on the month's last day) with arrows to browse back: tasks completed and added (counts and names, the first five then **+N more**), Pomodoro focus total and per-day (and per-week) averages with a bar per day and a donut of focus by task (a slice per linked task, the rest as **Other**, unlinked time as **No task**; hover for time, share and sessions), income and spending against the last period, the next period's calendar events and tasks as a mini agenda (by day, or by week for a month), new vault notes, and a trend list against the last period and the 4-week or 3-month average. **Habits**: the Today card has a chip per habit to tick off today, a streak on hover, and a grid of this week (or this month, with the Monthly switch) lit by how many were done each day; the gear opens a manager to add, rename, recolour, reorder and remove them. Each review gets a Habits card (days done, rate, longest streak and streak at the end per habit, plus an optional note) and a habit completion trend. Pick an optional reflection prompt, add a note, and **Export to vault** writes `Reviews/Weekly/2026-W40.md` or `Reviews/Monthly/2026-10.md`, asking before overwriting. A dot on the nav icon and a chip on Home mark a review you have not opened yet; **Settings → The Orbit → Auto-export reviews** writes each one when it is ready. Its own pale black hole backdrop and ice-and-lavender liquid glass, also on the Home greeting card, which opens it |
 | **📋 Tasks** | Full CRUD task management with categories, due dates, priorities, and completion tracking. Repeats every N days, weekly on chosen weekdays, monthly on the start date's day, or N days after you complete it (for chores that slide). Overdue tasks get their own group at the top of the list with a one-click **Today** reschedule. Each task can carry a time estimate (15m, 30m, 1h, 2h, 4h or any number of minutes), shown on its card, and a **Fits today?** bar at the top of the page weighs today's open estimates against the free time left in your work day, minus timed events in your Horizon calendar. See [Time estimates and capacity](#-time-estimates-and-capacity). Tasks also carry notes and subtasks: a checklist on the task, and other tasks nested under it, with a **+N subtasks** count on the card. See [Notes and subtasks](#-notes-and-subtasks). Any open task can be snoozed until a later date or to Someday, and stays out of the way until it wakes. See [Snoozing tasks](#-snoozing-tasks). The Engine page has its own red black hole backdrop and ember palette, matching the Horizon's look. Switching between List and Board fades one view out and the other in (instantly in performance mode) |
 | **📅 The Horizon** | Google Calendar, live: month, week, day and agenda views (week and day are hour grids: overlapping events sit side by side, a line marks now, and clicking an empty slot creates an event at that half hour), create/edit/delete events (delete confirmed), all-day and recurring events, multi-calendar picker, up to 15 event dots per day in the month grid. The dots cascade in when the page opens, and paging months fades and slides the whole grid, with the neighbouring months prefetched so their dots come along. The page has its own black hole backdrop and blue palette (see [The Horizon](#-the-horizon-google-calendar-integration)) |
 | **🏠 Home widgets** | A 3×3 grid: the greeting and clock (on The Orbit's black hole, with this week's tasks done and focus time; opens The Orbit), weather (with a one-line nudge such as "Rain from 4 PM, take an umbrella"), and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, a free-time bar with today's planned work and a nudge toward the next task ("Want to start Write report?"), or once today is clear the next 14 days' tasks, highest priority first, with a nudge to get a head start on one), today's calendar events, and the Archive; then Nebula, Portal and Terminal boxes. The weather, Engine, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Engine's red black hole, the Horizon's black hole, the Archive's amethyst cave, your Nebula palette, your Portal theme). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device |
@@ -28,9 +28,9 @@ Current release: **v0.9.4** — see [CHANGELOG.md](CHANGELOG.md) for release his
 | **🌤️ Weather** | Current conditions + 7-day forecast for any of ~840 Canadian locations (searchable city picker, or **Use my location** for the nearest one), the Air Quality Health Index from the nearest station with its 24 h peak, the UV index with advice, and how much daylight is left, over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
 | **📖 The Archive** | Browse, search, read and edit your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown, and a CodeMirror markdown editor that refuses to overwrite a note changed on disk since you opened it. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
 | **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, a context-window meter, per-model token counts, and a swirling three-colour nebula |
-| **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges, and three themes (desktop; the web build opens apps in new tabs) |
+| **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges (hidden while a Pomodoro focus phase is running), and three themes (desktop; the web build opens apps in new tabs) |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
-| **⏱️ Pomodoro** | Customizable focus/break intervals, session tracking, audio notifications, and tray controls (Tasks view) |
+| **⏱️ Pomodoro** | Customizable focus/break intervals, session tracking, audio notifications, and tray controls (Tasks view). A **Focusing on** picker under Start/Reset links the timer to an open task, by search or by dragging a card from The Engine onto it, and focus time is logged to that task. Focus mode also mutes The Portal while a focus phase runs. See [Pomodoro and tasks](#-pomodoro-and-tasks) |
 | **🔔 Notifications** | Desktop toasts when a task reaches its end time, before each timed calendar event (30 minutes by default, set in Settings), when a Pomodoro focus or break runs out, and when a Portal app's unread count goes up while Crystal OS is not focused (per app, from its right-click menu). A switch per kind and a Do Not Disturb switch in **Settings → Notifications**. See [Notifications](#-notifications) |
 | **🖥️ Desktop shell** | Native Tauri window with PowerShell terminal, tray (Pomodoro + Quick Add), always-on global hotkeys, and launch-at-login — the web build is unaffected |
 | **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, notifications, vault folder, Nebula keys, models and look, Portal theme, and downloading or building an installer. A search box (Ctrl+F) hides sections that don't match and unfolds the ones that do. Click a section's header to fold it away (remembered on this device); switches and sliders glide instead of snapping. **Diagnostics** copies recent errors (unhandled rejections, uncaught errors, failed Supabase saves) with the app version for a bug report; on desktop they are also logged to `diagnostics.log` |
@@ -200,6 +200,7 @@ src/
 │   │   ├── HomeGrid.tsx        # Home's rearrangeable grid: drag to move, edit mode to resize, hide and reset
 │   │   ├── OrbitPage.tsx       # The Orbit: weekly/monthly review cards, reflection and vault export
 │   │   ├── orbit/OrbitCharts.tsx # The Orbit's SVG focus bars, money bars and task rings
+│   │   ├── orbit/FocusPie.tsx  # The Orbit's focus-by-task donut chart and legend
 │   │   ├── orbit/OrbitAutoExport.tsx # Writes each ready review to the vault when auto-export is on
 │   │   ├── orbit/HabitsToday.tsx # The Today card's habit chips and week/month grid
 │   │   ├── orbit/HabitManager.tsx # Add, rename, recolour, reorder and remove habits
@@ -219,6 +220,7 @@ src/
 │   │   ├── SettingsPage.tsx    # Hotkeys, launch at login, notifications, vault folder, Portal theme, Atmosphere effects and image, Install & update
 │   │   ├── InstallerSection.tsx # Check for updates, release picker, installer download, build-from-source log
 │   │   ├── PomodoroTimer.tsx   # Focus timer component
+│   │   ├── PomodoroTask.tsx    # "Focusing on" task picker and drop target under Start/Reset
 │   │   └── CategoryManager.tsx # Category CRUD for tasks/finances
 │   ├── CommandPalette.tsx      # Search, NL commands, vault note results
 │   ├── NotificationScheduler.tsx # Checks task due times and calendar reminders every 30 s while signed in
@@ -272,7 +274,8 @@ src/
 │   ├── imageBackdrop.ts        # Horizon, Engine and Orbit backgrounds: bakes and decodes the page (15%) and Home box (25%) blurs once per session
 │   ├── backdropSlot.ts         # Whether the surrounding backdrop is on screen; useBackdropStill pauses its loops when not
 │   ├── frameLoop.ts            # fps-capped draw loop for backdrop canvases; sleeps on a timer between frames
-│   ├── pomodoro.ts             # Module-level Pomodoro store (page + tray agree)
+│   ├── pomodoro.ts             # Module-level Pomodoro store (page + tray agree), linked task and run splitting
+│   ├── focusTask.ts            # Keeps the Pomodoro's linked task in step with the task list; the picker's options
 │   ├── tray.ts                 # Tauri tray events → app, app state → tray menu
 │   ├── hotkey.ts               # Hotkey parsing + combo validation
 │   ├── platform.ts             # isDesktop(), apiUrl(), usesSidecar(), openExternal()
@@ -446,7 +449,7 @@ Crystal OS shows native toasts (Windows notifications on desktop through `tauri-
 - **Task due times.** When an open task reaches its end time ("Due now: File taxes", with the priority if it is high or urgent), including each occurrence of a repeating task. A due time is still announced up to 10 minutes late, so a sleeping timer or opening the app just after it does not lose it.
 - **Calendar reminders.** Before each timed event in the Google calendar picked in The Horizon: 30 minutes by default, 0 (as it starts) to 1440. Opening the app inside that window still reminds, with the time actually left ("In 8 min, at 3:00 PM · Main St"). All-day events get none. The next 50 hours of events are fetched every 10 minutes, also while the window is hidden in the tray; on desktop nothing is fetched until the calendar has been connected once, so the sidecar is not started for nothing.
 - **Pomodoro.** When a focus session or a break runs out, from the Tasks page or the tray. Pausing and resetting stay quiet.
-- **Portal messages.** When a Portal app's unread count goes up while Crystal OS is not focused ("Discord: 2 new · 5 unread", or "New activity" for a site that only shows a dot). The count an app opens with is not announced. Only loaded apps report, so an app with **Keep loaded in background** off stays quiet once it closes. Turn it off for one app with **Notify on new messages** in its right-click menu.
+- **Portal messages.** When a Portal app's unread count goes up while Crystal OS is not focused (and not while a Pomodoro focus phase is running: see [Pomodoro and tasks](#-pomodoro-and-tasks)) ("Discord: 2 new · 5 unread", or "New activity" for a site that only shows a dot). The count an app opens with is not announced. Only loaded apps report, so an app with **Keep loaded in background** off stays quiet once it closes. Turn it off for one app with **Notify on new messages** in its right-click menu.
 
 What to say and when lives in `src/lib/notifications.ts` (pure, tested); `src/components/NotificationScheduler.tsx` checks tasks and events every 30 s while signed in, and the Pomodoro and Portal stores are watched from `main.tsx`. Each task and event reminder is shown once: its key is kept in `localStorage` (`crystal-os-notified`, two days), so a restart does not repeat it. Settings are saved in `crystal-os-notifications`.
 
@@ -509,6 +512,20 @@ A snoozed task is never overdue. When it wakes it returns as normal, overdue if 
 
 Stored in `tasks.snoozed_until` and `tasks.someday` ([migration 0007](supabase/migrations/0007_task_snooze.sql)). The rules live in `src/lib/snooze.ts` (unit-tested).
 
+## 🍅 Pomodoro and tasks
+
+**Focusing on.** Under Start and Reset, a themed, searchable **Focusing on** picker links the timer to a task. It lists open, non-snoozed tasks (overdue and today first, then by date, priority and name), each with an Overdue, Today or date hint, plus **No task**. It is also a drop target: drag a task card from The Engine's List or Board onto it and it lights with a primary ring ("Drop to focus on this task"). It follows the page theme (the Engine's palette).
+
+**One link, across phases.** The linked task stays through focus and break phases. Changing it mid-focus splits the run: the time so far is logged to the old task (when it is at least a minute, the same rule as Reset) and the clock keeps running for the new one.
+
+**It follows the task list.** Completing the linked task (including a repeating task moving to its next date) or deleting it logs its share and unlinks it, and the timer keeps running. Renaming it updates the name shown and logged, whether the change came from the Engine, the tray or another device. Signing out clears the link.
+
+**Focus mode mutes The Portal.** While a focus phase is running (not paused, not on a break), Portal unread badges are hidden in the sidebar and the Portal navbar, and Portal desktop notifications are not shown. Badges keep updating underneath and come back on pause, Reset or a break.
+
+**The Orbit.** The Focus card gets a donut of focus by task under the daily bars: a slice per task, largest first, with the rest after seven tasks folded into **Other** (an eighth task alone is shown on its own), and unlinked focus as a muted **No task** slice. Hover a slice or its legend row to lift it and see its time, share of focus and session count (for Other, the tasks it holds). Tasks are grouped by id, or by the saved title once the task is deleted. The markdown export gains a **### By task** list ("- Write report: 30 min (75%)").
+
+Runs are saved in `focus_sessions` with `task_id` and `task_title` ([migration 0008](supabase/migrations/0008_focus_task_title.sql)). Before it is applied, the insert retries without `task_title` and The Orbit's history falls back to the old columns. The rules live in `src/lib/pomodoro.ts` and `src/lib/focusTask.ts` (unit-tested).
+
 ## 🗄️ Database Schema (Supabase)
 
 ```sql
@@ -521,7 +538,7 @@ task_categories      (id, user_id, name, color)
 financial_categories (id, user_id, name, color)
 settings             (user_id, key, value)   -- primary key (user_id, key)
 task_completions     (id, user_id, task_id, title, category_id, completed_at)
-focus_sessions       (id, user_id, started_at, ended_at, seconds, task_id)
+focus_sessions       (id, user_id, started_at, ended_at, seconds, task_id, task_title)
 habits               (id, user_id, name, color, position, created_at, archived_at)
 habit_checks         (id, user_id, habit_id, day)   -- unique (habit_id, day)
 ```
@@ -557,6 +574,10 @@ Then apply [`supabase/migrations/0007_task_snooze.sql`](supabase/migrations/0007
 (v0.9.4), which adds `tasks.snoozed_until` (a date) and `tasks.someday` (boolean, default false). It is
 safe to run twice. Until it is applied, snoozing a task fails; tasks that were never snoozed save as
 before.
+Then apply [`supabase/migrations/0008_focus_task_title.sql`](supabase/migrations/0008_focus_task_title.sql)
+(v0.9.5), which adds `focus_sessions.task_title` (text) and an index on `focus_sessions(task_id)`. It is
+safe to run twice. Until it is applied, a focus run linked to a task is saved with its task id only (no
+name copied), and The Orbit names such a task from the task list while it exists.
 
 ---
 

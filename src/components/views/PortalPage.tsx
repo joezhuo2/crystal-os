@@ -5,8 +5,9 @@ import PortalNavbar, { AppIcon, type Confirm } from "@/components/portal/PortalN
 import AddPortalAppDialog from "@/components/portal/AddPortalAppDialog";
 import PortalSkeleton from "@/components/portal/PortalSkeleton";
 import { portalUnloader, startPortalSession, usePortal, usePortalOcclusion } from "@/hooks/usePortal";
+import { useFocusMuted } from "@/hooks/usePomodoro";
 import { isDesktop } from "@/lib/platform";
-import { PRESETS, type PortalApp } from "@/lib/portalApps";
+import { PRESETS, type PortalApp, type PortalBadge } from "@/lib/portalApps";
 import {
   PORTAL_FADE_MS,
   fadeOutPortal,
@@ -76,9 +77,14 @@ function EmptyState({ onConnect, onCustom }: { onConnect: (app: PortalApp) => vo
   );
 }
 
+const NO_BADGES: Record<string, PortalBadge> = {};
+
 export default function PortalPage() {
   const desktop = isDesktop();
   const { apps, activeId, badges, occluders } = usePortal();
+  // A running focus session hides the unread badges; they keep updating
+  // underneath and come back on pause, reset or the break.
+  const focusMuted = useFocusMuted();
   const active = apps.find((a) => a.id === activeId) ?? null;
   const hostRef = useRef<HTMLDivElement>(null);
   const [adding, setAdding] = useState(false);
@@ -395,7 +401,7 @@ export default function PortalPage() {
         desktop={desktop}
         apps={apps}
         activeId={pendingId ?? activeId}
-        badges={badges}
+        badges={focusMuted ? NO_BADGES : badges}
         confirm={confirm}
         onConfirmChange={setConfirm}
         onSelect={select}

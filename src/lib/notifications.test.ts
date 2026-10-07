@@ -147,6 +147,7 @@ describe("pomodoroAlert", () => {
     remaining: 1,
     workDuration: DEFAULT_WORK,
     breakDuration: DEFAULT_BREAK,
+    task: null,
   };
 
   it("announces the end of focus and of a break", () => {

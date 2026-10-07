@@ -2951,6 +2951,132 @@
     filter: drop-shadow(0 0 4px hsl(var(--orbit-mauve) / 0.6));
   }
 
+  /* Focus by task (v0.9.5, views/orbit/FocusPie.tsx): a donut and its
+     legend, under the Focus card's daily bars. */
+  .orbit-pie {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid hsl(var(--orbit-ice) / 0.08);
+  }
+
+  .orbit-pie-chart {
+    width: 7.5rem;
+    height: 7.5rem;
+    flex-shrink: 0;
+  }
+
+  .orbit-pie-track {
+    fill: none;
+    stroke: hsl(var(--orbit-slate) / 0.18);
+    stroke-width: 12;
+  }
+
+  .orbit-pie-slice {
+    fill: none;
+    stroke-width: 12;
+    cursor: pointer;
+    transition:
+      stroke-width 160ms ease-out,
+      opacity 160ms ease-out,
+      filter 160ms ease-out;
+  }
+
+  .orbit-pie-slice[data-active] {
+    stroke-width: 15;
+    filter: drop-shadow(0 0 5px hsl(var(--orbit-cyan) / 0.65));
+  }
+
+  .orbit-pie-slice[data-dim],
+  .orbit-pie-legend li[data-dim] {
+    opacity: 0.45;
+  }
+
+  .orbit-pie-center {
+    font-size: 12px;
+    font-weight: 700;
+    fill: hsl(var(--orbit-ice));
+  }
+
+  .orbit-pie-caption {
+    font-size: 7px;
+    fill: hsl(var(--muted-foreground) / 0.9);
+  }
+
+  .orbit-pie-legend {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.72rem;
+  }
+
+  .orbit-pie-legend li {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.4rem;
+    cursor: default;
+    transition:
+      background-color 160ms ease-out,
+      opacity 160ms ease-out;
+  }
+
+  .orbit-pie-legend li[data-active] {
+    background: hsl(var(--orbit-ice) / 0.07);
+  }
+
+  .orbit-pie-swatch {
+    width: 0.55rem;
+    height: 0.55rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+  }
+
+  .orbit-pie-tip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 9rem;
+  }
+
+  .orbit-pie-tip-stats {
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+  }
+
+  .orbit-pie-tip-stats strong {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .orbit-pie-tip-members {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    max-width: 14rem;
+    padding-top: 0.3rem;
+    border-top: 1px solid rgb(255 255 255 / 0.08);
+  }
+
+  .orbit-pie-tip-members > span {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .orbit-pie-slice,
+    .orbit-pie-legend li {
+      transition: none;
+    }
+  }
+
   .orbit-ring-core {
     fill: #000;
     stroke: hsl(var(--orbit-ice) / 0.55);

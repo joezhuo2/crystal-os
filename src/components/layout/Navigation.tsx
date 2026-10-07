@@ -3,6 +3,7 @@ import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings, SquareT
 import { m } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
 import { usePortal } from "@/hooks/usePortal";
+import { useFocusMuted } from "@/hooks/usePomodoro";
 import { badgeLabel, type PortalBadge } from "@/lib/portalApps";
 import { selectBadgeTotal } from "@/lib/portalStore";
 import { useNow, useOrbitReady } from "@/hooks/useOrbitReview";
@@ -176,7 +177,9 @@ const SidebarButton = memo(function SidebarButton({
 export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const shellRef = useRef<HTMLDivElement>(null);
   const setExpanded = (on: boolean) => shellRef.current?.toggleAttribute("data-expanded", on);
-  const portalBadge = selectBadgeTotal(usePortal());
+  // A running focus session mutes the Portal's badges (v0.9.5).
+  const portalTotal = selectBadgeTotal(usePortal());
+  const portalBadge = useFocusMuted() ? null : portalTotal;
   const orbitReady = useOrbitReady(useNow());
   const mode: SidebarMode =
     activeTab === "terminal"

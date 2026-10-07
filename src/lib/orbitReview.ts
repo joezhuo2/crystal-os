@@ -162,9 +162,14 @@ export interface FocusRecord {
   /** ISO timestamp the run ended; it counts on that day. */
   endedAt: string;
   seconds: number;
+  /** The linked task; null once it is deleted or for unlinked focus (v0.9.5). */
+  taskId?: string | null;
+  /** The task's name when the run was saved; null for unlinked focus. */
+  taskTitle?: string | null;
 }
 
 export interface ReviewTask {
+  id?: string;
   name: string;
   startDate: string;
   endDate: string;
@@ -315,6 +320,8 @@ export interface Review {
   focusPerDay: number;
   /** Monthly only: average minutes per week of the month. */
   focusPerWeek: number;
+  /** Where the focus went: a slice per task, then Other and No task. */
+  focusByTask: FocusSlice[];
   agenda: AgendaItem[];
   next: ReviewPeriod;
   /** Habits active in the period, in manager order. */
@@ -332,6 +339,88 @@ const TREND_DEFS: Omit<Trend, "value" | "previous" | "average">[] = [
   { id: "notes", label: "Vault notes", higherIsBetter: true, format: "count" },
   { id: "habitRate", label: "Habit completion", higherIsBetter: true, format: "percent" },
 ];
+
+/** One slice of The Orbit's focus pie. */
+export interface FocusSlice {
+  key: string;
+  kind: "task" | "other" | "none";
+  label: string;
+  seconds: number;
+  minutes: number;
+  /** Focus runs counted in the slice. */
+  sessions: number;
+  /** Fraction of the period's focus, 0 to 1. */
+  share: number;
+  /** Other only: the tasks folded into it, largest first. */
+  members?: { label: string; minutes: number }[];
+}
+
+/** Tasks shown as their own slice before the rest fold into Other. */
+export const FOCUS_TASK_SLICES = 7;
+
+/**
+ * The period's focus by linked task, largest first, then Other (past the
+ * seventh task) and No task. A run is grouped by its task id, or by its saved
+ * title once the task is deleted, and labelled with the latest title seen.
+ */
+export function focusByTask(
+  period: ReviewPeriod,
+  records: FocusRecord[],
+  tasks: readonly Pick<ReviewTask, "id" | "name">[] = [],
+): FocusSlice[] {
+  type Group = { key: string; label: string | null; latest: string; seconds: number; sessions: number };
+  const groups = new Map<string, Group>();
+  let none = { seconds: 0, sessions: 0 };
+  for (const f of records) {
+    if (f.seconds <= 0 || !inPeriod(dayOfInstant(f.endedAt), period)) continue;
+    const key = f.taskId ? `id:${f.taskId}` : f.taskTitle ? `title:${f.taskTitle}` : null;
+    if (!key) {
+      none = { seconds: none.seconds + f.seconds, sessions: none.sessions + 1 };
+      continue;
+    }
+    const group = groups.get(key) ?? { key, label: null, latest: "", seconds: 0, sessions: 0 };
+    group.seconds += f.seconds;
+    group.sessions += 1;
+    if (f.taskTitle && f.endedAt >= group.latest) {
+      group.label = f.taskTitle;
+      group.latest = f.endedAt;
+    }
+    groups.set(key, group);
+  }
+  const total = none.seconds + [...groups.values()].reduce((sum, g) => sum + g.seconds, 0);
+  if (total === 0) return [];
+
+  const named = (g: Group) =>
+    g.label ?? (g.key.startsWith("id:") ? tasks.find((t) => `id:${t.id}` === g.key)?.name : undefined) ?? "Untitled task";
+  const slice = (key: string, kind: FocusSlice["kind"], label: string, seconds: number, sessions: number): FocusSlice => ({
+    key,
+    kind,
+    label,
+    seconds,
+    minutes: Math.round(seconds / 60),
+    sessions,
+    share: seconds / total,
+  });
+
+  const sorted = [...groups.values()].sort((a, b) => b.seconds - a.seconds || named(a).localeCompare(named(b)));
+  // An Other of one task would hide a name for nothing.
+  const shown = sorted.length > FOCUS_TASK_SLICES + 1 ? sorted.slice(0, FOCUS_TASK_SLICES) : sorted;
+  const rest = sorted.slice(shown.length);
+  const slices = shown.map((g) => slice(g.key, "task", named(g), g.seconds, g.sessions));
+  if (rest.length > 0) {
+    const other = slice(
+      "other",
+      "other",
+      "Other",
+      rest.reduce((sum, g) => sum + g.seconds, 0),
+      rest.reduce((sum, g) => sum + g.sessions, 0),
+    );
+    other.members = rest.map((g) => ({ label: named(g), minutes: Math.round(g.seconds / 60) }));
+    slices.push(other);
+  }
+  if (none.seconds > 0) slices.push(slice("none", "none", "No task", none.seconds, none.sessions));
+  return slices;
+}
 
 /** The first day a review needs data from: the start of its trend window. */
 export function dataStart(period: ReviewPeriod): string {
@@ -382,6 +471,7 @@ export function buildReview(period: ReviewPeriod, data: ReviewData): Review {
     focusByDay,
     focusPerDay: Math.round(stats.focusMinutes / days.length),
     focusPerWeek: Math.round((stats.focusMinutes / days.length) * 7),
+    focusByTask: focusByTask(period, data.focus, data.tasks),
     agenda: buildAgenda(next, data),
     next,
     habits,
@@ -519,6 +609,14 @@ export function toMarkdown(review: Review, reflection?: Reflection, now: Date = 
     `- Total: ${formatMinutes(stats.focusMinutes)}`,
     `- Per day: ${formatMinutes(review.focusPerDay)}`,
     ...(period.kind === "monthly" ? [`- Per week: ${formatMinutes(review.focusPerWeek)}`] : []),
+    ...(review.focusByTask.length > 0
+      ? [
+          "",
+          "### By task",
+          "",
+          ...review.focusByTask.map((f) => `- ${f.label}: ${formatMinutes(f.minutes)} (${Math.round(f.share * 100)}%)`),
+        ]
+      : []),
     "",
     "## Money",
     "",
