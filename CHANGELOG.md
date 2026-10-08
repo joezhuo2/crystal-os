@@ -5,6 +5,47 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.0] - 2026-10-08 - The Engine Reborn (Release Summary)
+
+*This release makes ticking a task feel like something happened: the checkbox pops, the check mark draws in, the name is struck through, and only then does the card move. The Board's cards are also rebuilt so their details stay readable in narrow columns.*
+
+It also caps the Engine update, `v0.9.1` through `v0.9.11`. Over that period The Engine gained time estimates and a check on whether today's work fits the day, notes, checklists and subtasks, snoozing, sorting and filtering, a Pomodoro timer linked to a task, and a fully laid-out Board, while Home's search became an overlay on every page.
+
+### Highlights
+
+- **Time and capacity (`v0.9.1`, `v0.9.2`)** — an estimate on every task, a **Fits today?** bar that weighs today's planned work against the free time left in your work day, a free-time bar and a nudge toward the next task on Home, and once today is clear a nudge toward an upcoming one
+- **Notes and subtasks (`v0.9.3`)** — free-text notes, checklists, and child tasks nested one level deep, with a subtask count on the card and expandable cards in List and Board
+- **Snooze (`v0.9.4`)** — hide a task until a later date or to Someday, with a collapsed Snoozed section, tasks that wake on their own at midnight, and snoozing from the command bar
+- **Focus on a task (`v0.9.5`)** — a **Focusing on** picker under the Pomodoro timer (or drag a card onto it), focus time logged per task, and a focus-by-task chart on The Orbit
+- **Sort and filter (`v0.9.6`, `v0.9.7`)** — a **Sort & Filter** button for List and Board, and completed tasks tucked behind a **Show N completed** button
+- **A fully laid-out Board (`v0.9.8`, `v0.9.9`)** — drag cards between columns to change their category or complete them, every category its own column, and an end time that follows the start time
+- **Search and glass (`v0.9.10`, `v0.9.11`)** — the search bar is an overlay on every page in the open page's theme, and the loading and login screens sit on glass over The Orbit's black hole
+- **Completion animations and the Board card redesign (`v0.10.0`)** — detailed below
+
+### Added
+
+- **Ticking a task plays an animation first.** On The Engine's List and Board:
+  - The checkbox fills with a springy pop and the check mark draws itself in. Unticking undraws it, a little faster.
+  - The name is struck through from left to right, and the line pulls back the other way when you reopen the task.
+  - The card dims to half strength as it completes.
+- **A short pause so you can see it.** The change is saved about a half second after you tick (a quarter second when reopening), so the animation shows before the card moves. Click again during the pause and the tick is cancelled; nothing is saved. If you switch views mid-pause, the change is saved then rather than lost.
+- **The card then leaves.** In the List, a completed card collapses away and the cards below slide up. On the Board, a ticked card flies across to the Done column.
+- **Repeating tasks play it in place.** The check animates, holds, and then the card resets to its next date. The "Next due" toast is unchanged.
+- **Still when motion is off.** In performance mode, or with the OS reduced-motion setting, there is no animation and no pause: the task saves at once, as before.
+- `src/hooks/useCompletionHold.ts` and `src/components/views/TaskCompletion.tsx`, with tests in `useCompletionHold.test.ts` and `TaskCompletion.test.tsx`.
+
+### Changed
+
+- **Board cards show their details one per line,** so narrow columns stay readable. From the top: the name; the notes (one line, cut short, or in full once expanded); the start and end dates; priority and category; estimate and repeat; a snooze chip if the task is snoozed; and a **Details** line (or the subtask progress) that expands the checklist and subtasks.
+- **The Board's actions moved to a footer row** along the bottom of the card, under a thin line: **Today** to reschedule an overdue task, snooze, edit and delete. Edit and delete now also appear when the card has keyboard focus.
+- **Subtask rows, Home's Engine card and checklists are unchanged:** they keep their old behaviour with no animation.
+- **`src/components/views/TasksPage.tsx`** carries both changes in `TaskItem`.
+- **`TODO.md`:** *animations when completing and uncompleting a task* is done and removed, which clears the v0.10.0 item.
+
+### Notes
+
+- No database change and no migration for this release. If you are catching up from before `v0.9.1`, apply `0005_task_estimates.sql`, `0006_task_notes_subtasks.sql`, `0007_task_snooze.sql` and `0008_focus_task_title.sql` from `supabase/migrations/` in order; each is safe to run twice.
+
 ## [v0.9.11] - 2026-10-08 - Search over every page.
 
 ### Changed

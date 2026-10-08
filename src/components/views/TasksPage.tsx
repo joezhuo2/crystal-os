@@ -30,6 +30,8 @@ import { canSnooze, ownSnoozed, snoozedSections, splitSnoozed } from "@/lib/snoo
 import { useToday } from "@/hooks/useToday";
 import { activeFilterCount, applyTaskView, taskView, useTaskView } from "@/lib/taskView";
 import { TaskViewMenu } from "./TaskViewMenu";
+import { CompletionCheck, StrikeText } from "./TaskCompletion";
+import { useCompletionHold } from "@/hooks/useCompletionHold";
 
 const NO_CHILDREN: Task[] = [];
 
@@ -59,6 +61,7 @@ const TaskItem = memo(function TaskItem({
   nesting,
   draggable,
   overdue,
+  board,
   today,
 }: {
   task: Task;
@@ -66,12 +69,15 @@ const TaskItem = memo(function TaskItem({
   nesting: NestHandlers;
   draggable?: boolean;
   overdue?: boolean;
+  /** A Board card: the details stacked one per line, the actions along the foot. */
+  board?: boolean;
   /** Today's date, live: a snoozed card wakes when it passes the snooze day. */
   today: string;
 }) {
   const { updateTask, completeTask, deleteTask } = useAppActions();
   const taskCategories = useTaskCategories();
   const { setEditingTask, setShowTaskForm } = appUi;
+  const { still } = useAppActivity();
   const [expanded, setExpanded] = useState(false);
   const [dropTarget, setDropTarget] = useState(false);
   const cat = taskCategories.find((c) => c.id === task.categoryId);
@@ -79,20 +85,104 @@ const TaskItem = memo(function TaskItem({
   const progress = subtaskProgress(task, subtasks);
   const snoozed = ownSnoozed(task, today);
   const toggle = (t: Task) => (t.completed ? updateTask(t.id, { completed: false }) : completeTask(t));
+  // The card's own check holds a moment before saving, so its animation shows
+  // before the card moves (src/hooks/useCompletionHold.ts).
+  const { done, toggle: toggleSelf } = useCompletionHold({
+    completed: task.completed,
+    still,
+    complete: () => completeTask(task),
+    reopen: () => updateTask(task.id, { completed: false }),
+  });
   const edit = (t: Task) => {
     setEditingTask(t);
     setShowTaskForm(true);
   };
+  const toggleExpanded = () => setExpanded((v) => !v);
+
+  const check = (
+    <CompletionCheck done={done} still={still} label={done ? `Reopen ${task.name}` : `Complete ${task.name}`} onToggle={toggleSelf} />
+  );
+  const name = (
+    <p className="text-sm font-medium truncate">
+      <StrikeText done={done} still={still}>{task.name}</StrikeText>
+    </p>
+  );
+  const dates = (
+    <span className="text-[10px] text-muted-foreground truncate">
+      {task.startDate} {task.startTime} – {task.endDate === task.startDate ? "" : `${task.endDate} `}{task.endTime}
+    </span>
+  );
+  const priority = <span className={`text-[10px] font-semibold shrink-0 ${priorityClass[task.priority]}`}>{priorityLabel[task.priority]}</span>;
+  const category = cat && (
+    <span className="text-[10px] px-1.5 py-0.5 rounded-full truncate" style={{ background: `${cat.color}22`, color: cat.color }}>
+      {cat.name}
+    </span>
+  );
+  const estimate = task.estimateMinutes && (
+    <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 tabular-nums shrink-0" title="Estimate">
+      <Clock className="w-2.5 h-2.5" />{formatEstimate(task.estimateMinutes)}
+    </span>
+  );
+  const repeat = repeatLabel && (
+    <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 min-w-0" title="Repeats">
+      <Repeat className="w-2.5 h-2.5 shrink-0" /><span className="truncate">{repeatLabel}</span>
+    </span>
+  );
+  const rescheduleButton = overdue && (
+    <button
+      onClick={() => updateTask(task.id, rescheduleToToday(task, toLocalDateStr()))}
+      title="Reschedule to today"
+      aria-label={`Reschedule ${task.name} to today`}
+      className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-amber-300 hover:bg-amber-400/10 transition-colors shrink-0"
+    >
+      <CalendarClock className="w-3.5 h-3.5" />
+      Today
+    </button>
+  );
+  const expandButton = (
+    <button
+      onClick={toggleExpanded}
+      aria-expanded={expanded}
+      aria-label={expanded ? `Hide details of ${task.name}` : `Show details of ${task.name}`}
+      className={`transition-[opacity,transform] text-muted-foreground hover:text-primary ${
+        board || expanded || progress.total || task.notes ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+      } ${expanded ? "rotate-180" : ""}`}
+    >
+      <ChevronDown className="w-4 h-4" />
+    </button>
+  );
+  const actions = (
+    <>
+      {snoozed ? <UnsnoozeButton task={task} /> : canSnooze(task) && <SnoozeButton task={task} today={today} />}
+      <button onClick={() => edit(task)} aria-label={`Edit ${task.name}`} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-muted-foreground hover:text-primary">
+        <Pencil className="w-4 h-4" />
+      </button>
+      <button onClick={() => deleteTask(task.id)} aria-label={`Delete ${task.name}`} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-muted-foreground hover:text-destructive">
+        <Trash2 className="w-4 h-4" />
+      </button>
+    </>
+  );
+
   return (
     <m.div
       // Position only, on a short tween: a size layout animation springs
       // (and overshoots) and stretches the card's content while it scales.
       // The details panel below grows its own height instead.
       layout="position"
+      // On the Board a checked card flies to the Done column (and back).
+      layoutId={board && !still ? `board-task-${task.id}` : undefined}
       transition={{ default: CARD_TRANSITION, layout: EXPAND_TRANSITION }}
       initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: -20 }}
+      // Dimmed by animation, not a class: the animated inline opacity would
+      // override an opacity class.
+      animate={{ opacity: done ? 0.5 : 1, y: 0 }}
+      // A checked card in the List collapses out of the way, closing the gap
+      // under it, rather than leaving a hole the rest then jump into.
+      exit={
+        still || board
+          ? { opacity: 0, x: -20 }
+          : { opacity: 0, height: 0, marginTop: 0, paddingTop: 0, paddingBottom: 0, transition: EXPAND_TRANSITION }
+      }
       draggable={draggable}
       onDragStart={(e: Event) => {
         (e as DragEvent).dataTransfer?.setData("text/plain", task.id);
@@ -120,78 +210,76 @@ const TaskItem = memo(function TaskItem({
         nesting.nest(childId, task.id);
         taskDrag.id = null;
       }}
-      className={`glass-card-hover p-4 group ${task.completed ? "opacity-50" : ""} ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${
+      className={`glass-card-hover ${board ? "p-3" : "p-4"} group overflow-hidden ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${
         dropTarget ? "ring-1 ring-primary/60 bg-primary/10" : ""
       }`}
     >
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => toggle(task)}
-          aria-label={task.completed ? `Reopen ${task.name}` : `Complete ${task.name}`}
-          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-            task.completed ? "bg-accent border-accent" : "border-muted-foreground/40 hover:border-primary"
-          }`}
-        >
-          {task.completed && <Check className="w-3 h-3 text-accent-foreground" />}
-        </button>
-        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setExpanded((v) => !v)}>
-          <p className={`text-sm font-medium truncate ${task.completed ? "line-through" : ""}`}>{task.name}</p>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className="text-[10px] text-muted-foreground">{task.startDate} {task.startTime} – {task.endDate === task.startDate ? "" : `${task.endDate} `}{task.endTime}</span>
-            <span className={`text-[10px] font-semibold ${priorityClass[task.priority]}`}>{priorityLabel[task.priority]}</span>
-            {repeatLabel && (
-              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5" title="Repeats">
-                <Repeat className="w-2.5 h-2.5" />{repeatLabel}
-              </span>
-            )}
-            {cat && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: `${cat.color}22`, color: cat.color }}>
-                {cat.name}
-              </span>
-            )}
-            {task.estimateMinutes && (
-              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 tabular-nums" title="Estimate">
-                <Clock className="w-2.5 h-2.5" />{formatEstimate(task.estimateMinutes)}
-              </span>
-            )}
-            <SubtaskChip {...progress} />
-            {snoozed && <SnoozeChip task={task} today={today} />}
-            {task.notes && (
-              <span className="text-muted-foreground" title="Has notes">
-                <StickyNote className="w-2.5 h-2.5" />
-              </span>
-            )}
+      {board ? (
+        // One line each, so the narrow column stays readable: name, notes,
+        // dates, priority and category, estimate and repeat, then the
+        // details toggle. The actions sit along the foot.
+        <>
+          <div className="flex items-start gap-2.5">
+            <div className="pt-px">{check}</div>
+            <div className="flex-1 min-w-0 space-y-1 cursor-pointer" onClick={toggleExpanded}>
+              {name}
+              {task.notes && (
+                <p className={`text-[11px] text-muted-foreground ${expanded ? "whitespace-pre-wrap break-words select-text" : "truncate"}`}>{task.notes}</p>
+              )}
+              <div className="flex">{dates}</div>
+              <div className="flex items-center gap-2 min-w-0">
+                {priority}
+                {category}
+              </div>
+              {(estimate || repeat) && (
+                <div className="flex items-center gap-2 min-w-0">
+                  {estimate}
+                  {repeat}
+                </div>
+              )}
+              {snoozed && (
+                <div className="flex">
+                  <SnoozeChip task={task} today={today} />
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        {overdue && (
           <button
-            onClick={() => updateTask(task.id, rescheduleToToday(task, toLocalDateStr()))}
-            title="Reschedule to today"
-            aria-label={`Reschedule ${task.name} to today`}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-amber-300 hover:bg-amber-400/10 transition-colors shrink-0"
+            type="button"
+            onClick={toggleExpanded}
+            aria-expanded={expanded}
+            aria-label={expanded ? `Hide details of ${task.name}` : `Show details of ${task.name}`}
+            className="mt-1.5 ml-[30px] flex w-[calc(100%-30px)] items-center gap-2 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
           >
-            <CalendarClock className="w-3.5 h-3.5" />
-            Today
+            {progress.total ? <SubtaskChip {...progress} /> : <span>{expanded ? "Hide details" : "Details"}</span>}
+            <ChevronDown className={`ml-auto w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
           </button>
-        )}
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          aria-label={expanded ? `Hide details of ${task.name}` : `Show details of ${task.name}`}
-          className={`transition-[opacity,transform] text-muted-foreground hover:text-primary ${
-            expanded || progress.total || task.notes ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-          } ${expanded ? "rotate-180" : ""}`}
-        >
-          <ChevronDown className="w-4 h-4" />
-        </button>
-        {snoozed ? <UnsnoozeButton task={task} /> : canSnooze(task) && <SnoozeButton task={task} today={today} />}
-        <button onClick={() => edit(task)} aria-label={`Edit ${task.name}`} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary">
-          <Pencil className="w-4 h-4" />
-        </button>
-        <button onClick={() => deleteTask(task.id)} aria-label={`Delete ${task.name}`} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive">
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
+        </>
+      ) : (
+        <div className="flex items-center gap-3">
+          {check}
+          <div className="flex-1 min-w-0 cursor-pointer" onClick={toggleExpanded}>
+            {name}
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {dates}
+              {priority}
+              {repeat}
+              {category}
+              {estimate}
+              <SubtaskChip {...progress} />
+              {snoozed && <SnoozeChip task={task} today={today} />}
+              {task.notes && (
+                <span className="text-muted-foreground" title="Has notes">
+                  <StickyNote className="w-2.5 h-2.5" />
+                </span>
+              )}
+            </div>
+          </div>
+          {rescheduleButton}
+          {expandButton}
+          {actions}
+        </div>
+      )}
       <AnimatePresence initial={false}>
         {expanded && (
           <m.div
@@ -204,8 +292,9 @@ const TaskItem = memo(function TaskItem({
           >
             {/* Checklist rows and child tasks carry their own drags, which must
                 not start a drag of the card around them. */}
-            <div className="pt-3 ml-8 space-y-3 cursor-auto" onDragStart={(e) => e.stopPropagation()}>
-              {task.notes && <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words select-text">{task.notes}</p>}
+            <div className={`pt-3 ${board ? "ml-[30px]" : "ml-8"} space-y-3 cursor-auto`} onDragStart={(e) => e.stopPropagation()}>
+              {/* A Board card shows its notes in full above, in its notes line. */}
+              {task.notes && !board && <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words select-text">{task.notes}</p>}
               <ChecklistEditor items={task.checklist ?? []} onChange={(checklist) => updateTask(task.id, { checklist })} />
               {subtasks.length > 0 && (
                 <div className="space-y-0.5" role="group" aria-label="Subtasks">
@@ -224,6 +313,12 @@ const TaskItem = memo(function TaskItem({
           </m.div>
         )}
       </AnimatePresence>
+      {board && (
+        <div className="mt-2 pt-2 border-t border-border/40 flex items-center justify-end gap-3">
+          {rescheduleButton && <div className="mr-auto -ml-2">{rescheduleButton}</div>}
+          {actions}
+        </div>
+      )}
     </m.div>
   );
 });
@@ -306,6 +401,7 @@ function KanbanBoard({
                     subtasks={childrenOf.get(task.id)}
                     nesting={nesting}
                     draggable
+                    board
                     overdue={col.id === OVERDUE_COLUMN_ID}
                     today={today}
                   />

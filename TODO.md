@@ -1,6 +1,4 @@
 # Planned Features
-- [v0.10.0] - engine options update
-    - animations when completing/uncompleting a task
 - [v0.11.0] vault/banking overhaul
     - [ ]  use plaid to connect to banks (store api keys and tokens in secure .env variables)
     - [ ] themed glassmorphism UI 
