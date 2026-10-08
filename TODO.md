@@ -1,8 +1,6 @@
 # Planned Features
 - [v0.10.0] - engine options update
-- [v0.9.9] animations when completing/uncompleting a task
-- [v0.9.10] the engine board view: drag tasks between categories on task view to change their categories, show all categories (including empty ones, overdue category, and done category), pomodoro should always show on the right, categories should be scrollable left/right
-- [v0.9.11] glassmorphism ui loading/login screen with background image
+- [v0.9.10] glassmorphism ui loading/login screen with background image
 - [v0.11.0] vault/banking overhaul
     - [ ]  use plaid to connect to banks (store api keys and tokens in secure .env variables)
     - [ ] themed glassmorphism UI 
@@ -16,9 +14,10 @@
 ### Theme switching (left over from v0.8.5)
 - [ ] **Changing the root theme class still restyles the page subtree.** v0.8.5 turned the per-theme `.x-root main .glass-card` rule sets into `--glass-card-*` values on each theme's `<main>`, but `rootClass` and the `body` `horizon-theme`/`engine-theme`/`orbit-theme` classes still change on every switch, and the `portal-theme-*`, `sidebar-*` and `*-title` rules are still per theme. Measure a switch in the Performance panel before going further; if recalc is still a large share, move the remaining palettes to custom properties set from JS on one element.
 
-- redo portal/obsidian/nebula ui (change to glassmorphism with some background)
+- redo portal ui (change to glassmorphism with some background)
 - glassmorphism ui to all home page widget cards (except terminal)
 - global search bar should be an overlay on any screen, and fully themed to current page
+- animations when completing/uncompleting a task
 
 ## Before first release (v1.0.0)
 

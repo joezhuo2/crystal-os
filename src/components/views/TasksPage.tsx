@@ -18,6 +18,7 @@ import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-contro
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useAppActivity } from "@/lib/appActivity";
 import { withStartTime } from "@/lib/autoEndTime";
+import { buildBoardColumns, OVERDUE_COLUMN_ID, planBoardDrop, type BoardColumn } from "@/lib/boardColumns";
 import PomodoroTimer from "./PomodoroTimer";
 import { CategoryManagerButton } from "./CategoryManager";
 import { CapacityCard } from "./CapacityBar";
@@ -239,82 +240,86 @@ function KanbanBoard({
   today: string;
 }) {
   const taskCategories = useTaskCategories();
-  const { updateTask } = useAppActions();
+  const { updateTask, completeTask } = useAppActions();
   const [dragOverCat, setDragOverCat] = useState<string | null>(null);
 
-  const handleDragOver = (e: React.DragEvent, catId: string) => {
-    // Only task drags; a checklist item being reordered is not one.
-    if (!taskDrag.id) return;
+  const columns = buildBoardColumns(tasks, taskCategories, today);
+
+  const handleDragOver = (e: React.DragEvent, col: BoardColumn) => {
+    // Only task drags; a checklist item being reordered is not one. Overdue
+    // takes no drops, so it never lights up as a target.
+    if (!taskDrag.id || !col.droppable) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    setDragOverCat(catId);
+    setDragOverCat(col.id);
   };
 
-  const handleDrop = (e: React.DragEvent, targetCategoryId: string) => {
+  const handleDrop = (e: React.DragEvent, col: BoardColumn) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData("text/plain");
-    if (taskId) {
-      // A child task dragged out of its parent onto a column also moves back
-      // to the top level. For a top-level task the parentId key changes nothing.
-      updateTask(taskId, { categoryId: targetCategoryId, parentId: undefined });
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) {
+      const plan = planBoardDrop(task, col.id, taskCategories);
+      if (plan.kind === "complete") {
+        // A subtask completed from the board also leaves its parent, as a category drop does.
+        if (task.parentId) updateTask(task.id, { parentId: undefined });
+        completeTask(task);
+      } else if (plan.kind === "update") {
+        updateTask(task.id, plan.updates);
+      }
     }
     taskDrag.id = null;
     setDragOverCat(null);
   };
 
-  const handleDragLeave = () => setDragOverCat(null);
-
-  // Group by category + a "Done" column
-  const categoryColumns = taskCategories.map((cat) => ({
-    id: cat.id,
-    label: cat.name,
-    color: cat.color,
-    tasks: tasks.filter((t) => t.categoryId === cat.id && !t.completed),
-  }));
-  const doneColumn = {
-    id: "__done__",
-    label: "Done",
-    color: "hsl(160 84% 39%)",
-    tasks: tasks.filter((t) => t.completed),
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOverCat(null);
   };
-  const allColumns = [...categoryColumns, doneColumn].filter((col) => col.tasks.length > 0);
 
+  // The columns scroll sideways inside their own box; the Pomodoro panel sits
+  // outside it (see TasksPage), so it stays put.
   return (
-    <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${allColumns.length}, minmax(180px, 1fr))` }}>
-      {allColumns.map((col) => (
-        <div
-          key={col.id}
-          onDragOver={(e) => handleDragOver(e, col.id)}
-          onDrop={(e) => handleDrop(e, col.id)}
-          onDragLeave={handleDragLeave}
-          className={`min-h-[200px] rounded-xl p-2 transition-colors ${
-            dragOverCat === col.id ? "bg-primary/10 ring-1 ring-primary/30" : ""
-          }`}
-        >
-          <div data-fade-unit className="flex items-center gap-2 px-1 mb-3">
-            <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
-            <p className="text-xs text-muted-foreground uppercase tracking-widest">{col.label}</p>
-            <span className="text-[10px] text-muted-foreground/60 ml-auto">{col.tasks.length}</span>
+    <div className="overflow-x-auto pb-2">
+      <div className="flex gap-4 w-max min-w-full">
+        {columns.map((col) => (
+          <div
+            key={col.id}
+            data-column={col.id}
+            onDragOver={(e) => handleDragOver(e, col)}
+            onDrop={(e) => handleDrop(e, col)}
+            onDragLeave={handleDragLeave}
+            className={`min-h-[200px] w-[220px] shrink-0 rounded-xl p-2 transition-colors ${
+              dragOverCat === col.id ? "bg-primary/10 ring-1 ring-primary/30" : ""
+            }`}
+          >
+            <div data-fade-unit className="flex items-center gap-2 px-1 mb-3">
+              <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
+              <p className="text-xs text-muted-foreground uppercase tracking-widest">{col.label}</p>
+              <span className="text-[10px] text-muted-foreground/60 ml-auto">{col.tasks.length}</span>
+            </div>
+            <div className="space-y-2">
+              <AnimatePresence initial={false}>
+                {col.tasks.map((task) => (
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    subtasks={childrenOf.get(task.id)}
+                    nesting={nesting}
+                    draggable
+                    overdue={col.id === OVERDUE_COLUMN_ID}
+                    today={today}
+                  />
+                ))}
+              </AnimatePresence>
+              {col.tasks.length === 0 && (
+                <p data-fade-unit className="text-xs text-muted-foreground/40 text-center py-6">
+                  {col.droppable ? "Drop tasks here" : "Nothing overdue"}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="space-y-2">
-            <AnimatePresence initial={false}>
-              {col.tasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  subtasks={childrenOf.get(task.id)}
-                  nesting={nesting}
-                  draggable={col.id !== "__done__"}
-                  today={today}
-                />
-              ))}
-            </AnimatePresence>
-            {col.tasks.length === 0 && (
-              <p data-fade-unit className="text-xs text-muted-foreground/40 text-center py-6">Drop tasks here</p>
-            )}
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -852,8 +857,11 @@ export default function TasksPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4">
-        <div className="space-y-4">
+      {/* The Board always shows the Pomodoro on the right (minmax(0, 1fr) lets
+          the columns scroll instead of widening the page); the List hides it
+          on narrow screens. */}
+      <div className={`grid gap-4 ${view === "kanban" ? "grid-cols-[minmax(0,1fr)_260px]" : "grid-cols-1 lg:grid-cols-[1fr_260px]"}`}>
+        <div className="space-y-4 min-w-0">
           <CapacityCard />
           {/* Switching List/Board fades the old view out, then the new one in;
               reduced motion (OS setting or performance mode) swaps at once. The
@@ -946,7 +954,7 @@ export default function TasksPage() {
             <SnoozedSection tasks={snoozedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />
           </div>
         </div>
-        <div className="hidden lg:block">
+        <div className={view === "kanban" ? "" : "hidden lg:block"}>
           <PomodoroTimer />
         </div>
       </div>

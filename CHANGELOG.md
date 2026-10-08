@@ -5,6 +5,18 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.9] - 2026-10-07 - The Engine's Board, fully laid out.
+
+### Changed
+
+- **Drag tasks between columns on the Board to change their category.** The change is saved through the same `updateTask` the rest of the page uses. A subtask dropped on a column also leaves its parent, as before.
+- **Every category is a column, empty ones included,** followed by **Overdue** and **Done**. An overdue task shows in Overdue only (as in the List), a completed one in Done only.
+- **Dropping on Done completes the task** (through `completeTask`, so repeats roll on and checklists tick). **Dragging a done task onto a category reopens it** and sets that category. Done cards can now be dragged.
+- **Overdue takes no drops.** A task is overdue by its dates, so there is nothing sensible to set; use **Today** on its card to reschedule it. The column shows no drop highlight while you drag over it.
+- **The Pomodoro panel always sits on the right of the Board,** also on narrow screens (the List still hides it there).
+- **The columns scroll left and right** inside their own area when they do not fit; the Pomodoro panel stays pinned.
+- **`src/lib/boardColumns.ts`** builds the columns and plans each drop, with tests in `src/lib/boardColumns.test.ts`. `TasksPage.tsx` renders them.
+
 ## [v0.9.8] - 2026-10-07 - End time follows start time.
 
 ### Changed
