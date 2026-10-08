@@ -6,7 +6,7 @@
  */
 
 import { useSyncExternalStore } from "react";
-import type { ReviewKind } from "@/lib/orbitReview";
+import { REVIEW_KINDS, type ReviewKind } from "@/lib/orbitReview";
 
 const AUTO_EXPORT_KEY = "crystal-os-orbit-auto-export";
 const SEEN_KEY = "crystal-os-orbit-seen";
@@ -27,7 +27,7 @@ export interface OrbitState {
   seen: ByKind;
   /** Newest period key auto-export has handled, per kind. */
   autoExported: ByKind;
-  /** The Weekly/Monthly switch, remembered. */
+  /** The Weekly/Monthly/Yearly switch, remembered. */
   view: ReviewKind;
   landing: OrbitLanding;
 }
@@ -52,8 +52,7 @@ function readByKind(key: string): ByKind {
   try {
     const parsed = JSON.parse(read(key) ?? "{}");
     const out: ByKind = {};
-    if (typeof parsed?.weekly === "string") out.weekly = parsed.weekly;
-    if (typeof parsed?.monthly === "string") out.monthly = parsed.monthly;
+    for (const kind of REVIEW_KINDS) if (typeof parsed?.[kind] === "string") out[kind] = parsed[kind];
     return out;
   } catch {
     return {};
@@ -65,7 +64,7 @@ function load(): OrbitState {
     autoExport: read(AUTO_EXPORT_KEY) === "1",
     seen: readByKind(SEEN_KEY),
     autoExported: readByKind(EXPORTED_KEY),
-    view: read(VIEW_KEY) === "monthly" ? "monthly" : "weekly",
+    view: REVIEW_KINDS.find((kind) => kind === read(VIEW_KEY)) ?? "weekly",
     landing: null,
   };
 }

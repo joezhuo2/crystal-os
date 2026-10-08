@@ -7,6 +7,7 @@ import { useFocusMuted } from "@/hooks/usePomodoro";
 import { badgeLabel, type PortalBadge } from "@/lib/portalApps";
 import { selectBadgeTotal } from "@/lib/portalStore";
 import { useNow, useOrbitReady } from "@/hooks/useOrbitReview";
+import { kindLabel, type ReviewKind } from "@/lib/orbitReview";
 
 export type TabId = "home" | "orbit" | "tasks" | "calendar" | "financials" | "weather" | "archive" | "portal" | "nebula" | "terminal" | "settings";
 
@@ -308,8 +309,10 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
 }
 
 /** "Weekly review ready", or "Weekly and monthly reviews ready". */
-function readyTitle(unseen: string[]): string {
-  return unseen.length > 1 ? "Weekly and monthly reviews ready" : `${unseen[0] === "weekly" ? "Weekly" : "Monthly"} review ready`;
+function readyTitle(unseen: ReviewKind[]): string {
+  if (unseen.length === 1) return `${kindLabel(unseen[0])} review ready`;
+  const names = unseen.map((kind, i) => (i === 0 ? kindLabel(kind) : kindLabel(kind).toLowerCase()));
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]} reviews ready`;
 }
 
 export function BottomNav({ activeTab, onTabChange }: SidebarNavProps) {

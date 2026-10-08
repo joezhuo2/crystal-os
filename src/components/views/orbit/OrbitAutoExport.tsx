@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useNow, useOrbitReview } from "@/hooks/useOrbitReview";
 import { createVaultNote, vaultErrorCode } from "@/hooks/useVault";
-import { exportPath, latestReadyPeriod, toMarkdown, type ReviewKind, type ReviewPeriod } from "@/lib/orbitReview";
+import { REVIEW_KINDS, exportPath, kindLabel, latestReadyPeriod, toMarkdown, type ReviewKind, type ReviewPeriod } from "@/lib/orbitReview";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 
 /**
@@ -28,7 +28,7 @@ function AutoExportKind({ kind, period }: { kind: ReviewKind; period: ReviewPeri
       .then(() => {
         orbitStore.markAutoExported(kind, period.key);
         queryClient.invalidateQueries({ queryKey: ["vault"] });
-        toast.success(`${kind === "weekly" ? "Weekly" : "Monthly"} review exported`, { description: path });
+        toast.success(`${kindLabel(kind)} review exported`, { description: path });
       })
       .catch((err) => {
         if (vaultErrorCode(err) === "conflict") {
@@ -45,12 +45,12 @@ function AutoExportKind({ kind, period }: { kind: ReviewKind; period: ReviewPeri
 /** Mounted while Settings → The Orbit → Auto-export is on. */
 export default function OrbitAutoExport() {
   const now = useNow();
-  const weekly = latestReadyPeriod("weekly", now);
-  const monthly = latestReadyPeriod("monthly", now);
   return (
     <>
-      <AutoExportKind key={weekly.key} kind="weekly" period={weekly} />
-      <AutoExportKind key={monthly.key} kind="monthly" period={monthly} />
+      {REVIEW_KINDS.map((kind) => {
+        const period = latestReadyPeriod(kind, now);
+        return <AutoExportKind key={`${kind}-${period.key}`} kind={kind} period={period} />;
+      })}
     </>
   );
 }

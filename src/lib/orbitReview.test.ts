@@ -264,3 +264,47 @@ describe("markdown export", () => {
     expect(toMarkdown(review, { prompt: "What went well", note: "  " })).toContain("### What went well");
   });
 });
+
+describe("yearly review", () => {
+  it("runs calendar years, ready at 18:00 on December 31", () => {
+    expect(periodContaining("yearly", "2026-10-08")).toMatchObject({ start: "2026-01-01", end: "2026-12-31", key: "2026" });
+    expect(latestReadyPeriod("yearly", local("2026-12-31", "17:59")).key).toBe("2025");
+    expect(latestReadyPeriod("yearly", local("2026-12-31", "18:00")).key).toBe("2026");
+    expect(inProgressPeriod("yearly", local("2026-10-08"))?.key).toBe("2026");
+    expect(inProgressPeriod("yearly", local("2026-12-31", "18:00"))).toBeNull();
+    expect(shiftPeriod(periodContaining("yearly", "2026-06-01"), -2)).toMatchObject({ key: "2024", start: "2024-01-01" });
+  });
+
+  it("labels and names years", () => {
+    const year = periodContaining("yearly", "2026-03-01");
+    expect(periodLabel(year)).toBe("2026");
+    expect(exportPath(year)).toBe("Reviews/Yearly/2026.md");
+  });
+
+  it("totals focus by month and exports it", () => {
+    const year = periodContaining("yearly", "2026-03-01");
+    const review = buildReview(year, {
+      ...empty,
+      focus: [
+        { endedAt: iso("2026-01-10"), seconds: 3600 },
+        { endedAt: iso("2026-01-20"), seconds: 1800 },
+        { endedAt: iso("2026-12-31"), seconds: 600 },
+        { endedAt: iso("2025-12-31"), seconds: 6000 },
+      ],
+    });
+    expect(review.focusByMonth).toHaveLength(12);
+    expect(review.focusByMonth[0]).toEqual({ month: "2026-01", minutes: 90 });
+    expect(review.focusByMonth[11]).toEqual({ month: "2026-12", minutes: 10 });
+    expect(review.focusPerMonth).toBe(8);
+    expect(review.previous.focusMinutes).toBe(100);
+    expect(review.next.key).toBe("2027");
+
+    const md = toMarkdown(review, { prompt: "Focus for next" });
+    expect(md).toMatch(/^---\ntype: yearly-review\nperiod: 2026\n/);
+    expect(md).toContain("# Yearly review · 2026");
+    expect(md).toContain("- January: 1 h 30 min");
+    expect(md).toContain("## Next year");
+    expect(md).toContain("### Focus for next year");
+    expect(md).toContain("vs 2-year average");
+  });
+});

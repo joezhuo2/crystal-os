@@ -7,6 +7,7 @@ import { useVaultNotes } from "@/hooks/useVault";
 import { useCalendarEvents, useCalendarStatus } from "@/hooks/useGoogleCalendar";
 import {
   ORBIT_QUERY_KEY,
+  REVIEW_KINDS,
   buildReview,
   dataStart,
   latestReadyPeriod,
@@ -131,12 +132,15 @@ export interface OrbitReviewResult {
   calendarConnected: boolean;
 }
 
-/** Everything a review of `period` needs, assembled. */
-export function useOrbitReview(period: ReviewPeriod): OrbitReviewResult {
+/**
+ * Everything a review of `period` needs, assembled. While `enabled` is false
+ * its history and calendar are not fetched, and the review stays null.
+ */
+export function useOrbitReview(period: ReviewPeriod, enabled = true): OrbitReviewResult {
   const tasks = useTasks();
   const transactions = useTransactions();
   const appLoading = useAppLoading();
-  const history = useHistory(dataStart(period), period.end);
+  const history = useHistory(dataStart(period), period.end, enabled);
   const notes = useAllNotes();
   // Without the habit tables the review leaves habits out.
   const habits = useHabitsData();
@@ -148,7 +152,7 @@ export function useOrbitReview(period: ReviewPeriod): OrbitReviewResult {
     () => ({ calendarId: calendarId(), timeMin: startOfDay(next.start), timeMax: startOfDay(addDays(next.end, 1)) }),
     [next.start, next.end],
   );
-  const events = useCalendarEvents(range, connected);
+  const events = useCalendarEvents(range, connected && enabled);
 
   const review = useMemo(() => {
     // Without the history tables the rest of the review still works.
@@ -173,12 +177,13 @@ export function useOrbitReview(period: ReviewPeriod): OrbitReviewResult {
   return {
     review,
     loading:
-      appLoading ||
-      history.isLoading ||
-      notes.isLoading ||
-      habits.isLoading ||
-      status.isLoading ||
-      (connected && events.isLoading),
+      enabled &&
+      (appLoading ||
+        history.isLoading ||
+        notes.isLoading ||
+        habits.isLoading ||
+        status.isLoading ||
+        (connected && events.isLoading)),
     historyError: history.error ?? null,
     vaultUnavailable: notes.isError,
     calendarConnected: connected,
@@ -186,14 +191,9 @@ export function useOrbitReview(period: ReviewPeriod): OrbitReviewResult {
 }
 
 /** Which reviews are ready and not yet opened, for the nav dot and Home chip. */
-export function useOrbitReady(now: Date = new Date()): { weekly: ReviewPeriod; monthly: ReviewPeriod; unseen: ReviewKind[] } {
+export function useOrbitReady(now: Date = new Date()): { unseen: ReviewKind[] } {
   const { seen } = useOrbitStore();
-  const weekly = latestReadyPeriod("weekly", now);
-  const monthly = latestReadyPeriod("monthly", now);
-  const unseen: ReviewKind[] = [];
-  if (seen.weekly !== weekly.key) unseen.push("weekly");
-  if (seen.monthly !== monthly.key) unseen.push("monthly");
-  return { weekly, monthly, unseen };
+  return { unseen: REVIEW_KINDS.filter((kind) => seen[kind] !== latestReadyPeriod(kind, now).key) };
 }
 
 /** This week so far, for the Home card's one-line teaser. */

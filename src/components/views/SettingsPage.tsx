@@ -585,7 +585,7 @@ export default function SettingsPage() {
         <Section id="orbit" icon={Orbit} title="The Orbit">
           <Row
             title="Auto-export reviews"
-            description="Writes each weekly review to Reviews/Weekly and each monthly review to Reviews/Monthly in your vault once it is ready (Sunday and the month's last day, from 6 PM), or the next time the app opens. Never overwrites a note that is already there, and leaves out the reflection, which you can add by exporting again from The Orbit."
+            description="Writes each weekly, monthly and yearly review to Reviews/Weekly, Reviews/Monthly and Reviews/Yearly in your vault once it is ready (Sunday, the month's last day and December 31, from 6 PM), or the next time the app opens. Never overwrites a note that is already there, and leaves out the reflection, which you can add by exporting again from The Orbit."
           >
             <Switch checked={orbit.autoExport} onCheckedChange={orbitStore.setAutoExport} />
           </Row>

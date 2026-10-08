@@ -44,7 +44,7 @@ import { NebulaSpace, PortalSpace, TerminalSpace } from "./HomeSpaces";
 import HomeGrid, { type HomeWidget } from "./HomeGrid";
 import { CapacityStrip } from "./CapacityBar";
 import { useOrbitReady, useOrbitTeaser } from "@/hooks/useOrbitReview";
-import { formatMinutes } from "@/lib/orbitReview";
+import { formatMinutes, kindLabel } from "@/lib/orbitReview";
 import { orbitStore } from "@/lib/orbitStore";
 
 /** The greeting and clock, on the Orbit's black hole, with this week so far. */
@@ -92,7 +92,7 @@ function Clock({ onClick }: { onClick?: () => void }) {
             {unseen.length > 0 && (
               <span className="orbit-ready-chip">
                 <span className="orbit-ready-dot" aria-hidden="true" />
-                {unseen.length > 1 ? "Reviews ready" : `${unseen[0] === "weekly" ? "Weekly" : "Monthly"} review ready`}
+                {unseen.length > 1 ? "Reviews ready" : `${kindLabel(unseen[0])} review ready`}
               </span>
             )}
             <GlassTip label="Log today's orbit" hint="Focus, mood, and a line to end the day" tone="orbit">

@@ -28,7 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { GlassTip } from "@/components/ui/glass-tooltip";
-import { FocusBars, MoneyBars, TaskOrbit } from "@/components/views/orbit/OrbitCharts";
+import { FocusBars, FocusMonthBars, MoneyBars, TaskOrbit } from "@/components/views/orbit/OrbitCharts";
 import { FocusPie } from "@/components/views/orbit/FocusPie";
 import { TodayCard } from "@/components/views/orbit/TodayCard";
 import { OrbitHistoryError, useNow, useOrbitReview, type OrbitReviewResult } from "@/hooks/useOrbitReview";
@@ -36,6 +36,7 @@ import { useCreateNote, vaultErrorCode } from "@/hooks/useVault";
 import { useAppActivity } from "@/lib/appActivity";
 import {
   REFLECTION_PROMPTS,
+  REVIEW_KINDS,
   TREND_WINDOW,
   agendaDayLabel,
   exportPath,
@@ -44,7 +45,9 @@ import {
   formatMoney,
   formatTrendValue,
   inProgressPeriod,
+  kindLabel,
   latestReadyPeriod,
+  monthLabel,
   periodLabel,
   promptLabel,
   shiftPeriod,
@@ -61,7 +64,7 @@ import {
 } from "@/lib/orbitReview";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 
-/** Length of each half of the Weekly/Monthly fade: out, then in. Matches .orbit-view in index.css. */
+/** Length of each half of the Weekly/Monthly/Yearly fade: out, then in. Matches .orbit-view in index.css. */
 const VIEW_FADE_MS = 150;
 
 /** Names shown before the "+N more" button. */
@@ -177,7 +180,7 @@ function TasksCard({ review }: { review: Review }) {
 }
 
 function FocusCard({ review }: { review: Review }) {
-  const monthly = review.period.kind === "monthly";
+  const kind = review.period.kind;
   return (
     <section className="orbit-card" aria-labelledby="orbit-focus">
       <CardTitle icon={Flame}>
@@ -186,9 +189,10 @@ function FocusCard({ review }: { review: Review }) {
       <div className="flex gap-6 mb-3 flex-wrap">
         <Stat value={formatMinutes(review.stats.focusMinutes)} label="total" />
         <Stat value={formatMinutes(review.focusPerDay)} label="per day" tone="mauve" />
-        {monthly && <Stat value={formatMinutes(review.focusPerWeek)} label="per week" tone="mauve" />}
+        {kind !== "weekly" && <Stat value={formatMinutes(review.focusPerWeek)} label="per week" tone="mauve" />}
+        {kind === "yearly" && <Stat value={formatMinutes(review.focusPerMonth)} label="per month" tone="mauve" />}
       </div>
-      <FocusBars days={review.focusByDay} />
+      {kind === "yearly" ? <FocusMonthBars months={review.focusByMonth} /> : <FocusBars days={review.focusByDay} />}
       {review.focusByTask.length > 0 && <FocusPie slices={review.focusByTask} />}
     </section>
   );
@@ -406,16 +410,18 @@ function AgendaGroup({ label, items, cap }: { label: string; items: AgendaItem[]
 }
 
 function AgendaCard({ review, calendarConnected, wide }: { review: Review; calendarConnected: boolean; wide?: boolean }) {
-  const unit = unitOf(review.period.kind);
-  const monthly = review.period.kind === "monthly";
+  const kind = review.period.kind;
+  const unit = unitOf(kind);
+  const wideGrid = kind !== "weekly";
   const groups = useMemo(() => {
     const map = new Map<string, AgendaItem[]>();
     for (const item of review.agenda) {
-      const key = monthly ? `Week ${weekOfPeriod(review.next, item.day)}` : agendaDayLabel(item.day);
+      const key =
+        kind === "yearly" ? monthLabel(item.day) : kind === "monthly" ? `Week ${weekOfPeriod(review.next, item.day)}` : agendaDayLabel(item.day);
       map.set(key, [...(map.get(key) ?? []), item]);
     }
     return [...map.entries()];
-  }, [review.agenda, review.next, monthly]);
+  }, [review.agenda, review.next, kind]);
 
   return (
     <section className={`orbit-card ${wide ? "md:col-span-3" : "md:col-span-2"}`} aria-labelledby="orbit-agenda">
@@ -429,9 +435,9 @@ function AgendaCard({ review, calendarConnected, wide }: { review: Review; calen
         <p className="orbit-empty mb-2">Google Calendar isn't connected, so only tasks are listed.</p>
       )}
       {groups.length ? (
-        <div className={`grid gap-4 ${monthly ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"}`}>
+        <div className={`grid gap-4 ${wideGrid ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"}`}>
           {groups.map(([label, items]) => (
-            <AgendaGroup key={label} label={label} items={items} cap={monthly ? 4 : 3} />
+            <AgendaGroup key={label} label={label} items={items} cap={kind === "monthly" ? 4 : 3} />
           ))}
         </div>
       ) : (
@@ -595,9 +601,16 @@ export default function OrbitPage() {
 
   // One step past the newest ready review is the period still running, until
   // it is ready itself.
-  const runningWeek = inProgressPeriod("weekly", now);
-  const runningMonth = inProgressPeriod("monthly", now);
-  const maxOffset: Record<ReviewKind, number> = { weekly: runningWeek ? 1 : 0, monthly: runningMonth ? 1 : 0 };
+  const running: Record<ReviewKind, ReviewPeriod | null> = {
+    weekly: inProgressPeriod("weekly", now),
+    monthly: inProgressPeriod("monthly", now),
+    yearly: inProgressPeriod("yearly", now),
+  };
+  const maxOffset: Record<ReviewKind, number> = {
+    weekly: running.weekly ? 1 : 0,
+    monthly: running.monthly ? 1 : 0,
+    yearly: running.yearly ? 1 : 0,
+  };
 
   const [target, setTarget] = useState<Target>(() =>
     landing === "current" ? { kind: "weekly", offset: maxOffset.weekly } : { kind: store.view, offset: 0 },
@@ -605,24 +618,36 @@ export default function OrbitPage() {
   const [offsets, setOffsets] = useState<Record<ReviewKind, number>>(() => ({
     weekly: landing === "current" ? maxOffset.weekly : 0,
     monthly: 0,
+    yearly: 0,
   }));
 
   // Once a running period's review turns ready it is offset 0, so a view one
   // step past it would be the future: clamp.
   const weeklyOffset = Math.min(offsets.weekly, maxOffset.weekly);
   const monthlyOffset = Math.min(offsets.monthly, maxOffset.monthly);
-  const latestWeek = latestReadyPeriod("weekly", now);
-  const latestMonth = latestReadyPeriod("monthly", now);
-  const weeklyPeriod = useMemo(() => shiftPeriod(latestWeek, weeklyOffset), [latestWeek.key, weeklyOffset]); // eslint-disable-line react-hooks/exhaustive-deps
-  const monthlyPeriod = useMemo(() => shiftPeriod(latestMonth, monthlyOffset), [latestMonth.key, monthlyOffset]); // eslint-disable-line react-hooks/exhaustive-deps
+  const yearlyOffset = Math.min(offsets.yearly, maxOffset.yearly);
+  const latest: Record<ReviewKind, ReviewPeriod> = {
+    weekly: latestReadyPeriod("weekly", now),
+    monthly: latestReadyPeriod("monthly", now),
+    yearly: latestReadyPeriod("yearly", now),
+  };
+  const weeklyPeriod = useMemo(() => shiftPeriod(latest.weekly, weeklyOffset), [latest.weekly.key, weeklyOffset]); // eslint-disable-line react-hooks/exhaustive-deps
+  const monthlyPeriod = useMemo(() => shiftPeriod(latest.monthly, monthlyOffset), [latest.monthly.key, monthlyOffset]); // eslint-disable-line react-hooks/exhaustive-deps
+  const yearlyPeriod = useMemo(() => shiftPeriod(latest.yearly, yearlyOffset), [latest.yearly.key, yearlyOffset]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Both kinds load together, so the switch has its numbers ready.
+  // Weekly and monthly load together, so the switch has their numbers ready.
+  // The yearly review reads years of history, so it loads the first time it
+  // is picked; the old view stays up, fading, until it is ready.
+  const [yearlyWanted, setYearlyWanted] = useState(target.kind === "yearly");
   const weekly = useOrbitReview(weeklyPeriod);
   const monthly = useOrbitReview(monthlyPeriod);
-  const live: Shown =
-    target.kind === "weekly"
-      ? { kind: "weekly", period: weeklyPeriod, result: weekly }
-      : { kind: "monthly", period: monthlyPeriod, result: monthly };
+  const yearly = useOrbitReview(yearlyPeriod, yearlyWanted);
+  const views: Record<ReviewKind, Shown> = {
+    weekly: { kind: "weekly", period: weeklyPeriod, result: weekly },
+    monthly: { kind: "monthly", period: monthlyPeriod, result: monthly },
+    yearly: { kind: "yearly", period: yearlyPeriod, result: yearly },
+  };
+  const live = views[target.kind];
 
   // While switching, the old review stays on screen (fading out) until the
   // new one has its data, then fades in. It never fades in empty and pops.
@@ -635,6 +660,7 @@ export default function OrbitPage() {
   const go = (next: Target) => {
     if (next.kind === target.kind && next.offset === target.offset) return;
     if (next.kind !== target.kind) orbitStore.setView(next.kind);
+    if (next.kind === "yearly") setYearlyWanted(true);
     setFrozen((cur) => cur ?? live);
     setTarget(next);
     setOffsets((o) => ({ ...o, [next.kind]: next.offset }));
@@ -668,7 +694,7 @@ export default function OrbitPage() {
   const { review, loading, historyError, vaultUnavailable, calendarConnected } = shown.result;
 
   // Seeing the newest review clears its ready badge.
-  const latestKey = shown.kind === "weekly" ? latestWeek.key : latestMonth.key;
+  const latestKey = latest[shown.kind].key;
   useEffect(() => {
     if (!frozen && review && shown.period.key === latestKey) orbitStore.markSeen(shown.kind, latestKey);
   }, [frozen, review, shown.kind, shown.period.key, latestKey]);
@@ -676,7 +702,7 @@ export default function OrbitPage() {
   const unit = unitOf(shown.kind);
   const atReady = Math.min(target.offset, maxOffset[target.kind]) === 0;
   const atNewest = target.offset >= maxOffset[target.kind];
-  const runningKey = (shown.kind === "weekly" ? runningWeek : runningMonth)?.key;
+  const runningKey = running[shown.kind]?.key;
   const inProgress = shown.period.key === runningKey;
   const empty = review && review.stats.done === 0 && review.stats.focusMinutes === 0;
 
@@ -689,7 +715,7 @@ export default function OrbitPage() {
           </h1>
           <div className={`orbit-view flex items-center gap-2 mt-1`} data-fade={fade ?? undefined}>
             <p className="text-sm text-muted-foreground" data-fade-unit aria-live="polite">
-              {shown.kind === "weekly" ? "Weekly" : "Monthly"} review · <span className="text-foreground/90">{periodLabel(shown.period)}</span>
+              {kindLabel(shown.kind)} review · <span className="text-foreground/90">{periodLabel(shown.period)}</span>
               {inProgress && <span className="orbit-so-far"> · so far</span>}
             </p>
           </div>
@@ -724,7 +750,7 @@ export default function OrbitPage() {
             </button>
           </div>
           <div className="orbit-switch" role="tablist" aria-label="Review length">
-            {(["weekly", "monthly"] as const).map((k) => (
+            {REVIEW_KINDS.map((k) => (
               <button
                 key={k}
                 type="button"
@@ -733,14 +759,14 @@ export default function OrbitPage() {
                 onClick={() => go({ kind: k, offset: offsets[k] })}
                 className={`orbit-switch-option ${target.kind === k ? "orbit-switch-on" : ""}`}
               >
-                {k === "weekly" ? "Weekly" : "Monthly"}
+                {kindLabel(k)}
               </button>
             ))}
           </div>
         </div>
       </header>
 
-      <TodayCard focusOnMount={landing === "today"} kind={target.kind} />
+      <TodayCard focusOnMount={landing === "today"} kind={target.kind === "weekly" ? "weekly" : "monthly"} />
 
       <div className="orbit-view space-y-4" data-fade={fade ?? undefined}>
         {historyError && <HistoryBanner error={historyError} />}

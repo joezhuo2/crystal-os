@@ -5,6 +5,21 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.1] - 2026-10-08 - The Orbit's yearly review.
+
+### Added
+
+- **A Yearly review on The Orbit.** The Weekly/Monthly switch is now Weekly/Monthly/Yearly. A yearly period is a calendar year (January 1 to December 31), keyed and labelled `2026`. It is ready at 6 PM on December 31; until then the running year can be browsed as "so far", one step past the latest ready year, like weeks and months.
+- **The same cards as the other reviews,** scaled to a year: tasks completed and added, focus (total and per day, week and month, with a bar per month instead of per day), the focus-by-task donut, money against last year, new vault notes, habits, and trends against last year and the 2-year average. A **Next year** agenda lists the upcoming calendar events and tasks grouped by month, and the reflection prompts ask about your focus for next year.
+- **Export to vault writes `Reviews/Yearly/2026.md`,** with `type: yearly-review` and `period: 2026` in the frontmatter and a **By month** focus breakdown.
+- **The review-ready dot on the nav icon, the chip on Home and Settings → The Orbit → Auto-export reviews cover yearly reviews too.** Auto-export writes them to `Reviews/Yearly`. The badge reads "Weekly, monthly and yearly reviews ready" when all three are waiting.
+- `REVIEW_KINDS`, `kindLabel`, `monthLabel` and `agendaDateLabel` helpers in `orbitReview.ts`, a `FocusMonthBars` chart in `OrbitCharts.tsx`, and a "yearly review" block of tests in `orbitReview.test.ts`.
+
+### Changed
+
+- **The yearly review loads its data only the first time Yearly is picked** (three years of history plus next year's calendar), so opening The Orbit is no slower than before. `useOrbitReview(period, enabled)` takes a new `enabled` flag for this.
+- **Internals:** `exportPath` derives the vault folder from the review kind, `useOrbitReady` now returns only `{ unseen }`, and the bar chart in `OrbitCharts.tsx` is a shared `Bars` that `FocusBars` (per day) and `FocusMonthBars` (per month) build on.
+
 ## [v0.10.0] - 2026-10-08 - The Engine Reborn (Release Summary)
 
 *This release makes ticking a task feel like something happened: the checkbox pops, the check mark draws in, the name is struck through, and only then does the card move. The Board's cards are also rebuilt so their details stay readable in narrow columns.*

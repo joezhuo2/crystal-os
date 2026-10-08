@@ -1,5 +1,5 @@
 /**
- * The Orbit's weekly and monthly reviews: which period is up for review, the
+ * The Orbit's weekly, monthly and yearly reviews: which period is up for review, the
  * numbers in it, and the vault note it exports to.
  *
  * Pure functions of their inputs (and an explicit `now`), so the period
@@ -10,7 +10,9 @@
 import { overallRate, summarizeHabits, type Habit, type HabitCheck, type HabitSummary } from "@/lib/habits";
 import { addDays, cleanRepeat, taskFallsOnDate, toLocalDateStr, type RepeatRule } from "@/lib/utils";
 
-export type ReviewKind = "weekly" | "monthly";
+export type ReviewKind = "weekly" | "monthly" | "yearly";
+
+export const REVIEW_KINDS: readonly ReviewKind[] = ["weekly", "monthly", "yearly"];
 
 /** The Orbit's React Query keys start with this; saving a completion or focus run refreshes them. */
 export const ORBIT_QUERY_KEY = ["orbit"] as const;
@@ -19,15 +21,15 @@ export const ORBIT_QUERY_KEY = ["orbit"] as const;
 export const READY_HOUR = 18;
 
 /** How many earlier periods the trend average covers. */
-export const TREND_WINDOW: Record<ReviewKind, number> = { weekly: 4, monthly: 3 };
+export const TREND_WINDOW: Record<ReviewKind, number> = { weekly: 4, monthly: 3, yearly: 2 };
 
 export interface ReviewPeriod {
   kind: ReviewKind;
   /** First day, inclusive. Weeks start on Monday. */
   start: string;
-  /** Last day, inclusive: a Sunday, or the month's last day. */
+  /** Last day, inclusive: a Sunday, the month's last day, or December 31. */
   end: string;
-  /** "2026-W40" or "2026-10": names the exported note and the ready badge. */
+  /** "2026-W40", "2026-10" or "2026": names the exported note and the ready badge. */
   key: string;
 }
 
@@ -72,14 +74,19 @@ function monthPeriod(year: number, monthIndex: number): ReviewPeriod {
   };
 }
 
+function yearPeriod(year: number): ReviewPeriod {
+  return { kind: "yearly", start: `${year}-01-01`, end: `${year}-12-31`, key: String(year) };
+}
+
 /** The period that holds `day`. */
 export function periodContaining(kind: ReviewKind, day: string): ReviewPeriod {
   if (kind === "weekly") return weekPeriod(mondayOf(day));
   const d = parseDay(day);
+  if (kind === "yearly") return yearPeriod(d.getFullYear());
   return monthPeriod(d.getFullYear(), d.getMonth());
 }
 
-/** When a period's review is ready: 18:00 on its last day. */
+/** When a period's review is ready: 18:00 on its last day (December 31 for a year). */
 export function readyAt(period: ReviewPeriod): Date {
   const d = parseDay(period.end);
   d.setHours(READY_HOUR, 0, 0, 0);
@@ -109,6 +116,7 @@ export function inProgressPeriod(kind: ReviewKind, now: Date = new Date()): Revi
 export function shiftPeriod(period: ReviewPeriod, delta: number): ReviewPeriod {
   if (period.kind === "weekly") return weekPeriod(addDays(period.start, delta * 7));
   const d = parseDay(period.start);
+  if (period.kind === "yearly") return yearPeriod(d.getFullYear() + delta);
   return monthPeriod(d.getFullYear(), d.getMonth() + delta);
 }
 
@@ -130,22 +138,29 @@ export function dayOfInstant(iso: string): string {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-/** "Sep 28 – Oct 4, 2026" or "October 2026". */
+/** "Sep 28 – Oct 4, 2026", "October 2026" or "2026". */
 export function periodLabel(period: ReviewPeriod): string {
   const s = parseDay(period.start);
   const e = parseDay(period.end);
+  if (period.kind === "yearly") return String(s.getFullYear());
   if (period.kind === "monthly") return `${MONTHS_LONG[s.getMonth()]} ${s.getFullYear()}`;
   const left = `${MONTHS[s.getMonth()]} ${s.getDate()}`;
   const right = s.getMonth() === e.getMonth() ? `${e.getDate()}` : `${MONTHS[e.getMonth()]} ${e.getDate()}`;
   return `${left} – ${right}, ${e.getFullYear()}`;
 }
 
-/** "week" or "month", for copy like "vs last week". */
-export const unitOf = (kind: ReviewKind) => (kind === "weekly" ? "week" : "month");
+const UNITS: Record<ReviewKind, string> = { weekly: "week", monthly: "month", yearly: "year" };
+const KIND_LABELS: Record<ReviewKind, string> = { weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" };
+
+/** "week", "month" or "year", for copy like "vs last week". */
+export const unitOf = (kind: ReviewKind) => UNITS[kind];
+
+/** "Weekly", "Monthly" or "Yearly". */
+export const kindLabel = (kind: ReviewKind) => KIND_LABELS[kind];
 
 /** Vault path the review exports to. */
 export function exportPath(period: ReviewPeriod): string {
-  return period.kind === "weekly" ? `Reviews/Weekly/${period.key}.md` : `Reviews/Monthly/${period.key}.md`;
+  return `Reviews/${kindLabel(period.kind)}/${period.key}.md`;
 }
 
 /* ------------------------------------------------------------------ *
@@ -317,9 +332,13 @@ export interface Review {
   notePaths: string[];
   /** Focus minutes on each day of the period. */
   focusByDay: { day: string; minutes: number }[];
+  /** Focus minutes in each month of the period ("YYYY-MM"), for the yearly chart. */
+  focusByMonth: { month: string; minutes: number }[];
   focusPerDay: number;
-  /** Monthly only: average minutes per week of the month. */
+  /** Monthly and yearly: average minutes per week of the period. */
   focusPerWeek: number;
+  /** Yearly only: average minutes per month. */
+  focusPerMonth: number;
   /** Where the focus went: a slice per task, then Other and No task. */
   focusByTask: FocusSlice[];
   agenda: AgendaItem[];
@@ -439,6 +458,9 @@ export function buildReview(period: ReviewPeriod, data: ReviewData): Review {
     if (focusSeconds.has(day)) focusSeconds.set(day, (focusSeconds.get(day) ?? 0) + f.seconds);
   }
   const focusByDay = days.map((day) => ({ day, minutes: Math.round((focusSeconds.get(day) ?? 0) / 60) }));
+  const monthSeconds = new Map<string, number>();
+  for (const day of days) monthSeconds.set(day.slice(0, 7), (monthSeconds.get(day.slice(0, 7)) ?? 0) + (focusSeconds.get(day) ?? 0));
+  const focusByMonth = [...monthSeconds].map(([month, seconds]) => ({ month, minutes: Math.round(seconds / 60) }));
 
   const sortedCompletions = data.completions
     .filter((c) => inPeriod(dayOfInstant(c.completedAt), period))
@@ -469,8 +491,10 @@ export function buildReview(period: ReviewPeriod, data: ReviewData): Review {
     noteTitles: notes.map((n) => n.title),
     notePaths: notes.map((n) => n.path),
     focusByDay,
+    focusByMonth,
     focusPerDay: Math.round(stats.focusMinutes / days.length),
     focusPerWeek: Math.round((stats.focusMinutes / days.length) * 7),
+    focusPerMonth: Math.round(stats.focusMinutes / focusByMonth.length),
     focusByTask: focusByTask(period, data.focus, data.tasks),
     agenda: buildAgenda(next, data),
     next,
@@ -508,9 +532,19 @@ export function agendaDayLabel(day: string): string {
   return parseDay(day).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
+/** "Mon, Jan 5, 2027": a day in a yearly agenda, which spans a whole year. */
+export function agendaDateLabel(day: string): string {
+  return parseDay(day).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+}
+
 /** "9:00 AM" for an "HH:MM" time. */
 export function formatClockTime(time: string): string {
   return new Date(`2000-01-01T${time}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+/** "January" for a "YYYY-MM-DD" or "YYYY-MM" day. */
+export function monthLabel(day: string): string {
+  return MONTHS_LONG[Number(day.slice(5, 7)) - 1];
 }
 
 /** Week of the month (1–5) a day falls in, counting Monday-started weeks. */
@@ -571,7 +605,7 @@ const bullet = (items: string[]) => (items.length ? items.map((i) => `- ${i}`).j
 export function toMarkdown(review: Review, reflection?: Reflection, now: Date = new Date()): string {
   const { period, stats, previous } = review;
   const unit = unitOf(period.kind);
-  const title = `${period.kind === "weekly" ? "Weekly" : "Monthly"} review · ${review.label}`;
+  const title = `${kindLabel(period.kind)} review · ${review.label}`;
   const lines: string[] = [
     "---",
     `type: ${period.kind}-review`,
@@ -608,7 +642,16 @@ export function toMarkdown(review: Review, reflection?: Reflection, now: Date = 
     "",
     `- Total: ${formatMinutes(stats.focusMinutes)}`,
     `- Per day: ${formatMinutes(review.focusPerDay)}`,
-    ...(period.kind === "monthly" ? [`- Per week: ${formatMinutes(review.focusPerWeek)}`] : []),
+    ...(period.kind !== "weekly" ? [`- Per week: ${formatMinutes(review.focusPerWeek)}`] : []),
+    ...(period.kind === "yearly"
+      ? [
+          `- Per month: ${formatMinutes(review.focusPerMonth)}`,
+          "",
+          "### By month",
+          "",
+          ...review.focusByMonth.map((m) => `- ${monthLabel(m.month)}: ${formatMinutes(m.minutes)}`),
+        ]
+      : []),
     ...(review.focusByTask.length > 0
       ? [
           "",
@@ -631,7 +674,7 @@ export function toMarkdown(review: Review, reflection?: Reflection, now: Date = 
     "",
     review.agenda.length
       ? review.agenda
-          .map((a) => `- ${agendaDayLabel(a.day)}${a.time ? ` · ${formatClockTime(a.time)}` : ""} · ${a.title}${a.kind === "task" ? " (task)" : ""}`)
+          .map((a) => `- ${period.kind === "yearly" ? agendaDateLabel(a.day) : agendaDayLabel(a.day)}${a.time ? ` · ${formatClockTime(a.time)}` : ""} · ${a.title}${a.kind === "task" ? " (task)" : ""}`)
           .join("\n")
       : "- Nothing scheduled",
     "",
