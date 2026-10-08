@@ -214,12 +214,13 @@ function WeatherWidget({ onClick }: { onClick?: () => void }) {
 }
 
 /**
- * Notes from the Obsidian vault. The whole card opens The Archive, and wears
- * its amethyst cave look (index.css, "Home spaces").
+ * Notes from the Obsidian vault. The whole card opens The Archive, and sits
+ * on a violet black hole under light glass (index.css, "Home spaces").
  */
 function ArchiveWidget({ onClick }: { onClick?: () => void }) {
   const { setSelectedNotePath, setShowQuickAdd, setQuickAddDraft } = appUi;
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const backdropUrl = useImageBackdrop("archive", CARD_BACKDROP_BLUR);
   const { data, isLoading, error } = useVaultNotes({
     tag: activeTag ?? undefined,
     limit: 4,
@@ -233,6 +234,9 @@ function ArchiveWidget({ onClick }: { onClick?: () => void }) {
 
   return (
     <div className="home-space home-space-archive">
+      <span aria-hidden="true" className="home-backdrop-scene">
+        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />}
+      </span>
       <div onClick={onClick} className="home-card-archive h-full p-6 cursor-pointer group">
         <div className="flex items-center justify-between mb-3">
           <p className="flex items-center gap-2 text-xs uppercase tracking-widest font-semibold">

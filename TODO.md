@@ -1,6 +1,7 @@
 # Planned Features
 - [v0.10.0] - engine options update
-- [v0.9.10] glassmorphism ui loading/login screen with background image
+    - global search bar should be an overlay on any screen that blurs the screen a tiny bit, can be exited by clicking out or pressing escape, and fully themed to current page
+    - animations when completing/uncompleting a task
 - [v0.11.0] vault/banking overhaul
     - [ ]  use plaid to connect to banks (store api keys and tokens in secure .env variables)
     - [ ] themed glassmorphism UI 
@@ -15,9 +16,7 @@
 - [ ] **Changing the root theme class still restyles the page subtree.** v0.8.5 turned the per-theme `.x-root main .glass-card` rule sets into `--glass-card-*` values on each theme's `<main>`, but `rootClass` and the `body` `horizon-theme`/`engine-theme`/`orbit-theme` classes still change on every switch, and the `portal-theme-*`, `sidebar-*` and `*-title` rules are still per theme. Measure a switch in the Performance panel before going further; if recalc is still a large share, move the remaining palettes to custom properties set from JS on one element.
 
 - redo portal ui (change to glassmorphism with some background)
-- glassmorphism ui to all home page widget cards (except terminal)
-- global search bar should be an overlay on any screen, and fully themed to current page
-- animations when completing/uncompleting a task
+- glassmorphism ui to all home page widget cards (vault, portal, nebula)
 
 ## Before first release (v1.0.0)
 

@@ -5,6 +5,15 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.10] - 2026-10-08 - Loading and login on glass.
+
+### Changed
+
+- **The Archive's Home card now sits on a violet black hole,** a new image blurred the same way as the Horizon, Engine and Orbit cards, under the same light glass. Its amethyst-cave gradient and twinkling sparkles are gone from the card. The Archive page itself is unchanged.
+- **The loading screen shows The Orbit's black hole behind a glass panel.** The backdrop is a pre-blurred copy (`public/orbit-splash.webp`) with a light blur on the page. The title, gem and loading bar take The Orbit's colours (ice, cyan and mauve).
+- **The login screen matches the loading screen:** the same Orbit backdrop and glass panel, The Orbit's palette, and the crystal gem as its logo. Inputs are glass with a cyan focus ring, the **Sign in** button has a gradient, and browser autofill stays dark.
+- **`CrystalGem`** is now a shared component exported from `AppSplash.tsx`, and the splash and login share the `.boot-scene` and `.boot-glass` styles defined in `index.html`.
+
 ## [v0.9.9] - 2026-10-07 - The Engine's Board, fully laid out.
 
 ### Changed

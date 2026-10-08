@@ -9,14 +9,17 @@ import { useEffect, useState } from "react";
 import horizonImage from "@/assets/horizon-backdrop.webp";
 import engineImage from "@/assets/engine-backdrop.webp";
 import orbitImage from "@/assets/orbit-backdrop.webp";
+import archiveImage from "@/assets/archive-backdrop.jpg";
 import { blurImage } from "@/lib/atmosphereImage";
 
-export type BackdropImage = "horizon" | "engine" | "orbit";
+export type BackdropImage = "horizon" | "engine" | "orbit" | "archive";
 
 const IMAGES: Record<BackdropImage, string> = {
   horizon: horizonImage,
   engine: engineImage,
   orbit: orbitImage,
+  // Home box only; The Archive page keeps its amethyst cave.
+  archive: archiveImage,
 };
 
 /** Image blur (0–100) behind a page. */

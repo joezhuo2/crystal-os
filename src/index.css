@@ -1994,6 +1994,7 @@
      toasts and tooltips follow it; the Home box takes the --orbit-* colours. */
   .orbit-root,
   body.orbit-theme,
+  .auth-screen,
   .home-space-orbit {
     --orbit-ice: 190 95% 82%;
     --orbit-cyan: 192 88% 66%;
@@ -2003,7 +2004,8 @@
   }
 
   .orbit-root,
-  body.orbit-theme {
+  body.orbit-theme,
+  .auth-screen {
     --background: 226 55% 4%;
     --popover: 226 45% 9%;
     --card: 226 40% 12%;
@@ -2023,6 +2025,57 @@
 
   .orbit-root {
     background: #000;
+  }
+
+  /* The sign-in screen (LoginPage.tsx): the Orbit's palette over the boot
+     splash's backdrop and glass (.boot-scene, .boot-glass in index.html). */
+  .auth-card {
+    text-shadow: 0 1px 8px rgb(2 4 14 / 0.6);
+  }
+
+  .auth-card .boot-splash-title {
+    font-size: 26px;
+  }
+
+  .auth-gem {
+    width: 44px;
+    height: 44px;
+    filter: drop-shadow(0 0 14px rgb(125 211 252 / 0.5));
+  }
+
+  .auth-input {
+    background: rgb(3 6 18 / 0.45);
+    border-color: rgb(207 239 252 / 0.16);
+    color: #f5fbff;
+    transition: border-color 200ms, box-shadow 200ms;
+  }
+
+  .auth-input:hover {
+    border-color: rgb(165 233 251 / 0.3);
+  }
+
+  .auth-input:focus-visible {
+    border-color: rgb(165 233 251 / 0.5);
+  }
+
+  .auth-input:-webkit-autofill {
+    -webkit-text-fill-color: #f5fbff;
+    box-shadow: 0 0 0 1000px rgb(8 13 32) inset;
+    caret-color: #f5fbff;
+  }
+
+  .auth-submit {
+    background: linear-gradient(100deg, #a5e9fb, #67d4f0 50%, #b5a6dc);
+    color: hsl(226 60% 8%);
+    font-weight: 600;
+    text-shadow: none;
+    box-shadow: 0 4px 20px rgb(103 212 240 / 0.25);
+    transition: box-shadow 200ms, filter 200ms;
+  }
+
+  .auth-submit:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 4px 28px rgb(103 212 240 / 0.4);
   }
 
   .orbit-title {
@@ -3588,54 +3641,37 @@
     right: -0.4rem;
   }
 
-  /* Archive: the amethyst cave of The Archive page, with twinkling sparkles.
+  /* Archive: a violet black hole behind the box, already blurred at 25%
+     Image blur (imageBackdrop.ts), under a very light glass like the Horizon.
      The palette overrides retint text-muted-foreground and text-primary. */
   .home-space-archive {
-    --primary: 271 91% 72%;
-    --muted-foreground: 268 22% 66%;
+    --primary: 262 95% 78%;
+    --muted-foreground: 250 28% 80%;
   }
 
   .home-space-archive::before {
-    background:
-      radial-gradient(90% 70% at 50% 115%, #2e0b52 0%, transparent 65%),
-      radial-gradient(55% 60% at 8% 6%, rgb(126 34 206 / 0.4), transparent 70%),
-      radial-gradient(45% 50% at 92% 40%, rgb(192 38 211 / 0.16), transparent 70%),
-      linear-gradient(180deg, #07030f 0%, #0c0420 55%, #05020b 100%);
-    box-shadow: 0 0 32px rgb(147 51 234 / 0.2);
-  }
-
-  .home-space-archive::after {
-    display: block;
-    background-image:
-      radial-gradient(1.5px 1.5px at 9% 18%, #f5d0fe, transparent),
-      radial-gradient(1px 1px at 27% 86%, rgb(233 213 255 / 0.85), transparent),
-      radial-gradient(1.5px 1.5px at 48% 6%, #fff, transparent),
-      radial-gradient(1px 1px at 66% 94%, rgb(216 180 254 / 0.8), transparent),
-      radial-gradient(2px 2px at 95% 12%, #f0abfc, transparent),
-      radial-gradient(1px 1px at 88% 72%, #fff, transparent),
-      radial-gradient(1.5px 1.5px at 3% 64%, rgb(233 213 255 / 0.9), transparent);
-    animation: home-twinkle 4s ease-in-out infinite alternate;
+    background: #000;
+    box-shadow: 0 0 32px rgb(139 92 246 / 0.2);
   }
 
   .home-card-archive {
     border-radius: 1rem;
     color: #f5f3ff;
-    background: linear-gradient(160deg, rgb(46 16 84 / 0.42), rgb(14 6 28 / 0.55));
-    border: 1px solid rgb(192 132 252 / 0.2);
+    background: linear-gradient(160deg, rgb(24 14 52 / 0.1), rgb(6 3 18 / 0.3));
+    border: 1px solid rgb(221 214 254 / 0.16);
+    text-shadow: 0 1px 8px rgb(6 3 18 / 0.75);
     box-shadow:
-      0 8px 32px rgb(3 0 10 / 0.55),
-      0 0 36px rgb(147 51 234 / 0.1),
-      inset 0 1px 0 rgb(245 208 254 / 0.08);
-    backdrop-filter: blur(10px) saturate(1.2);
+      0 8px 32px rgb(3 0 14 / 0.45),
+      inset 0 1px 0 rgb(237 233 254 / 0.1);
     transition: border-color 300ms, box-shadow 300ms;
   }
 
   .home-card-archive:hover {
-    border-color: rgb(216 180 254 / 0.45);
+    border-color: rgb(167 139 250 / 0.45);
     box-shadow:
-      0 8px 32px rgb(3 0 10 / 0.55),
-      0 0 34px rgb(168 85 247 / 0.3),
-      inset 0 1px 0 rgb(245 208 254 / 0.12);
+      0 8px 32px rgb(3 0 14 / 0.45),
+      0 0 30px rgb(139 92 246 / 0.25),
+      inset 0 1px 0 rgb(237 233 254 / 0.14);
   }
 
   .home-archive-gem {
@@ -4059,7 +4095,6 @@
 
   @media (prefers-reduced-motion: reduce) {
     .home-space-nebula[data-stars]::after,
-    .home-space-archive::after,
     .home-space-atmosphere::after,
     .home-atmo-aurora,
     .home-atmo-precip,
