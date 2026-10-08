@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-811%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.10.1-6366F1)
+![Tests](https://img.shields.io/badge/tests-817%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.10.2-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.10.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.10.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -32,7 +32,7 @@ Current release: **v0.10.1** — see [CHANGELOG.md](CHANGELOG.md) for release hi
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **📶 Offline saves** | Task and transaction changes made while Supabase is unreachable are kept on the device and replayed in order once it answers again (on reconnect, every 30 s, and at the next start), instead of failing the save. See [Offline queue](#-offline-queue) |
 | **🌤️ Weather** | Current conditions + 7-day forecast for any of ~840 Canadian locations (searchable city picker, or **Use my location** for the nearest one), the Air Quality Health Index from the nearest station with its 24 h peak, the UV index with advice, and how much daylight is left, over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
-| **📖 The Archive** | Browse, search, read and edit your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown, and a CodeMirror markdown editor that refuses to overwrite a note changed on disk since you opened it. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
+| **📖 The Archive** | Browse, search, read and edit your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown, a **Connections** section under each note (the notes it links to, the notes that link back, and the notes sharing one of its tags or categories, each one click away), and a CodeMirror markdown editor that refuses to overwrite a note changed on disk since you opened it. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
 | **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, a context-window meter, per-model token counts, and a swirling three-colour nebula |
 | **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges (hidden while a Pomodoro focus phase is running), and three themes (desktop; the web build opens apps in new tabs) |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
@@ -261,7 +261,7 @@ src/
 │   ├── notifySettings.ts       # Notification switches and the event reminder lead time (localStorage)
 │   ├── appUi.ts                # Transient UI store: open forms, Quick Add draft, selected note (useAppUi(selector))
 │   ├── vaultCore.ts            # Shared vault logic: parsing, search index, tags, quick-add formatting
-│   ├── wikilinks.ts            # Archive reader: wikilink targets mapped once per listing
+│   ├── wikilinks.ts            # Archive reader: wikilink targets mapped once per listing, note connections (links to / linked from)
 │   ├── vaultNative.ts          # Desktop vault client for src-tauri/src/vault.rs
 │   ├── obsidianScene.ts        # Archive backdrop: crystal shapes, edge layout, cursor light maths
 │   ├── terminalNative.ts       # Desktop terminal bridge (terminal_* commands, event routing per shell)
@@ -351,7 +351,7 @@ The middleware is mounted on both the dev server and `vite preview`. It is **not
 
 - **Search ranking** — title (exact > prefix > substring) beats tags beats path beats body; body hits return a snippet so the UI can show *why* a note matched.
 - **Frontmatter** — `title`, `tags`, `date`, and `status` are modelled explicitly; every other key is surfaced as-is in the reader.
-- **Wikilinks** — `[[Note]]` and `[[Note|alias]]` resolve to in-app navigation; unresolved links stay plain text rather than becoming dead anchors.
+- **Wikilinks** — `[[Note]]`, `[[Note|alias]]` and `[[Note#Heading]]` resolve to in-app navigation (a heading link opens the note); unresolved links stay plain text rather than becoming dead anchors. Under each note, **Connections** lists **Links to** (its outgoing wikilinks) and **Linked from** (backlinks), both clickable, plus **Shares a category**: other notes with any of the note's tags or `categories`/`category` frontmatter values (wikilink values like `[[Books]]` included), most overlap first; the listing carries each note's lowercased link targets (`links`), extracted in `vaultCore.ts`.
 - **Quick Add** — appends a `- **HH:MM** text` bullet under a `## YYYY-MM-DD` heading, creating the note (and any parent directories) when missing. Supplied tags are merged into the note's frontmatter; the existing YAML list style (inline or block) is preserved and no other key is reformatted.
 - **Editing** — **Edit** in the reader opens the whole file, frontmatter included, in CodeMirror (`src/components/views/NoteEditor.tsx`, loaded only when first used). **Save** or Ctrl+S writes it back with the `mtime` it was opened at; if Obsidian saved the note in between, the save is refused and you choose **Discard mine, load theirs** or **Overwrite with mine**. Unsaved edits survive switching notes or tabs as a draft until the window closes.
 - **Caching** — parsed notes are cached per path and invalidated on `mtime` change.

@@ -5,6 +5,23 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.2] - 2026-10-08 - Connections in The Archive.
+
+### Added
+
+- **A Connections section under each note in The Archive.** The reader now lists **Links to** (the notes this note links to with wikilinks) and **Linked from** (the notes that link to it, its backlinks). Each entry is clickable and opens that note. Self-links and links that match no note are left out, and a note that is both linked and linking appears in both lists. A third list, **Shares a category**, shows the other notes that share any of the note's categories: its tags plus the values of a `categories` or `category` frontmatter key, where wikilink values such as `[[Books]]` count by name. Notes sharing the most come first, each entry names what it shares, and the list shows 12 with a **Show all** button for busy tags.
+- `noteCategories` and `relatedByCategory` in `wikilinks.ts` work out those category matches, with tests.
+- Vault note listings now carry a `links` field (the lowercased wikilink targets), extracted in `vaultCore.ts` by `extractWikilinks`. The new `noteConnections` helper in `wikilinks.ts` resolves them, with tests in `wikilinks.test.ts`.
+
+### Changed
+
+- **`[[Note#Heading]]` wikilinks now open the note** instead of rendering as plain text. The reader has no heading anchors, so the link lands at the top of the note.
+
+### Fixed
+
+- **The Archive's note list would not scroll with the mouse wheel while the cursor rested on a note.** The wheel only moved it from the gaps between rows. The list now handles the wheel itself (`useWheelScroll` in `ArchivePage.tsx`), so it scrolls wherever the cursor is inside it; at either end the wheel is left to the browser as before.
+- **The v0.10.1 release build failed.** `tauri build` stopped with "Found version mismatched Tauri packages" because the regenerated npm lockfile pulled `@tauri-apps/plugin-opener` 2.7.0 while the Rust crate `tauri-plugin-opener` stayed at 2.5.5. The crate is now 2.7 (`Cargo.toml` and `Cargo.lock`) and the npm range is `^2.7.0`, so both sides stay on the same minor version.
+
 ## [v0.10.1] - 2026-10-08 - The Orbit's yearly review.
 
 ### Added

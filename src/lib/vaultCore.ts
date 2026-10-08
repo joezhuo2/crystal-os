@@ -47,6 +47,8 @@ export interface VaultNote {
    * `date`, else a date in the file name, else the file's creation time.
    */
   created: string | null;
+  /** Wikilink targets in the body, lowercased and deduplicated, "#heading" stripped. */
+  links: string[];
 }
 
 export interface VaultNoteDetail extends VaultNote {
@@ -217,6 +219,16 @@ export function noteCreatedDay(
   return time > 0 ? localDay(new Date(time)) : null;
 }
 
+/** `[[target]]`, `[[target|alias]]` and `[[target#heading]]` targets, in order. */
+export function extractWikilinks(content: string): string[] {
+  const links = new Set<string>();
+  for (const match of content.matchAll(/\[\[([^\]|#]*)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g)) {
+    const target = match[1].trim().toLowerCase();
+    if (target) links.add(target);
+  }
+  return [...links];
+}
+
 /** Build a note from already-split frontmatter data and body. */
 export function buildNote(
   relPath: string,
@@ -239,6 +251,7 @@ export function buildNote(
     mtime: mtimeMs,
     size,
     created: noteCreatedDay(data, relPath, ctimeMs, mtimeMs),
+    links: extractWikilinks(content),
     content,
   };
 }

@@ -1,12 +1,8 @@
 # Planned Features
-- [v0.11.0]
-    - [v0.10.2] Horizon: free-slot finder. "Next free 2 h block" search.
-    - [v0.10.3] Customisable navbar. Reorder and hide sidebar sections.
-    - [v0.10.4] Pulse: Now / Next strip. Countdown to the next event and, when it has a location, a leave-by time. (calculate from current location)
+- [v0.11.0] QoL & Smaller Features
     - [v0.10.5] Undo toast. A 5 s "Undo" after deleting, completing or rescheduling a task, event or transaction.
     - redo portal ui (change to glassmorphism with some background)
     - glassmorphism ui to all home page widget cards (vault, portal, nebula)
-    - Archive: Connections and Graph Show a list of connected notes that are clickable (click loads the note that was clicked) (v1). 
 - [v0.12.0] vault/banking overhaul
     - [ ]  use plaid to connect to banks (store api keys and tokens in secure .env variables)
     - [ ] themed glassmorphism UI 
@@ -34,6 +30,9 @@
 
 ## Planned List
 
+- Customisable navbar. Reorder and hide sidebar sections.
+- Pulse: Now / Next strip. Countdown to the next event and, when it has a location, a leave-by time. (calculate from current location)
+- Horizon: free-slot finder. "Next free 2 h block" search.
 - [ ] [Low-Med] Optionally link a task to a vault note so the details live in Obsidian. (v2)
 - [ ] **[Med] Morning plan and evening shutdown.** On the first open of the day, one card with weather, today's events, overdue tasks and habits, where you pick the day's top 3 tasks. In the evening, a shutdown step rolls unfinished tasks to tomorrow and writes a summary to the daily note.
 - [ ] **[Med] Orbit: correlations.** Mood against habits done or focus time.

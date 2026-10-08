@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -11,6 +11,7 @@ import {
   FileText,
   FileX,
   FolderOpen,
+  Link2,
   NotebookPen,
   Pencil,
   RotateCw,
@@ -27,7 +28,13 @@ import {
 } from "@/hooks/useVault";
 import { isDesktop } from "@/lib/platform";
 import { useDebouncedValue } from "@/lib/utils";
-import { buildLinkTargets, resolveWikilinks } from "@/lib/wikilinks";
+import {
+  buildLinkTargets,
+  noteConnections,
+  relatedByCategory,
+  resolveWikilinks,
+  type RelatedNote,
+} from "@/lib/wikilinks";
 
 // CodeMirror is only needed once someone edits, so it stays out of the main bundle.
 const NoteEditor = lazy(() => import("./NoteEditor"));
@@ -120,6 +127,39 @@ const VIRTUALIZE_AFTER = 80;
 /** A limit no vault reaches, for queries that want every note. */
 const ALL_NOTES = 1_000_000;
 
+/** Pixels per line for wheel events reported in lines (DOM_DELTA_LINE). */
+const WHEEL_LINE_PX = 16;
+
+/**
+ * Scroll a panel by the mouse wheel ourselves. In the desktop app (WebView2)
+ * a notched wheel over a hovered note row left the list where it was, while
+ * the same wheel over the gaps between rows scrolled it. Handling the wheel
+ * on the scroller works wherever the cursor rests inside it. When the panel
+ * is already at its end in that direction the event is left alone.
+ */
+function useWheelScroll(ref: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      // Pinch-zoom and sideways scrolling keep their native behaviour.
+      if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      const delta =
+        e.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? e.deltaY * WHEEL_LINE_PX
+          : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? e.deltaY * el.clientHeight
+            : e.deltaY;
+      const max = el.scrollHeight - el.clientHeight;
+      if ((delta < 0 && el.scrollTop <= 0) || (delta > 0 && el.scrollTop >= max - 1)) return;
+      e.preventDefault();
+      el.scrollTop = Math.min(max, Math.max(0, el.scrollTop + delta));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [ref]);
+}
+
 function NoteList({
   notes,
   selectedPath,
@@ -130,6 +170,7 @@ function NoteList({
   onSelect: (path: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  useWheelScroll(scrollRef);
   const virtual = notes.length > VIRTUALIZE_AFTER;
   const dates = useMemo(() => notes.map(relativeDate), [notes]);
   const mounted = useRef(false);
@@ -200,7 +241,142 @@ const NoteMarkdown = memo(function NoteMarkdown({ body }: { body: string }) {
   return <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>{body}</ReactMarkdown>;
 });
 
-function NoteReader({ linkTargets }: { linkTargets: Map<string, string> }) {
+function ConnectionGroup({
+  label,
+  notes,
+  onOpen,
+}: {
+  label: string;
+  notes: VaultNote[];
+  onOpen: (path: string) => void;
+}) {
+  if (notes.length === 0) return null;
+  return (
+    <div>
+      <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5">
+        {label} <span className="text-muted-foreground/60">{notes.length}</span>
+      </p>
+      <ul className="space-y-1">
+        {notes.map((n) => (
+          <li key={n.path}>
+            <button
+              onClick={() => onOpen(n.path)}
+              title={n.path}
+              className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            >
+              <span className="block text-sm truncate">{n.title}</span>
+              <span className="block text-[11px] text-muted-foreground truncate">{n.path}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Category matches shown before "Show all", so a tag on hundreds of notes stays short. */
+const RELATED_PREVIEW = 12;
+
+/** Other notes sharing a tag or category with this one, with what they share. */
+function RelatedGroup({
+  notePath,
+  related,
+  onOpen,
+}: {
+  notePath: string;
+  related: RelatedNote<VaultNote>[];
+  onOpen: (path: string) => void;
+}) {
+  // Keyed by path, so opening another note collapses the list again.
+  const [expandedPath, setExpandedPath] = useState<string | null>(null);
+  if (related.length === 0) return null;
+  const expanded = expandedPath === notePath;
+  const shown = expanded ? related : related.slice(0, RELATED_PREVIEW);
+
+  return (
+    <div className="mt-4">
+      <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5">
+        Shares a category <span className="text-muted-foreground/60">{related.length}</span>
+      </p>
+      <ul className="grid gap-1 sm:grid-cols-2">
+        {shown.map(({ note: n, shared }) => (
+          <li key={n.path}>
+            <button
+              onClick={() => onOpen(n.path)}
+              title={n.path}
+              className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            >
+              <span className="block text-sm truncate">{n.title}</span>
+              <span className="block text-[11px] text-muted-foreground truncate">{shared.join(" · ")}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {related.length > RELATED_PREVIEW && (
+        <button
+          onClick={() => setExpandedPath(expanded ? null : notePath)}
+          className="mt-1.5 px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-white/5 transition-colors"
+        >
+          {expanded ? "Show fewer" : `Show all ${related.length}`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Notes this one links to, notes linking back to it, and notes sharing a
+ * category. Clicking one opens it.
+ */
+function NoteConnectionsPanel({
+  note,
+  allNotes,
+  linkTargets,
+  onOpen,
+}: {
+  note: VaultNote;
+  allNotes: VaultNote[];
+  linkTargets: Map<string, string>;
+  onOpen: (path: string) => void;
+}) {
+  const { outgoing, backlinks } = useMemo(
+    () => noteConnections(note.path, note.links ?? [], allNotes, linkTargets),
+    [note, allNotes, linkTargets],
+  );
+  const related = useMemo(() => relatedByCategory(note, allNotes), [note, allNotes]);
+
+  return (
+    <section className="mt-8 pt-4 border-t border-white/10" aria-label="Connections">
+      <h3 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+        <Link2 className="w-3.5 h-3.5" />
+        Connections
+      </h3>
+      {outgoing.length === 0 && backlinks.length === 0 && related.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          No connected notes yet. Add a [[wikilink]], a tag or a category to connect one.
+        </p>
+      ) : (
+        <>
+          {(outgoing.length > 0 || backlinks.length > 0) && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ConnectionGroup label="Links to" notes={outgoing} onOpen={onOpen} />
+              <ConnectionGroup label="Linked from" notes={backlinks} onOpen={onOpen} />
+            </div>
+          )}
+          <RelatedGroup notePath={note.path} related={related} onOpen={onOpen} />
+        </>
+      )}
+    </section>
+  );
+}
+
+function NoteReader({
+  linkTargets,
+  allNotes,
+}: {
+  linkTargets: Map<string, string>;
+  allNotes: VaultNote[];
+}) {
   const selectedNotePath = useAppUi((s) => s.selectedNotePath);
   const { setSelectedNotePath } = appUi;
   const { data: note, isLoading, error } = useVaultNote(selectedNotePath);
@@ -348,6 +524,13 @@ function NoteReader({ linkTargets }: { linkTargets: Map<string, string> }) {
         >
           <NoteMarkdown body={body} />
         </div>
+
+        <NoteConnectionsPanel
+          note={note}
+          allNotes={allNotes}
+          linkTargets={linkTargets}
+          onOpen={setSelectedNotePath}
+        />
         </>
       )}
     </m.div>
@@ -549,7 +732,7 @@ export default function ArchivePage() {
         </div>
 
         {/* ── Right pane: reader ── */}
-        <NoteReader linkTargets={linkTargets} />
+        <NoteReader linkTargets={linkTargets} allNotes={allNotes} />
       </div>
     </div>
   );
