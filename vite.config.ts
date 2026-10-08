@@ -40,6 +40,10 @@ export default defineConfig(({ mode }) => {
       // burden alone.
       host: "127.0.0.1",
       port: 8080,
+      // Tauri's devUrl is fixed at 8080. A second server sliding to 8081
+      // would share node_modules/.vite with the first, and their dependency
+      // re-optimizations wipe each other's cache (504s, pages failing to load).
+      strictPort: true,
       hmr: {
         overlay: false,
       },

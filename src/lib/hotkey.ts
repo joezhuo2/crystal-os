@@ -20,7 +20,7 @@ export const HOTKEY_COPY: Record<HotkeyAction, { title: string; description: str
   },
   palette: {
     title: "Open search bar",
-    description: "Shows Crystal OS from any app, switches to Home and focuses the search bar.",
+    description: "Shows Crystal OS from any app and opens the search bar over the current page.",
   },
   home: {
     title: "Go to Home",
@@ -28,7 +28,7 @@ export const HOTKEY_COPY: Record<HotkeyAction, { title: string; description: str
   },
 };
 
-/** True for the in-app shortcut that focuses the search bar: Ctrl+K, or Cmd+K on macOS. */
+/** True for the in-app shortcut that opens or closes the search bar: Ctrl+K, or Cmd+K on macOS. */
 export function isPaletteShortcut(e: Pick<KeyboardEvent, "code" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">): boolean {
   return e.code === "KeyK" && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey;
 }

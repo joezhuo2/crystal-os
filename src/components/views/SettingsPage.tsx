@@ -480,7 +480,7 @@ export default function SettingsPage() {
               </Row>
             );
           })}
-          <Row title="Focus search bar" description="Jumps to the search bar while Crystal OS is focused.">
+          <Row title="Open search bar" description="Opens or closes the search bar over any page while Crystal OS is focused.">
             <Combo>{paletteShortcutLabel()}</Combo>
           </Row>
         </Section>

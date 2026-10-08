@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAppActions, useFinancialCategories, useTaskCategories, useTasks, useTransactions, type Task } from "@/contexts/AppContext";
 import { nestTargets } from "@/lib/subtasks";
 import { canSnooze, formatSnoozeDate, ownSnoozed, snoozePresets, snoozeUpdates, UNSNOOZE } from "@/lib/snooze";
@@ -38,20 +38,29 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
-import { inTerminal, paletteShortcutLabel } from "@/lib/hotkey";
 import { isDesktop } from "@/lib/platform";
+import { usePortalOcclusion } from "@/hooks/usePortal";
+
+const ITEM = "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer";
 
 interface CommandPaletteProps {
+  open: boolean;
+  onClose: () => void;
   onNavigate: (tab: TabId) => void;
-  /** True when a shortcut asked for the bar; it is focused, then onFocusRequested clears it. */
-  focusRequested: boolean;
-  onFocusRequested: () => void;
 }
 
-export default function CommandPalette({ onNavigate, focusRequested, onFocusRequested }: CommandPaletteProps) {
-  const [focused, setFocused] = useState(false);
+/**
+ * The global search bar: an overlay over whichever tab is open. It renders
+ * inside the page root (not portalled to <body>), so the page's theme tokens
+ * reach it. Closes on Escape, a click outside the panel, or a picked result.
+ */
+export default function CommandPalette({ open, onClose, onNavigate }: CommandPaletteProps) {
+  return <AnimatePresence>{open && <SearchOverlay onClose={onClose} onNavigate={onNavigate} />}</AnimatePresence>;
+}
+
+/** Mounted only while open, so every query and sub-mode starts fresh. */
+function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open">) {
   const [search, setSearch] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const tasks = useTasks();
   const { updateTask } = useAppActions();
@@ -64,59 +73,22 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
   const financialCategories = useFinancialCategories();
   const { setShowTaskForm, setShowTransactionForm, setSelectedNotePath, setShowQuickAdd, setQuickAddDraft, setShowEventForm } = appUi;
 
-  const showDropdown = focused && (search.length > 0 || focused);
+  // The Portal's native webview draws over all page content.
+  usePortalOcclusion(true);
 
-  // Close dropdown on outside click
+  // Focus waits a frame: after the desktop hotkey, Rust shows the window and
+  // the webview may not have focus back yet. Focus goes back to where it was
+  // on close, such as the Terminal.
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setFocused(false);
-      }
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => {
+      cancelAnimationFrame(frame);
+      if (previous?.isConnected && previous !== document.body) previous.focus();
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !inTerminal(e)) {
-        setFocused(false);
-        setNestChild(null);
-        setSnoozeTask(null);
-      }
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, []);
-
-  const close = useCallback(() => {
-    setFocused(false);
-    setSearch("");
-    setNestChild(null);
-    setSnoozeTask(null);
-  }, []);
-
-  // ---------- Focus shortcuts ----------
-  // setFocused is explicit because Escape closes the dropdown without blurring
-  // the input, so focus() alone would not fire onFocus.
-  const focusBar = useCallback(() => {
-    const input = inputRef.current;
-    if (!input) return;
-    containerRef.current?.scrollIntoView({ block: "nearest" });
-    input.focus();
-    input.select();
-    setFocused(true);
-  }, []);
-
-  // The shortcuts live in Index.tsx, which switches to Home (the only tab with
-  // the bar) and then asks here. Focus waits a frame: after the desktop hotkey,
-  // Rust shows the window and the webview may not have focus back yet.
-  useEffect(() => {
-    if (!focusRequested) return;
-    onFocusRequested();
-    requestAnimationFrame(focusBar);
-  }, [focusRequested, onFocusRequested, focusBar]);
+  const close = onClose;
 
   // ---------- Natural-language parsing ----------
   const addPrefix = search.toLowerCase().startsWith("add ");
@@ -246,18 +218,40 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
   };
 
   // ---------- Render ----------
+  // Opacity sits on the panel itself, never on an ancestor of it: that would
+  // cut off the panel's backdrop blur until the fade ended.
   return (
-    <div ref={containerRef} className="relative w-full mb-4">
+    <div
+      className="search-overlay fixed inset-0 z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search"
+      // Handled here, with focus in the bar, so Escape closes only the bar and
+      // never also a page panel listening on the document underneath.
+      onKeyDown={(e) => {
+        if (e.key !== "Escape") return;
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }}
+    >
+      <m.div
+        className="search-overlay-backdrop absolute inset-0"
+        onMouseDown={close}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+      />
+      <m.div
+        className="search-overlay-panel relative mx-auto mt-[18vh] w-[min(640px,calc(100%-2rem))] rounded-xl overflow-hidden"
+        initial={{ opacity: 0, scale: 0.98, y: -8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, y: -8 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+      >
       <Command
-        className="rounded-xl border overflow-visible"
-        style={{
-          background: "hsl(217 33% 15% / 0.6)",
-          borderColor: focused ? "hsl(239 84% 67% / 0.35)" : "hsl(0 0% 100% / 0.08)",
-          boxShadow: focused
-            ? "0 8px 40px hsl(222 47% 6% / 0.5), 0 0 24px hsl(239 84% 67% / 0.06), inset 0 1px 0 hsl(0 0% 100% / 0.06)"
-            : "0 4px 20px hsl(222 47% 6% / 0.3), inset 0 1px 0 hsl(0 0% 100% / 0.04)",
-          transition: "border-color 0.2s, box-shadow 0.2s",
-        }}
+        className="bg-transparent"
         filter={(value, search) => {
           // Vault notes are matched server-side (including on body text), and
           // Quick Add is always offered — neither can pass a local substring
@@ -268,13 +262,12 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
         }}
       >
         {/* Search Input */}
-        <div className="flex items-center gap-3 px-5 py-3 min-w-0">
+        <div className="search-overlay-divider flex items-center gap-3 px-5 py-3 min-w-0 border-b">
           <Search className="w-5 h-5 text-muted-foreground/50 shrink-0" />
           <CommandInput
             ref={inputRef}
             value={search}
             onValueChange={setSearch}
-            onFocus={() => setFocused(true)}
             placeholder={
               nestChild
                 ? `Make "${nestChild.name}" a subtask of…`
@@ -285,29 +278,12 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
             wrapperClassName="border-0 px-0 flex-1 min-w-0"
             className="h-8 text-base bg-transparent border-0 outline-none placeholder:text-muted-foreground/40 focus:ring-0"
           />
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-muted-foreground font-medium tracking-wider shrink-0">
-            {focused ? "ESC" : paletteShortcutLabel()}
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded-md border px-2 py-0.5 text-[10px] text-muted-foreground font-medium tracking-wider shrink-0">
+            ESC
           </kbd>
         </div>
 
-        {/* Dropdown Results */}
-        <AnimatePresence>
-          {showDropdown && (
-            <m.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.15 }}
-              className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border overflow-hidden"
-              style={{
-                background: "hsl(217 33% 15% / 0.95)",
-                borderColor: "hsl(0 0% 100% / 0.1)",
-                boxShadow:
-                  "0 16px 64px hsl(222 47% 6% / 0.7), 0 0 32px hsl(239 84% 67% / 0.06), inset 0 1px 0 hsl(0 0% 100% / 0.06)",
-                backdropFilter: "blur(24px)",
-              }}
-            >
-              <CommandList className="max-h-[340px] overflow-y-auto scrollbar-thin px-2 py-2">
+              <CommandList className="max-h-[min(420px,60vh)] overflow-y-auto scrollbar-thin px-2 py-2">
                 <CommandEmpty className="py-6 text-center text-sm text-muted-foreground/70">
                   {nestChild ? "No task to nest it under." : snoozeTask ? "No matching snooze." : 'No results found. Try "add Buy milk" or "log 25 for Lunch".'}
                 </CommandEmpty>
@@ -319,10 +295,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                         key={parent.id}
                         value={`parent-${parent.id}-${parent.name}`}
                         onSelect={() => handleNest(parent)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                        className={ITEM}
                       >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
-                          <ListTree className="w-4 h-4 text-indigo-400" />
+                        <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                          <ListTree className="w-4 h-4" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{parent.name}</p>
@@ -336,7 +312,7 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                         setNestChild(null);
                         setSearch("");
                       }}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                      className={ITEM}
                     >
                       <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5">
                         <X className="w-4 h-4 text-muted-foreground" />
@@ -351,10 +327,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                         key={preset.id}
                         value={`snooze-${preset.id}-${preset.label}`}
                         onSelect={() => handleSnooze(preset.date)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                        className={ITEM}
                       >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
-                          <AlarmClock className="w-4 h-4 text-indigo-400" />
+                        <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                          <AlarmClock className="w-4 h-4" />
                         </div>
                         <p className="flex-1 min-w-0 text-sm font-medium truncate">{preset.label}</p>
                         <span className="text-xs text-muted-foreground">{formatSnoozeDate(preset.date, toLocalDateStr())}</span>
@@ -363,10 +339,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                     <CommandItem
                       value="snooze-someday-Someday"
                       onSelect={() => handleSnooze("someday")}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                      className={ITEM}
                     >
-                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
-                        <InfinityIcon className="w-4 h-4 text-indigo-400" />
+                      <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                        <InfinityIcon className="w-4 h-4" />
                       </div>
                       <p className="flex-1 min-w-0 text-sm font-medium truncate">Someday</p>
                       <span className="text-xs text-muted-foreground">No date</span>
@@ -377,7 +353,7 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                         setSnoozeTask(null);
                         setSearch("");
                       }}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                      className={ITEM}
                     >
                       <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5">
                         <X className="w-4 h-4 text-muted-foreground" />
@@ -393,10 +369,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                   <CommandItem
                     value="quick-add-vault"
                     onSelect={handleQuickAdd}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                    className={ITEM}
                   >
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/15">
-                      <NotebookPen className="w-4 h-4 text-emerald-400" />
+                    <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                      <NotebookPen className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
@@ -415,10 +391,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                   <CommandGroup heading="Actions">
                     <CommandItem
                       onSelect={handleAddTask}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                      className={ITEM}
                     >
-                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/15">
-                        <Plus className="w-4 h-4 text-emerald-400" />
+                      <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                        <Plus className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">Add New Task</p>
@@ -434,10 +410,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                   <CommandGroup heading="Actions">
                     <CommandItem
                       onSelect={handleLogExpense}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                      className={ITEM}
                     >
-                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-500/15">
-                        <DollarSign className="w-4 h-4 text-orange-400" />
+                      <div className="search-overlay-icon-alt flex items-center justify-center w-8 h-8 rounded-lg">
+                        <DollarSign className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">Log Transaction</p>
@@ -453,7 +429,7 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                 {/* ── Matching Tasks ── */}
                 {matchedTasks.length > 0 && (
                   <>
-                    <CommandSeparator className="my-1 bg-white/[0.06]" />
+                    <CommandSeparator className="my-1" />
                     <CommandGroup heading="Tasks">
                       {matchedTasks.slice(0, 5).map((task) => {
                         const cat = taskCategories.find((c) => c.id === task.categoryId);
@@ -462,11 +438,11 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                             key={task.id}
                             value={`task-${task.name}-${cat?.name ?? ""}`}
                             onSelect={() => handleNavigate("tasks")}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                            className={ITEM}
                           >
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
+                            <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
                               <CheckCircle2
-                                className={`w-4 h-4 ${task.completed ? "text-emerald-400" : "text-indigo-400"}`}
+                                className={`w-4 h-4 ${task.completed ? "opacity-60" : ""}`}
                               />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -490,10 +466,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                           <CommandItem
                             value={`unnest-${matchedTasks[0].name}`}
                             onSelect={() => handleUnnest(matchedTasks[0])}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                            className={ITEM}
                           >
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
-                              <CornerLeftUp className="w-4 h-4 text-indigo-400" />
+                            <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                              <CornerLeftUp className="w-4 h-4" />
                             </div>
                             <p className="flex-1 min-w-0 text-sm font-medium truncate">Move "{matchedTasks[0].name}" to top level</p>
                           </CommandItem>
@@ -502,10 +478,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                             <CommandItem
                               value={`nest-${matchedTasks[0].name}`}
                               onSelect={() => startNesting(matchedTasks[0])}
-                              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                              className={ITEM}
                             >
-                              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
-                                <ListTree className="w-4 h-4 text-indigo-400" />
+                              <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                                <ListTree className="w-4 h-4" />
                               </div>
                               <p className="flex-1 min-w-0 text-sm font-medium truncate">Make "{matchedTasks[0].name}" a subtask of…</p>
                               <ArrowRight className="w-4 h-4 text-muted-foreground/40" />
@@ -518,10 +494,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                             <CommandItem
                               value={`unsnooze-${matchedTasks[0].name}`}
                               onSelect={() => handleUnsnooze(matchedTasks[0])}
-                              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                              className={ITEM}
                             >
-                              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
-                                <Sunrise className="w-4 h-4 text-indigo-400" />
+                              <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                                <Sunrise className="w-4 h-4" />
                               </div>
                               <p className="flex-1 min-w-0 text-sm font-medium truncate">Unsnooze "{matchedTasks[0].name}"</p>
                             </CommandItem>
@@ -529,10 +505,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                             <CommandItem
                               value={`snooze-task-${matchedTasks[0].name}`}
                               onSelect={() => startSnoozing(matchedTasks[0])}
-                              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                              className={ITEM}
                             >
-                              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
-                                <AlarmClock className="w-4 h-4 text-indigo-400" />
+                              <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                                <AlarmClock className="w-4 h-4" />
                               </div>
                               <p className="flex-1 min-w-0 text-sm font-medium truncate">Snooze "{matchedTasks[0].name}"…</p>
                               <ArrowRight className="w-4 h-4 text-muted-foreground/40" />
@@ -546,7 +522,7 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                 {/* ── Matching Transactions ── */}
                 {matchedTransactions.length > 0 && (
                   <>
-                    <CommandSeparator className="my-1 bg-white/[0.06]" />
+                    <CommandSeparator className="my-1" />
                     <CommandGroup heading="Financials">
                       {matchedTransactions.slice(0, 5).map((tx) => {
                         const cat = financialCategories.find((c) => c.id === tx.categoryId);
@@ -555,10 +531,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                             key={tx.id}
                             value={`tx-${tx.name}-${cat?.name ?? ""}`}
                             onSelect={() => handleNavigate("financials")}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                            className={ITEM}
                           >
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-500/10">
-                              <Wallet className="w-4 h-4 text-orange-400" />
+                            <div className="search-overlay-icon-alt flex items-center justify-center w-8 h-8 rounded-lg">
+                              <Wallet className="w-4 h-4" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">{tx.name}</p>
@@ -579,17 +555,17 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                 {/* ── Matching Vault Notes ── */}
                 {matchedNotes.length > 0 && (
                   <>
-                    <CommandSeparator className="my-1 bg-white/[0.06]" />
+                    <CommandSeparator className="my-1" />
                     <CommandGroup heading="Vault Notes">
                       {matchedNotes.map((note) => (
                         <CommandItem
                           key={note.path}
                           value={`note-${note.title}-${note.tags.join("-")}-${note.path}`}
                           onSelect={() => handleOpenNote(note.path)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                          className={ITEM}
                         >
-                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 shrink-0">
-                            <BookOpen className="w-4 h-4 text-sky-400" />
+                          <div className="search-overlay-icon-alt flex items-center justify-center w-8 h-8 rounded-lg shrink-0">
+                            <BookOpen className="w-4 h-4" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{note.title}</p>
@@ -606,15 +582,15 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                 {/* ── Quick Actions (when empty search, focused) ── */}
                 {!search && (
                   <>
-                    <CommandSeparator className="my-1 bg-white/[0.06]" />
+                    <CommandSeparator className="my-1" />
                     <CommandGroup heading="Quick Actions">
                       <CommandItem
                         value="add-new-task"
                         onSelect={handleAddTask}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                        className={ITEM}
                       >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10">
-                          <Plus className="w-4 h-4 text-emerald-400" />
+                        <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                          <Plus className="w-4 h-4" />
                         </div>
                         <span className="text-sm font-medium">Add a new task</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">or type "add"</span>
@@ -622,10 +598,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                       <CommandItem
                         value="log-expense"
                         onSelect={handleLogExpense}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                        className={ITEM}
                       >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-500/10">
-                          <DollarSign className="w-4 h-4 text-orange-400" />
+                        <div className="search-overlay-icon-alt flex items-center justify-center w-8 h-8 rounded-lg">
+                          <DollarSign className="w-4 h-4" />
                         </div>
                         <span className="text-sm font-medium">Log an expense</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">or type "log"</span>
@@ -633,10 +609,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                       <CommandItem
                         value="add-new-event"
                         onSelect={handleAddEvent}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                        className={ITEM}
                       >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10">
-                          <CalendarPlus className="w-4 h-4 text-indigo-400" />
+                        <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                          <CalendarPlus className="w-4 h-4" />
                         </div>
                         <span className="text-sm font-medium">Add a new event</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">The Horizon</span>
@@ -644,10 +620,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                       <CommandItem
                         value="search-tasks-transactions"
                         onSelect={() => {}}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                        className={ITEM}
                       >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10">
-                          <Search className="w-4 h-4 text-sky-400" />
+                        <div className="search-overlay-icon-alt flex items-center justify-center w-8 h-8 rounded-lg">
+                          <Search className="w-4 h-4" />
                         </div>
                         <span className="text-sm font-medium">Search tasks & transactions</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">just start typing</span>
@@ -659,15 +635,15 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                 {/* ── Settings shortcut (matched by cmdk's filter on `value`) ── */}
                 {!addPrefix && !logPrefix && (
                   <>
-                    <CommandSeparator className="my-1 bg-white/[0.06]" />
+                    <CommandSeparator className="my-1" />
                     <CommandGroup heading="Settings">
                       <CommandItem
                         value="settings-preferences-hotkey-shortcut-vault-folder-launch-login"
                         onSelect={() => handleNavigate("settings")}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                        className={ITEM}
                       >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-500/10">
-                          <Settings className="w-4 h-4 text-violet-400" />
+                        <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                          <Settings className="w-4 h-4" />
                         </div>
                         <span className="text-sm font-medium">Open Settings</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">hotkeys, startup, vault</span>
@@ -675,10 +651,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                       <CommandItem
                         value="portal-web-apps-discord-instagram-linkedin-spotify-gmail-outlook-x-reddit"
                         onSelect={() => handleNavigate("portal")}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                        className={ITEM}
                       >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-cyan-500/10">
-                          <Orbit className="w-4 h-4 text-cyan-400" />
+                        <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                          <Orbit className="w-4 h-4" />
                         </div>
                         <span className="text-sm font-medium">Open The Portal</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">Discord, Instagram, web apps</span>
@@ -687,10 +663,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                         <CommandItem
                           value="nebula-coding-agent-ai-chat-deepseek-claude-code-kimi-model"
                           onSelect={() => handleNavigate("nebula")}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                          className={ITEM}
                         >
-                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-fuchsia-500/10">
-                            <Sparkles className="w-4 h-4 text-fuchsia-400" />
+                          <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                            <Sparkles className="w-4 h-4" />
                           </div>
                           <span className="text-sm font-medium">Open The Nebula</span>
                           <span className="ml-auto text-xs text-muted-foreground/50">coding agent</span>
@@ -700,10 +676,10 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
                         <CommandItem
                           value="terminal-powershell-shell-command-line-console"
                           onSelect={() => handleNavigate("terminal")}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer data-[selected=true]:bg-primary/15 data-[selected=true]:text-primary-foreground"
+                          className={ITEM}
                         >
-                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10">
-                            <SquareTerminal className="w-4 h-4 text-emerald-400" />
+                          <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                            <SquareTerminal className="w-4 h-4" />
                           </div>
                           <span className="text-sm font-medium">Open Terminal</span>
                           <span className="ml-auto text-xs text-muted-foreground/50">PowerShell</span>
@@ -717,23 +693,21 @@ export default function CommandPalette({ onNavigate, focusRequested, onFocusRequ
               </CommandList>
 
               {/* Footer */}
-              <div className="flex items-center justify-between px-4 py-2 border-t border-white/[0.06] text-[11px] text-muted-foreground/50">
+              <div className="search-overlay-divider flex items-center justify-between px-4 py-2 border-t text-[11px] text-muted-foreground/50">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-[10px]">↑↓</kbd>
+                    <kbd className="px-1.5 py-0.5 rounded border text-[10px]">↑↓</kbd>
                     navigate
                   </span>
                   <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-[10px]">↵</kbd>
+                    <kbd className="px-1.5 py-0.5 rounded border text-[10px]">↵</kbd>
                     select
                   </span>
                 </div>
-                <span className="text-gradient-indigo font-medium text-xs">Crystal OS</span>
+                <span className="search-overlay-brand font-medium text-xs">Crystal OS</span>
               </div>
-            </m.div>
-          )}
-        </AnimatePresence>
       </Command>
+      </m.div>
     </div>
   );
 }

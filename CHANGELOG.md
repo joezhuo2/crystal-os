@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.11] - 2026-10-08 - Search over every page.
+
+### Changed
+
+- **The search bar is now an overlay on every page.** `Cmd/Ctrl + K` opens it over the current tab instead of switching to Home, and pressing it again closes it; `Alt+Shift+Space` opens it from any app. The page behind is lightly blurred and dimmed, and `Escape` or a click outside closes it. The inline bar at the top of Home is gone.
+- **The overlay takes the open page's theme:** panel, border glow, selected row, keys and result icons use the page's palette (the Horizon's blues, the Engine's embers, the Orbit's ice, the Archive's amethyst, the Atmosphere's cyan, your Portal and Nebula palettes). Over the Terminal it goes monochrome: mono type, square corners, scanlines, and the glitch frame's red/cyan split on the picked row. Over The Portal the native webview is swapped for a snapshot while it is open.
+
 ## [v0.9.10] - 2026-10-08 - Loading and login on glass.
 
 ### Changed

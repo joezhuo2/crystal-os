@@ -137,31 +137,27 @@ const Index = () => {
     setKeptBackdrops([activeTab, ...keptBackdrops.filter((t) => t !== activeTab)].slice(0, KEPT_BACKDROPS));
   }
 
-  // The search bar lives on Home only. Its shortcuts work from every tab:
-  // they switch to Home, and the bar focuses itself once it is mounted.
-  const [paletteRequested, setPaletteRequested] = useState(false);
-  const openPalette = useCallback(() => {
-    setActiveTab("home");
-    setPaletteRequested(true);
-  }, []);
-  const clearPaletteRequest = useCallback(() => setPaletteRequested(false), []);
+  // The search bar is an overlay over whichever tab is open.
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const closePalette = useCallback(() => setPaletteOpen(false), []);
 
-  // Desktop global hotkey (Rust shows and focuses the window first). Also
-  // toasts hotkeys that failed to register, so it stays mounted on every tab.
-  usePaletteHotkey(openPalette);
+  // Desktop global hotkey (Rust shows and focuses the window first). Opens
+  // rather than toggles, so it never closes a bar left open while hidden.
+  // Also toasts hotkeys that failed to register, so it stays mounted.
+  usePaletteHotkey(useCallback(() => setPaletteOpen(true), []));
 
-  // In-app Ctrl/Cmd+K. Skipped when something else already handled the key,
-  // such as the hotkey recorder, and inside the Terminal, whose keys belong
-  // to the shell.
+  // In-app Ctrl/Cmd+K toggles the bar. Skipped when something else already
+  // handled the key, such as the hotkey recorder, and inside the Terminal,
+  // whose keys belong to the shell.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.defaultPrevented || !isPaletteShortcut(e) || inTerminal(e)) return;
       e.preventDefault();
-      openPalette();
+      setPaletteOpen((open) => !open);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [openPalette]);
+  }, []);
 
   // Runs once: fetches the most used views' chunks after Home has settled.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -197,7 +193,7 @@ const Index = () => {
 
   const rootClass =
     activeTab === "terminal"
-      ? "bg-black"
+      ? "terminal-root bg-black"
       : activeTab === "portal"
         ? `portal-root ${PORTAL_THEME_CLASS[portalTheme]}`
         : activeTab === "nebula"
@@ -255,14 +251,6 @@ const Index = () => {
         ))}
         <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
         <main className="flex-1 min-h-0 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
-          {/* Home only. Its shortcuts are above, so they reach it from any tab. */}
-          {activeTab === "home" && (
-            <CommandPalette
-              onNavigate={setActiveTab}
-              focusRequested={paletteRequested}
-              onFocusRequested={clearPaletteRequest}
-            />
-          )}
           {/* The last view leaves at once and the next fades in. Keyed, so
               each switch mounts a fresh ViewEnter. */}
           <ViewEnter key={activeTab} fade={!still}>
@@ -273,6 +261,8 @@ const Index = () => {
         </main>
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
         <GlobalOverlays />
+        {/* Inside the page root, so the page's theme reaches it. */}
+        <CommandPalette open={paletteOpen} onClose={closePalette} onNavigate={setActiveTab} />
       </div>
     </AppProvider>
   );

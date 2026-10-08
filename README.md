@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-798%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.9.10-6366F1)
+![Version](https://img.shields.io/badge/version-0.9.11-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.9.10** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.9.11** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -350,7 +350,7 @@ The middleware is mounted on both the dev server and `vite preview`. It is **not
 
 ### Layout
 
-The global search bar lives on Home only, so the rail runs down to the bottom of the window. It is a fixed-height column split into two halves that scroll independently: the tag cloud on top, the filtered note list below, with the note count between them as a divider and the search field pinned above both. Each half is `flex-1 basis-0 min-h-0`, so a vault with many tags cannot crowd the list out of view, and a vault with few tags leaves the extra space to the list. Past 80 notes the list is virtualised (`@tanstack/react-virtual`): only the rows in view are mounted, so large vaults scroll smoothly; smaller lists keep their staggered entrance.
+The global search bar is an overlay, so the rail runs down to the bottom of the window. It is a fixed-height column split into two halves that scroll independently: the tag cloud on top, the filtered note list below, with the note count between them as a divider and the search field pinned above both. Each half is `flex-1 basis-0 min-h-0`, so a vault with many tags cannot crowd the list out of view, and a vault with few tags leaves the extra space to the list. Past 80 notes the list is virtualised (`@tanstack/react-virtual`): only the rows in view are mounted, so large vaults scroll smoothly; smaller lists keep their staggered entrance.
 
 ### Theme
 
@@ -728,7 +728,7 @@ Whether or not performance mode is on, hiding the window to the tray or minimisi
 **Global hotkeys.** Three combos work from any app:
 
 - `Alt+Space` shows Crystal OS; press it again while the app is in front to hide it, including while you are typing in a Portal app. It does not touch the search bar. Saved as `globalShortcut`.
-- `Alt+Shift+Space` shows Crystal OS, switches to Home and focuses the search bar. Saved as `paletteShortcut`.
+- `Alt+Shift+Space` shows Crystal OS and opens the search bar over the current page. Saved as `paletteShortcut`.
 - `Alt+Shift+H` shows Crystal OS if it is hidden and opens the Home page; if the window is already open it just switches to Home, from any tab. Saved as `homeShortcut`.
 
 Change any of them with **Change** in Settings. All are saved in `%APPDATA%\com.crystalos.desktop\settings.json`, and no two can share a combo. If another app already owns one, Crystal OS still starts and shows a toast.
@@ -809,7 +809,7 @@ The toolbar's **Context** chip shows how full the current model's context window
 
 ## ⌨️ Command Palette
 
-The palette sits at the top of Home only. `Cmd/Ctrl + K` switches to Home and focuses it from any tab while Crystal OS is focused (not while typing in the Terminal); on desktop, `Alt+Shift+Space` does the same from any app. It filters tasks and transactions locally and searches vault notes server-side (2+ characters, debounced 250 ms), and understands two natural-language prefixes:
+The palette is an overlay over whichever page is open. `Cmd/Ctrl + K` opens it, and closes it again, while Crystal OS is focused (not while typing in the Terminal); on desktop, `Alt+Shift+Space` opens it from any app. The page behind it is lightly blurred and dimmed; `Escape` or a click outside the panel closes it, and focus goes back where it was. It renders inside the page root, so its panel, borders, selection, keys and result icons take the open page's palette (the Portal's and the Nebula's hex palettes are mapped in `.search-overlay` in `index.css`); over The Portal the native webview is swapped for a snapshot while it is open. It filters tasks and transactions locally and searches vault notes server-side (2+ characters, debounced 250 ms), and understands two natural-language prefixes:
 
 | Input | Result |
 |-------|--------|
