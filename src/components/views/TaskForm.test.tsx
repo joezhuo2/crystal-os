@@ -4,13 +4,17 @@ import type { Task } from "@/contexts/AppContext";
 
 const addTask = vi.fn();
 const updateTask = vi.fn();
+// Applies each change through updateTask, so the assertions see the writes.
+const rescheduleTasks = vi.fn((changes: { id: string; updates: Partial<Task> }[]) => {
+  for (const { id, updates } of changes) updateTask(id, updates);
+});
 
 const taskCategories = [{ id: "c1", name: "Work", color: "hsl(0 0% 50%)" }];
 
 let tasks: Task[] = [];
 
 vi.mock("@/contexts/AppContext", () => ({
-  useAppActions: () => ({ addTask, updateTask }),
+  useAppActions: () => ({ addTask, updateTask, rescheduleTasks }),
   useTaskCategories: () => taskCategories,
   useTasks: () => tasks,
 }));
@@ -218,5 +222,21 @@ describe("TaskForm end time follows start time", () => {
     pickTime("Start time", /^11:30\s?PM$/i);
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
     expect(updateTask).toHaveBeenCalledWith("t1", expect.objectContaining({ endDate: "2026-09-02", endTime: "00:30" }));
+  });
+
+  it("offers Undo only when the dates or times moved", () => {
+    rescheduleTasks.mockClear();
+    const { unmount } = render(<TaskForm onClose={() => {}} editingTask={editing} />);
+    pickTime("Start time", /^8:00\s?AM$/i);
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    expect(rescheduleTasks).toHaveBeenCalledWith([expect.objectContaining({ id: "t1" })], `${editing.name} rescheduled`);
+    unmount();
+
+    rescheduleTasks.mockClear();
+    render(<TaskForm onClose={() => {}} editingTask={editing} />);
+    pickRepeat("Weekly on…");
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    expect(rescheduleTasks).not.toHaveBeenCalled();
+    expect(updateTask).toHaveBeenCalledWith("t1", expect.objectContaining({ repeat: expect.anything() }));
   });
 });

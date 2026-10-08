@@ -123,6 +123,13 @@ export function formatSnoozeDate(date: string, today: string): string {
   return (date.slice(0, 4) === today.slice(0, 4) ? SHORT_DATE : LONG_DATE).format(d);
 }
 
+/** The toast title for snoozing `name` until a day or to Someday. */
+export function snoozeTitle(name: string, until: string | "someday", today: string): string {
+  return until === "someday"
+    ? `${name} moved to Someday`
+    : `${name} snoozed until ${formatSnoozeDate(until, today)}`;
+}
+
 /** "Until Mon, Oct 12" or "Someday", for a snoozed task's chip. */
 export function snoozeLabel(task: SnoozeLike, today: string): string {
   if (task.someday) return "Someday";

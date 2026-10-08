@@ -9,7 +9,7 @@ import { useAppActions, type Task } from "@/contexts/AppContext";
 import { Calendar } from "@/components/ui/calendar";
 import { Popup, useDismiss, usePopupPosition } from "@/components/ui/field-controls";
 import { addDays, cn, toLocalDateStr } from "@/lib/utils";
-import { formatSnoozeDate, snoozeLabel, snoozePresets, snoozeUpdates, UNSNOOZE } from "@/lib/snooze";
+import { formatSnoozeDate, snoozeLabel, snoozePresets, snoozeTitle, snoozeUpdates, UNSNOOZE } from "@/lib/snooze";
 
 const ROW = "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-primary/10 focus-visible:bg-primary/10 outline-none";
 
@@ -82,7 +82,7 @@ function SnoozePopover({
     toggle: (e: React.MouseEvent) => void;
   }) => ReactNode;
 }) {
-  const { updateTask } = useAppActions();
+  const { rescheduleTasks } = useAppActions();
   const [open, setOpen] = useState(false);
   const [picking, setPicking] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -101,7 +101,7 @@ function SnoozePopover({
   useDismiss(open, close, dismissRefs);
 
   const pick = (until: string | "someday") => {
-    updateTask(task.id, snoozeUpdates(until));
+    rescheduleTasks([{ id: task.id, updates: snoozeUpdates(until) }], snoozeTitle(task.name, until, today));
     close();
   };
 
@@ -177,11 +177,11 @@ export function SnoozeChip({ task, today }: { task: Task; today: string }) {
 
 /** The Unsnooze button a snoozed card shows in the snooze button's place. */
 export function UnsnoozeButton({ task }: { task: Task }) {
-  const { updateTask } = useAppActions();
+  const { rescheduleTasks } = useAppActions();
   return (
     <button
       type="button"
-      onClick={() => updateTask(task.id, UNSNOOZE)}
+      onClick={() => rescheduleTasks([{ id: task.id, updates: UNSNOOZE }], `${task.name} is back`)}
       aria-label={`Unsnooze ${task.name}`}
       title="Bring it back now"
       className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors shrink-0"

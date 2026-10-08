@@ -1,6 +1,8 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { apiRequest, shouldRetry } from "@/lib/apiRequest";
+import { deletesEvent, isPendingDelete, scheduleDelete } from "@/lib/pendingEventDeletes";
 
 const API_BASE = "/api/calendar";
 
@@ -187,7 +189,11 @@ export function calendarEventsQuery(params: EventsQuery) {
         timeMin: params.timeMin,
         timeMax: params.timeMax,
       });
-      return request<{ events: CalendarEvent[] }>(`${API_BASE}/events?${qs}`);
+      // An event whose delete is waiting out its Undo stays hidden.
+      return request<{ events: CalendarEvent[] }>(`${API_BASE}/events?${qs}`).then((data) => ({
+        ...data,
+        events: data.events.filter((e) => !isPendingDelete(e)),
+      }));
     },
     staleTime: 30 * 1000,
     retry: shouldRetry,
@@ -266,22 +272,45 @@ export interface DeleteEventVars {
   recurringEventId?: string | null;
 }
 
-export function useDeleteEvent() {
+function deleteEventRequest({ calendarId, eventId, scope, recurringEventId }: DeleteEventVars) {
+  const qs = new URLSearchParams({ calendarId, scope });
+  if (recurringEventId) qs.set("recurringEventId", recurringEventId);
+  // keepalive, so a delete flushed as the window closes still goes out.
+  return request<{ ok: true }>(
+    `${API_BASE}/events/${encodeURIComponent(eventId)}?${qs}`,
+    { method: "DELETE", keepalive: true },
+  );
+}
+
+/**
+ * Deletes an event after the 5 s Undo window (src/lib/pendingEventDeletes.ts).
+ * The event leaves the calendar at once; the returned function brings it
+ * back, if the delete has not gone out yet.
+ */
+export function useDeferredDeleteEvent() {
   const queryClient = useQueryClient();
 
-  return useMutation<{ ok: true }, Error, DeleteEventVars>({
-    mutationFn: ({ calendarId, eventId, scope, recurringEventId }) => {
-      const qs = new URLSearchParams({ calendarId, scope });
-      if (recurringEventId) qs.set("recurringEventId", recurringEventId);
-      return request<{ ok: true }>(
-        `${API_BASE}/events/${encodeURIComponent(eventId)}?${qs}`,
-        { method: "DELETE" },
+  return useCallback(
+    (vars: DeleteEventVars) => {
+      const refresh = () => queryClient.invalidateQueries({ queryKey: ["gcal", "events"] });
+      const cancel = scheduleDelete(vars, {
+        send: () => deleteEventRequest(vars),
+        onSent: refresh,
+        onError: (error) => {
+          toast.error("Could not delete the event", { description: error.message });
+          refresh();
+        },
+      });
+      queryClient.setQueriesData<{ events: CalendarEvent[] }>(
+        { queryKey: ["gcal", "events"] },
+        (data) => data && { ...data, events: data.events.filter((e) => !deletesEvent(vars, e)) },
       );
+      return () => {
+        if (cancel()) refresh();
+      };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["gcal", "events"] });
-    },
-  });
+    [queryClient],
+  );
 }
 
 /** Revoke the grant and forget the refresh token. */

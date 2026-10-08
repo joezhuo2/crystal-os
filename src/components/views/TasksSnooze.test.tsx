@@ -6,13 +6,17 @@ import { toLocalDateStr, addDays } from "@/lib/utils";
 const updateTask = vi.fn();
 const completeTask = vi.fn();
 const deleteTask = vi.fn();
+// Applies each change through updateTask, so the assertions see the writes.
+const rescheduleTasks = vi.fn((changes: { id: string; updates: Partial<Task> }[]) => {
+  for (const { id, updates } of changes) updateTask(id, updates);
+});
 
 const taskCategories = [{ id: "c1", name: "Work", color: "hsl(0 0% 50%)" }];
 
 let tasks: Task[] = [];
 
 vi.mock("@/contexts/AppContext", () => ({
-  useAppActions: () => ({ updateTask, completeTask, deleteTask }),
+  useAppActions: () => ({ updateTask, completeTask, deleteTask, rescheduleTasks }),
   useTaskCategories: () => taskCategories,
   useTasks: () => tasks,
 }));
@@ -81,6 +85,8 @@ describe("The Engine with snoozed tasks", () => {
     fireEvent.click(screen.getByRole("button", { name: "Snooze Awake" }));
     fireEvent.click(screen.getByRole("menuitem", { name: /Someday/ }));
     expect(updateTask).toHaveBeenCalledWith("a", { snoozedUntil: undefined, someday: true });
+    // With an Undo toast titled for what happened.
+    expect(rescheduleTasks).toHaveBeenLastCalledWith(expect.any(Array), "Awake moved to Someday");
   });
 
   it("drops focus from the clock after a mouse-opened menu closes on Escape", () => {

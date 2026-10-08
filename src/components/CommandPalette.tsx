@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAppActions, useFinancialCategories, useTaskCategories, useTasks, useTransactions, type Task } from "@/contexts/AppContext";
 import { nestTargets } from "@/lib/subtasks";
-import { canSnooze, formatSnoozeDate, ownSnoozed, snoozePresets, snoozeUpdates, UNSNOOZE } from "@/lib/snooze";
+import { canSnooze, formatSnoozeDate, ownSnoozed, snoozePresets, snoozeTitle, snoozeUpdates, UNSNOOZE } from "@/lib/snooze";
 import { toast } from "sonner";
 import { appUi } from "@/lib/appUi";
 import { toLocalDateStr, useDebouncedValue } from "@/lib/utils";
@@ -63,7 +63,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const tasks = useTasks();
-  const { updateTask } = useAppActions();
+  const { updateTask, rescheduleTasks } = useAppActions();
   // "Make subtask of…": the task being nested while the bar lists parents for it.
   const [nestChild, setNestChild] = useState<Task | null>(null);
   // "Snooze…": the task being snoozed while the bar lists the snooze picks.
@@ -184,18 +184,15 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
 
   const handleSnooze = (until: string | "someday") => {
     if (!snoozeTask) return;
-    updateTask(snoozeTask.id, snoozeUpdates(until));
-    toast.success(
-      until === "someday"
-        ? `${snoozeTask.name} moved to Someday`
-        : `${snoozeTask.name} snoozed until ${formatSnoozeDate(until, toLocalDateStr())}`,
+    rescheduleTasks(
+      [{ id: snoozeTask.id, updates: snoozeUpdates(until) }],
+      snoozeTitle(snoozeTask.name, until, toLocalDateStr()),
     );
     close();
   };
 
   const handleUnsnooze = (task: Task) => {
-    updateTask(task.id, UNSNOOZE);
-    toast.success(`${task.name} is back`);
+    rescheduleTasks([{ id: task.id, updates: UNSNOOZE }], `${task.name} is back`);
     close();
   };
 

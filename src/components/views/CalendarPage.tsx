@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { addDays, toLocalDateStr } from "@/lib/utils";
+import { undoToast } from "@/lib/undo";
 import { fromMinutes, toMinutes, weekDates } from "@/lib/timeGrid";
 import { withStartTime } from "@/lib/autoEndTime";
 import TimeGrid from "./TimeGrid";
@@ -41,6 +42,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import {
   type CalendarEvent,
+  type EventInput,
   type EventScope,
   type RecurrenceFreq,
   buildRecurrence,
@@ -50,7 +52,7 @@ import {
   useCalendarList,
   useCalendarStatus,
   useCreateEvent,
-  useDeleteEvent,
+  useDeferredDeleteEvent,
   useDisconnectCalendar,
   usePrefetchCalendarEvents,
   useUpdateEvent,
@@ -601,6 +603,30 @@ function DayPanel({
 
 /* ── create / edit form ── */
 
+/**
+ * The input that puts `event` back as it was before an edit, for Undo. The
+ * repeat rule goes back only when the edit sent one; an instance does not
+ * carry its series' rule, so an edit that changed it has no Undo (null).
+ */
+function eventInputOf(
+  event: CalendarEvent,
+  sentRecurrence: string[] | null | undefined,
+): EventInput | null {
+  if (sentRecurrence !== undefined && event.recurringEventId) return null;
+  return {
+    summary: event.summary,
+    description: event.description,
+    location: event.location,
+    allDay: event.allDay,
+    startDate: event.startDate,
+    startTime: event.allDay ? "" : event.startTime,
+    endDate: event.endDate,
+    endTime: event.allDay ? "" : event.endTime,
+    timeZone: localTimeZone(),
+    ...(sentRecurrence !== undefined ? { recurrence: event.recurrence } : {}),
+  };
+}
+
 function EventForm({
   calendarId,
   editingEvent,
@@ -671,20 +697,34 @@ function EventForm({
     };
 
     if (editingEvent) {
+      const target = {
+        calendarId,
+        eventId: editingEvent.id,
+        scope,
+        recurringEventId: editingEvent.recurringEventId,
+      };
       update.mutate(
-        {
-          calendarId,
-          eventId: editingEvent.id,
-          scope,
-          recurringEventId: editingEvent.recurringEventId,
-          input,
-        },
+        { ...target, input },
         {
           onSuccess: () => {
-            toast.success("Event updated", {
-              description:
-                scope === "all" ? "Applied to every occurrence." : undefined,
-            });
+            const description =
+              scope === "all" ? "Applied to every occurrence." : undefined;
+            const before = eventInputOf(editingEvent, recurrence);
+            if (before) {
+              undoToast(
+                "Event updated",
+                () => {
+                  update
+                    .mutateAsync({ ...target, input: before })
+                    .catch((err: Error) =>
+                      toast.error("Could not undo the edit", { description: err.message }),
+                    );
+                },
+                description,
+              );
+            } else {
+              toast.success("Event updated", { description });
+            }
             onClose();
           },
         },
@@ -921,27 +961,24 @@ function DeleteEventDialog({
   event: CalendarEvent;
   onClose: () => void;
 }) {
-  const remove = useDeleteEvent();
+  const remove = useDeferredDeleteEvent();
   const isSeriesInstance = Boolean(event.recurringEventId);
 
+  // The event leaves the calendar now; Google only hears of it once the
+  // toast's Undo has run out.
   const confirm = (scope: EventScope) => {
-    remove.mutate(
-      {
-        calendarId,
-        eventId: event.id,
-        scope,
-        recurringEventId: event.recurringEventId,
-      },
-      {
-        onSuccess: () => {
-          toast.success("Event deleted", {
-            description:
-              scope === "all" ? "Every occurrence was removed." : undefined,
-          });
-          onClose();
-        },
-      },
+    const undo = remove({
+      calendarId,
+      eventId: event.id,
+      scope,
+      recurringEventId: event.recurringEventId,
+    });
+    undoToast(
+      "Event deleted",
+      undo,
+      scope === "all" ? "Every occurrence was removed." : undefined,
     );
+    onClose();
   };
 
   return (
@@ -951,20 +988,13 @@ function DeleteEventDialog({
           <AlertDialogTitle>Delete “{event.summary}”?</AlertDialogTitle>
           <AlertDialogDescription>
             {isSeriesInstance
-              ? "This is part of a repeating event. Choose whether to remove just this occurrence or the whole series. This cannot be undone."
-              : "This removes the event from your Google Calendar. This cannot be undone."}
+              ? "This is part of a repeating event. Choose whether to remove just this occurrence or the whole series."
+              : "This removes the event from your Google Calendar."}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {remove.error && (
-          <div className="flex items-start gap-2 rounded-lg p-3 bg-destructive/10 border border-destructive/20">
-            <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-            <p className="text-xs text-destructive">{remove.error.message}</p>
-          </div>
-        )}
-
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={remove.isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
           {isSeriesInstance ? (
             <>
               <AlertDialogAction
@@ -972,7 +1002,6 @@ function DeleteEventDialog({
                   e.preventDefault();
                   confirm("single");
                 }}
-                disabled={remove.isPending}
                 className={buttonVariants({ variant: "destructive" })}
               >
                 This event
@@ -982,7 +1011,6 @@ function DeleteEventDialog({
                   e.preventDefault();
                   confirm("all");
                 }}
-                disabled={remove.isPending}
                 className={buttonVariants({ variant: "destructive" })}
               >
                 All events
@@ -994,12 +1022,8 @@ function DeleteEventDialog({
                 e.preventDefault();
                 confirm("single");
               }}
-              disabled={remove.isPending}
               className={buttonVariants({ variant: "destructive" })}
             >
-              {remove.isPending && (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              )}
               Delete
             </AlertDialogAction>
           )}

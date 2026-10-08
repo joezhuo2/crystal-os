@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { flushPendingDeletes } from "@/lib/pendingEventDeletes";
 
 type AuthState = {
   session: Session | null;
@@ -74,6 +75,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signOut = useCallback(async () => {
+    // A calendar delete still inside its Undo window goes out while the
+    // session can still sign it.
+    await flushPendingDeletes();
     await supabase.auth.signOut();
   }, []);
 

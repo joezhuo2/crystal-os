@@ -5,6 +5,26 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.3] - 2026-10-08 - Undo toast.
+
+### Added
+
+- **A 5 s Undo after deleting, completing or rescheduling a task.** Each of these now shows a toast with an **Undo** button (`undoToast` in `src/lib/undo.ts`):
+  - **Delete** puts the task back with its own id and nests its subtasks under it again (the database had moved them to the top level).
+  - **Complete** reopens the task and its subtasks that were completed with it, restores a repeat that rolled on to its old dates and checklist, and drops the completion from The Orbit. The existing "done · Next due" toast for repeats carries the Undo instead of a second toast.
+  - **Reschedule** covers the **Today** button on an overdue task, **Move all to today** (one Undo for the whole batch), snoozing and unsnoozing from the card or the command palette, a Board drag to another category column, and saving the edit form with a changed date or time (Undo puts back the whole edit). These go through a new `rescheduleTasks` action in `AppContext`, which remembers each changed field before applying the change.
+- **Undo for Google Calendar event deletes and edits.** A delete now takes the event off the calendar at once but only sends it to Google once the 5 s Undo has run out (`src/lib/pendingEventDeletes.ts`, `useDeferredDeleteEvent`), so Undo keeps the event exactly as it was: same id, attendees, links and series. Held deletes go out straight away if the window closes or you sign out. If Google rejects one, an error toast appears and the event comes back. An edit's Undo writes the event's previous values back. An edit to one occurrence that changed the series' repeat rule has no Undo, since an occurrence does not carry its series' rule.
+- Tests for the restore patch, the Undo toast and the held deletes (`undo.test.ts`, `pendingEventDeletes.test.ts`), and for when the edit form offers Undo.
+
+### Changed
+
+- **Toasts are glass now,** like the app's panels and dialogs: a blurred, translucent card with the glass border and shadow, and an indigo glass **Undo** button that glows on hover (`.glass-toast` in `index.css`). This applies to every toast, not only the Undo ones.
+- The event delete dialog no longer says the delete cannot be undone.
+
+### Fixed
+
+- **Saving the edit form of an open task removed its latest completion from The Orbit.** The form always sends `completed: false`, which `updateTask` took as an untick. A completion is now dropped only when a completed task is actually reopened.
+
 ## [v0.10.2] - 2026-10-08 - Connections in The Archive.
 
 ### Added

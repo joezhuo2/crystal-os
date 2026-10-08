@@ -18,6 +18,7 @@ import { clampEstimate } from "@/lib/capacity";
 import { cleanChecklist, cleanNotes, tickAll, untickAll, type ChecklistItem } from "@/lib/subtasks";
 import { cleanSnoozeDate, clearedSnooze } from "@/lib/snooze";
 import { reconcileFocusTask } from "@/lib/focusTask";
+import { restorePatch, undoToast } from "@/lib/undo";
 import {
   isRetryable,
   offlineQueue,
@@ -77,6 +78,9 @@ export type FinancialCategory = {
   color: string;
 };
 
+/** One task and the fields to change on it. */
+export type TaskChange = { id: string; updates: Partial<Task> };
+
 /**
  * Every write the app makes to tasks, transactions and categories. Each one is
  * a stable callback, so the context value never changes after mount and
@@ -88,6 +92,11 @@ export type AppActions = {
   deleteTask: (id: string) => void;
   /** Marks a task done today, or moves an "after completion" repeat to its next date. */
   completeTask: (task: Task) => void;
+  /**
+   * Applies date, snooze or column changes to one or more tasks with a single
+   * Undo toast that puts every changed field back.
+   */
+  rescheduleTasks: (changes: TaskChange[], title: string, description?: string) => void;
   addTransaction: (tx: Omit<Transaction, "id">) => void;
   updateTransaction: (id: string, updates: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
@@ -762,48 +771,104 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ),
     );
     // Unticking takes back the tick's history row, so a misclick is not
-    // counted as done in The Orbit.
-    if (updates.completed === false) void forgetCompletion(id);
+    // counted as done in The Orbit. Only a real untick: saving an open task's
+    // edit form also sends completed: false.
+    if (updates.completed === false && current?.completed) void forgetCompletion(id);
   }, [forgetCompletion, queryClient, saveWrite, setTasks]);
 
   const completeTask = useCallback(
-    function complete(task: Task) {
-      const timing = completionUpdates(task, toLocalDateStr());
-      const rolled = "startDate" in timing;
-      // Completing a task ticks its checklist; a repeat moving on to its next
-      // date starts the checklist over instead. Either way a snooze is over.
-      const updates: Partial<Task> = {
-        ...timing,
-        ...clearedSnooze(task),
-        ...(task.checklist ? { checklist: rolled ? untickAll(task.checklist) : tickAll(task.checklist) } : {}),
+    (task: Task) => {
+      // Every task this completion touches (the task and its open children)
+      // and the fields it changed, for Undo.
+      const done: TaskChange[] = [];
+      const before = new Map<string, Task>();
+      const complete = (task: Task) => {
+        const timing = completionUpdates(task, toLocalDateStr());
+        const rolled = "startDate" in timing;
+        // Completing a task ticks its checklist; a repeat moving on to its next
+        // date starts the checklist over instead. Either way a snooze is over.
+        const updates: Partial<Task> = {
+          ...timing,
+          ...clearedSnooze(task),
+          ...(task.checklist ? { checklist: rolled ? untickAll(task.checklist) : tickAll(task.checklist) } : {}),
+        };
+        // Focus on it so far counts toward it; the timer carries on unlinked.
+        // (A repeat rolling on stays open, so the list sync would not unlink it.)
+        pomodoro.unlinkTask(task.id);
+        updateTask(task.id, updates);
+        void recordCompletion(task);
+        done.push({ id: task.id, updates });
+        before.set(task.id, task);
+        // Its open child tasks are done with it. Nesting is one level deep, so
+        // this never recurses further.
+        const children = queryClient
+          .getQueryData<Task[]>(APP_DATA_KEYS.tasks)
+          ?.filter((t) => t.parentId === task.id && !t.completed && t.id !== task.id) ?? [];
+        for (const child of children) complete(child);
       };
-      // Focus on it so far counts toward it; the timer carries on unlinked.
-      // (A repeat rolling on stays open, so the list sync would not unlink it.)
-      pomodoro.unlinkTask(task.id);
-      updateTask(task.id, updates);
-      void recordCompletion(task);
-      if (rolled) {
-        const next = new Date(`${timing.startDate}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-        toast.success(`${task.name} done`, { description: `Next due ${next}` });
-      }
-      // Its open child tasks are done with it. Nesting is one level deep, so
-      // this never recurses further.
-      const children = queryClient
-        .getQueryData<Task[]>(APP_DATA_KEYS.tasks)
-        ?.filter((t) => t.parentId === task.id && !t.completed && t.id !== task.id) ?? [];
-      for (const child of children) complete(child);
+      complete(task);
+
+      const nextDate = done[0].updates.startDate;
+      const next = nextDate
+        ? new Date(`${nextDate}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+        : undefined;
+      undoToast(
+        `${task.name} done`,
+        () => {
+          for (const { id, updates } of done) {
+            const patch = restorePatch(before.get(id)!, updates);
+            updateTask(id, patch);
+            // Reopening drops the Orbit row itself (updateTask); a repeat that
+            // rolled on was never closed, so its row is dropped here.
+            if (patch.completed !== false) void forgetCompletion(id);
+          }
+        },
+        next && `Next due ${next}`,
+      );
     },
-    [queryClient, updateTask, recordCompletion],
+    [queryClient, updateTask, recordCompletion, forgetCompletion],
   );
 
+  // Puts a deleted task back with its own id, so anything pointing at it
+  // (its children, the focus timer's link) lines up again.
+  const restoreTask = useCallback(async (task: Task, childIds: string[]) => {
+    const { id, createdAt, ...fields } = task;
+    const row = { ...mapTaskToDb(fields), ...(createdAt ? { created_at: createdAt } : {}) };
+    if (!(await saveWrite({ op: "insert", table: "tasks", id, row }, "restore the task"))) return;
+    setTasks((prev) => [...prev, task]);
+    for (const childId of childIds) updateTask(childId, { parentId: id });
+  }, [saveWrite, setTasks, updateTask]);
+
   const deleteTask = useCallback(async (id: string) => {
+    const tasks = queryClient.getQueryData<Task[]>(APP_DATA_KEYS.tasks) ?? [];
+    const task = tasks.find((t) => t.id === id);
+    const childIds = tasks.filter((t) => t.parentId === id).map((t) => t.id);
     if (!(await saveWrite({ op: "delete", table: "tasks", id }, "delete the task"))) return;
     // The database moves its child tasks back to the top level (on delete set
     // null); the cache follows.
     setTasks((prev) =>
       prev.filter((t) => t.id !== id).map((t) => (t.parentId === id ? { ...t, parentId: undefined } : t)),
     );
-  }, [saveWrite, setTasks]);
+    if (task) undoToast(`${task.name} deleted`, () => void restoreTask(task, childIds));
+  }, [queryClient, restoreTask, saveWrite, setTasks]);
+
+  const rescheduleTasks = useCallback(
+    (changes: TaskChange[], title: string, description?: string) => {
+      const tasks = queryClient.getQueryData<Task[]>(APP_DATA_KEYS.tasks) ?? [];
+      const undo: TaskChange[] = [];
+      for (const { id, updates } of changes) {
+        const before = tasks.find((t) => t.id === id);
+        if (!before) continue;
+        updateTask(id, updates);
+        undo.push({ id, updates: restorePatch(before, updates) });
+      }
+      if (!undo.length) return;
+      undoToast(title, () => {
+        for (const { id, updates } of undo) updateTask(id, updates);
+      }, description);
+    },
+    [queryClient, updateTask],
+  );
 
   // ── Transactions ──
   const addTransaction = useCallback(async (tx: Omit<Transaction, "id">) => {
@@ -862,10 +927,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const actions = useMemo<AppActions>(
     () => ({
-      addTask, updateTask, deleteTask, completeTask, addTransaction, updateTransaction, deleteTransaction,
+      addTask, updateTask, deleteTask, completeTask, rescheduleTasks, addTransaction, updateTransaction, deleteTransaction,
       addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
     }),
-    [addTask, updateTask, deleteTask, completeTask, addTransaction, updateTransaction, deleteTransaction,
+    [addTask, updateTask, deleteTask, completeTask, rescheduleTasks, addTransaction, updateTransaction, deleteTransaction,
      addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory]
   );
 

@@ -1,6 +1,5 @@
 # Planned Features
 - [v0.11.0] QoL & Smaller Features
-    - [v0.10.5] Undo toast. A 5 s "Undo" after deleting, completing or rescheduling a task, event or transaction.
     - redo portal ui (change to glassmorphism with some background)
     - glassmorphism ui to all home page widget cards (vault, portal, nebula)
 - [v0.12.0] vault/banking overhaul

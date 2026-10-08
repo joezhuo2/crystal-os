@@ -74,7 +74,7 @@ const TaskItem = memo(function TaskItem({
   /** Today's date, live: a snoozed card wakes when it passes the snooze day. */
   today: string;
 }) {
-  const { updateTask, completeTask, deleteTask } = useAppActions();
+  const { updateTask, completeTask, deleteTask, rescheduleTasks } = useAppActions();
   const taskCategories = useTaskCategories();
   const { setEditingTask, setShowTaskForm } = appUi;
   const { still } = useAppActivity();
@@ -130,7 +130,9 @@ const TaskItem = memo(function TaskItem({
   );
   const rescheduleButton = overdue && (
     <button
-      onClick={() => updateTask(task.id, rescheduleToToday(task, toLocalDateStr()))}
+      onClick={() =>
+        rescheduleTasks([{ id: task.id, updates: rescheduleToToday(task, toLocalDateStr()) }], `${task.name} moved to today`)
+      }
       title="Reschedule to today"
       aria-label={`Reschedule ${task.name} to today`}
       className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-amber-300 hover:bg-amber-400/10 transition-colors shrink-0"
@@ -335,7 +337,7 @@ function KanbanBoard({
   today: string;
 }) {
   const taskCategories = useTaskCategories();
-  const { updateTask, completeTask } = useAppActions();
+  const { updateTask, completeTask, rescheduleTasks } = useAppActions();
   const [dragOverCat, setDragOverCat] = useState<string | null>(null);
 
   const columns = buildBoardColumns(tasks, taskCategories, today);
@@ -360,7 +362,8 @@ function KanbanBoard({
         if (task.parentId) updateTask(task.id, { parentId: undefined });
         completeTask(task);
       } else if (plan.kind === "update") {
-        updateTask(task.id, plan.updates);
+        const column = taskCategories.find((c) => c.id === col.id)?.name ?? col.id;
+        rescheduleTasks([{ id: task.id, updates: plan.updates }], `${task.name} moved to ${column}`);
       }
     }
     taskDrag.id = null;
@@ -487,7 +490,7 @@ function EstimatePicker({ value, onChange }: { value: number | undefined; onChan
 const NO_PARENT = "__none__";
 
 export function TaskForm({ onClose, editingTask }: { onClose: () => void; editingTask?: Task | null }) {
-  const { addTask, updateTask } = useAppActions();
+  const { addTask, updateTask, rescheduleTasks } = useAppActions();
   const taskCategories = useTaskCategories();
   const tasks = useTasks();
   const today = toLocalDateStr();
@@ -526,7 +529,11 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
     if (editingTask) {
       // Always send repeat, undefined included: updateTask clears the repeat for it.
       // Same for estimateMinutes, notes, checklist and parentId: undefined clears them.
-      updateTask(editingTask.id, { ...form, ...details, repeat: rule, estimateMinutes: estimate, completed: editingTask.completed });
+      const updates = { ...form, ...details, repeat: rule, estimateMinutes: estimate, completed: editingTask.completed };
+      // A date or time change gets an Undo that puts the whole edit back.
+      const moved = (["startDate", "startTime", "endDate", "endTime"] as const).some((k) => form[k] !== editingTask[k]);
+      if (moved) rescheduleTasks([{ id: editingTask.id, updates }], `${form.name} rescheduled`);
+      else updateTask(editingTask.id, updates);
     } else {
       addTask({ ...form, ...details, completed: false, repeat: rule, estimateMinutes: estimate });
     }
@@ -819,7 +826,7 @@ const VIEW_FADE_MS = 150;
 
 export default function TasksPage() {
   const tasks = useTasks();
-  const { updateTask } = useAppActions();
+  const { updateTask, rescheduleTasks } = useAppActions();
   const { setShowTaskForm } = appUi;
   const nesting = useNesting(tasks);
   // Live, so snoozed tasks wake at midnight (or on focus) without a reload.
@@ -906,7 +913,11 @@ export default function TasksPage() {
   const completedTasks = sortedTasks.filter((t) => t.completed);
 
   const rescheduleAll = () => {
-    for (const task of overdueTasks) updateTask(task.id, rescheduleToToday(task, today));
+    const n = overdueTasks.length;
+    rescheduleTasks(
+      overdueTasks.map((task) => ({ id: task.id, updates: rescheduleToToday(task, today) })),
+      `Moved ${n} task${n === 1 ? "" : "s"} to today`,
+    );
   };
 
   // Dropping a child task anywhere on the list (not on a card) moves it back

@@ -3426,6 +3426,45 @@
 }
 
 /* ------------------------------------------------------------------
+ * Glass toast (components/ui/sonner.tsx): the .glass-card look of the app's
+ * panels and dialogs. Toasts render into <body>, outside a themed <main>, so
+ * they take the default glass values, over a darker fill than a card's: a
+ * toast has no scrim behind it and must stay readable over any page.
+ * Sonner's own styles sit in :where(), so these win without !important.
+ * ------------------------------------------------------------------ */
+@layer components {
+  [data-sonner-toast].glass-toast {
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--glass-border) / 0.12);
+    border-radius: 0.875rem;
+    background:
+      linear-gradient(hsl(var(--glass-bg) / 0.07), hsl(var(--glass-bg) / 0.03)),
+      hsl(var(--background) / 0.6);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
+    box-shadow:
+      0 8px 32px hsl(var(--background) / 0.5),
+      inset 0 1px 0 hsl(var(--glass-border) / 0.08);
+  }
+
+  [data-sonner-toast].glass-toast [data-button].glass-toast-action {
+    height: 1.75rem;
+    padding: 0 0.75rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    color: hsl(var(--foreground));
+    background: hsl(var(--glow-indigo) / 0.18);
+    border: 1px solid hsl(var(--glow-indigo) / 0.4);
+    transition: background-color 150ms, box-shadow 150ms;
+  }
+
+  [data-sonner-toast].glass-toast [data-button].glass-toast-action:hover {
+    background: hsl(var(--glow-indigo) / 0.3);
+    box-shadow: 0 0 14px hsl(var(--glow-indigo) / 0.4);
+  }
+}
+
+/* ------------------------------------------------------------------
  * Glass tooltip (components/ui/glass-tooltip.tsx): replaces the browser's
  * `title` box. `[data-side]` lifts it over the default TooltipContent
  * utilities (bg-popover, border, shadow-md, text-sm, ...).
