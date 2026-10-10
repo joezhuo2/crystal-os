@@ -9,17 +9,14 @@ import { SidebarNav, BottomNav, type TabId } from "@/components/layout/Navigatio
 import { AnimatePresence } from "framer-motion";
 import CommandPalette from "@/components/CommandPalette";
 import TerminalStatic from "@/components/layout/TerminalStatic";
-import PortalBackdrop from "@/components/layout/PortalBackdrop";
 import NebulaBackdrop from "@/components/layout/NebulaBackdrop";
 import ObsidianBackdrop from "@/components/layout/ObsidianBackdrop";
 import AtmosphereBackdrop from "@/components/layout/AtmosphereBackdrop";
 import ImageBackdrop from "@/components/layout/ImageBackdrop";
 import BackdropSlot from "@/components/layout/BackdropSlot";
 import { useHarness } from "@/hooks/useHarness";
-import { usePortal } from "@/hooks/usePortal";
 import { isDesktop } from "@/lib/platform";
 import { hidePortal } from "@/lib/portalNative";
-import { PORTAL_THEME_CLASS } from "@/lib/portalStore";
 import QuickAddDialog from "@/components/QuickAddDialog";
 import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
 import { useHomeHotkey, usePaletteHotkey } from "@/hooks/useGlobalHotkey";
@@ -132,7 +129,6 @@ function GlobalOverlays() {
 const Index = () => {
   const { session, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("home");
-  const { theme: portalTheme } = usePortal();
   const { theme: nebulaTheme } = useHarness();
   const { still } = useAppActivity();
   const View = views[activeTab];
@@ -177,9 +173,10 @@ const Index = () => {
   }, [activeTab]);
 
   // Popups (dropdowns, pickers) portal to <body>, outside the page root, so
-  // the Horizon's, the Engine's and the Orbit's palettes go on <body> too for
-  // them to pick up.
+  // the Portal's, the Horizon's, the Engine's and the Orbit's palettes go on
+  // <body> too for them to pick up.
   useEffect(() => {
+    document.body.classList.toggle("portal-theme", activeTab === "portal");
     document.body.classList.toggle("horizon-theme", activeTab === "calendar");
     document.body.classList.toggle("engine-theme", activeTab === "tasks");
     document.body.classList.toggle("orbit-theme", activeTab === "orbit");
@@ -204,7 +201,7 @@ const Index = () => {
     activeTab === "terminal"
       ? "terminal-root bg-black"
       : activeTab === "portal"
-        ? `portal-root ${PORTAL_THEME_CLASS[portalTheme]}`
+        ? "portal-root"
         : activeTab === "nebula"
           ? "nebula-root"
           : activeTab === "weather"
@@ -223,7 +220,7 @@ const Index = () => {
       case "terminal":
         return <TerminalStatic />;
       case "portal":
-        return <PortalBackdrop theme={portalTheme} />;
+        return <ImageBackdrop image="portal" />;
       case "nebula":
         return <NebulaBackdrop theme={nebulaTheme} />;
       case "weather":

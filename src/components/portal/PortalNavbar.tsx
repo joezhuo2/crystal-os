@@ -64,7 +64,7 @@ function Badge({ badge }: { badge: PortalBadge }) {
 }
 
 /**
- * Tooltip in the Portal theme. Always opens above its trigger, over the page
+ * Tooltip in the Portal's palette. Always opens above its trigger, over the page
  * header: the app webview sits above all page content, so a tooltip below
  * the navbar would be hidden (collision flipping is off for that reason).
  */
@@ -114,7 +114,7 @@ interface PortalNavbarProps {
 /**
  * The Portal's own navbar: one pill per connected app (drag to reorder,
  * right-click for more), then browser controls for the active app.
- * Every control's tooltip is a themed `PortalTip`.
+ * Every control's tooltip is a `PortalTip`.
  */
 export default function PortalNavbar({
   desktop,
