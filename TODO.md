@@ -1,7 +1,6 @@
 # Planned Features
 - [v0.11.0] QoL & Smaller Features
-    - redo portal ui (change to glassmorphism with some background)
-    - glassmorphism ui to all home page widget cards (vault, portal, nebula)
+    - glassmorphism ui to all home page widget cards (vault, nebula)
 - [v0.12.0] vault/banking overhaul
     - [ ]  use plaid to connect to banks (store api keys and tokens in secure .env variables)
     - [ ] themed glassmorphism UI 
