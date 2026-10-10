@@ -1,23 +1,25 @@
 /**
  * Image backgrounds for the Horizon (a blue black hole), the Engine (a red
- * one) and the Orbit (a pale tilted one), shown behind each page and behind
- * its box on the Home tab. Each image is blurred once on a canvas with the
- * Atmosphere's Image blur scale (blurImage, the same bake), so no place pays
- * for a live CSS blur.
+ * one), the Orbit (a pale tilted one) and the Portal (a warm, peach and rose
+ * one), shown behind each page and behind its box on the Home tab. Each image
+ * is blurred once on a canvas with the Atmosphere's Image blur scale
+ * (blurImage, the same bake), so no place pays for a live CSS blur.
  */
 import { useEffect, useState } from "react";
 import horizonImage from "@/assets/horizon-backdrop.webp";
 import engineImage from "@/assets/engine-backdrop.webp";
 import orbitImage from "@/assets/orbit-backdrop.webp";
+import portalImage from "@/assets/portal-backdrop.webp";
 import archiveImage from "@/assets/archive-backdrop.jpg";
 import { blurImage } from "@/lib/atmosphereImage";
 
-export type BackdropImage = "horizon" | "engine" | "orbit" | "archive";
+export type BackdropImage = "horizon" | "engine" | "orbit" | "portal" | "archive";
 
 const IMAGES: Record<BackdropImage, string> = {
   horizon: horizonImage,
   engine: engineImage,
   orbit: orbitImage,
+  portal: portalImage,
   // Home box only; The Archive page keeps its amethyst cave.
   archive: archiveImage,
 };
