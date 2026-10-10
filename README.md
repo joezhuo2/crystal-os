@@ -863,7 +863,7 @@ Native `<select>`, date, and time inputs are replaced app-wide by `src/component
 2. Add its id to `TabId` and the `tabs` array in `src/components/layout/Navigation.tsx`
 3. Add a loader for it to `loaders` in `src/lib/viewLoader.ts`. Every view is a lazy chunk; work that must keep running while the view is closed belongs in a module-level store that `src/pages/Index.tsx` imports, not in the page
 
-Write Tailwind-scanned class names out in full. A class built at runtime, such as `` `portal-theme-${theme}` ``, is purged from the CSS; map values to literal class strings instead (see `PORTAL_THEME_CLASS` in `src/lib/portalStore.ts`).
+Write Tailwind-scanned class names out in full. A class built at runtime, such as `` `portal-theme-${theme}` ``, is purged from the CSS; map values to literal class strings instead (see `TONE_CLASS` in `src/components/ui/glass-tooltip.tsx`).
 
 ---
 

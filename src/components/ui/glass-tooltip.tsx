@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { TooltipPortal } from "@radix-ui/react-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-export type GlassTipTone = "indigo" | "emerald" | "amethyst" | "orbit";
+export type GlassTipTone = "indigo" | "emerald" | "amethyst" | "orbit" | "portal";
 
 /**
  * Written out in full so Tailwind's content scan keeps the rules in
@@ -13,12 +13,13 @@ const TONE_CLASS: Record<GlassTipTone, string> = {
   emerald: "glass-tooltip-emerald",
   amethyst: "glass-tooltip-amethyst",
   orbit: "glass-tooltip-orbit",
+  portal: "glass-tooltip-portal",
 };
 
 /**
  * A small glass card with a gradient border, used in place of the browser's
  * `title` tooltip. `colors` overrides the tone's two gradient stops, for
- * widgets themed by the user (the Portal's theme, the Nebula's palette).
+ * widgets whose palette the user picks (the Nebula's).
  *
  * The card renders into <body>. Inline, it sat inside its widget's stacking
  * context (backdrop-filter, isolation), so any widget later in the grid

@@ -35,6 +35,7 @@ describe("portal store", () => {
     portal._reset();
     expect(portal.getState().apps.map((a) => a.id)).toEqual(["discord"]);
     expect(portal.getState()).not.toHaveProperty("theme");
+    expect(localStorage.getItem("crystal-os-portal-theme")).toBe("stargate");
   });
 
   it("adds apps, activates the new one, and persists", () => {
