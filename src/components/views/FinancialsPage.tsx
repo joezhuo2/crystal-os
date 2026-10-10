@@ -6,9 +6,9 @@ import {
   type Transaction,
 } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
-import { m, AnimatePresence } from "framer-motion";
+import { m } from "framer-motion";
 import { toLocalDateStr } from "@/lib/utils";
-import { Plus, Trash2, X, Settings, Pencil } from "lucide-react";
+import { Plus, Trash2, X, Pencil } from "lucide-react";
 import { CategoryManagerButton } from "./CategoryManager";
 import { DateField, ThemedSelect } from "@/components/ui/field-controls";
 import { useEscapeKey } from "@/hooks/useEscapeKey";

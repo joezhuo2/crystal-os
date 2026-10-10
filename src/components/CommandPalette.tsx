@@ -137,18 +137,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const addPrefix = search.toLowerCase().startsWith("add ");
   const logPrefix = search.toLowerCase().startsWith("log ");
 
-  const parsedTaskText = addPrefix ? search.slice(4).trim() : "";
-  const parsedLog = logPrefix ? parseLogInput(search.slice(4).trim()) : null;
-
-  function parseLogInput(raw: string): { amount: number; name: string } | null {
-    const match = raw.match(/^(\d+(?:\.\d+)?)\s+(?:for\s+)?(.+)/i);
-    if (match) return { amount: parseFloat(match[1]), name: match[2].trim() };
-    return null;
-  }
-
   // ---------- Search existing data ----------
-  const today = toLocalDateStr();
-
   const matchedTasks =
     search.length >= 2 && !addPrefix && !logPrefix
       ? tasks.filter(
