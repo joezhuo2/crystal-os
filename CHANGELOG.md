@@ -5,6 +5,17 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.5] - 2026-10-10 - E2E smoke test in CI.
+
+### Added
+
+- **The Playwright smoke test runs in CI.** A new `e2e` job in `.github/workflows/ci.yml` runs `npm run test:e2e` on every pull request and push to `main`, alongside the existing `check` job, on a Windows runner with its preinstalled Edge (no browser download). It signs in as the test user from the new `E2E_EMAIL` and `E2E_PASSWORD` repository secrets, against the Supabase project in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Without the E2E secrets (a fork's pull request, for example) the tests are skipped, not failed. When the job fails, the HTML report and traces are uploaded as the `playwright-report` artifact for 7 days.
+
+### Changed
+
+- In CI, `playwright.config.ts` retries a failed test once (a slow Supabase round trip should not fail the run) and reports through Playwright's `github` reporter, so failures show up as annotations on the run. Local runs are unchanged: no retries and the `list` reporter.
+- The task and transaction smoke tests first delete any `E2E smoke task …` or `E2E smoke transaction …` rows a failed earlier run left behind, so the test account does not fill up with them.
+
 ## [v0.10.4] - 2026-10-09 - Command palette: Settings sections and recents.
 
 ### Added

@@ -60,6 +60,19 @@ async function deleteRow(row: Locator) {
   await expect(row).toHaveCount(0);
 }
 
+/**
+ * Delete rows a previous run left behind when it failed between adding and
+ * deleting, so the test account does not fill up with them.
+ */
+async function sweepLeftovers(rows: Locator) {
+  for (let left = await rows.count(); left > 0; left--) {
+    const row = rows.first();
+    await row.hover();
+    await row.getByRole("button").last().click();
+    await expect(rows).toHaveCount(left - 1);
+  }
+}
+
 test("opens every page", async ({ page }) => {
   for (const label of PAGES) {
     await test.step(label, () => openPage(page, label));
@@ -69,6 +82,7 @@ test("opens every page", async ({ page }) => {
 test("adds and deletes a task", async ({ page }) => {
   const name = `E2E smoke task ${Date.now()}`;
   await openPage(page, "The Engine");
+  await sweepLeftovers(page.locator("main .glass-card-hover").filter({ hasText: /E2E smoke task \d+/ }));
 
   await page.locator("main").getByRole("button", { name: "Add Task" }).click();
   const input = page.getByPlaceholder("Task name...");
@@ -90,6 +104,7 @@ test("adds and deletes a task", async ({ page }) => {
 test("logs and deletes a transaction", async ({ page }) => {
   const name = `E2E smoke transaction ${Date.now()}`;
   await openPage(page, "The Vault");
+  await sweepLeftovers(page.locator("main .glass-card").filter({ hasText: /E2E smoke transaction \d+/ }));
 
   await page.locator("main").getByRole("button", { name: "Quick Add" }).click();
   await page.getByPlaceholder("Description...").fill(name);

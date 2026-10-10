@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-852%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.10.4-6366F1)
+![Version](https://img.shields.io/badge/version-0.10.5-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.10.4** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.10.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -644,9 +644,9 @@ npm run build:desktop # Sidecar + web build + Windows installer
 npm run build:release # Same, plus the updater signature and latest.json for a GitHub release
 ```
 
-**CI.** `.github/workflows/ci.yml` runs on every pull request and push to `main`, on Windows: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, then `cargo check --locked` in `src-tauri`. Pushing a `v*` tag runs `release.yml` (see [Publishing a release](#packaged-build)).
+**CI.** `.github/workflows/ci.yml` runs on every pull request and push to `main`, on Windows: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, then `cargo check --locked` in `src-tauri`. A second job, `e2e`, runs alongside it: `npm run test:e2e` in the runner's Edge, signed in as the test user from the `E2E_EMAIL` and `E2E_PASSWORD` repository secrets (plus `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`). In CI a failed test is retried once, failures show up as annotations on the run, and the HTML report and traces are uploaded as the `playwright-report` artifact (kept 7 days). Without the E2E secrets, on a fork's pull request for example, the tests are skipped rather than failed. Pushing a `v*` tag runs `release.yml` (see [Publishing a release](#packaged-build)).
 
-**Before a release**, run `npm run badges` and `npm run test:e2e`. The smoke test signs in, adds and deletes a task, logs and deletes a transaction, and opens every page, failing on any uncaught error or a page that renders nothing. It starts its own Vite server on port 8090 (`E2E_PORT` to change) and uses the Edge that ships with Windows (`E2E_CHANNEL=chrome` or an empty value for Playwright's Chromium). Point it at a test user created in the Supabase dashboard, not your own account; Row Level Security keeps its rows apart from yours.
+**Before a release**, run `npm run badges` and `npm run test:e2e`. The smoke test signs in, adds and deletes a task, logs and deletes a transaction, and opens every page, failing on any uncaught error or a page that renders nothing. It starts its own Vite server on port 8090 (`E2E_PORT` to change) and uses the Edge that ships with Windows (`E2E_CHANNEL=chrome` or an empty value for Playwright's Chromium). Point it at a test user created in the Supabase dashboard, not your own account; Row Level Security keeps its rows apart from yours. If a run dies between adding and deleting, the next run deletes the leftover `E2E smoke …` rows first.
 
 ---
 

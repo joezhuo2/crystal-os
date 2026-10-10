@@ -15,8 +15,13 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
-  retries: 0,
-  reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
+  // One retry in CI absorbs a slow Supabase round trip; locally a failure
+  // should show up straight away.
+  retries: process.env.CI ? 1 : 0,
+  reporter: [
+    [process.env.CI ? "github" : "list"],
+    ["html", { open: "never", outputFolder: "playwright-report" }],
+  ],
   outputDir: "test-results",
   use: {
     baseURL: `http://127.0.0.1:${port}`,
