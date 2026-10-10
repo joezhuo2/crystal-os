@@ -5,6 +5,15 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.4] - 2026-10-09 - Command palette: Settings sections and recents.
+
+### Added
+
+- **Jump to any Settings section from the command palette.** Once something is typed, the Settings group lists the sections that match, by title or by the settings inside them: "do not disturb" finds **Settings → Notifications**, "aurora" finds **Settings → The Atmosphere**, "work day" finds **Settings → The Engine**. Picking one opens Settings, clears its search box, unfolds the section (and remembers it open, as a click would), scrolls to it and outlines it in the page's primary colour for a moment. Desktop-only sections (Startup, Vault, The Nebula, Install & update) are only offered in the desktop app. The list lives in `src/lib/settingsSections.ts`; the request travels through a new `settingsSection` field in `appUi`.
+- **A Recent group in the empty command palette.** It lists the last 8 tasks, vault notes and calendar events you opened, newest first, above Quick Actions. A task counts as opened when its edit form opens from anywhere, a note when The Archive's reader loads it, and an event when its edit form opens in The Horizon. Picking one reopens it: the task's edit form over the current page, the note in The Archive, or the event's edit form on its day in The Horizon (switching to its calendar and the day view for that visit, without changing your saved view). Tasks come from the live list, so a deleted one drops out and a renamed one shows its new name; an event that is gone by the time The Horizon loads its day is dropped with a toast.
+- Recents are kept in localStorage per device and per signed-in user (`crystal-os-recents:<userId>`, `src/lib/recents.ts`), so another account on the same machine never sees them. The Horizon request travels through a new `openEvent` field in `appUi`.
+- Tests for the recents store (`recents.test.ts`), the palette's Recent group and Settings sections (`CommandPalette.test.tsx`, the first palette tests), and the Settings jump (`SettingsSearch.test.tsx`), including a check that every web section in the list exists on the page.
+
 ## [v0.10.3] - 2026-10-08 - Undo toast.
 
 ### Added

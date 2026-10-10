@@ -36,12 +36,52 @@ import {
   Sunrise,
   Infinity as InfinityIcon,
   X,
+  CalendarDays,
+  History,
+  Keyboard,
+  Power,
+  FolderOpen,
+  ListTodo,
+  Bell,
+  AppWindow,
+  CloudSun,
+  Gauge,
+  Download,
+  Bug,
 } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
 import { usePortalOcclusion } from "@/hooks/usePortal";
+import { readRecents, type RecentItem } from "@/lib/recents";
+import { SETTINGS_SECTIONS, settingsSectionValue } from "@/lib/settingsSections";
 
 const ITEM = "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer";
+
+/** Icons for the Settings sections, matching their headers on the Settings page. */
+const SECTION_ICONS: Record<string, React.ElementType> = {
+  shortcuts: Keyboard,
+  startup: Power,
+  vault: FolderOpen,
+  nebula: Sparkles,
+  engine: ListTodo,
+  notifications: Bell,
+  orbit: Orbit,
+  portal: AppWindow,
+  atmosphere: CloudSun,
+  performance: Gauge,
+  install: Download,
+  diagnostics: Bug,
+};
+
+const RECENT_ICONS: Record<RecentItem["kind"], React.ElementType> = {
+  task: CheckCircle2,
+  note: BookOpen,
+  event: CalendarDays,
+};
+
+function formatRecentDate(date: string): string {
+  return new Date(`${date}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
 
 interface CommandPaletteProps {
   open: boolean;
@@ -89,6 +129,9 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   }, []);
 
   const close = onClose;
+
+  // Read once per open: the overlay remounts every time the bar opens.
+  const [recents] = useState(readRecents);
 
   // ---------- Natural-language parsing ----------
   const addPrefix = search.toLowerCase().startsWith("add ");
@@ -197,6 +240,39 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   };
 
   const parentChoices = nestChild ? nestTargets(nestChild.id, tasks) : [];
+
+  const handleOpenSettingsSection = (id: string) => {
+    appUi.setSettingsSection(id);
+    handleNavigate("settings");
+  };
+
+  // Tasks come from the live list, so a deleted one drops out and a renamed
+  // one shows its new name.
+  const recentRows = recents.flatMap((item): { item: RecentItem; title: string; task?: Task }[] => {
+    if (item.kind !== "task") return [{ item, title: item.title }];
+    const task = tasks.find((t) => t.id === item.id);
+    return task ? [{ item, title: task.name, task }] : [];
+  });
+
+  const handleOpenRecent = (item: RecentItem, task?: Task) => {
+    if (item.kind === "task") {
+      if (!task) return;
+      close();
+      appUi.setEditingTask(task);
+      setShowTaskForm(true);
+    } else if (item.kind === "note") {
+      handleOpenNote(item.id);
+    } else {
+      appUi.setOpenEvent({ id: item.id, calendarId: item.calendarId, date: item.date });
+      handleNavigate("calendar");
+    }
+  };
+
+  const recentHint = (item: RecentItem, task?: Task) => {
+    if (item.kind === "task") return `Task · ${taskCategories.find((c) => c.id === task?.categoryId)?.name ?? "Uncategorized"}`;
+    if (item.kind === "note") return `Note · ${item.id}`;
+    return `Event · ${formatRecentDate(item.date)}`;
+  };
 
   const handleAddTask = () => {
     close();
@@ -576,6 +652,35 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                   </>
                 )}
 
+                {/* ── Recently opened tasks, notes and events (empty search) ── */}
+                {!search && recentRows.length > 0 && (
+                  <>
+                    <CommandSeparator className="my-1" />
+                    <CommandGroup heading="Recent">
+                      {recentRows.map(({ item, title, task }) => {
+                        const Icon = RECENT_ICONS[item.kind];
+                        return (
+                          <CommandItem
+                            key={`${item.kind}-${item.id}`}
+                            value={`recent-${item.kind}-${item.id}`}
+                            onSelect={() => handleOpenRecent(item, task)}
+                            className={ITEM}
+                          >
+                            <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg shrink-0">
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{title}</p>
+                              <p className="text-xs text-muted-foreground truncate">{recentHint(item, task)}</p>
+                            </div>
+                            <History className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </>
+                )}
+
                 {/* ── Quick Actions (when empty search, focused) ── */}
                 {!search && (
                   <>
@@ -645,6 +750,28 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                         <span className="text-sm font-medium">Open Settings</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">hotkeys, startup, vault</span>
                       </CommandItem>
+                      {/* Individual sections only once something is typed, or the list would crowd the empty bar. */}
+                      {search &&
+                        SETTINGS_SECTIONS.filter((section) => !section.desktopOnly || isDesktop()).map((section) => {
+                          const Icon = SECTION_ICONS[section.id] ?? Settings;
+                          return (
+                            <CommandItem
+                              key={section.id}
+                              value={settingsSectionValue(section)}
+                              onSelect={() => handleOpenSettingsSection(section.id)}
+                              className={ITEM}
+                            >
+                              <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg shrink-0">
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">Settings → {section.title}</p>
+                                <p className="text-xs text-muted-foreground truncate">{section.hint}</p>
+                              </div>
+                              <ArrowRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+                            </CommandItem>
+                          );
+                        })}
                       <CommandItem
                         value="portal-web-apps-discord-instagram-linkedin-spotify-gmail-outlook-x-reddit"
                         onSelect={() => handleNavigate("portal")}

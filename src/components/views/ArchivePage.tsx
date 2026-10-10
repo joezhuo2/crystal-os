@@ -19,6 +19,7 @@ import {
   Tag as TagIcon,
 } from "lucide-react";
 import { appUi, useAppUi } from "@/lib/appUi";
+import { recordRecent } from "@/lib/recents";
 import {
   usePickVault,
   useVaultNote,
@@ -383,6 +384,12 @@ function NoteReader({
   // Keyed by path, so opening another note always comes back to reading.
   const [editingPath, setEditingPath] = useState<string | null>(null);
   const editing = !!note && editingPath === note.path;
+  // Recorded once the note has loaded, so a moved or deleted path never lands in the palette's recents.
+  const notePath = note?.path;
+  const noteTitle = note?.title;
+  useEffect(() => {
+    if (notePath && noteTitle) recordRecent({ kind: "note", id: notePath, title: noteTitle });
+  }, [notePath, noteTitle]);
   const content = note?.content;
   const body = useMemo(
     () => (content === undefined ? "" : resolveWikilinks(content, linkTargets)),

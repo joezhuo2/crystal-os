@@ -24,6 +24,10 @@ export interface AppUiState {
   quickAddDraft: string;
   /** Requests that the Horizon open its "New Event" form. */
   showEventForm: boolean;
+  /** Requests that the Horizon open this event's edit form, on its date. */
+  openEvent: { id: string; calendarId: string; date: string } | null;
+  /** Requests that Settings unfold, scroll to and flash this section. */
+  settingsSection: string | null;
 }
 
 const initialState: AppUiState = {
@@ -35,6 +39,8 @@ const initialState: AppUiState = {
   showQuickAdd: false,
   quickAddDraft: "",
   showEventForm: false,
+  openEvent: null,
+  settingsSection: null,
 };
 
 let state: AppUiState = initialState;
@@ -65,6 +71,8 @@ export const appUi = {
   setShowQuickAdd: (show: boolean) => set("showQuickAdd", show),
   setQuickAddDraft: (text: string) => set("quickAddDraft", text),
   setShowEventForm: (show: boolean) => set("showEventForm", show),
+  setOpenEvent: (target: AppUiState["openEvent"]) => set("openEvent", target),
+  setSettingsSection: (id: string | null) => set("settingsSection", id),
 
   /** Back to nothing open. AppProvider calls it on sign-out. */
   reset() {

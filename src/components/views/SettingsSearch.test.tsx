@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { appUi } from "@/lib/appUi";
+import { SETTINGS_SECTIONS } from "@/lib/settingsSections";
 
 vi.mock("@/lib/platform", async (orig) => ({ ...(await orig<object>()), isDesktop: () => false }));
 vi.mock("@/hooks/useGlobalHotkey", () => ({ useGlobalHotkeys: () => ({ statuses: null }) }));
@@ -42,5 +44,39 @@ describe("Settings search", () => {
     render(<SettingsPage />);
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "zzzz-nothing" } });
     expect(screen.getByText(/No settings match/)).toBeInTheDocument();
+  });
+});
+
+describe("Jumping to a section from the command palette", () => {
+  it("lists every web section the page renders", () => {
+    render(<SettingsPage />);
+    for (const entry of SETTINGS_SECTIONS.filter((e) => !e.desktopOnly)) {
+      expect(section(entry.id), entry.id).not.toBeNull();
+    }
+  });
+
+  it("clears the search, unfolds the section, saves it open and flashes it", () => {
+    vi.useFakeTimers();
+    try {
+      localStorage.setItem("crystal-os-settings-collapsed", JSON.stringify(["performance"]));
+      Element.prototype.scrollIntoView = vi.fn();
+      render(<SettingsPage />);
+      fireEvent.change(screen.getByRole("searchbox"), { target: { value: "aurora" } });
+      expect(section("performance").hidden).toBe(true);
+
+      act(() => appUi.setSettingsSection("performance"));
+      expect(screen.getByRole("searchbox")).toHaveValue("");
+      expect(section("performance").hidden).toBe(false);
+      expect(expanded("performance")).toBe("true");
+      expect(section("performance").hasAttribute("data-flash")).toBe(true);
+      expect(JSON.parse(localStorage.getItem("crystal-os-settings-collapsed")!)).not.toContain("performance");
+      expect(appUi.getState().settingsSection).toBeNull();
+
+      act(() => vi.advanceTimersByTime(2000));
+      expect(section("performance").hasAttribute("data-flash")).toBe(false);
+    } finally {
+      vi.useRealTimers();
+      appUi.reset();
+    }
   });
 });

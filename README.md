@@ -7,11 +7,11 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-832%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.10.3-6366F1)
+![Tests](https://img.shields.io/badge/tests-852%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.10.4-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.10.3** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.10.4** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -40,7 +40,7 @@ Current release: **v0.10.3** — see [CHANGELOG.md](CHANGELOG.md) for release hi
 | **🔔 Notifications** | Desktop toasts when a task reaches its end time, before each timed calendar event (30 minutes by default, set in Settings), when a Pomodoro focus or break runs out, and when a Portal app's unread count goes up while Crystal OS is not focused (per app, from its right-click menu). A switch per kind and a Do Not Disturb switch in **Settings → Notifications**. See [Notifications](#-notifications) |
 | **🖥️ Desktop shell** | Native Tauri window with PowerShell terminal, tray (Pomodoro + Quick Add), always-on global hotkeys, and launch-at-login — the web build is unaffected |
 | **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, notifications, vault folder, Nebula keys, models and look, Portal theme, and downloading or building an installer. A search box (Ctrl+F) hides sections that don't match and unfolds the ones that do. Click a section's header to fold it away (remembered on this device); switches and sliders glide instead of snapping. **Diagnostics** copies recent errors (unhandled rejections, uncaught errors, failed Supabase saves) with the app version for a bug report; on desktop they are also logged to `diagnostics.log` |
-| **⌨️ Command Palette** | Global search over tasks, transactions, and vault note bodies, plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event |
+| **⌨️ Command Palette** | Global search over tasks, transactions, vault note bodies and Settings sections (picking one scrolls to it and unfolds it), plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event. With nothing typed it lists your 8 most recently opened tasks, notes and events to reopen in one step |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
 | **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar |
 
@@ -261,7 +261,9 @@ src/
 │   ├── daylight.ts             # Daylight left / time to sunrise, and day length change (sunrise equation)
 │   ├── notifications.ts        # Desktop toasts: what to say and when (tasks, events, Pomodoro, Portal), delivery, Do Not Disturb
 │   ├── notifySettings.ts       # Notification switches and the event reminder lead time (localStorage)
-│   ├── appUi.ts                # Transient UI store: open forms, Quick Add draft, selected note (useAppUi(selector))
+│   ├── appUi.ts                # Transient UI store: open forms, Quick Add draft, selected note, palette jump requests (useAppUi(selector))
+│   ├── recents.ts              # Recently opened tasks, notes and events for the command palette (localStorage, per user)
+│   ├── settingsSections.ts     # Settings sections and their keywords, for the command palette to search and jump to
 │   ├── vaultCore.ts            # Shared vault logic: parsing, search index, tags, quick-add formatting
 │   ├── wikilinks.ts            # Archive reader: wikilink targets mapped once per listing, note connections (links to / linked from)
 │   ├── vaultNative.ts          # Desktop vault client for src-tauri/src/vault.rs
@@ -826,9 +828,17 @@ The palette is an overlay over whichever page is open. `Cmd/Ctrl + K` opens it, 
 | `add Buy milk` | Creates a task |
 | `log 25 for Lunch` | Records an expense |
 | *"Add a new event"* | Opens The Horizon's create-event form for today |
-| *anything else* | Filters tasks, transactions, and vault notes; **Quick Add** is always offered as the first row |
+| *anything else* | Filters tasks, transactions, vault notes and Settings sections; **Quick Add** is always offered as the first row |
 
 Selecting a note result opens it in The Archive.
+
+### Settings sections
+
+Once something is typed, the Settings group lists every section that matches by title or by the settings inside it (`src/lib/settingsSections.ts`): "do not disturb" finds **Settings → Notifications**, "aurora" **Settings → The Atmosphere**. Picking one opens Settings, clears its search box, unfolds the section and keeps it unfolded, scrolls to it and outlines it briefly. Desktop-only sections are offered only in the desktop app.
+
+### Recent
+
+With nothing typed, a **Recent** group above Quick Actions lists the last 8 tasks, vault notes and calendar events you opened, newest first. Opening a task's edit form (from any page), reading a note in The Archive, or opening an event's edit form in The Horizon records it. Picking a recent item reopens it: the task's edit form over the current page, the note in The Archive, or the event's edit form on its day in The Horizon. Deleted tasks drop out and renamed ones show their new name; an event that is no longer on the calendar is dropped with a toast. The list is stored in localStorage per device and per signed-in user (`src/lib/recents.ts`).
 
 ### Closing overlays
 

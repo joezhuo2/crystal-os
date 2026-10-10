@@ -14,6 +14,7 @@ import {
 } from "@/lib/seedCategories";
 import { ascNullsLast, loadInPages, mergePage } from "@/lib/pagedLoad";
 import { appUi } from "@/lib/appUi";
+import { setRecentsOwner } from "@/lib/recents";
 import { clampEstimate } from "@/lib/capacity";
 import { cleanChecklist, cleanNotes, tickAll, untickAll, type ChecklistItem } from "@/lib/subtasks";
 import { cleanSnoozeDate, clearedSnooze } from "@/lib/snooze";
@@ -428,6 +429,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     },
     [queryClient],
   );
+
+  // The palette's recents are per user, so only this session's opens show.
+  useEffect(() => {
+    setRecentsOwner(user?.id ?? null);
+    return () => setRecentsOwner(null);
+  }, [user?.id]);
 
   // ── Offline queue ──
   //

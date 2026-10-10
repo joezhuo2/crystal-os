@@ -23,6 +23,7 @@ import { MAX_EVENT_LEAD, notifySettings, useNotifySettings } from "@/lib/notifyS
 import { notify } from "@/lib/notifications";
 import { capacitySettings, useCapacitySettings } from "@/lib/capacitySettings";
 import { TimeField } from "@/components/ui/field-controls";
+import { appUi, useAppUi } from "@/lib/appUi";
 
 const COLLAPSED_KEY = "crystal-os-settings-collapsed";
 
@@ -50,6 +51,8 @@ function writeCollapsed(id: string, collapsed: boolean) {
 
 /** Matches the grid-row transition on .settings-collapse (index.css). */
 const COLLAPSE_MS = 360;
+/** How long a section jumped to from the command palette stays highlighted. */
+const FLASH_MS = 1600;
 
 /**
  * A Settings panel whose header folds it open and closed. The body eases
@@ -102,6 +105,30 @@ function Section({ id, icon: Icon, title, children }: { id: string; icon: React.
     return () => window.clearTimeout(timer);
   }, [shown]);
 
+  // The command palette's "jump to section": unfold it (saved, like a click),
+  // scroll to it and flash it. Waits for the page to clear its search first,
+  // since a filtered-out section is hidden and cannot be scrolled to.
+  const jumpTarget = useAppUi((s) => s.settingsSection);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (jumpTarget !== id || searching) return;
+    appUi.setSettingsSection(null);
+    writeCollapsed(id, false);
+    setOpen(true);
+    setFlash(true);
+  }, [jumpTarget, searching, id]);
+
+  // Apart from the jump, which re-runs as soon as it clears the request.
+  useEffect(() => {
+    if (!flash) return;
+    const frame = requestAnimationFrame(() => sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    const timer = window.setTimeout(() => setFlash(false), FLASH_MS);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [flash]);
+
   const toggle = () => {
     if (searching) return setOverride(!shown);
     writeCollapsed(id, open);
@@ -109,7 +136,7 @@ function Section({ id, icon: Icon, title, children }: { id: string; icon: React.
   };
 
   return (
-    <section ref={sectionRef} hidden={searching && !match} data-settings-section={id} className="glass-card p-6 scroll-mt-4">
+    <section ref={sectionRef} hidden={searching && !match} data-settings-section={id} data-flash={flash || undefined} className="glass-card p-6 scroll-mt-4">
       <h3>
         <button
           type="button"
@@ -407,6 +434,12 @@ export default function SettingsPage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // A palette jump to a section needs every section visible.
+  const jumpTarget = useAppUi((s) => s.settingsSection);
+  useEffect(() => {
+    if (jumpTarget) setSearch("");
+  }, [jumpTarget]);
 
   const jumpToFirstMatch = () => {
     document

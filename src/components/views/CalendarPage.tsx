@@ -29,6 +29,7 @@ import TimeGrid from "./TimeGrid";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { appUi, useAppUi } from "@/lib/appUi";
+import { forgetRecent, recordRecent } from "@/lib/recents";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1178,8 +1179,10 @@ export default function CalendarPage() {
 
   const openCreate = (date: string, time?: string) =>
     setFormState({ open: true, event: null, date, time });
-  const openEdit = (event: CalendarEvent) =>
+  const openEdit = (event: CalendarEvent) => {
+    recordRecent({ kind: "event", id: event.id, title: event.summary, calendarId, date: event.startDate });
     setFormState({ open: true, event, date: event.startDate });
+  };
   const closeForm = () => setFormState((s) => ({ ...s, open: false }));
 
   // The command palette can request the create form from any tab; the request
@@ -1192,6 +1195,39 @@ export default function CalendarPage() {
     if (connected) openCreate(toLocalDateStr());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showEventForm, connected, status.isPending]);
+
+  // The palette's recents reopen an event: show its calendar and its day (the
+  // day view, without saving it as the preferred view), then open its edit
+  // form once that day's events have loaded. An event that is gone by then is
+  // dropped from the recents.
+  const openEventRequest = useAppUi((s) => s.openEvent);
+  useEffect(() => {
+    if (!openEventRequest || status.isPending) return;
+    if (!connected) {
+      appUi.setOpenEvent(null);
+      return;
+    }
+    if (openEventRequest.calendarId !== calendarId) selectCalendar(openEventRequest.calendarId);
+    setFocusDate(openEventRequest.date);
+    setViewState("day");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openEventRequest, connected, status.isPending]);
+
+  useEffect(() => {
+    const target = openEventRequest;
+    if (!target || view !== "day" || focusDate !== target.date || calendarId !== target.calendarId) return;
+    if (eventsQuery.isPending) return;
+    appUi.setOpenEvent(null);
+    if (eventsQuery.isError) return;
+    const event = events.find((e) => e.id === target.id);
+    if (event) {
+      openEdit(event);
+    } else {
+      forgetRecent("event", target.id);
+      toast("That event is no longer on the calendar");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openEventRequest, view, focusDate, calendarId, eventsQuery.isPending, eventsQuery.isError, events]);
 
   if (!connected) {
     return (

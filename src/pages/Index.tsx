@@ -1,6 +1,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { AppProvider } from "@/contexts/AppContext";
 import { appUi, useAppUi } from "@/lib/appUi";
+import { recordRecent } from "@/lib/recents";
 import { useAuth } from "@/contexts/AuthContext";
 import LoginPage from "@/components/auth/LoginPage";
 import AppSplash from "@/components/layout/AppSplash";
@@ -88,6 +89,12 @@ const closeTransactionForm = () => {
 function TaskFormOverlay() {
   const show = useAppUi((s) => s.showTaskForm);
   const editingTask = useAppUi((s) => s.editingTask);
+  // Any edit form opened, from any page, counts as opening the task.
+  const recentId = show ? editingTask?.id : undefined;
+  useEffect(() => {
+    if (recentId && editingTask) recordRecent({ kind: "task", id: recentId, title: editingTask.name });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recentId]);
   return <AnimatePresence>{show && <LazyTaskForm editingTask={editingTask} onClose={closeTaskForm} />}</AnimatePresence>;
 }
 

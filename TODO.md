@@ -29,18 +29,30 @@
 
 ## Planned List
 
-- Customisable navbar. Reorder and hide sidebar sections.
-- Pulse: Now / Next strip. Countdown to the next event and, when it has a location, a leave-by time. (calculate from current location)
-- Horizon: free-slot finder. "Next free 2 h block" search.
-- [ ] [Low-Med] Optionally link a task to a vault note so the details live in Obsidian. (v2)
+- [ ] **[High] Orbit: review-ready notification.** A toast at 6 PM (or first time app launches when the review has not been viewed) when a weekly, monthly or yearly review becomes ready, alongside the existing nav dot.
+
+- [ ] [Med-High] Customisable navbar. Reorder and hide sidebar sections.
+- [ ] [Mid-High] Horizon: free-slot finder. "Next free 2 h block" search.
+- [ ] **[Med-High] Habits: reminders.** An optional time per habit that sends a native notification if it is not ticked yet, with its own switch in Settings → Notifications.
+
 - [ ] **[Med] Morning plan and evening shutdown.** On the first open of the day, one card with weather, today's events, overdue tasks and habits, where you pick the day's top 3 tasks. In the evening, a shutdown step rolls unfinished tasks to tomorrow and writes a summary to the daily note.
 - [ ] **[Med] Orbit: correlations.** Mood against habits done or focus time.
 - [ ] **[Med] Horizon: meeting note from an event.** A button on an event that creates a vault note from a template, linked to the event.
-- [ ] **[Low] Atmosphere: what to wear.** A clothing suggestion from the forecast.
-    - [ ] Implement the entire obsidian graph feature directly into the vault (v2)
-- [ ] **[Low] Nebula: cost and usage view.** Token totals are stored in `harness/state.json`; show them per project and per day, with an estimated cost per tier.
-- [ ] **[High] The Constellation (people).** Birthdays, last contacted and gift ideas, with reminders in the Horizon.
+- [ ] [Med] Pulse: Now / Next strip. Countdown to the next event and, when it has a location, a leave-by time. (calculate from current location)
 - [ ] **[Med] The Comet (inbox).** A hotkey captures anything instantly; triage it later into a task, event, note or transaction.
+- [ ] **[Med] The Constellation (people).** Birthdays, last contacted and gift ideas, with reminders in the Horizon.
+- [ ] **[Med] Nebula: diff review and commit.** After a run, a pane with the changed files and their diffs, with Accept, Revert per file and a one-click commit with a generated message.
+- [ ] **[Med] Nebula: saved prompts.** A per-project library of reusable prompts, available from the composer and the command palette.
+- [ ] **[Med] Privacy mode.** A settings option that blurs money amounts, archive names/desc (until opened)
+
+- [ ] [Low-Med] Optionally link a task to a vault note so the details live in Obsidian. (v2)
 - [ ] **[Low] The Biosphere (health).** Sleep, workouts, weight and water, entered by hand at first, feeding Orbit trends.
 - [ ] **[Low] The Gallery.** place to dump any images/photos/notes/etc.
 - [ ] **[Low] The Satellite.** Books, shows and games backlog with ratings.
+- [ ] **[Low] Orbit: estimate vs actual.** Compare each completed task's time estimate with the Pomodoro focus time logged to it, and show the average over/under-run per category in the reviews.
+- [ ] **[Low] Engine: time blocking.** Drag a task from the Engine onto the Horizon week or day grid to create a calendar block sized from its time estimate, linked back to the task.
+- [ ] **[Low] Atmosphere: what to wear.** A clothing suggestion from the forecast.
+- [ ] [Low] Implement the entire obsidian graph feature directly into the vault (v2)
+- [ ] **[Low] Nebula: cost and usage view.** Token totals are stored in `harness/state.json`; show them per project and per day, with an estimated cost per tier.
+- [ ] **[Very-Low] Engine: task dependencies.** "Blocked by" another task; blocked tasks are dimmed, skipped by the Home nudge and the Fits today? bar until the blocker is done.
+- [ ] **[Very-Low] Engine: keyboard navigation.** j/k to move through the list, x to complete, e to edit, s to snooze, matching the command palette's keyboard-first feel.

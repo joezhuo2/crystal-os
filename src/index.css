@@ -4192,6 +4192,24 @@
   overflow: visible;
 }
 
+/* A section jumped to from the command palette: a primary ring that holds,
+   then fades out (FLASH_MS in SettingsPage.tsx). */
+[data-settings-section][data-flash] {
+  animation: settings-flash 1600ms ease-out;
+}
+
+@keyframes settings-flash {
+  0%,
+  35% {
+    outline: 2px solid hsl(var(--primary) / 0.75);
+    outline-offset: 2px;
+  }
+  100% {
+    outline: 2px solid hsl(var(--primary) / 0);
+    outline-offset: 2px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .smooth-slider > span:has(> [role="slider"]),
   .smooth-slider-range,
