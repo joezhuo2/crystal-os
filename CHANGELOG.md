@@ -5,6 +5,37 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.0] - 2026-10-10 - The Portal Reborn (Release Summary)
+
+*This release replaces The Portal's three themes with one look: a warm black hole, with a cream photon ring and a peach and dusty-rose disk, behind glass. The page, its sidebar, its popups and its box on Home all share it, and the theme setting is gone.*
+
+It also caps the updates since `v0.10.0`, `v0.10.1` through `v0.10.6`. Over that period The Orbit gained a yearly review and a toast when a review is ready, The Archive linked notes together, deletes and edits got a 5 s Undo, the command palette learned Settings sections and recents, and the Playwright smoke test started running in CI.
+
+### Highlights
+
+- **The Orbit's yearly review (`v0.10.1`)** — a Weekly/Monthly/Yearly switch, the same cards scaled to a calendar year, a by-month agenda, and **Export to vault** to `Reviews/Yearly/2026.md`
+- **Connections in The Archive (`v0.10.2`)** — **Links to**, **Linked from** and **Shares a category** under each note, and `[[Note#Heading]]` links that open their note
+- **Undo (`v0.10.3`)** — a 5 s **Undo** toast after deleting, completing or rescheduling a task, and after deleting or editing a Google Calendar event, on new glass toasts
+- **Command palette (`v0.10.4`)** — jump to any Settings section by name or by a setting inside it, and a **Recent** group of the last tasks, notes and events you opened
+- **E2E in CI (`v0.10.5`)** — the Playwright smoke test runs on every pull request and push to `main`
+- **Review-ready toast (`v0.10.6`)** — The Orbit announces each weekly, monthly or yearly review once when it becomes ready, with **Open** to go straight to it
+- **The Portal's black hole glass (`v0.11.0`)** — detailed below
+
+### Added
+
+- **A black hole behind The Portal.** The page's background is a warm, tilted black hole (`src/assets/portal-backdrop.webp`), pre-blurred once at 15% Image blur through the same bake as The Horizon, The Engine and The Orbit (`imageBackdrop.ts`), so no live CSS blur runs behind the app.
+- **A glass bezel around the app** in place of the spinning conic ring: a translucent warm-dark frame with a cream hairline, a highlight along its top edge and a still peach-and-rose halo. The hairline and highlight are inset shadows, so the native webview keeps exactly the size and position it had.
+- **One palette for everything on the Portal tab:** cream `#fff1e6`, peach `#f4b89a` and dusty rose `#d8a0a8`. The app pills, icon buttons, tooltips, loading skeleton, gradient title and orbit icon use it, and the sidebar turns to warm dark glass edged with a faint cream line. Hovered pills and tooltips keep an opaque dark fill (`#140c0d`), so the peach-to-rose gradient shows only as their border.
+- **Popups follow it too.** While The Portal is open, `body` carries a `portal-theme` class that retints the shared colour tokens, so dialogs (Add app, for example), menus and toasts opened from it match the page, and go back to normal on leaving it. The search overlay's panel uses the warm popover colour and stays opaque over a bright app page.
+- **The Portal box on Home sits on the same black hole,** pre-blurred at 25%, under light warm glass like The Orbit's greeting card, with a peach glow on hover. Its app tooltips use a new `portal` tone of `GlassTip`.
+- Tests: a theme saved by an older version is ignored, and left in storage (`portalStore.test.ts`); Settings no longer has a Portal section, and searching "portal" still finds The Portal's unload delay under Performance (`SettingsSearch.test.tsx`).
+
+### Removed
+
+- **The Void swirl, Event horizon and Stargate blue themes,** their animated backdrops (`PortalBackdrop.tsx`) and spinning rings, and **Settings → The Portal**, whose only setting was the theme. A theme saved earlier (`crystal-os-portal-theme` in `localStorage`) is ignored.
+- `PortalTheme`, `PORTAL_THEMES`, `PORTAL_THEME_CLASS`, `DEFAULT_PORTAL_THEME`, `THEME_KEY` and `setTheme` from `portalStore.ts`, and the `@property --portal-angle` and keyframes only the old themes used.
+- **Unused code:** `src/App.css`, `src/components/NavLink.tsx`, `src/hooks/use-mobile.tsx`, `public/placeholder.svg`, `getWeatherIconDescription` in `useWeather.ts`, the `.text-gradient-emerald` class, the `pulse-glow` and `fade-in` Tailwind animations, and unused imports and variables in `CommandPalette.tsx` and `FinancialsPage.tsx`. None was referenced anywhere.
+
 ## [v0.10.6] - 2026-10-10 - Orbit: review-ready notification.
 
 ### Added

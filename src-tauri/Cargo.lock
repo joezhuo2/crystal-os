@@ -662,7 +662,7 @@ dependencies = [
 
 [[package]]
 name = "crystal-os"
-version = "0.10.6"
+version = "0.11.0"
 dependencies = [
  "log",
  "notify-debouncer-mini",
