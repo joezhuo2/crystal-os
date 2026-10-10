@@ -93,9 +93,6 @@ export function NebulaSpace({ onClick }: { onClick?: () => void }) {
   );
 }
 
-/** The Portal's peach and rose (index.css), for its app tooltips. */
-const PORTAL_TIP_COLORS: [string, string] = ["#f4b89a", "#d8a0a8"];
-
 export function PortalSpace({ onClick }: { onClick?: () => void }) {
   const state = usePortal();
   const { apps, badges } = state;
@@ -139,7 +136,7 @@ export function PortalSpace({ onClick }: { onClick?: () => void }) {
                     key={app.id}
                     label={app.name}
                     hint="Open in the Portal"
-                    colors={PORTAL_TIP_COLORS}
+                    tone="portal"
                   >
                     <button onClick={(e) => openApp(e, app.id)} className="home-portal-app" aria-label={`Open ${app.name}`}>
                       <AppIcon app={app} size={18} />

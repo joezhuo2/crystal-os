@@ -2,7 +2,7 @@ import { useState } from "react";
 import { isBackdropReady, PAGE_BACKDROP_BLUR, useImageBackdrop, type BackdropImage } from "@/lib/imageBackdrop";
 
 /**
- * Full-screen background for The Horizon, The Engine or The Orbit: its black hole,
+ * Full-screen background for The Portal, The Horizon, The Engine or The Orbit: its black hole,
  * blurred at PAGE_BACKDROP_BLUR (see imageBackdrop.ts), fading in once baked.
  * An image baked on an earlier visit shows at once, without the fade.
  * Sits behind the page (the parent must create a stacking context) and never

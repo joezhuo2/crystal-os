@@ -792,7 +792,6 @@
       linear-gradient(color-mix(in srgb, var(--portal-a) 16%, #140c0d), color-mix(in srgb, var(--portal-b) 10%, #140c0d)) padding-box,
       linear-gradient(90deg, var(--portal-a), var(--portal-b)) border-box;
     border: 1px solid transparent;
-    backdrop-filter: blur(12px);
     box-shadow:
       0 0 18px color-mix(in srgb, var(--portal-a) 35%, transparent),
       0 8px 24px rgb(0 0 0 / 0.5);
@@ -878,7 +877,7 @@
   /* Sidebar while The Portal is open: warm dark glass over the black hole,
      edged with a faint cream line instead of the glass border. */
   .sidebar-portal {
-    background: linear-gradient(180deg, rgb(40 22 20 / 0.55) 0%, rgb(8 5 6 / 0.62) 50%, rgb(36 20 24 / 0.5) 100%);
+    background: linear-gradient(180deg, rgb(40 22 20 / 0.72) 0%, rgb(8 5 6 / 0.82) 50%, rgb(36 20 24 / 0.65) 100%);
     border-color: transparent;
     box-shadow:
       inset -1px 0 0 rgb(255 241 230 / 0.18),
@@ -3347,6 +3346,13 @@
     --tip-b: hsl(285 34% 74%);
   }
 
+  /* The Portal's peach and rose, spelled out: the tip renders into <body>,
+     outside .home-space-portal where the --portal-* variables live. */
+  .glass-tooltip-portal {
+    --tip-a: #f4b89a;
+    --tip-b: #d8a0a8;
+  }
+
   .glass-tooltip[data-side] {
     display: flex;
     flex-direction: column;
@@ -4184,8 +4190,11 @@ html.perf-still .horizon-dot-cascade {
 /* ------------------------------------------------------------------
  * Search overlay (CommandPalette.tsx). It renders inside the page root,
  * so each theme's tokens reach it. --so-* resolve to colours from those
- * tokens; the Portal and the Nebula keep their palettes in hex variables
- * of their own, so they map those instead.
+ * tokens; the Nebula keeps its palette in hex variables of its
+ * own, so it maps those instead. The Portal takes its accents from its
+ * palette but its panel colours from the warm shadcn tokens:
+ * --portal-surface is translucent, and the panel floats over whatever app
+ * snapshot is behind it.
  * ------------------------------------------------------------------ */
 @layer components {
   .search-overlay {
@@ -4198,8 +4207,8 @@ html.perf-still .horizon-dot-cascade {
   .portal-root .search-overlay {
     --so-accent: var(--portal-a);
     --so-accent-2: var(--portal-b);
-    --so-surface: var(--portal-surface);
-    --so-bg: var(--portal-bg);
+    --so-surface: hsl(var(--popover));
+    --so-bg: hsl(var(--background));
   }
 
   .nebula-root .search-overlay {

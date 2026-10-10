@@ -7,8 +7,8 @@ const STAR_FPS = 12;
 const STARS_PER_PIXEL = 1 / 4500;
 
 /**
- * Full-screen twinkling star specks, used by the Portal's Stargate theme and
- * the Atmosphere's night sky. `rgb` is a space-separated colour ("224 242
+ * Full-screen twinkling star specks, used by the Atmosphere's night sky
+ * (AtmosphereBackdrop). `rgb` is a space-separated colour ("224 242
  * 254"); `opacity` scales every star. Runs at 12 fps only while the window
  * can be seen, and draws one still frame in reduced motion.
  */
