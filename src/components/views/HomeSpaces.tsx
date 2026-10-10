@@ -1,7 +1,8 @@
 /**
  * The Home tab's bottom row: one box each for The Nebula, The Portal and the
  * Terminal. Each box and the space around it wear that page's look (index.css,
- * "Home spaces"), following the user's Nebula palette and Portal theme.
+ * "Home spaces"), following the user's Nebula palette; the Portal box sits over
+ * its black hole.
  */
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight, Orbit, Sparkles } from "lucide-react";
@@ -16,7 +17,8 @@ import { parseStateFile } from "@/lib/harness/store";
 import type { ChatMeta } from "@/lib/harness/types";
 import { isDesktop } from "@/lib/platform";
 import { badgeLabel } from "@/lib/portalApps";
-import { PORTAL_THEMES, PORTAL_THEME_CLASS, portal, selectBadgeTotal } from "@/lib/portalStore";
+import { CARD_BACKDROP_BLUR, useImageBackdrop } from "@/lib/imageBackdrop";
+import { portal, selectBadgeTotal } from "@/lib/portalStore";
 import { listTerminals } from "@/lib/terminalNative";
 
 const plural = (n: number, word: string) => `${n} ${word}${n !== 1 ? "s" : ""}`;
@@ -91,11 +93,14 @@ export function NebulaSpace({ onClick }: { onClick?: () => void }) {
   );
 }
 
+/** The Portal's peach and rose (index.css), for its app tooltips. */
+const PORTAL_TIP_COLORS: [string, string] = ["#f4b89a", "#d8a0a8"];
+
 export function PortalSpace({ onClick }: { onClick?: () => void }) {
   const state = usePortal();
-  const { apps, badges, theme } = state;
+  const { apps, badges } = state;
   const unread = selectBadgeTotal(state);
-  const swatch = PORTAL_THEMES.find((t) => t.id === theme)?.swatch;
+  const backdropUrl = useImageBackdrop("portal", CARD_BACKDROP_BLUR);
   const shown = apps.slice(0, 6);
 
   const openApp = (e: React.MouseEvent, id: string) => {
@@ -105,7 +110,10 @@ export function PortalSpace({ onClick }: { onClick?: () => void }) {
   };
 
   return (
-    <div className={`home-space home-space-portal ${PORTAL_THEME_CLASS[theme]}`}>
+    <div className="home-space home-space-portal">
+      <span aria-hidden="true" className="home-backdrop-scene">
+        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />}
+      </span>
       <div onClick={onClick} className="home-card-portal h-full p-6 cursor-pointer group">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs uppercase tracking-widest font-semibold portal-gradient-text">The Portal</p>
@@ -131,7 +139,7 @@ export function PortalSpace({ onClick }: { onClick?: () => void }) {
                     key={app.id}
                     label={app.name}
                     hint="Open in the Portal"
-                    colors={swatch ? [swatch[1], swatch[2]] : undefined}
+                    colors={PORTAL_TIP_COLORS}
                   >
                     <button onClick={(e) => openApp(e, app.id)} className="home-portal-app" aria-label={`Open ${app.name}`}>
                       <AppIcon app={app} size={18} />

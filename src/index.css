@@ -608,12 +608,6 @@
    is native and covers `.portal-screen`, so the bezel, navbar and sidebar
    carry the look. On <body> as well (Index.tsx) so portalled dialogs, menus
    and toasts follow it; the Home box takes the --portal-* colours. */
-@property --portal-angle {
-  syntax: "<angle>";
-  inherits: true;
-  initial-value: 0deg;
-}
-
 @layer components {
   .portal-root,
   body.portal-theme,
@@ -893,12 +887,6 @@
 
   .sidebar-portal button svg {
     filter: drop-shadow(0 0 4px color-mix(in srgb, var(--portal-a) 55%, transparent));
-  }
-
-  @keyframes portal-spin {
-    to {
-      --portal-angle: 360deg;
-    }
   }
 
   @keyframes portal-rotate {
@@ -3418,7 +3406,8 @@
  * boxes on the Home tab. `.home-space` paints the page's backdrop behind its box
  * and 8px past it, half the grid gap, so the box and the space around it
  * both wear the page's look. Colours come from --nebula-a/b/c (inline, the
- * user's palette) and the portal-theme-* class (the Portal theme).
+ * user's palette); the Portal box takes the Portal's fixed palette (--portal-*
+ * on .home-space-portal) and sits over its black hole image.
  * ------------------------------------------------------------------ */
 @layer components {
   .home-space {
@@ -3494,27 +3483,41 @@
     animation: portal-shimmer 1.6s ease-in-out infinite;
   }
 
-  /* Portal: the theme's glow over its background, and a spinning ring. */
+  /* Portal: its black hole behind the box, already blurred at 25% Image blur
+     (imageBackdrop.ts), under a very light warm glass like the Orbit's. */
+  .home-space-portal {
+    --primary: 20 82% 80%;
+    --muted-foreground: 20 22% 82%;
+  }
+
   .home-space-portal::before {
-    background:
-      radial-gradient(70% 80% at 12% 0%, color-mix(in srgb, var(--portal-a) 42%, transparent), transparent 70%),
-      radial-gradient(60% 70% at 100% 100%, color-mix(in srgb, var(--portal-b) 34%, transparent), transparent 70%),
-      var(--portal-bg);
-    box-shadow: 0 0 32px color-mix(in srgb, var(--portal-a) 22%, transparent);
+    background: #000;
+    box-shadow: 0 0 32px color-mix(in srgb, var(--portal-a) 16%, transparent);
+  }
+
+  /* The hole sits right of centre, a little above the middle. */
+  .home-space-portal .home-backdrop-image {
+    background-position: 60% 48%;
   }
 
   .home-card-portal {
     border-radius: 1rem;
-    border: 1.5px solid transparent;
-    background:
-      linear-gradient(color-mix(in srgb, var(--portal-surface) 86%, transparent), color-mix(in srgb, var(--portal-surface) 86%, transparent)) padding-box,
-      conic-gradient(from var(--portal-angle), var(--portal-a), var(--portal-b), #ffffff 12%, var(--portal-b) 16%, var(--portal-a) 40%, var(--portal-b) 60%, var(--portal-a)) border-box;
-    animation: portal-spin 8s linear infinite;
-    transition: box-shadow 300ms;
+    color: #fff8f2;
+    background: linear-gradient(160deg, rgb(40 22 20 / 0.1), rgb(10 5 6 / 0.32));
+    border: 1px solid rgb(255 241 230 / 0.16);
+    text-shadow: 0 1px 8px rgb(10 4 4 / 0.75);
+    box-shadow:
+      0 8px 32px rgb(8 2 2 / 0.45),
+      inset 0 1px 0 rgb(255 241 230 / 0.1);
+    transition: border-color 300ms, box-shadow 300ms;
   }
 
   .home-card-portal:hover {
-    box-shadow: 0 0 30px color-mix(in srgb, var(--portal-a) 40%, transparent);
+    border-color: rgb(244 184 154 / 0.45);
+    box-shadow:
+      0 8px 32px rgb(8 2 2 / 0.45),
+      0 0 30px rgb(244 184 154 / 0.22),
+      inset 0 1px 0 rgb(255 241 230 / 0.14);
   }
 
   .home-portal-app {
@@ -4006,7 +4009,6 @@
     .home-atmo-precip,
     .home-atmo-flash,
     .home-nebula-pulse,
-    .home-card-portal,
     .home-terminal-cursor {
       animation: none;
     }
