@@ -158,6 +158,28 @@ export const unitOf = (kind: ReviewKind) => UNITS[kind];
 /** "Weekly", "Monthly" or "Yearly". */
 export const kindLabel = (kind: ReviewKind) => KIND_LABELS[kind];
 
+/** "Weekly review ready", or "Weekly and monthly reviews ready". */
+export function readyTitle(kinds: readonly ReviewKind[]): string {
+  if (kinds.length === 1) return `${kindLabel(kinds[0])} review ready`;
+  const names = kinds.map((kind, i) => (i === 0 ? kindLabel(kind) : kindLabel(kind).toLowerCase()));
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]} reviews ready`;
+}
+
+/**
+ * The ready reviews to announce at `now`: the newest ready period of each
+ * kind, unless it has been opened (`seen`) or announced (`notified`) already.
+ * So each period is announced once, at 6 PM or on the next launch.
+ */
+export function reviewsToAnnounce(
+  now: Date,
+  seen: Partial<Record<ReviewKind, string>>,
+  notified: Partial<Record<ReviewKind, string>>,
+): ReviewPeriod[] {
+  return REVIEW_KINDS.map((kind) => latestReadyPeriod(kind, now)).filter(
+    (period) => seen[period.kind] !== period.key && notified[period.kind] !== period.key,
+  );
+}
+
 /** Vault path the review exports to. */
 export function exportPath(period: ReviewPeriod): string {
   return `Reviews/${kindLabel(period.kind)}/${period.key}.md`;

@@ -29,8 +29,6 @@
 
 ## Planned List
 
-- [ ] **[High] Orbit: review-ready notification.** A toast at 6 PM (or first time app launches when the review has not been viewed) when a weekly, monthly or yearly review becomes ready, alongside the existing nav dot.
-
 - [ ] [Med-High] Customisable navbar. Reorder and hide sidebar sections.
 - [ ] [Mid-High] Horizon: free-slot finder. "Next free 2 h block" search.
 - [ ] **[Med-High] Habits: reminders.** An optional time per habit that sends a native notification if it is not ticked yet, with its own switch in Settings → Notifications.

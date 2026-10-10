@@ -10,6 +10,8 @@ import {
   periodContaining,
   periodLabel,
   periodStats,
+  readyTitle,
+  reviewsToAnnounce,
   shiftPeriod,
   toMarkdown,
   weekOfPeriod,
@@ -306,5 +308,38 @@ describe("yearly review", () => {
     expect(md).toContain("## Next year");
     expect(md).toContain("### Focus for next year");
     expect(md).toContain("vs 2-year average");
+  });
+});
+
+describe("ready announcements", () => {
+  const kinds = (now: Date, seen = {}, notified = {}) => reviewsToAnnounce(now, seen, notified).map((p) => p.kind);
+  const sunday = local("2026-10-11", "18:00");
+  const seenOlder = { monthly: "2026-09", yearly: "2025" };
+
+  it("announces the newest ready review of each kind not yet seen or announced", () => {
+    expect(kinds(local("2026-10-11", "17:59"), { ...seenOlder, weekly: "2026-W40" })).toEqual([]);
+    expect(reviewsToAnnounce(sunday, seenOlder, {})).toMatchObject([{ kind: "weekly", key: "2026-W41" }]);
+    expect(kinds(sunday, seenOlder, { weekly: "2026-W41" })).toEqual([]);
+    expect(kinds(sunday, { ...seenOlder, weekly: "2026-W41" })).toEqual([]);
+  });
+
+  it("still announces on a later launch, and moves on to the next period", () => {
+    expect(kinds(local("2026-10-14", "09:00"), seenOlder, { weekly: "2026-W40" })).toEqual(["weekly"]);
+    expect(kinds(local("2026-10-18", "18:00"), seenOlder, { weekly: "2026-W41" })).toEqual(["weekly"]);
+  });
+
+  it("gathers reviews that turn ready together", () => {
+    // December 31, 2028 is a Sunday: the week, the month and the year end together.
+    expect(kinds(local("2028-12-31", "18:00"), { weekly: "2028-W51", monthly: "2028-11", yearly: "2027" })).toEqual([
+      "weekly",
+      "monthly",
+      "yearly",
+    ]);
+  });
+
+  it("words one or several ready reviews", () => {
+    expect(readyTitle(["weekly"])).toBe("Weekly review ready");
+    expect(readyTitle(["weekly", "monthly"])).toBe("Weekly and monthly reviews ready");
+    expect(readyTitle(["weekly", "monthly", "yearly"])).toBe("Weekly, monthly and yearly reviews ready");
   });
 });

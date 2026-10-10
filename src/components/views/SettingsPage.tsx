@@ -610,6 +610,12 @@ export default function SettingsPage() {
           >
             <Switch checked={notifications.portal} onCheckedChange={(on) => notifySettings.setFlag("portal", on)} />
           </Row>
+          <Row
+            title="Orbit reviews"
+            description="When a weekly, monthly or yearly review is ready (6 PM on its last day), or the next time the app opens if you have not opened it yet. Once per review, with an Open button; reviews ready together share one toast."
+          >
+            <Switch checked={notifications.reviews} onCheckedChange={(on) => notifySettings.setFlag("reviews", on)} />
+          </Row>
           <Row title="Test" description="Shows a notification now, even with Do Not Disturb on. The first one asks for permission.">
             <TestNotificationButton />
           </Row>

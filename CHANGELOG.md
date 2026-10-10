@@ -5,6 +5,20 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.6] - 2026-10-10 - Orbit: review-ready notification.
+
+### Added
+
+- **A toast when an Orbit review is ready.** At 6 PM on the last day of a week, month or year (Sunday, the month's last day, December 31), or on the next launch if the app was closed then and the review has not been opened, a toast says "Weekly review ready" with the period ("Oct 5 – 11, 2026"). Its **Open** button goes to The Orbit on that review. Reviews that are ready together share one toast ("Weekly and monthly reviews ready"), and Open goes to the first. It sits alongside the existing nav dot and Home chip, which still mark the review until it is opened.
+- While Crystal OS is not focused (hidden in the tray, for example) the same message is also sent as a native notification. With the window focused, the in-app toast and the nav dot already say it.
+- Each review is announced once: the announced period of each kind is kept per device in `localStorage` (`crystal-os-orbit-notified`), and a review already opened is never announced. The planner is `reviewsToAnnounce` in `src/lib/orbitReview.ts`; `src/components/views/orbit/OrbitReadyNotifier.tsx` shows it while signed in.
+- **Settings → Notifications → Orbit reviews**, on by default. Do Not Disturb silences it like the others. While either keeps it quiet nothing is recorded, so a review still unopened is announced once they allow it again. "orbit reviews" in the command palette finds the section.
+- Tests for the planner and its wording (`orbitReview.test.ts`) and for the notifier (`OrbitReadyNotifier.test.tsx`): once per period, nothing for an opened review, one toast for several, native only when unfocused, and waiting out the switch and Do Not Disturb.
+
+### Changed
+
+- The "… review ready" wording used by the nav dot moved from `Navigation.tsx` to `readyTitle` in `src/lib/orbitReview.ts`, shared with the toast.
+
 ## [v0.10.5] - 2026-10-10 - E2E smoke test in CI.
 
 ### Added

@@ -28,6 +28,7 @@ import { useVaultLiveUpdates } from "@/hooks/useVault";
 import { useAppActivity } from "@/lib/appActivity";
 import { useOrbitStore } from "@/lib/orbitStore";
 import OrbitAutoExport from "@/components/views/orbit/OrbitAutoExport";
+import OrbitReadyNotifier from "@/components/views/orbit/OrbitReadyNotifier";
 import NotificationScheduler from "@/components/NotificationScheduler";
 import { LazyTaskForm, LazyTransactionDrawer, lazyViews as views, preloadViews, recordVisit } from "@/lib/viewLoader";
 
@@ -147,6 +148,7 @@ const Index = () => {
   // The search bar is an overlay over whichever tab is open.
   const [paletteOpen, setPaletteOpen] = useState(false);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
+  const openOrbit = useCallback(() => setActiveTab("orbit"), []);
 
   // Desktop global hotkey (Rust shows and focuses the window first). Opens
   // rather than toggles, so it never closes a bar left open while hidden.
@@ -268,6 +270,7 @@ const Index = () => {
         </main>
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
         <GlobalOverlays />
+        <OrbitReadyNotifier onOpen={openOrbit} />
         {/* Inside the page root, so the page's theme reaches it. */}
         <CommandPalette open={paletteOpen} onClose={closePalette} onNavigate={setActiveTab} />
       </div>

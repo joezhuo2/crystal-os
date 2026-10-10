@@ -26,6 +26,8 @@ export interface NotifySettings {
   pomodoro: boolean;
   /** A toast when a Portal app's unread count goes up (apps can opt out one by one). */
   portal: boolean;
+  /** A toast when a weekly, monthly or yearly review in The Orbit becomes ready. */
+  reviews: boolean;
 }
 
 export const DEFAULT_NOTIFY_SETTINGS: NotifySettings = {
@@ -35,6 +37,7 @@ export const DEFAULT_NOTIFY_SETTINGS: NotifySettings = {
   eventLead: DEFAULT_EVENT_LEAD,
   pomodoro: true,
   portal: true,
+  reviews: true,
 };
 
 /** Whole minutes within range. Anything unreadable falls back to the default. */
@@ -62,6 +65,7 @@ export function parseNotifySettings(raw: string | null): NotifySettings {
     eventLead: "eventLead" in stored ? clampEventLead(stored.eventLead) : DEFAULT_EVENT_LEAD,
     pomodoro: flag("pomodoro"),
     portal: flag("portal"),
+    reviews: flag("reviews"),
   };
 }
 

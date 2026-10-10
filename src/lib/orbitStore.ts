@@ -1,7 +1,7 @@
 /**
  * The Orbit's per-device state, in localStorage: the auto-export setting,
- * which reviews have been seen (the ready badge), and which have been
- * auto-exported. Every change applies at once; blocked storage only means
+ * which reviews have been seen (the ready badge), announced (the ready
+ * toast) and auto-exported. Every change applies at once; blocked storage only means
  * nothing is remembered past this session.
  */
 
@@ -11,6 +11,7 @@ import { REVIEW_KINDS, type ReviewKind } from "@/lib/orbitReview";
 const AUTO_EXPORT_KEY = "crystal-os-orbit-auto-export";
 const SEEN_KEY = "crystal-os-orbit-seen";
 const EXPORTED_KEY = "crystal-os-orbit-auto-exported";
+const NOTIFIED_KEY = "crystal-os-orbit-notified";
 const VIEW_KEY = "crystal-os-orbit-view";
 
 type ByKind = Partial<Record<ReviewKind, string>>;
@@ -27,6 +28,8 @@ export interface OrbitState {
   seen: ByKind;
   /** Newest period key auto-export has handled, per kind. */
   autoExported: ByKind;
+  /** Newest period key the ready toast has announced, per kind. */
+  notified: ByKind;
   /** The Weekly/Monthly/Yearly switch, remembered. */
   view: ReviewKind;
   landing: OrbitLanding;
@@ -64,6 +67,7 @@ function load(): OrbitState {
     autoExport: read(AUTO_EXPORT_KEY) === "1",
     seen: readByKind(SEEN_KEY),
     autoExported: readByKind(EXPORTED_KEY),
+    notified: readByKind(NOTIFIED_KEY),
     view: REVIEW_KINDS.find((kind) => kind === read(VIEW_KEY)) ?? "weekly",
     landing: null,
   };
@@ -103,6 +107,15 @@ export const orbitStore = {
     const autoExported = { ...state.autoExported, [kind]: key };
     write(EXPORTED_KEY, JSON.stringify(autoExported));
     set({ ...state, autoExported });
+  },
+
+  /** Records that these periods' ready toast has been shown. */
+  markNotified(periods: readonly { kind: ReviewKind; key: string }[]) {
+    if (periods.length === 0) return;
+    const notified = { ...state.notified };
+    for (const { kind, key } of periods) notified[kind] = key;
+    write(NOTIFIED_KEY, JSON.stringify(notified));
+    set({ ...state, notified });
   },
 
   setView(view: ReviewKind) {
