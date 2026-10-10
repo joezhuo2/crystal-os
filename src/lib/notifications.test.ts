@@ -172,7 +172,6 @@ describe("portalAlerts", () => {
     activeId: "discord",
     badges: {},
     reported: { discord: true },
-    theme: "void",
     occluders: 0,
     ...over,
   });

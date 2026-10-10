@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { APPS_KEY, ACTIVE_KEY, DEFAULT_PORTAL_THEME, THEME_KEY, portal, selectBadgeTotal } from "./portalStore";
+import { APPS_KEY, ACTIVE_KEY, portal, selectBadgeTotal } from "./portalStore";
 
 const discord = { id: "discord", name: "Discord", url: "https://discord.com/app" };
 const insta = { id: "instagram", name: "Instagram", url: "https://www.instagram.com/" };
@@ -15,20 +15,26 @@ beforeEach(() => {
 });
 
 describe("portal store", () => {
-  it("starts empty with the default theme", () => {
+  it("starts empty", () => {
     const s = portal.getState();
     expect(s.apps).toEqual([]);
     expect(s.activeId).toBeNull();
-    expect(s.theme).toBe(DEFAULT_PORTAL_THEME);
     expect(s.occluders).toBe(0);
+    expect(s).not.toHaveProperty("theme");
   });
 
   it("falls back to no apps when storage holds corrupt JSON", () => {
     localStorage.setItem(APPS_KEY, "{oops");
-    localStorage.setItem(THEME_KEY, "neon");
     portal._reset();
     expect(portal.getState().apps).toEqual([]);
-    expect(portal.getState().theme).toBe(DEFAULT_PORTAL_THEME);
+  });
+
+  it("ignores a theme saved by an older version", () => {
+    localStorage.setItem("crystal-os-portal-theme", "stargate");
+    localStorage.setItem(APPS_KEY, JSON.stringify([discord]));
+    portal._reset();
+    expect(portal.getState().apps.map((a) => a.id)).toEqual(["discord"]);
+    expect(portal.getState()).not.toHaveProperty("theme");
   });
 
   it("adds apps, activates the new one, and persists", () => {
@@ -166,13 +172,6 @@ describe("portal store", () => {
     portal.clearBadge("discord");
     expect(portal.getState().reported).toEqual({});
     unsubscribe();
-  });
-
-  it("persists the theme and ignores unknown values", () => {
-    portal.setTheme("stargate");
-    expect(localStorage.getItem(THEME_KEY)).toBe("stargate");
-    portal.setTheme("neon" as never);
-    expect(portal.getState().theme).toBe("stargate");
   });
 
   it("counts occluders and releases each once", () => {

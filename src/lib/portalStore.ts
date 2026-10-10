@@ -1,61 +1,16 @@
 /**
- * Portal tab state as a module-level store, so the sidebar badge, the Settings
- * theme picker, and the page itself share it, and badges keep updating while
+ * Portal tab state as a module-level store, so the sidebar badge, the Home box
+ * and the page itself share it, and badges keep updating while
  * another tab is open.
  *
- * The connected apps, the last active app, and the theme persist in
+ * The connected apps and the last active app persist in
  * localStorage. Badges and loaded webviews last for the session only.
  */
 
 import { badgeTotal, parseBadge, parseStoredApps, type PortalApp, type PortalBadge } from "@/lib/portalApps";
 
-export type PortalTheme = "void" | "horizon" | "stargate";
-
-export interface PortalThemeInfo {
-  id: PortalTheme;
-  name: string;
-  description: string;
-  /** Background, then the two ring colours, for the Settings preview. */
-  swatch: [string, string, string];
-}
-
-export const PORTAL_THEMES: PortalThemeInfo[] = [
-  {
-    id: "void",
-    name: "Void swirl",
-    description: "Near-black with a slow violet and cyan nebula.",
-    swatch: ["#07060d", "#8b5cf6", "#22d3ee"],
-  },
-  {
-    id: "horizon",
-    name: "Event horizon",
-    description: "Pure black with a pulsing amber accretion ring.",
-    swatch: ["#000000", "#f59e0b", "#ea580c"],
-  },
-  {
-    id: "stargate",
-    name: "Stargate blue",
-    description: "Deep navy with an electric-blue shimmer and faint stars.",
-    swatch: ["#030b1f", "#3b82f6", "#7dd3fc"],
-  },
-];
-
-export const DEFAULT_PORTAL_THEME: PortalTheme = "void";
-
-/**
- * Root class per theme (colours in index.css). Written out in full so
- * Tailwind's content scan keeps the rules: a class built with a template
- * string is purged, which leaves every `--portal-*` variable undefined.
- */
-export const PORTAL_THEME_CLASS: Record<PortalTheme, string> = {
-  void: "portal-theme-void",
-  horizon: "portal-theme-horizon",
-  stargate: "portal-theme-stargate",
-};
-
 export const APPS_KEY = "crystal-os-portal-apps";
 export const ACTIVE_KEY = "crystal-os-portal-active";
-export const THEME_KEY = "crystal-os-portal-theme";
 
 export interface PortalState {
   apps: PortalApp[];
@@ -67,7 +22,6 @@ export interface PortalState {
    * rises after it (src/lib/notifications.ts).
    */
   reported: Record<string, true>;
-  theme: PortalTheme;
   /**
    * Open overlays (dialogs, menus) that the native webviews would cover.
    * While above zero the page hides the active webview.
@@ -92,20 +46,14 @@ function write(key: string, value: string | null) {
   }
 }
 
-function isTheme(value: unknown): value is PortalTheme {
-  return PORTAL_THEMES.some((theme) => theme.id === value);
-}
-
 function load(): PortalState {
   const apps = parseStoredApps(read(APPS_KEY));
   const active = read(ACTIVE_KEY);
-  const theme = read(THEME_KEY);
   return {
     apps,
     activeId: apps.some((app) => app.id === active) ? active : (apps[0]?.id ?? null),
     badges: {},
     reported: {},
-    theme: isTheme(theme) ? theme : DEFAULT_PORTAL_THEME,
     occluders: 0,
   };
 }
@@ -191,12 +139,6 @@ export const portal = {
     if (id === state.activeId || !state.apps.some((a) => a.id === id)) return;
     saveActive(id);
     set({ ...state, activeId: id });
-  },
-
-  setTheme(theme: PortalTheme) {
-    if (!isTheme(theme) || theme === state.theme) return;
-    write(THEME_KEY, theme);
-    set({ ...state, theme });
   },
 
   /**
