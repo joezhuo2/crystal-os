@@ -58,7 +58,7 @@ interface SidebarNavProps {
 const activePillStyle: Record<SidebarMode, React.CSSProperties> = {
   default: { background: "hsl(239 84% 67% / 0.15)", border: "1px solid hsl(239 84% 67% / 0.25)" },
   terminal: { background: "#000", border: "1px solid rgb(255 255 255 / 0.25)" },
-  // Colours come from the portal-theme-* class on the page root (index.css).
+  // Colours come from the Portal palette on the page root (index.css).
   portal: {
     background: "color-mix(in srgb, var(--portal-a) 18%, transparent)",
     border: "1px solid color-mix(in srgb, var(--portal-a) 45%, transparent)",
