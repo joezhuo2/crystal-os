@@ -771,12 +771,13 @@
   }
 
   /* App pill hover: a gradient border in the Portal's peach and rose (an opaque
-     padding-box fill over a border-box gradient), cream glowing text,
+     #140c0d padding-box fill over a border-box gradient, so the gradient shows
+     only as the edge; --portal-surface is translucent), cream glowing text,
      and a soft outer glow. The active pill keeps its own style. */
   .portal-pill:not(.portal-pill-active):hover {
     color: var(--portal-hover-text, #fff);
     background:
-      linear-gradient(color-mix(in srgb, var(--portal-a) 14%, var(--portal-surface, #0b0a14)), color-mix(in srgb, var(--portal-b) 8%, var(--portal-surface, #0b0a14))) padding-box,
+      linear-gradient(color-mix(in srgb, var(--portal-a) 14%, #140c0d), color-mix(in srgb, var(--portal-b) 8%, #140c0d)) padding-box,
       linear-gradient(90deg, var(--portal-a), var(--portal-b)) border-box;
     border-color: transparent;
     text-shadow: 0 0 10px color-mix(in srgb, var(--portal-b) 60%, transparent);
@@ -786,14 +787,15 @@
   }
 
   /* App pill tooltip (PortalNavbar.tsx): a small card with a gradient
-     border, the app name in cream text, and the hint below it. Scoped
+     border, the app name in cream text, and the hint below it. The fill is opaque
+     (#140c0d) so the border gradient shows only as the edge. Scoped
      under .portal-root so it outranks the default tooltip utilities
      (bg-popover, text-sm, shadow-md, ...) that TooltipContent also applies. */
   .portal-root .portal-tooltip {
     @apply flex flex-col gap-0.5 rounded-lg px-3 py-1.5 text-xs;
     color: rgb(255 255 255 / 0.72);
     background:
-      linear-gradient(color-mix(in srgb, var(--portal-a) 16%, var(--portal-surface, #0b0a14)), color-mix(in srgb, var(--portal-b) 10%, var(--portal-surface, #0b0a14))) padding-box,
+      linear-gradient(color-mix(in srgb, var(--portal-a) 16%, #140c0d), color-mix(in srgb, var(--portal-b) 10%, #140c0d)) padding-box,
       linear-gradient(90deg, var(--portal-a), var(--portal-b)) border-box;
     border: 1px solid transparent;
     backdrop-filter: blur(12px);
