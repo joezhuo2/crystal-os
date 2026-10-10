@@ -25,7 +25,8 @@ describe("Settings search", () => {
     expect(section("performance").hidden).toBe(false);
     expect(expanded("performance")).toBe("true");
     expect(section("atmosphere").hidden).toBe(true);
-    expect(section("portal").hidden).toBe(true);
+    // The Portal's only setting was its theme, which is gone.
+    expect(section("portal")).toBeNull();
 
     // Unfolding for a search is not saved as the user's choice.
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "" } });
@@ -38,6 +39,12 @@ describe("Settings search", () => {
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "aurora" } });
     expect(section("atmosphere").hidden).toBe(false);
     expect(section("performance").hidden).toBe(true);
+  });
+
+  it("still finds the Portal's unload delay under Performance", () => {
+    render(<SettingsPage />);
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "portal" } });
+    expect(section("performance").hidden).toBe(false);
   });
 
   it("says so when nothing matches", () => {
