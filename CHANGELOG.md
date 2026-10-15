@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.8] - 2026-10-15 - Tasks on the Horizon.
+
+### Added
+
+- **Engine tasks show as dots in the Horizon's month grid** (issue #16). Each open, awake top-level task that falls on a day (repeats included) gets its own dot, coloured by priority: red urgent, orange high, yellow medium, grey low. Task and event dots are ordered together by start time, with all-day and carried-over entries first, instead of tasks sitting at the end. Tasks are not listed in the Home "Today on the Horizon" card, which stays events only (`horizonDots.ts`, `CalendarPage.tsx`).
+
 ## [v0.11.7] - 2026-10-15 - Auto-update location.
 
 ### Added
