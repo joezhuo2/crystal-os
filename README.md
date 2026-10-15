@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-863%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.11.8-6366F1)
+![Version](https://img.shields.io/badge/version-0.11.9-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.11.8** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.11.9** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -731,12 +731,16 @@ Or let CI do steps 1 to 3: bump the version in `package.json`, `src-tauri/Cargo.
 - **Web build.** Browsers refuse to embed these sites in another page, so there the Portal keeps your app list and opens each app in a new tab.
 - The app pages draw above Crystal OS's own UI, so menus and dialogs (such as the pill right-click menu or tray **Quick Add**) hide the app while they are open. A still picture of the page stays in its place behind them. The pages get no access to Crystal OS commands. The view talks to Rust through the `portal_*` commands in `src/lib/portalNative.ts`.
 
-**Performance.** **Settings → Performance** has two controls.
+**Performance.** **Settings → Performance** has a master switch, four switches that can each be set alone, and a Portal setting. All apply at once and are saved in `localStorage`.
 
-- **Performance mode** (off by default, applies at once). No view is fetched ahead: each loads the first time you open it. Without it, the three views you open most (counted in `localStorage`, `crystal-os:tab-visits`; Engine and Horizon on a fresh install) are fetched one at a time at the first idle moment after Home has settled. Data those views fetched is dropped after one minute unused instead of five; each query keeps its own `staleTime`, so a view reopened within the minute shows its data without refetching. Page transitions, CSS animations and the canvas backdrops are turned off (loading spinners keep turning). The Nebula, Terminal and Portal pages are lazy chunks like the rest; the work they keep running in the background lives in their stores and in Rust, which load with the app.
+- **Performance mode** (off by default) turns all four switches below on or off together. It reads as on only while every one of them is on, so changing one on its own turns it off. A browser that saved the old single flag keeps its behaviour: all four start on.
+- **Load views on demand**. No view is fetched ahead: each loads the first time you open it. Off, the three views you open most (counted in `localStorage`, `crystal-os:tab-visits`; Engine and Horizon on a fresh install) are fetched one at a time at the first idle moment after Home has settled. The Nebula, Terminal and Portal pages are lazy chunks like the rest; the work they keep running in the background lives in their stores and in Rust, which load with the app.
+- **Free cached data sooner**. Data no view is using is dropped after the time chosen in **Free cached data after** (1 to 60 minutes, 1 by default) instead of five. Each query keeps its own `staleTime`, so a view reopened in time shows its data without refetching.
+- **Reduce transitions**. Page transitions and CSS animations jump to their end state (loading spinners and the small `data-smooth` controls keep moving). The page backdrops are not touched by this switch.
+- **Still backdrops**. The backdrops behind every page (stars, aurora, rain, nebula, terminal static, sparkles, and the image backdrops' animation) hold one frame. Work the Nebula, Terminal and Portal do in the background is never paused by it.
 - **Portal unload delay** (desktop), in seconds: see **Keep loaded in background** above.
 
-Whether or not performance mode is on, hiding the window to the tray or minimising it now stops the backdrop animation loops, freezes CSS animations, and pauses polling (weather refresh, calendar and vault refetches); stale data refetches when the window comes back. Closing the window with its **×** now goes through the same path as the tray and hotkey, so it also trims memory.
+Whatever the switches say, hiding the window to the tray or minimising it now stops the backdrop animation loops, freezes CSS animations, and pauses polling (weather refresh, calendar and vault refetches); stale data refetches when the window comes back. Closing the window with its **×** now goes through the same path as the tray and hotkey, so it also trims memory.
 
 **Global hotkeys.** Three combos work from any app:
 

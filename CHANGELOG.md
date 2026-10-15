@@ -5,6 +5,16 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.9] - 2026-10-15 - Performance settings.
+
+### Added
+
+- **Performance settings you can set one by one** (issue #14). **Settings → Performance** keeps the **Performance mode** master switch, which now turns four switches on or off together, and adds each of them on its own: **Load views on demand** (no views fetched ahead), **Free cached data sooner** with **Free cached data after** (1 to 60 minutes, 1 by default; five minutes when off), **Reduce transitions** (page transitions and CSS animations) and **Still backdrops** (every page backdrop holds one frame). The master reads as on only while all four are. A saved old performance-mode flag starts all four on. The Nebula, Terminal and Portal keep running in the background in every combination (`perfSettings.ts`, `appActivity.ts`, `backdropSlot.ts`, `viewLoader.ts`, `App.tsx`, `SettingsPage.tsx`, `index.css`).
+
+### Changed
+
+- **Reduce transitions no longer stops the backdrops.** Previously one flag stilled UI motion and backdrops together; backdrop CSS animation now follows **Still backdrops** only (`index.css`).
+
 ## [v0.11.8] - 2026-10-15 - Tasks on the Horizon.
 
 ### Added
