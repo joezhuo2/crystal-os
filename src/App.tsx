@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LazyMotion } from "framer-motion";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { shouldRetry } from "@/lib/apiRequest";
+import { useUpdateNotice } from "@/hooks/useUpdateNotice";
 import { perfSettings } from "@/lib/perfSettings";
 import { retimeCachedQueries } from "@/lib/queryCacheTime";
 import Index from "./pages/Index";
@@ -35,6 +36,11 @@ perfSettings.subscribe(applyCacheTime);
 // then `m` components render in their final state.
 const loadMotionFeatures = () => import("@/lib/motionFeatures").then((mod) => mod.default);
 
+const UpdateNotice = () => {
+  useUpdateNotice();
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -42,6 +48,7 @@ const App = () => (
         <LazyMotion features={loadMotionFeatures}>
           <Toaster />
           <Sonner />
+          <UpdateNotice />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
