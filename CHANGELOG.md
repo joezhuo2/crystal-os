@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.6] - 2026-10-15 - Themed location prompt.
+
+### Changed
+
+- **"Use my location" asked in the system's default pop-up, in the top-left corner** (issue #17). The picker's row now opens a dialog in The Atmosphere's sky colours, centred on the window, that pops in and out and explains what is read. **Use my location** in the dialog starts the lookup, and **Cancel** or Escape closes it. A failure (access off, timeout, outside Canada) shows in the dialog with **Try again**. In the desktop app, WebView2's own corner prompt is no longer shown: the page's request is answered once you confirm in the dialog (`LocationDialog.tsx`, `WeatherPage.tsx`, `index.css`, `portal/webview2.rs`). Windows location services must still be on.
+
 ## [v0.11.5] - 2026-10-15 - Archive quick-add theme fix.
 
 ### Fixed

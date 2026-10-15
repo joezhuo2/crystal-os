@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-863%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.11.5-6366F1)
+![Version](https://img.shields.io/badge/version-0.11.6-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.11.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.11.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -390,7 +390,7 @@ The weather tab draws a Living Sky behind its panels (`src/components/layout/Atm
 - **Background image.** By default a misty forest lake (`src/assets/atmosphere-backdrop.webp`), loaded once there is no image of your own, so a saved image never flashes the default first. Choose a PNG or JPEG (up to 25 MB) in Settings to replace it, or remove yours to go back to the default. Your image is checked, scaled down to 2560 px on its longest side, and stored in IndexedDB on this device (`src/lib/atmosphereImage.ts`). The image is shown under frosted glass behind the page and the Home box; the sky becomes a light tint of the current phase over it, and the sun, moon, stars, aurora and weather draw on top.
 - **Image blur** (0–100%, default 50%). How much the glass frosts the image, up to a 40 px blur. The store bakes a blurred 1600 px copy on a canvas whenever the image or the setting changes (the slider commits on release), and the page shows that copy as a plain image. There is no live CSS blur and no blend mode on the aurora: together with the aurora's large moving layers, they could make the desktop WebView drop the photo on high-DPI screens.
 
-Both switches work together or apart; with both off you get the background image under the sky's tint for the time of day (the plain sky only if the image cannot load). The city picked on the page is shared with the Home box and the backdrop (`src/lib/atmosphereStore.ts`, same `crystal-os-weather-city` key as before). The picker searches every Environment Canada city page location by name or forecast region, and suggests the nine GTA-area cities before you type. **Use my location**, at the top of the picker, asks the system for a rough position (Windows Location on desktop, so location services must be on) and picks the nearest location within 100 km (`nearestCity` in `src/hooks/useWeather.ts`); the position is used once and never stored or sent. If access is off, the request times out, or you are outside Canada, the row says so and the city is left as it was. Every canvas pauses while the window is hidden, and performance mode or reduced motion shows a still frame with no lightning.
+Both switches work together or apart; with both off you get the background image under the sky's tint for the time of day (the plain sky only if the image cannot load). The city picked on the page is shared with the Home box and the backdrop (`src/lib/atmosphereStore.ts`, same `crystal-os-weather-city` key as before). The picker searches every Environment Canada city page location by name or forecast region, and suggests the nine GTA-area cities before you type. **Use my location**, at the top of the picker, opens a themed confirmation (centred, in the sky's colours) and then asks the system for a rough position (Windows Location on desktop, so location services must be on) and picks the nearest location within 100 km (`nearestCity` in `src/hooks/useWeather.ts`); the position is used once and never stored or sent. If access is off, the request times out, or you are outside Canada, the row says so and the city is left as it was. Every canvas pauses while the window is hidden, and performance mode or reduced motion shows a still frame with no lightning.
 
 **Air, UV and daylight.** Under the hourly and 7-day forecasts, The Atmosphere has four cards: Air Quality, UV Index, Sun & Moon and Wind Details.
 
