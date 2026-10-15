@@ -7,7 +7,8 @@
  * second with `app://visibility`, because a window hidden with `hide()` does
  * not always mark its document hidden.
  *
- * "Still" is reduced motion: the OS setting, or performance mode.
+ * "Still" is reduced motion: the OS setting, or the transitions switch.
+ * "Backdrop still" is the OS setting, or the backdrops switch.
  */
 
 import { useSyncExternalStore } from "react";
@@ -20,6 +21,7 @@ export const VISIBILITY_EVENT = "app://visibility";
 export interface AppActivity {
   visible: boolean;
   still: boolean;
+  backdropStill: boolean;
 }
 
 let windowShown = true;
@@ -31,7 +33,8 @@ const osReducedMotion = () =>
 function compute(): AppActivity {
   return {
     visible: windowShown && (typeof document === "undefined" || !document.hidden),
-    still: osReducedMotion() || perfSettings.getState().performanceMode,
+    still: osReducedMotion() || perfSettings.getState().reduceTransitions,
+    backdropStill: osReducedMotion() || perfSettings.getState().stillBackdrops,
   };
 }
 
@@ -39,7 +42,7 @@ let state = compute();
 
 function update() {
   const next = compute();
-  if (next.visible === state.visible && next.still === state.still) return;
+  if (next.visible === state.visible && next.still === state.still && next.backdropStill === state.backdropStill) return;
   state = next;
   listeners.forEach((l) => l());
 }
@@ -67,7 +70,7 @@ let started = false;
 
 /**
  * Starts tracking, once. Also:
- * - puts `app-hidden` / `perf-still` on <html>, which pause or stop CSS
+ * - puts `app-hidden` / `perf-still` / `perf-backdrop-still` on <html>, which pause or stop CSS
  *   animations (index.css);
  * - tells React Query the app is unfocused while hidden, which stops
  *   `refetchInterval` polling and refetches stale data on return.
@@ -79,7 +82,8 @@ export function startAppActivity() {
   const root = document.documentElement;
   const apply = () => {
     root.classList.toggle("app-hidden", !state.visible);
-    root.classList.toggle("perf-still", perfSettings.getState().performanceMode);
+    root.classList.toggle("perf-still", perfSettings.getState().reduceTransitions);
+    root.classList.toggle("perf-backdrop-still", perfSettings.getState().stillBackdrops);
   };
   appActivity.subscribe(apply);
   perfSettings.subscribe(() => {

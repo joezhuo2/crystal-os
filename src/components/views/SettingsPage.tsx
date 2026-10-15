@@ -13,7 +13,7 @@ import { useGlobalHotkeys } from "@/hooks/useGlobalHotkey";
 import { usePickVault, useVaultStatus } from "@/hooks/useVault";
 import { HOTKEY_COPY, formatAccelerator, paletteShortcutLabel, type HotkeyAction } from "@/lib/hotkey";
 import { isDesktop } from "@/lib/platform";
-import { MAX_UNLOAD_DELAY, perfSettings, usePerfSettings } from "@/lib/perfSettings";
+import { MAX_CACHE_MINUTES, MAX_UNLOAD_DELAY, perfSettings, usePerfSettings } from "@/lib/perfSettings";
 import { atmosphere, useAtmosphere } from "@/lib/atmosphereStore";
 import { IMAGE_TYPES } from "@/lib/atmosphereImage";
 import { buildDiagnosticsReport } from "@/lib/diagnostics";
@@ -299,14 +299,27 @@ function ImageBlurSlider({ value }: { value: number }) {
 }
 
 /**
- * Seconds before a Portal app with "Keep loaded" off is closed. Typed freely
- * and saved (clamped) on blur or Enter, so a half-typed number is not cut
- * short.
+ * A whole number typed freely and saved (clamped by the store) on blur or
+ * Enter, so a half-typed number is not cut short.
  */
-function UnloadDelayInput({ value }: { value: number }) {
+function NumberInput({
+  value,
+  min,
+  max,
+  unit,
+  label,
+  onCommit,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  unit: string;
+  label: string;
+  onCommit: (draft: string) => void;
+}) {
   const [draft, setDraft] = useState<string | null>(null);
   const commit = () => {
-    if (draft !== null) perfSettings.setUnloadDelay(draft);
+    if (draft !== null) onCommit(draft);
     setDraft(null);
   };
   return (
@@ -314,8 +327,8 @@ function UnloadDelayInput({ value }: { value: number }) {
       <Input
         type="number"
         inputMode="numeric"
-        min={0}
-        max={MAX_UNLOAD_DELAY}
+        min={min}
+        max={max}
         step={1}
         value={draft ?? String(value)}
         onChange={(e) => setDraft(e.target.value)}
@@ -325,9 +338,9 @@ function UnloadDelayInput({ value }: { value: number }) {
           if (e.key === "Escape") setDraft(null);
         }}
         className="h-8 w-24 text-right"
-        aria-label="Unload delay in seconds"
+        aria-label={label}
       />
-      <span className="text-xs text-muted-foreground">seconds</span>
+      <span className="text-xs text-muted-foreground">{unit}</span>
     </div>
   );
 }
@@ -665,16 +678,62 @@ export default function SettingsPage() {
         <Section id="performance" icon={Gauge} title="Performance">
           <Row
             title="Performance mode"
-            description="Loads Pulse, Engine, Horizon, Vault, Atmosphere, Archive and Settings only when you first open them, frees their cached data after a minute unused, and turns off transitions and backdrop animation. The Nebula, Terminal and Portal keep running in the background as usual."
+            description="Turns all four switches below on or off together. It shows as on only while every one of them is on; change any of them on its own to fine-tune. The Nebula, Terminal and Portal keep running in the background as usual."
           >
             <Switch checked={perf.performanceMode} onCheckedChange={perfSettings.setPerformanceMode} />
+          </Row>
+          <Row
+            title="Load views on demand"
+            description="Pulse, Engine, Horizon, Vault, Atmosphere, Archive and Settings load the first time you open them. Off fetches the three you open most in the background after startup."
+          >
+            <Switch checked={perf.lazyViews} onCheckedChange={(on) => perfSettings.setSwitch("lazyViews", on)} />
+          </Row>
+          <Row
+            title="Free cached data sooner"
+            description="Data no page is using is dropped after the time below instead of five minutes. A page reopened within that time shows its data at once; later it loads again."
+          >
+            <Switch checked={perf.freeCache} onCheckedChange={(on) => perfSettings.setSwitch("freeCache", on)} />
+          </Row>
+          {perf.freeCache && (
+            <Row
+              title="Free cached data after"
+              description={`How long unused data is kept before it is freed, from 1 to ${MAX_CACHE_MINUTES} minutes.`}
+            >
+              <NumberInput
+                value={perf.cacheMinutes}
+                min={1}
+                max={MAX_CACHE_MINUTES}
+                unit="minutes"
+                label="Cached data lifetime in minutes"
+                onCommit={perfSettings.setCacheMinutes}
+              />
+            </Row>
+          )}
+          <Row
+            title="Reduce transitions"
+            description="Page transitions and animations jump straight to their end state. Loading spinners, switches and sliders keep moving. Backdrops have their own switch."
+          >
+            <Switch checked={perf.reduceTransitions} onCheckedChange={(on) => perfSettings.setSwitch("reduceTransitions", on)} />
+          </Row>
+          <Row
+            title="Still backdrops"
+            description="The backdrops behind every page (stars, aurora, rain, nebula, terminal static, sparkles) hold one frame instead of animating, which also takes the load off the GPU. Nothing running in the Nebula, Terminal or Portal is affected."
+          >
+            <Switch checked={perf.stillBackdrops} onCheckedChange={(on) => perfSettings.setSwitch("stillBackdrops", on)} />
           </Row>
           {desktop && (
             <Row
               title="Portal unload delay"
               description={`How long a Portal app with "Keep loaded in background" turned off (right-click its tab) can stay hidden before it is closed to free memory. 0 closes it as soon as you switch away. Up to ${MAX_UNLOAD_DELAY} seconds.`}
             >
-              <UnloadDelayInput value={perf.unloadDelay} />
+              <NumberInput
+                value={perf.unloadDelay}
+                min={0}
+                max={MAX_UNLOAD_DELAY}
+                unit="seconds"
+                label="Unload delay in seconds"
+                onCommit={perfSettings.setUnloadDelay}
+              />
             </Row>
           )}
         </Section>

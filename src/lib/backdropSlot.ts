@@ -15,11 +15,12 @@ export function useBackdropActive(): boolean {
 }
 
 /**
- * `useAppActivity().still`, plus still while the backdrop is hidden, so its
- * loops stop without unmounting. Outside a BackdropSlot it is plain `still`.
+ * `useAppActivity().backdropStill`, plus still while the backdrop is hidden,
+ * so its loops stop without unmounting. Outside a BackdropSlot it is plain
+ * `backdropStill`.
  */
 export function useBackdropStill(): boolean {
-  const { still } = useAppActivity();
+  const { backdropStill } = useAppActivity();
   const active = useBackdropActive();
-  return still || !active;
+  return backdropStill || !active;
 }

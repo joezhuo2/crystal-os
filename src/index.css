@@ -1147,7 +1147,7 @@
     --glass-card-blur: blur(6px);
   }
 
-  html.perf-still .obsidian-root main {
+  html.perf-backdrop-still .obsidian-root main {
     --glass-card-blur: blur(12px);
   }
 
@@ -1488,10 +1488,12 @@
     animation-play-state: paused;
   }
 
-  /* Performance mode ends every animation on its last frame, which for a
+  /* Stilling animations ends each on its last frame, which for a
      twinkle is invisible. Hold the sparkles lit instead. */
   html.perf-still .obsidian-sparkle::before,
-  html.perf-still .obsidian-sparkle::after {
+  html.perf-still .obsidian-sparkle::after,
+  html.perf-backdrop-still .obsidian-sparkle::before,
+  html.perf-backdrop-still .obsidian-sparkle::after {
     animation: none;
     opacity: 0.8;
   }
@@ -1639,7 +1641,7 @@
     --glass-card-blur: blur(6px) saturate(1.2);
   }
 
-  html.perf-still .atmosphere-root main {
+  html.perf-backdrop-still .atmosphere-root main {
     --glass-card-blur: blur(14px) saturate(1.2);
   }
 
@@ -4197,14 +4199,24 @@ html.app-hidden *::after {
   animation-play-state: paused !important;
 }
 
-/* Performance mode: animations jump to their end state and transitions are
-   instant. Loading indicators (spin, pulse, the Portal's spinners) keep
+/* "Reduce transitions": animations jump to their end state and transitions are
+   instant, except in the page backdrops (the "Still backdrops" switch below). Loading indicators (spin, pulse, the Portal's spinners) keep
    moving so progress stays visible, and so do the small controls marked
    data-smooth (switches, sliders, collapsing Settings sections) and their
    direct children, whose short transitions cost next to nothing. */
-html.perf-still *:not(.animate-spin):not(.animate-pulse):not([class*="-spin"]):not([class*="spinner"]):not([data-smooth], [data-smooth] > *),
-html.perf-still *::before,
-html.perf-still *::after {
+html.perf-still *:not(.animate-spin):not(.animate-pulse):not([class*="-spin"]):not([class*="spinner"]):not([data-smooth], [data-smooth] > *):not(.backdrop-slot *),
+html.perf-still *:not(.backdrop-slot *)::before,
+html.perf-still *:not(.backdrop-slot *)::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* The "Still backdrops" switch: the page backdrops' own animations end on
+   their last frame (the JS canvas loops stop through useBackdropStill). */
+html.perf-backdrop-still .backdrop-slot *,
+html.perf-backdrop-still .backdrop-slot *::before,
+html.perf-backdrop-still .backdrop-slot *::after {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;

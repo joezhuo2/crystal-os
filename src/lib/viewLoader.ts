@@ -8,8 +8,8 @@
  *
  * After startup only the views you open most are fetched ahead of time, one
  * after another once the browser is idle, so they never compete with the first
- * render. In performance mode nothing is fetched ahead: a view loads the first
- * time it is opened.
+ * render. With "Load views on demand" on nothing is fetched ahead: a view loads
+ * the first time it is opened.
  */
 
 import { lazy, type ComponentType } from "react";
@@ -94,11 +94,11 @@ let preloaded = false;
 
 /**
  * Fetches the most visited views' chunks in the background, one at a time,
- * at the first idle moment after the current view has settled. Skipped in
- * performance mode.
+ * at the first idle moment after the current view has settled. Skipped when
+ * views load on demand.
  */
 export function preloadViews(current: TabId) {
-  if (preloaded || perfSettings.getState().performanceMode) return;
+  if (preloaded || perfSettings.getState().lazyViews) return;
   preloaded = true;
   const order = preloadOrder(current);
   const run = async () => {
