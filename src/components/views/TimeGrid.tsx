@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { parseRecurrence, type CalendarEvent } from "@/hooks/useGoogleCalendar";
+import type { Task } from "@/contexts/AppContext";
+import { taskColor, tasksForDate } from "@/lib/horizonDots";
 import { toLocalDateStr } from "@/lib/utils";
 import { MINUTES_PER_DAY, fromMinutes, layoutDay, snapMinutes } from "@/lib/timeGrid";
 
@@ -78,6 +80,7 @@ function useNowMinutes(): number {
 export default function TimeGrid({
   dates,
   events,
+  tasks = [],
   color,
   tipColors,
   onCreateAt,
@@ -89,6 +92,7 @@ export default function TimeGrid({
   header?: ReactNode;
   dates: string[];
   events: CalendarEvent[];
+  tasks?: Task[];
   color: string;
   /** Gradient stops for the hover card; defaults to the event colour. */
   tipColors?: [string, string];
@@ -103,10 +107,20 @@ export default function TimeGrid({
   const tip = tipColors ?? [color, color];
 
   const days = useMemo(
-    () => dates.map((date) => ({ date, ...layoutDay(events, date) })),
-    [dates, events],
+    () =>
+      dates.map((date) => {
+        const dayTasks = tasksForDate(tasks, date);
+        const untimed = (t: Task) => t.startDate < date || !t.startTime;
+        return {
+          date,
+          ...layoutDay(events, date),
+          allDayTasks: dayTasks.filter(untimed),
+          timedTasks: dayTasks.filter((t) => !untimed(t)),
+        };
+      }),
+    [dates, events, tasks],
   );
-  const hasAllDay = days.some((d) => d.allDay.length > 0);
+  const hasAllDay = days.some((d) => d.allDay.length > 0 || d.allDayTasks.length > 0);
   const showsToday = dates.includes(today);
 
   // Open on the working day, or an hour before now when today is in view.
@@ -157,7 +171,7 @@ export default function TimeGrid({
       {hasAllDay && (
         <div className="grid border-b border-white/5 pb-1 mb-1" style={{ gridTemplateColumns: columns }}>
           <span className="text-[10px] text-muted-foreground self-center pr-2 text-right">all day</span>
-          {days.map(({ date, allDay }) => (
+          {days.map(({ date, allDay, allDayTasks }) => (
             <div key={date} className="space-y-0.5 px-0.5 min-w-0">
               {allDay.map((event) => (
                 <GlassTip key={event.id} label={event.summary} hint="All day" detail={<EventDetail event={event} />} colors={tip}>
@@ -170,6 +184,19 @@ export default function TimeGrid({
                     {event.summary}
                   </button>
                 </GlassTip>
+              ))}
+              {allDayTasks.map((task) => (
+                <div
+                  key={`t-${task.id}`}
+                  title={`Task: ${task.name}`}
+                  className="w-full text-[11px] px-1.5 py-0.5 rounded truncate border-l-2"
+                  style={{
+                    borderColor: taskColor(task),
+                    background: `color-mix(in srgb, ${taskColor(task)} 18%, transparent)`,
+                  }}
+                >
+                  {task.name}
+                </div>
               ))}
             </div>
           ))}
@@ -192,7 +219,7 @@ export default function TimeGrid({
             ))}
           </div>
 
-          {days.map(({ date, timed }) => (
+          {days.map(({ date, timed, timedTasks }) => (
             <div
               key={date}
               data-date={date}
@@ -223,6 +250,24 @@ export default function TimeGrid({
                   <div className="absolute -left-1 -top-1 w-2 h-2 rounded-full bg-rose-400" />
                 </div>
               )}
+
+              {timedTasks.map((task) => {
+                const [h, m] = task.startTime.split(":").map(Number);
+                return (
+                  <div
+                    key={`t-${task.id}`}
+                    title={`Task: ${task.name} · ${shortTime(task.startTime)}`}
+                    className="absolute right-0.5 z-[5] w-[45%] h-5 px-1.5 rounded text-[11px] leading-5 truncate border-l-2 pointer-events-none"
+                    style={{
+                      top: (h * 60 + m) * PX_PER_MIN,
+                      borderColor: taskColor(task),
+                      background: `color-mix(in srgb, ${taskColor(task)} 30%, hsl(var(--background)))`,
+                    }}
+                  >
+                    {task.name}
+                  </div>
+                );
+              })}
 
               {timed.map(({ event, startMin, endMin, column, columns: lanes }) => {
                 const height = (endMin - startMin) * PX_PER_MIN;

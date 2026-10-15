@@ -60,7 +60,7 @@ import {
 } from "@/hooks/useGoogleCalendar";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useTasks, type Task } from "@/contexts/AppContext";
-import { dotsForDate } from "@/lib/horizonDots";
+import { dotsForDate, taskColor, tasksForDate } from "@/lib/horizonDots";
 import { awakeTasks } from "@/lib/snooze";
 import { splitByParent } from "@/lib/subtasks";
 import { useToday } from "@/hooks/useToday";
@@ -266,6 +266,30 @@ function EventRow({
   );
 }
 
+function taskTimeLabel(task: Task, date: string): string {
+  if (task.startDate < date || !task.startTime) return "All day";
+  return task.endTime && task.endDate === task.startDate
+    ? `${formatTime(task.startTime)} – ${formatTime(task.endTime)}`
+    : formatTime(task.startTime);
+}
+
+function TaskRow({ task, date }: { task: Task; date: string }) {
+  return (
+    <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/30">
+      <div
+        className="w-1 self-stretch min-h-[2rem] rounded-full shrink-0"
+        style={{ background: taskColor(task) }}
+      />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{task.name}</p>
+        <p className="text-[10px] text-muted-foreground">
+          Task · {taskTimeLabel(task, date)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ── month grid ── */
 
 /**
@@ -466,26 +490,40 @@ function MonthDays({
 
 function AgendaList({
   events,
+  tasks,
   color,
   onEdit,
   onDelete,
 }: {
   events: CalendarEvent[];
+  tasks: Task[];
   color: string;
   onEdit: (event: CalendarEvent) => void;
   onDelete: (event: CalendarEvent) => void;
 }) {
   const groups = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>();
+    const map = new Map<string, { events: CalendarEvent[]; tasks: Task[] }>();
+    const slot = (date: string) => {
+      let entry = map.get(date);
+      if (!entry) {
+        entry = { events: [], tasks: [] };
+        map.set(date, entry);
+      }
+      return entry;
+    };
     for (const event of [...events].sort((a, b) =>
       a.startISO.localeCompare(b.startISO),
     )) {
-      const list = map.get(event.startDate) ?? [];
-      list.push(event);
-      map.set(event.startDate, list);
+      slot(event.startDate).events.push(event);
     }
-    return [...map.entries()];
-  }, [events]);
+    const first = toLocalDateStr();
+    for (let i = 0; i < AGENDA_DAYS; i++) {
+      const date = addDays(first, i);
+      const day = tasksForDate(tasks, date);
+      if (day.length > 0) slot(date).tasks = day;
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [events, tasks]);
 
   if (groups.length === 0) {
     return (
@@ -499,13 +537,13 @@ function AgendaList({
 
   return (
     <div className="space-y-3">
-      {groups.map(([dateStr, dayEvents]) => (
+      {groups.map(([dateStr, day]) => (
         <div key={dateStr} className="glass-card p-5">
           <p className="text-xs text-muted-foreground uppercase tracking-widest mb-3">
             {formatDayHeading(dateStr)}
           </p>
           <div className="space-y-2">
-            {dayEvents.map((event) => (
+            {day.events.map((event) => (
               <EventRow
                 key={event.id}
                 event={event}
@@ -513,6 +551,9 @@ function AgendaList({
                 onEdit={() => onEdit(event)}
                 onDelete={() => onDelete(event)}
               />
+            ))}
+            {day.tasks.map((task) => (
+              <TaskRow key={`t-${task.id}`} task={task} date={dateStr} />
             ))}
           </div>
         </div>
@@ -526,6 +567,7 @@ function AgendaList({
 function DayPanel({
   date,
   events,
+  tasks,
   color,
   onClose,
   onCreate,
@@ -534,6 +576,7 @@ function DayPanel({
 }: {
   date: string;
   events: CalendarEvent[];
+  tasks: Task[];
   color: string;
   onClose: () => void;
   onCreate: () => void;
@@ -543,6 +586,7 @@ function DayPanel({
   const dayEvents = events
     .filter((e) => eventFallsOnDate(e, date))
     .sort((a, b) => a.startISO.localeCompare(b.startISO));
+  const dayTasks = tasksForDate(tasks, date);
   useEscapeKey(onClose);
 
   return (
@@ -572,6 +616,8 @@ function DayPanel({
             <p className="text-lg font-semibold">{formatDayHeading(date)}</p>
             <p className="text-xs text-muted-foreground">
               {dayEvents.length} {dayEvents.length === 1 ? "event" : "events"}
+              {dayTasks.length > 0 &&
+                ` · ${dayTasks.length} ${dayTasks.length === 1 ? "task" : "tasks"}`}
             </p>
           </div>
           <button
@@ -582,7 +628,7 @@ function DayPanel({
           </button>
         </div>
 
-        {dayEvents.length === 0 ? (
+        {dayEvents.length === 0 && dayTasks.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">
             No events scheduled
           </p>
@@ -596,6 +642,9 @@ function DayPanel({
                 onEdit={() => onEdit(event)}
                 onDelete={() => onDelete(event)}
               />
+            ))}
+            {dayTasks.map((task) => (
+              <TaskRow key={`t-${task.id}`} task={task} date={date} />
             ))}
           </div>
         )}
@@ -1379,6 +1428,7 @@ export default function CalendarPage() {
             <TimeGrid
               dates={gridDates}
               events={events}
+              tasks={tasks}
               color={color}
               tipColors={HORIZON_TIP}
               onCreateAt={openCreate}
@@ -1415,6 +1465,7 @@ export default function CalendarPage() {
           ) : (
             <AgendaList
               events={events}
+              tasks={tasks}
               color={color}
               onEdit={openEdit}
               onDelete={setDeleteTarget}
@@ -1428,6 +1479,7 @@ export default function CalendarPage() {
           <DayPanel
             date={selectedDay}
             events={events}
+            tasks={tasks}
             color={color}
             onClose={() => setSelectedDay(null)}
             onCreate={() => openCreate(selectedDay)}
