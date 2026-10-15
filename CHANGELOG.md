@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.12] - 2026-10-15 - Horizon motion and dragging.
+
+### Added
+
+- **Horizon cards can be dragged** (issue #19). In the week and day views, drag a timed, single-day event to another time or to another day's column. It snaps to 15 minutes, shows the new time (and day) while you drag, and keeps its length. A short press still opens the editor. A moved event shows an **Undo** toast for 5 s, and a repeating event moves only that occurrence. All-day, multi-day and touch input are not draggable (`TimeGrid.tsx`, `CalendarPage.tsx`, `timeGrid.ts`).
+- **Week and day views animate when paging** (issue #21). Going to another week or day slides the grid in from the side it came from, with a short fade. **Reduce transitions** in Settings → Performance (or performance mode) turns it off (`TimeGrid.tsx`).
+
 ## [v0.11.11] - 2026-10-15 - Tasks across the Horizon.
 
 ### Added
