@@ -36,7 +36,7 @@ describe("Settings search", () => {
 
   it("matches text inside a section, not just its title", () => {
     render(<SettingsPage />);
-    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "aurora" } });
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "weather effects" } });
     expect(section("atmosphere").hidden).toBe(false);
     expect(section("performance").hidden).toBe(true);
   });
@@ -68,7 +68,7 @@ describe("Jumping to a section from the command palette", () => {
       localStorage.setItem("crystal-os-settings-collapsed", JSON.stringify(["performance"]));
       Element.prototype.scrollIntoView = vi.fn();
       render(<SettingsPage />);
-      fireEvent.change(screen.getByRole("searchbox"), { target: { value: "aurora" } });
+      fireEvent.change(screen.getByRole("searchbox"), { target: { value: "weather effects" } });
       expect(section("performance").hidden).toBe(true);
 
       act(() => appUi.setSettingsSection("performance"));

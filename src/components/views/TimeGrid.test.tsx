@@ -61,4 +61,11 @@ describe("TimeGrid", () => {
     expect(screen.getByText("all day")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Holiday" })).toBeInTheDocument();
   });
+  it("lists date, location, repeat and description in the hover card, skipping empty ones", async () => {
+    const event = { ...base, location: "Room 4", description: "Daily sync", recurrence: ["RRULE:FREQ=WEEKLY"] };
+    render(<TimeGrid dates={["2026-09-30"]} events={[event]} color="#60a5fa" onEdit={() => {}} onCreateAt={() => {}} />);
+    fireEvent.focus(screen.getByRole("button", { name: /Standup/ }));
+    const tip = (await screen.findAllByRole("tooltip"))[0];
+    for (const text of ["Wed, Sep 30", "Room 4", "Weekly", "Daily sync"]) expect(tip).toHaveTextContent(text);
+  });
 });
