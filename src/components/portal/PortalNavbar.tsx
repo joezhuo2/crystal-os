@@ -185,7 +185,7 @@ export default function PortalNavbar({
                   </PortalTip>
                 </Reorder.Item>
               </ContextMenuTrigger>
-              <ContextMenuContent className="w-64">
+              <ContextMenuContent className="w-64" onFocusOutside={(e) => e.preventDefault()}>
                 {desktop && (
                   <>
                     <ContextMenuItem onSelect={() => onNavigate(app, "reload")}>
