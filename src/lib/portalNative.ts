@@ -86,12 +86,20 @@ export function snapshotAndHidePortal(onSnapshot: (url: string) => void) {
       console.warn("[portal] snapshot failed", err);
     }
     if (url) {
+      await decoded(url);
       onSnapshot(url);
       await nextPaint();
     }
     await invoke<void>("portal_hide");
     return url;
   });
+}
+
+/** Resolves once the picture is decoded, so it paints in full the moment it is shown. */
+function decoded(url: string) {
+  const image = new Image();
+  image.src = url;
+  return image.decode().catch(() => undefined);
 }
 
 /** Resolves once the browser has painted what was just rendered. */
