@@ -5,6 +5,16 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.10] - 2026-10-15 - Horizon hover info.
+
+### Added
+
+- **Event hover cards show more** (issue #20). Hovering an event in the Horizon's day and week grids (timed blocks and the all-day strip) now lists its date, location, repeat and description under the name and time, leaving out any the event does not have. Repeats read as Daily, Weekly, Monthly or Yearly, with the end date when set; an occurrence of a series whose rule is not loaded reads "Repeats". Long descriptions stop at four lines (`TimeGrid.tsx`).
+
+### Fixed
+
+- **Settings search tests broke on "aurora".** The Still backdrops description added in v0.11.9 also mentions aurora, so the Performance section matched. The tests now search "weather effects", which only the Atmosphere section has (`SettingsSearch.test.tsx`).
+
 ## [v0.11.9] - 2026-10-15 - Performance settings.
 
 ### Added

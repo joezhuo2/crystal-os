@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { GlassTip } from "@/components/ui/glass-tooltip";
-import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
+import { parseRecurrence, type CalendarEvent } from "@/hooks/useGoogleCalendar";
 import { toLocalDateStr } from "@/lib/utils";
 import { MINUTES_PER_DAY, fromMinutes, layoutDay, snapMinutes } from "@/lib/timeGrid";
 
@@ -20,6 +20,36 @@ function hourLabel(hour: number): string {
 function timeRange(event: CalendarEvent): string {
   if (!event.startTime) return "";
   return event.endTime ? `${shortTime(event.startTime)} – ${shortTime(event.endTime)}` : shortTime(event.startTime);
+}
+
+const dayLabel = (date: string) =>
+  new Date(`${date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+
+const REPEAT_LABEL = { DAILY: "Daily", WEEKLY: "Weekly", MONTHLY: "Monthly", YEARLY: "Yearly" } as const;
+
+function repeatLabel(event: CalendarEvent): string {
+  const { freq, until } = parseRecurrence(event.recurrence);
+  if (freq === "NONE") return event.recurringEventId ? "Repeats" : "";
+  return until ? `${REPEAT_LABEL[freq]} until ${dayLabel(until)}` : REPEAT_LABEL[freq];
+}
+
+/** Date, location, repeat and description, skipping whichever the event leaves empty. */
+function EventDetail({ event }: { event: CalendarEvent }) {
+  const date =
+    event.endDate && event.endDate !== event.startDate
+      ? `${dayLabel(event.startDate)} – ${dayLabel(event.endDate)}`
+      : dayLabel(event.startDate);
+  const rows = [date, event.location, repeatLabel(event)].filter(Boolean);
+  return (
+    <>
+      {rows.map((row) => (
+        <span key={row}>{row}</span>
+      ))}
+      {event.description && (
+        <span className="max-w-64 line-clamp-4 whitespace-pre-line break-words">{event.description}</span>
+      )}
+    </>
+  );
 }
 
 function shortTime(time: string): string {
@@ -130,7 +160,7 @@ export default function TimeGrid({
           {days.map(({ date, allDay }) => (
             <div key={date} className="space-y-0.5 px-0.5 min-w-0">
               {allDay.map((event) => (
-                <GlassTip key={event.id} label={event.summary} hint="All day" colors={tip}>
+                <GlassTip key={event.id} label={event.summary} hint="All day" detail={<EventDetail event={event} />} colors={tip}>
                   <button
                     type="button"
                     onClick={() => onEdit(event)}
@@ -197,7 +227,13 @@ export default function TimeGrid({
               {timed.map(({ event, startMin, endMin, column, columns: lanes }) => {
                 const height = (endMin - startMin) * PX_PER_MIN;
                 return (
-                  <GlassTip key={event.id} label={event.summary} hint={timeRange(event)} colors={tip}>
+                  <GlassTip
+                    key={event.id}
+                    label={event.summary}
+                    hint={timeRange(event)}
+                    detail={<EventDetail event={event} />}
+                    colors={tip}
+                  >
                     <button
                       type="button"
                       onClick={(e) => {
