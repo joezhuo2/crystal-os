@@ -133,11 +133,13 @@ export default function PortalPage() {
     if (occluders > 0) {
       // Native webviews draw over everything, so a menu or dialog needs the app
       // hidden. A picture of the page takes its place until it comes back.
-      snapshotAndHidePortal()
-        .then((url) => {
-          if (!url) return;
-          if (cancelled) URL.revokeObjectURL(url);
-          else replaceSnapshot({ id: active.id, url });
+      let taken: string | null = null;
+      snapshotAndHidePortal((url) => {
+        taken = url;
+        if (!cancelled) replaceSnapshot({ id: active.id, url });
+      })
+        .then(() => {
+          if (taken && cancelled && snapshotRef.current?.url !== taken) URL.revokeObjectURL(taken);
         })
         .catch(() => undefined);
       return () => {

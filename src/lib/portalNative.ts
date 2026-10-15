@@ -76,7 +76,7 @@ export function hidePortal() {
  * nothing to capture. Used when a menu or dialog opens over the Portal, so
  * the page stays visible behind it.
  */
-export function snapshotAndHidePortal() {
+export function snapshotAndHidePortal(onSnapshot: (url: string) => void) {
   return inOrder(async () => {
     let url: string | null = null;
     try {
@@ -85,8 +85,19 @@ export function snapshotAndHidePortal() {
     } catch (err) {
       console.warn("[portal] snapshot failed", err);
     }
+    if (url) {
+      onSnapshot(url);
+      await nextPaint();
+    }
     await invoke<void>("portal_hide");
     return url;
+  });
+}
+
+/** Resolves once the browser has painted what was just rendered. */
+function nextPaint() {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
   });
 }
 
