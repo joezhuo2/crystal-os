@@ -138,6 +138,7 @@ pub fn run() {
       hotkey::init(_app.handle());
       vault::init(_app.handle());
       autostart::init(_app.handle());
+      portal::allow_main_geolocation(_app.handle());
 
       // The window starts hidden (tauri.conf.json). The login entry keeps it
       // in the tray; any other launch shows it.

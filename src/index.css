@@ -1518,6 +1518,106 @@
     --glass-border: 195 100% 90%;
   }
 
+  .atmo-dialog {
+    --background: 222 60% 5%;
+    --primary: 190 90% 68%;
+    --foreground: 210 40% 96%;
+    --muted-foreground: 212 24% 74%;
+    --ring: 190 90% 60%;
+    border: 1px solid rgb(125 211 252 / 0.2);
+    border-radius: 1rem;
+    background: linear-gradient(160deg, rgb(15 23 42 / 0.92), rgb(2 6 23 / 0.95));
+    box-shadow:
+      0 16px 48px rgb(0 4 16 / 0.6),
+      0 0 40px rgb(45 212 191 / 0.1),
+      inset 0 1px 0 rgb(224 242 254 / 0.08);
+    backdrop-filter: blur(14px) saturate(1.2);
+    color: hsl(var(--foreground));
+  }
+
+  .atmo-dialog[data-state="open"] {
+    animation: atmo-pop-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .atmo-dialog[data-state="closed"] {
+    animation: atmo-pop-out 0.15s ease-in forwards;
+  }
+
+  .atmo-dialog-overlay {
+    background: rgb(2 6 23 / 0.6);
+  }
+
+  .atmo-dialog-overlay[data-state="open"] {
+    animation: atmo-fade-in 0.2s ease-out;
+  }
+
+  .atmo-dialog-overlay[data-state="closed"] {
+    animation: atmo-fade-out 0.15s ease-in forwards;
+  }
+
+  .atmo-dialog-icon {
+    background: rgb(45 212 191 / 0.12);
+  }
+
+  .atmo-dialog-btn {
+    border: 1px solid rgb(125 211 252 / 0.18);
+    background: rgb(255 255 255 / 0.04);
+  }
+
+  .atmo-dialog-btn:hover:not(:disabled) {
+    background: rgb(125 211 252 / 0.12);
+  }
+
+  .atmo-dialog-primary {
+    border: 1px solid rgb(125 211 252 / 0.4);
+    background: linear-gradient(135deg, rgb(45 212 191 / 0.3), rgb(56 189 248 / 0.3));
+    color: #e0f2fe;
+  }
+
+  .atmo-dialog-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgb(45 212 191 / 0.45), rgb(56 189 248 / 0.45));
+  }
+
+  @keyframes atmo-pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes atmo-pop-out {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+  }
+
+  @keyframes atmo-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes atmo-fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
   .atmosphere-title {
     background: linear-gradient(100deg, #a7f3d0, #7dd3fc 45%, #c4b5fd);
     -webkit-background-clip: text;

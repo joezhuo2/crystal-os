@@ -419,6 +419,19 @@ fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds, k
   Ok(webview)
 }
 
+/// Lets the main webview's "Use my location" request through without the
+/// system prompt (the page shows its own first). Windows only.
+pub fn allow_main_geolocation<R: Runtime>(app: &AppHandle<R>) {
+  #[cfg(windows)]
+  if let Some(main) = app.get_webview(MAIN) {
+    if let Err(err) = webview2::allow_geolocation(&main) {
+      log::warn!("[webview] could not answer location requests: {err}");
+    }
+  }
+  #[cfg(not(windows))]
+  let _ = app;
+}
+
 /// Gives keyboard focus to the app on screen, or to the main webview when no
 /// app is. Run after the window is shown.
 pub fn focus_content<R: Runtime>(app: &AppHandle<R>) {

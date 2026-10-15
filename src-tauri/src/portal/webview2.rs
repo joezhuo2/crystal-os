@@ -6,9 +6,10 @@ use tauri::{Emitter, EventTarget, Manager, Runtime, Webview};
 use webview2_com::Microsoft::Web::WebView2::Win32::{
   ICoreWebView2Controller, ICoreWebView2_19, COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_JPEG, COREWEBVIEW2_KEY_EVENT_KIND,
   COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW,
-  COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL, COREWEBVIEW2_PHYSICAL_KEY_STATUS,
+  COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL, COREWEBVIEW2_PERMISSION_KIND_GEOLOCATION,
+  COREWEBVIEW2_PERMISSION_STATE_ALLOW, COREWEBVIEW2_PHYSICAL_KEY_STATUS,
 };
-use webview2_com::{AcceleratorKeyPressedEventHandler, CapturePreviewCompletedHandler};
+use webview2_com::{AcceleratorKeyPressedEventHandler, CapturePreviewCompletedHandler, PermissionRequestedEventHandler};
 use windows::core::Interface;
 use windows::Win32::Foundation::HGLOBAL;
 use windows::Win32::System::Com::StructuredStorage::CreateStreamOnHGlobal;
@@ -120,6 +121,30 @@ pub fn forward_shortcuts<R: Runtime>(webview: &Webview<R>) -> Result<(), String>
       let mut token = 0i64;
       if let Err(err) = platform.controller().add_AcceleratorKeyPressed(&handler, &mut token) {
         log::warn!("[portal] could not forward shortcuts: {err}");
+      }
+    })
+    .map_err(|e| e.to_string())
+}
+
+/// Answers the page's location request without WebView2's own prompt, which
+/// opens in the window's top-left corner in the system theme. The page asks
+/// the user in its own themed dialog first (WeatherPage.tsx).
+pub fn allow_geolocation<R: Runtime>(webview: &Webview<R>) -> Result<(), String> {
+  webview
+    .with_webview(move |platform| unsafe {
+      let Ok(core) = platform.controller().CoreWebView2() else { return };
+      let handler = PermissionRequestedEventHandler::create(Box::new(|_, args| {
+        let Some(args) = args else { return Ok(()) };
+        let mut kind = Default::default();
+        args.PermissionKind(&mut kind)?;
+        if kind == COREWEBVIEW2_PERMISSION_KIND_GEOLOCATION {
+          args.SetState(COREWEBVIEW2_PERMISSION_STATE_ALLOW)?;
+        }
+        Ok(())
+      }));
+      let mut token = 0i64;
+      if let Err(err) = core.add_PermissionRequested(&handler, &mut token) {
+        log::warn!("[webview] could not answer location requests: {err}");
       }
     })
     .map_err(|e| e.to_string())
