@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.4] - 2026-10-15 - Hourly forecast scroll fix.
+
+### Fixed
+
+- **The mouse wheel did nothing over the hourly forecast cards in The Atmosphere** (issue #9). The two hourly rows were horizontal scrollers, so in the desktop app a wheel over a card was captured by the row instead of scrolling the page. The cards already shrink to fit, so the rows no longer scroll and the wheel reaches the page everywhere (`WeatherPage.tsx`).
+
 ## [v0.11.3] - 2026-10-15 - Update notice on launch.
 
 ### Added
