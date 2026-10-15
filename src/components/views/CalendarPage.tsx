@@ -59,6 +59,11 @@ import {
   useUpdateEvent,
 } from "@/hooks/useGoogleCalendar";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { useTasks, type Task } from "@/contexts/AppContext";
+import { dotsForDate } from "@/lib/horizonDots";
+import { awakeTasks } from "@/lib/snooze";
+import { splitByParent } from "@/lib/subtasks";
+import { useToday } from "@/hooks/useToday";
 
 const CALENDAR_STORAGE_KEY = "crystal-os-google-calendar";
 const VIEW_STORAGE_KEY = "crystal-os-horizon-view";
@@ -282,6 +287,7 @@ function MonthGrid({
   direction,
   cascade,
   events,
+  tasks,
   color,
   onPrev,
   onNext,
@@ -293,6 +299,7 @@ function MonthGrid({
   /** Pop the dots in cell by cell (the page's first load) instead of fading them. */
   cascade: boolean;
   events: CalendarEvent[];
+  tasks: Task[];
   color: string;
   onPrev: () => void;
   onNext: () => void;
@@ -357,6 +364,7 @@ function MonthGrid({
           <MonthDays
             currentDate={currentDate}
             events={events}
+            tasks={tasks}
             color={color}
             cascade={cascade}
             onSelectDay={onSelectDay}
@@ -370,12 +378,14 @@ function MonthGrid({
 function MonthDays({
   currentDate,
   events,
+  tasks,
   color,
   cascade,
   onSelectDay,
 }: {
   currentDate: Date;
   events: CalendarEvent[];
+  tasks: Task[];
   color: string;
   cascade: boolean;
   onSelectDay: (dateStr: string) => void;
@@ -396,15 +406,15 @@ function MonthDays({
   const getDateStr = (day: number) =>
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-  const countFor = (day: number) =>
-    events.filter((e) => eventFallsOnDate(e, getDateStr(day))).length;
+  const dotsFor = (day: number) => dotsForDate(getDateStr(day), events, tasks, color);
 
   return (
     <div className="grid grid-cols-7 gap-1">
       {days.map((day, i) => {
         if (day === null) return <div key={`empty-${i}`} />;
         const dateStr = getDateStr(day);
-        const count = countFor(day);
+        const dots = dotsFor(day);
+        const count = dots.length;
         const isToday = dateStr === today;
 
         return (
@@ -425,9 +435,9 @@ function MonthDays({
             {day}
             {count > 0 && (
               <div className="flex flex-wrap justify-center gap-1.5 mt-1 max-w-[64px]">
-                {Array.from({ length: Math.min(count, 15) }).map((_, j) => (
+                {dots.slice(0, 15).map((dot, j) => (
                   <div
-                    key={j}
+                    key={dot.key}
                     // The fade is marked data-smooth so it survives performance
                     // mode; the cascade is switched off there (index.css).
                     data-smooth={cascade ? undefined : ""}
@@ -436,8 +446,8 @@ function MonthDays({
                     }`}
                     style={
                       {
-                        background: color,
-                        boxShadow: `0 0 4px ${color}`,
+                        background: dot.color,
+                        boxShadow: `0 0 4px ${dot.color}`,
                         "--dot-delay": `${i * CASCADE_STEP_MS + j * 20}ms`,
                       } as React.CSSProperties
                     }
@@ -1171,6 +1181,12 @@ export default function CalendarPage() {
           return `${from} – ${to}, ${last.getFullYear()}`;
         })();
   const events = eventsQuery.data?.events ?? [];
+  const today = useToday();
+  const allTasks = useTasks();
+  const tasks = useMemo(
+    () => splitByParent(awakeTasks(allTasks, today)).top,
+    [allTasks, today],
+  );
 
   const activeCalendar = calendars.data?.calendars.find(
     (c) => c.id === calendarId,
@@ -1353,6 +1369,7 @@ export default function CalendarPage() {
               direction={direction}
               cascade={cascade}
               events={events}
+              tasks={tasks}
               color={color}
               onPrev={() => pageMonth(-1)}
               onNext={() => pageMonth(1)}
