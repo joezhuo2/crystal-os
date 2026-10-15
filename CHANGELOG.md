@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.3] - 2026-10-15 - Update notice on launch.
+
+### Added
+
+- **Crystal OS now tells you when a newer release is out** (issue #8). On every launch the desktop app runs the in-app update check in the background. If a newer version is published, a toast offers **Update now**, which downloads, verifies and installs it the same way **Settings → Install & update** does. Nothing shows when you are up to date or the check fails (`useUpdateNotice.ts`, `App.tsx`).
+
 ## [v0.11.2] - 2026-10-15 - Portal right-click menu fix.
 
 ### Fixed

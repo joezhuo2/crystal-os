@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-863%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.11.2-6366F1)
+![Version](https://img.shields.io/badge/version-0.11.3-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.11.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.11.3** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -695,6 +695,8 @@ Or let CI do steps 1 to 3: bump the version in `package.json`, `src-tauri/Cargo.
 **Settings.** The gear at the bottom of the sidebar opens **Settings**, which holds every desktop preference: all three global hotkeys, **Launch at login**, the vault folder, and **Install & update**. Each section's header folds it open and closed with a short height animation; which sections are folded is saved in `localStorage` (`crystal-os-settings-collapsed`). Switches, sliders and the fold animation are marked `data-smooth` and keep their short transitions in performance mode, which otherwise makes transitions instant. The palette's **Open Settings** row goes there too. Click the Crystal OS mark at the top of the sidebar to return to **The Pulse** (home) from any page.
 
 **Install & update.** The last panel in Settings keeps Crystal OS current without leaving the app.
+
+- **Update notice.** On every launch the desktop app runs the same check in the background. When a newer release exists, a toast offers **Update now**, which installs it as below; nothing shows when you are up to date or offline.
 
 - **Check for updates.** Asks the newest GitHub release for its `latest.json`. When it is newer than the running build, **Update to vX** downloads the installer, checks its signature against the updater public key, closes Crystal OS (stopping the sidecar, shells and agents first) and runs the installer in passive mode, which opens the app again when it finishes. An installer that fails the signature check is never run. Pre-releases are not offered here; download one below instead.
 
