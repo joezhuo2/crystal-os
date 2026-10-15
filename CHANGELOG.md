@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.11] - 2026-10-15 - Tasks across the Horizon.
+
+### Added
+
+- **Tasks show in every Horizon view** (issue #16). Open tasks now appear in the week and day grids (untimed ones in the all-day strip, timed ones at their start time), in the agenda grouped under their day, and under the card that opens when you click a date in the month view. Each is coloured by priority like its dot and labelled "Task" (`CalendarPage.tsx`, `TimeGrid.tsx`, `horizonDots.ts`).
+
 ## [v0.11.10] - 2026-10-15 - Horizon hover info.
 
 ### Added
