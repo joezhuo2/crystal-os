@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Update location on launch** (issue #15). A new switch in Settings → The Atmosphere, off by default. When on, the app reads your rough position once at the start of every launch and picks the nearest Environment Canada location within 100 km. It is silent: if access is off, the lookup fails or you are outside Canada, your chosen location stays. Turning it on also runs it once straight away (`useAutoLocate.ts`, `atmosphereStore.ts`, `SettingsPage.tsx`, `App.tsx`).
 
+### Fixed
+
+- **The v0.11.6 release build failed** (`inotify = "^0.11.0"` locked to 0.11.6, which does not exist). The version bump had also rewritten the `inotify` entry in `Cargo.lock`; it is back at 0.11.5 (`src-tauri/Cargo.lock`).
+
 ## [v0.11.6] - 2026-10-15 - Themed location prompt.
 
 ### Changed
