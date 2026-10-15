@@ -23,6 +23,7 @@ import {
 export const CITY_KEY = "crystal-os-weather-city";
 export const WEATHER_EFFECTS_KEY = "crystal-os-atmosphere-weather-effects";
 export const AURORA_KEY = "crystal-os-atmosphere-aurora";
+export const AUTO_LOCATE_KEY = "crystal-os-atmosphere-auto-locate";
 export const IMAGE_BLUR_KEY = "crystal-os-atmosphere-image-blur";
 
 export const DEFAULT_CITY = "on-85";
@@ -33,6 +34,8 @@ export interface AtmosphereSettings {
   weatherEffects: boolean;
   /** Aurora ribbons over a pine treeline, bending toward the cursor. */
   aurora: boolean;
+  /** Picks the nearest location once at the start of every launch. Off by default. */
+  autoLocate: boolean;
   /**
    * Object URL of the background as chosen (the user's own, else the bundled
    * default), for the Settings preview. Null until the default has loaded,
@@ -80,6 +83,7 @@ function load(): AtmosphereSettings {
     // Both on unless turned off.
     weatherEffects: read(WEATHER_EFFECTS_KEY) !== "0",
     aurora: read(AURORA_KEY) !== "0",
+    autoLocate: read(AUTO_LOCATE_KEY) === "1",
     imageUrl: null,
     customImage: false,
     backdropUrl: null,
@@ -204,6 +208,12 @@ export const atmosphere = {
     if (on === state.aurora) return;
     write(AURORA_KEY, on ? "1" : "0");
     set({ ...state, aurora: on });
+  },
+
+  setAutoLocate(on: boolean) {
+    if (on === state.autoLocate) return;
+    write(AUTO_LOCATE_KEY, on ? "1" : "0");
+    set({ ...state, autoLocate: on });
   },
 
   /** Sets the image blur (0–100) and re-bakes the blurred copy. */

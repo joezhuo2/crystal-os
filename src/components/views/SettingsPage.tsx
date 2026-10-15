@@ -641,6 +641,12 @@ export default function SettingsPage() {
             <Switch checked={sky.aurora} onCheckedChange={atmosphere.setAurora} />
           </Row>
           <Row
+            title="Update location on launch"
+            description="Once at the start of every launch, picks the nearest Environment Canada location to where you are. Your position is read once, not stored or sent anywhere. Needs Windows location services; if it cannot be found, your chosen location stays."
+          >
+            <Switch checked={sky.autoLocate} onCheckedChange={atmosphere.setAutoLocate} />
+          </Row>
+          <Row
             title="Background image"
             description="Shown behind the page and the Home box, under frosted glass, with the sky's tint and effects drawn over it. A misty forest lake by default; choose a PNG or JPEG of your own (stored on this device only), or remove yours to go back to the default."
           >

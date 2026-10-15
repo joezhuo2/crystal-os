@@ -7,6 +7,7 @@ import { LazyMotion } from "framer-motion";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { shouldRetry } from "@/lib/apiRequest";
 import { useUpdateNotice } from "@/hooks/useUpdateNotice";
+import { useAutoLocate } from "@/hooks/useAutoLocate";
 import { perfSettings } from "@/lib/perfSettings";
 import { retimeCachedQueries } from "@/lib/queryCacheTime";
 import Index from "./pages/Index";
@@ -38,6 +39,7 @@ const loadMotionFeatures = () => import("@/lib/motionFeatures").then((mod) => mo
 
 const UpdateNotice = () => {
   useUpdateNotice();
+  useAutoLocate();
   return null;
 };
 
