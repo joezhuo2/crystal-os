@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.2] - 2026-10-15 - Portal right-click menu fix.
+
+### Fixed
+
+- **Right-clicking an app pill in The Portal flashed its menu and closed it** (issue #7). Opening the menu hides the app's native webview, and the hand-off of keyboard focus to the main webview counted as a focus change outside the menu, so the menu dismissed itself. The pill menu now ignores focus moving outside it, and still closes on Escape, a click elsewhere or a choice (`PortalNavbar.tsx`).
+
 ## [v0.11.1] - 2026-10-15 - Calendar dropdown highlight fix.
 
 ### Fixed
