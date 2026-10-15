@@ -431,11 +431,11 @@ function HourlyForecastSection({ hourly }: { hourly: HourlyForecast[] }) {
     <div className="glass-card p-6 col-span-full">
       <p className="text-xs text-muted-foreground uppercase tracking-widest mb-4">Hourly Forecast</p>
       <div className="flex flex-col gap-2">
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+        <div className="flex gap-2">
           {row1.map((h, i) => renderHourCard(h, i))}
         </div>
         {row2.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+          <div className="flex gap-2">
             {row2.map((h, i) => renderHourCard(h, i + 12))}
           </div>
         )}
