@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.7] - 2026-10-15 - Auto-update location.
+
+### Added
+
+- **Update location on launch** (issue #15). A new switch in Settings → The Atmosphere, off by default. When on, the app reads your rough position once at the start of every launch and picks the nearest Environment Canada location within 100 km. It is silent: if access is off, the lookup fails or you are outside Canada, your chosen location stays. Turning it on also runs it once straight away (`useAutoLocate.ts`, `atmosphereStore.ts`, `SettingsPage.tsx`, `App.tsx`).
+
 ## [v0.11.6] - 2026-10-15 - Themed location prompt.
 
 ### Changed
