@@ -1115,7 +1115,8 @@
  * of those would cut the glass off from what sits behind it.
  * ------------------------------------------------------------------ */
 @layer components {
-  .obsidian-root {
+  .obsidian-root,
+  body.obsidian-theme {
     background: #06020d;
     --background: 270 60% 5%;
     --primary: 271 91% 72%;
