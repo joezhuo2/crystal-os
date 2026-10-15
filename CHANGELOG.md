@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.5] - 2026-10-15 - Archive quick-add theme fix.
+
+### Fixed
+
+- **The Quick Add to Vault popup ignored the Archive's theme** (issue #10). The dialog portals to `<body>`, outside the page root that carries the Archive's amethyst palette, so it rendered in the default colours. The palette now also applies to `body.obsidian-theme`, toggled while the Archive tab is active (`index.css`, `Index.tsx`).
+
 ## [v0.11.4] - 2026-10-15 - Hourly forecast scroll fix.
 
 ### Fixed
