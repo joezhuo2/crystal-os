@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.1] - 2026-10-15 - Calendar dropdown highlight fix.
+
+### Fixed
+
+- **Date pickers showed two highlights on a selected day.** The shared `Calendar` (`src/components/ui/calendar.tsx`) tinted the whole grid cell as a square and the day button inside it as a rounded square, so the selected day, and the day marked as today, drew both (issue #6, seen in The Engine's date selection). The cell no longer draws its own highlight, so only the rounded day button does.
+
 ## [v0.11.0] - 2026-10-10 - The Portal Reborn (Release Summary)
 
 *This release replaces The Portal's three themes with one look: a warm black hole, with a cream photon ring and a peach and dusty-rose disk, behind glass. The page, its sidebar, its popups and its box on Home all share it, and the theme setting is gone.*
