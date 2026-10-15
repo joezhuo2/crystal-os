@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Reorder } from "framer-motion";
 import { ArrowLeft, ArrowRight, ExternalLink, LogOut, Plus, RotateCw, Trash2 } from "lucide-react";
 import {
@@ -135,6 +135,19 @@ export default function PortalNavbar({
   onNotifyChange,
 }: PortalNavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const openedAt = useRef(0);
+  const justOpened = () => performance.now() - openedAt.current < 1500;
+  const onMenuOpenChange = (open: boolean) => {
+    if (open) openedAt.current = performance.now();
+    setMenuOpen(open);
+  };
+  const guard = (e: Event) => {
+    if (justOpened()) e.preventDefault();
+  };
+  const afterOpen = (run: () => void) => (e: Event) => {
+    if (justOpened()) e.preventDefault();
+    else run();
+  };
   usePortalOcclusion(menuOpen || confirm !== null);
 
   const active = apps.find((a) => a.id === activeId) ?? null;
@@ -160,7 +173,7 @@ export default function PortalNavbar({
           const isActive = desktop && app.id === activeId;
           const badge = badges[app.id];
           return (
-            <ContextMenu key={app.id} onOpenChange={setMenuOpen}>
+            <ContextMenu key={app.id} onOpenChange={onMenuOpenChange}>
               <ContextMenuTrigger asChild>
                 <Reorder.Item
                   as="li"
@@ -185,16 +198,19 @@ export default function PortalNavbar({
                   </PortalTip>
                 </Reorder.Item>
               </ContextMenuTrigger>
-              <ContextMenuContent className="w-64" onFocusOutside={(e) => e.preventDefault()}>
+              <ContextMenuContent className="w-64" onFocusOutside={(e) => e.preventDefault()}
+                onPointerDownOutside={guard}
+                onInteractOutside={guard}
+                onEscapeKeyDown={guard}>
                 {desktop && (
                   <>
-                    <ContextMenuItem onSelect={() => onNavigate(app, "reload")}>
+                    <ContextMenuItem onSelect={afterOpen(() => onNavigate(app, "reload"))}>
                       <RotateCw className="w-4 h-4 mr-2" /> Reload
                     </ContextMenuItem>
-                    <ContextMenuItem onSelect={() => onNavigate(app, "home")}>
+                    <ContextMenuItem onSelect={afterOpen(() => onNavigate(app, "home"))}>
                       <ArrowLeft className="w-4 h-4 mr-2" /> Back to home page
                     </ContextMenuItem>
-                    <ContextMenuItem onSelect={() => onOpenExternal(app)}>
+                    <ContextMenuItem onSelect={afterOpen(() => onOpenExternal(app))}>
                       <ExternalLink className="w-4 h-4 mr-2" /> Open in browser
                     </ContextMenuItem>
                     <ContextMenuSeparator />
@@ -226,13 +242,13 @@ export default function PortalNavbar({
                       Notify on new messages
                     </ContextMenuCheckboxItem>
                     <ContextMenuSeparator />
-                    <ContextMenuItem onSelect={() => onConfirmChange({ kind: "signout", app })}>
+                    <ContextMenuItem onSelect={afterOpen(() => onConfirmChange({ kind: "signout", app }))}>
                       <LogOut className="w-4 h-4 mr-2" /> Sign out…
                     </ContextMenuItem>
                   </>
                 )}
                 <ContextMenuItem
-                  onSelect={() => onConfirmChange({ kind: "remove", app })}
+                  onSelect={afterOpen(() => onConfirmChange({ kind: "remove", app }))}
                   className="text-destructive focus:text-destructive"
                 >
                   <Trash2 className="w-4 h-4 mr-2" /> Remove…
