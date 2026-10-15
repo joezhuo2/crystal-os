@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Right-clicking an app pill in The Portal flashed its menu and closed it** (issue #7). Opening the menu hides the app's native webview, and the hand-off of keyboard focus to the main webview counted as a focus change outside the menu, so the menu dismissed itself. The pill menu now ignores focus moving outside it, and still closes on Escape, a click elsewhere or a choice (`PortalNavbar.tsx`).
+- **Right-clicking an app pill in The Portal flashed its menu and closed it** (issue #7). Opening the menu hides the app's native webview, which blurs the window, and Radix closes a menu on window blur. The pill menu is now controlled and ignores a close in the first second after it opens; Escape, a click elsewhere and choosing an item close it as before (`PortalNavbar.tsx`).
 
 ## [v0.11.1] - 2026-10-15 - Calendar dropdown highlight fix.
 

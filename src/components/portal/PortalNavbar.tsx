@@ -134,21 +134,22 @@ export default function PortalNavbar({
   onKeepLoadedChange,
   onNotifyChange,
 }: PortalNavbarProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const openedAt = useRef(0);
-  const justOpened = () => performance.now() - openedAt.current < 1500;
-  const onMenuOpenChange = (open: boolean) => {
-    if (open) openedAt.current = performance.now();
-    setMenuOpen(open);
-  };
-  const guard = (e: Event) => {
-    if (justOpened()) e.preventDefault();
+  const justOpened = () => performance.now() - openedAt.current < 1000;
+  const changeMenu = (id: string, open: boolean) => {
+    if (open) {
+      openedAt.current = performance.now();
+      setOpenMenuId(id);
+    } else if (!justOpened()) {
+      setOpenMenuId((current) => (current === id ? null : current));
+    }
   };
   const afterOpen = (run: () => void) => (e: Event) => {
     if (justOpened()) e.preventDefault();
     else run();
   };
-  usePortalOcclusion(menuOpen || confirm !== null);
+  usePortalOcclusion(openMenuId !== null || confirm !== null);
 
   const active = apps.find((a) => a.id === activeId) ?? null;
 
@@ -173,7 +174,7 @@ export default function PortalNavbar({
           const isActive = desktop && app.id === activeId;
           const badge = badges[app.id];
           return (
-            <ContextMenu key={app.id} onOpenChange={onMenuOpenChange}>
+            <ContextMenu key={app.id} open={openMenuId === app.id} onOpenChange={(open) => changeMenu(app.id, open)}>
               <ContextMenuTrigger asChild>
                 <Reorder.Item
                   as="li"
@@ -198,10 +199,7 @@ export default function PortalNavbar({
                   </PortalTip>
                 </Reorder.Item>
               </ContextMenuTrigger>
-              <ContextMenuContent className="w-64" onFocusOutside={(e) => e.preventDefault()}
-                onPointerDownOutside={guard}
-                onInteractOutside={guard}
-                onEscapeKeyDown={guard}>
+              <ContextMenuContent className="w-64">
                 {desktop && (
                   <>
                     <ContextMenuItem onSelect={afterOpen(() => onNavigate(app, "reload"))}>
