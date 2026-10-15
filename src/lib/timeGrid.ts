@@ -98,3 +98,17 @@ export function layoutDay(
 export function snapMinutes(minutes: number, step = 30): number {
   return Math.max(0, Math.min(MINUTES_PER_DAY - step, Math.floor(minutes / step) * step));
 }
+
+/** Minutes a dragged block snaps to. */
+export const DRAG_STEP_MINUTES = 15;
+
+/**
+ * Where a block that started at `startMin` and lasts `durationMin` lands after
+ * being dragged `deltaMin` minutes: snapped to DRAG_STEP_MINUTES and kept
+ * within the day, so its end never passes 23:59.
+ */
+export function draggedStart(startMin: number, durationMin: number, deltaMin: number): number {
+  const latest = Math.max(0, MINUTES_PER_DAY - 1 - durationMin);
+  const snapped = Math.round((startMin + deltaMin) / DRAG_STEP_MINUTES) * DRAG_STEP_MINUTES;
+  return Math.max(0, Math.min(latest, snapped));
+}

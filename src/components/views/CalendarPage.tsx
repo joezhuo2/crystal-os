@@ -1249,6 +1249,29 @@ export default function CalendarPage() {
     setFormState({ open: true, event, date: event.startDate });
   };
   const closeForm = () => setFormState((s) => ({ ...s, open: false }));
+  const moveUpdate = useUpdateEvent();
+  const moveEvent = (event: CalendarEvent, date: string, startTime: string, endTime: string) => {
+    const before = eventInputOf(event, undefined);
+    if (!before) return;
+    const target = {
+      calendarId,
+      eventId: event.id,
+      scope: "single" as const,
+      recurringEventId: event.recurringEventId,
+    };
+    moveUpdate.mutate(
+      { ...target, input: { ...before, startDate: date, endDate: date, startTime, endTime } },
+      {
+        onSuccess: () =>
+          undoToast("Event moved", () => {
+            moveUpdate
+              .mutateAsync({ ...target, input: before })
+              .catch((err: Error) => toast.error("Could not undo the move", { description: err.message }));
+          }),
+        onError: (err) => toast.error("Could not move the event", { description: err.message }),
+      },
+    );
+  };
 
   // The command palette can request the create form from any tab; the request
   // lands here once this page mounts. Wait for the status query to settle so a
@@ -1433,6 +1456,7 @@ export default function CalendarPage() {
               tipColors={HORIZON_TIP}
               onCreateAt={openCreate}
               onEdit={openEdit}
+              onMoveEvent={moveEvent}
               onSelectDate={view === "week" ? openDay : undefined}
               header={
                 <div className="flex items-center justify-between gap-2 mb-3">

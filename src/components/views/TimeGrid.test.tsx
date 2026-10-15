@@ -8,6 +8,20 @@ import TimeGrid from "./TimeGrid";
 /** Event blocks carry a GlassTip, which needs the app's TooltipProvider. */
 const render = (ui: ReactElement) => rtlRender(<TooltipProvider>{ui}</TooltipProvider>);
 
+// jsdom has no PointerEvent, which would drop clientX/clientY from fireEvent.pointer*.
+if (!window.PointerEvent) {
+  class PointerEventShim extends MouseEvent {
+    pointerId: number;
+    pointerType: string;
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerId = init.pointerId ?? 0;
+      this.pointerType = init.pointerType ?? "mouse";
+    }
+  }
+  window.PointerEvent = PointerEventShim as unknown as typeof PointerEvent;
+}
+
 const base: CalendarEvent = {
   id: "e1",
   calendarId: "primary",
@@ -67,5 +81,41 @@ describe("TimeGrid", () => {
     fireEvent.focus(screen.getByRole("button", { name: /Standup/ }));
     const tip = (await screen.findAllByRole("tooltip"))[0];
     for (const text of ["Wed, Sep 30", "Room 4", "Weekly", "Daily sync"]) expect(tip).toHaveTextContent(text);
+  });
+
+  it("drags a timed event to a new time and does not open the editor", () => {
+    const onMoveEvent = vi.fn();
+    const onEdit = vi.fn();
+    render(
+      <TimeGrid
+        dates={["2026-09-30"]}
+        events={[base]}
+        color="#60a5fa"
+        onEdit={onEdit}
+        onCreateAt={() => {}}
+        onMoveEvent={onMoveEvent}
+      />,
+    );
+    const block = screen.getByRole("button", { name: /Standup/ });
+    fireEvent.pointerDown(block, { clientX: 10, clientY: 100, button: 0, pointerId: 1 });
+    fireEvent.pointerMove(block, { clientX: 10, clientY: 148, pointerId: 1 });
+    fireEvent.pointerUp(block, { clientX: 10, clientY: 148, pointerId: 1 });
+    fireEvent.click(block);
+    expect(onMoveEvent).toHaveBeenCalledWith(base, "2026-09-30", "10:00", "10:30");
+    expect(onEdit).not.toHaveBeenCalled();
+  });
+
+  it("treats a press without travel as a click", () => {
+    const onMoveEvent = vi.fn();
+    const onEdit = vi.fn();
+    render(
+      <TimeGrid dates={["2026-09-30"]} events={[base]} color="#60a5fa" onEdit={onEdit} onCreateAt={() => {}} onMoveEvent={onMoveEvent} />,
+    );
+    const block = screen.getByRole("button", { name: /Standup/ });
+    fireEvent.pointerDown(block, { clientX: 10, clientY: 100, button: 0, pointerId: 1 });
+    fireEvent.pointerUp(block, { clientX: 10, clientY: 100, pointerId: 1 });
+    fireEvent.click(block);
+    expect(onMoveEvent).not.toHaveBeenCalled();
+    expect(onEdit).toHaveBeenCalledWith(base);
   });
 });

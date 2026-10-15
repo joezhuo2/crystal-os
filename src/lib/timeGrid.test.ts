@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
-import { fromMinutes, layoutDay, snapMinutes, toMinutes, weekDates } from "./timeGrid";
+import { draggedStart, fromMinutes, layoutDay, snapMinutes, toMinutes, weekDates } from "./timeGrid";
 
 function event(id: string, start: string, end: string, extra: Partial<CalendarEvent> = {}): CalendarEvent {
   return {
@@ -91,5 +91,18 @@ describe("layoutDay", () => {
 
   it("gives very short events a clickable minimum height", () => {
     expect(lanes(DAY, event("blip", "09:00", "09:05"))[0][4]).toBe(560);
+  });
+});
+
+describe("draggedStart", () => {
+  it("snaps to 15 minutes", () => {
+    expect(draggedStart(540, 30, 7)).toBe(540);
+    expect(draggedStart(540, 30, 8)).toBe(555);
+    expect(draggedStart(540, 30, -20)).toBe(525);
+  });
+
+  it("stays inside the day", () => {
+    expect(draggedStart(30, 60, -500)).toBe(0);
+    expect(draggedStart(1300, 60, 500)).toBe(1439 - 60);
   });
 });
