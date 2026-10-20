@@ -277,7 +277,13 @@ export function initNotificationBridges(): () => void {
     // running focus session mutes the Portal altogether.
     if (alerts.length === 0 || !notifySettings.getState().portal || document.hasFocus()) return;
     if (selectFocusMuted(pomodoro.getState())) return;
-    for (const alert of alerts) void notify(alert);
+    // The Portal's own webview takes focus from this document, so an app open
+    // on screen is being watched: its own sends and reads are not news.
+    const watching = document.body.classList.contains("portal-theme") && document.visibilityState === "visible";
+    for (const alert of alerts) {
+      if (watching && alert.key === `portal:${next.activeId}`) continue;
+      void notify(alert);
+    }
   });
 
   return () => {
