@@ -146,6 +146,19 @@ export default function PortalNavbar({
       setOpenMenuId((current) => (current === id ? null : current));
     }
   };
+  // Escape closes the menu even inside the open guard, and even if focus was
+  // left behind with the hidden page rather than reaching Radix.
+  useEffect(() => {
+    if (openMenuId === null) return;
+    window.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      setOpenMenuId(null);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [openMenuId]);
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (!armed) return;

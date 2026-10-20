@@ -81,7 +81,19 @@ const NO_BADGES: Record<string, PortalBadge> = {};
 
 export default function PortalPage() {
   const desktop = isDesktop();
-  const { apps, activeId, badges, occluders } = usePortal();
+  const { apps, activeId, badges, occluders: liveOccluders } = usePortal();
+  // Overlays that close and reopen within a beat (a menu armed on right-press,
+  // then opened) keep the page hidden through the gap instead of flashing it.
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    if (liveOccluders > 0) {
+      setHeld(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setHeld(false), 150);
+    return () => window.clearTimeout(timer);
+  }, [liveOccluders]);
+  const occluders = liveOccluders > 0 ? liveOccluders : held ? 1 : 0;
   // A running focus session hides the unread badges; they keep updating
   // underneath and come back on pause, reset or the break.
   const focusMuted = useFocusMuted();
