@@ -1,4 +1,4 @@
-# Crystal OS
+<p align="center"><img src="docs/images/banner.png" alt="Crystal OS" width="100%"></p>
 
 > A personal productivity dashboard built with React, TypeScript, Supabase, your Google Calendar, and your Obsidian vault. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
