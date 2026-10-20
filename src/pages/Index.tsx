@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
 import { AppProvider } from "@/contexts/AppContext";
 import { appUi, useAppUi } from "@/lib/appUi";
 import { recordRecent } from "@/lib/recents";
@@ -39,7 +39,7 @@ const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["terminal", "portal", "nebula
 const KEPT_BACKDROPS = 2;
 
 /** Long enough for the view's first content (and a preloaded chunk) to fade in. */
-const VIEW_ENTER_MS = 600;
+const VIEW_ENTER_MS = 300;
 
 /**
  * Fades a newly opened view in. Opacity on this wrapper would cut off the
@@ -131,7 +131,8 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const { theme: nebulaTheme } = useHarness();
   const { still } = useAppActivity();
-  const View = views[activeTab];
+  const viewTab = useDeferredValue(activeTab);
+  const View = views[viewTab];
   useHomeHotkey(() => setActiveTab("home"));
 
   // Most recent backdrop tabs first. Updated during render, so the new tab's
@@ -260,7 +261,7 @@ const Index = () => {
         <main className="flex-1 min-h-0 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
           {/* The last view leaves at once and the next fades in. Keyed, so
               each switch mounts a fresh ViewEnter. */}
-          <ViewEnter key={activeTab} fade={!still}>
+          <ViewEnter key={viewTab} fade={!still}>
             <Suspense fallback={<ViewFallback />}>
               <View onNavigate={setActiveTab} />
             </Suspense>

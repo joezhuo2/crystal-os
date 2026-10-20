@@ -141,7 +141,7 @@ const SidebarButton = memo(function SidebarButton({
           layoutId="sidebar-active"
           className={`absolute inset-0 ${radius}`}
           style={activePillStyle[mode]}
-          transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+          transition={{ type: "spring", bounce: 0.2, duration: 0.3 }}
         />
       )}
       <span className="relative z-10 shrink-0">
@@ -337,7 +337,7 @@ export function BottomNav({ activeTab, onTabChange }: SidebarNavProps) {
               <m.div
                 layoutId="bottom-active"
                 className="absolute -top-0.5 w-8 h-0.5 rounded-full bg-primary"
-                transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+                transition={{ type: "spring", bounce: 0.2, duration: 0.3 }}
               />
             )}
             <span className="relative">
