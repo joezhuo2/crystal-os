@@ -5,6 +5,16 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.14] - 2026-10-20 - Snappier page changes.
+
+### Changed
+
+- **Every fade now runs at the same speed** (issue #23). Opening a page, its backdrop, the Engine List/Board switch, the Orbit period switch, the Horizon month/week/day switch and the Portal app switch all fade in 200 ms, so none feels slower than the others. The sidebar highlight glides in 300 ms instead of 500 ms (`index.css`, `TasksPage.tsx`, `OrbitPage.tsx`, `CalendarPage.tsx`, `Navigation.tsx`).
+
+### Fixed
+
+- **Sidebar highlight starts at once** (issue #23). Clicking a section now moves the highlight before the new page renders, so heavy pages (Nebula, Archive, Orbit) no longer hold it back (`Index.tsx`).
+
 ## [v0.11.13] - 2026-10-20 - Precise times and hourly repeats.
 
 ### Added
