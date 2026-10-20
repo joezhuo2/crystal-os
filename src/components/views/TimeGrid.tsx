@@ -48,12 +48,13 @@ function timeRange(event: CalendarEvent): string {
 const dayLabel = (date: string) =>
   new Date(`${date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
-const REPEAT_LABEL = { DAILY: "Daily", WEEKLY: "Weekly", MONTHLY: "Monthly", YEARLY: "Yearly" } as const;
+const REPEAT_LABEL = { HOURLY: "Hourly", DAILY: "Daily", WEEKLY: "Weekly", MONTHLY: "Monthly", YEARLY: "Yearly" } as const;
 
 function repeatLabel(event: CalendarEvent): string {
-  const { freq, until } = parseRecurrence(event.recurrence);
+  const { freq, until, interval } = parseRecurrence(event.recurrence);
   if (freq === "NONE") return event.recurringEventId ? "Repeats" : "";
-  return until ? `${REPEAT_LABEL[freq]} until ${dayLabel(until)}` : REPEAT_LABEL[freq];
+  const label = freq === "HOURLY" && interval > 1 ? `Every ${interval} hours` : REPEAT_LABEL[freq];
+  return until ? `${label} until ${dayLabel(until)}` : label;
 }
 
 /** Date, location, repeat and description, skipping whichever the event leaves empty. */

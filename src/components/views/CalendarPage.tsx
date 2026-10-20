@@ -719,6 +719,7 @@ function EventForm({
     endTime: editingEvent?.endTime || newEnd,
     freq: initialRecurrence.freq as RecurrenceFreq,
     until: initialRecurrence.until,
+    interval: initialRecurrence.interval,
   });
   const [scope, setScope] = useState<EventScope>("single");
   // An instance carries no RRULE of its own, so leaving recurrence untouched
@@ -741,7 +742,7 @@ function EventForm({
     const recurrence =
       !showRecurrence || (isSeriesInstance && !recurrenceTouched)
         ? undefined
-        : buildRecurrence(form.freq, form.until || undefined);
+        : buildRecurrence(form.allDay && form.freq === "HOURLY" ? "DAILY" : form.freq, form.until || undefined, form.interval);
 
     const input = {
       summary: form.summary,
@@ -964,6 +965,7 @@ function EventForm({
               }}
               options={[
                 { value: "NONE", label: "Does not repeat" },
+                ...(form.allDay ? [] : [{ value: "HOURLY", label: "Hourly" }]),
                 { value: "DAILY", label: "Daily" },
                 { value: "WEEKLY", label: "Weekly" },
                 { value: "MONTHLY", label: "Monthly" },
@@ -971,6 +973,24 @@ function EventForm({
               ]}
               className="flex-1"
             />
+            {form.freq === "HOURLY" && !form.allDay && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span>every</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={23}
+                  value={form.interval}
+                  aria-label="Hours between repeats"
+                  onChange={(e) => {
+                    setRecurrenceTouched(true);
+                    setForm((f) => ({ ...f, interval: Math.min(23, Math.max(1, parseInt(e.target.value) || 1)) }));
+                  }}
+                  className={`${FIELD_CLASS} w-16`}
+                />
+                <span>h</span>
+              </div>
+            )}
             {form.freq !== "NONE" && (
               <DateField
                 value={form.until}

@@ -52,7 +52,7 @@ export interface CalendarStatus {
   error?: string;
 }
 
-export type RecurrenceFreq = "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
+export type RecurrenceFreq = "NONE" | "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
 
 export interface EventInput {
   summary: string;
@@ -92,9 +92,11 @@ export function localTimeZone(): string {
 export function buildRecurrence(
   freq: RecurrenceFreq,
   until?: string,
+  interval = 1,
 ): string[] | null {
   if (freq === "NONE") return null;
   let rule = `RRULE:FREQ=${freq}`;
+  if (freq === "HOURLY" && interval > 1) rule += `;INTERVAL=${Math.floor(interval)}`;
   if (until) rule += `;UNTIL=${until.replace(/-/g, "")}T235959Z`;
   return [rule];
 }
@@ -103,18 +105,21 @@ export function buildRecurrence(
 export function parseRecurrence(recurrence: string[] | null): {
   freq: RecurrenceFreq;
   until: string;
+  interval: number;
 } {
   const rule = recurrence?.find((r) => r.startsWith("RRULE:"));
-  if (!rule) return { freq: "NONE", until: "" };
+  if (!rule) return { freq: "NONE", until: "", interval: 1 };
 
   const freq = (/FREQ=([A-Z]+)/.exec(rule)?.[1] ?? "NONE") as RecurrenceFreq;
   const until = /UNTIL=(\d{4})(\d{2})(\d{2})/.exec(rule);
+  const interval = Number(/INTERVAL=(\d+)/.exec(rule)?.[1]);
 
   return {
-    freq: ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"].includes(freq)
+    freq: ["HOURLY", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"].includes(freq)
       ? freq
       : "NONE",
     until: until ? `${until[1]}-${until[2]}-${until[3]}` : "",
+    interval: freq === "HOURLY" && interval > 0 ? interval : 1,
   };
 }
 
