@@ -13,7 +13,7 @@
 
 Current release: **v0.11.12** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
-[Features](#-features) · [Install](#-install-windows) · [Quick Start](#-quick-start) · [Customization](#-customization) · [Deployment](#-deployment) · [License](#-license)
+[Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
 ---
 
