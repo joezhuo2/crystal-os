@@ -56,6 +56,9 @@ const MAIN: &str = "main";
 #[cfg(windows)]
 const SNAPSHOT_TIMEOUT: Duration = Duration::from_millis(800);
 
+/// Where a webview waits while a menu or dialog is over the Portal.
+const PARKED_OFFSET: f64 = -20000.0;
+
 /// A page that has not finished loading by then is shown anyway, so a stalled
 /// request cannot leave the skeleton up forever.
 const LOAD_TIMEOUT: Duration = Duration::from_secs(20);
@@ -516,7 +519,25 @@ pub async fn portal_show<R: Runtime>(
 /// keyboard focus moves to the main webview, which the menu or dialog opening
 /// in its place needs.
 #[tauri::command]
-pub async fn portal_hide<R: Runtime>(app: AppHandle<R>, state: tauri::State<'_, PortalState>) -> Result<(), String> {
+pub async fn portal_hide<R: Runtime>(
+  app: AppHandle<R>,
+  state: tauri::State<'_, PortalState>,
+  park: Option<bool>,
+) -> Result<(), String> {
+  // A menu or dialog opening over the page only needs the app out of the way.
+  // Hiding a webview makes it repaint from blank when it comes back, which
+  // shows as a flash, so it is moved off screen instead and `portal_show`
+  // puts it back.
+  if park.unwrap_or(false) {
+    let shown = state.shown.lock().unwrap().clone();
+    if let Some(webview) = shown.and_then(|label| app.get_webview(&label)) {
+      let _ = webview.set_position(LogicalPosition::new(PARKED_OFFSET, PARKED_OFFSET));
+      if let Some(main) = app.get_webview(MAIN) {
+        let _ = main.set_focus();
+      }
+    }
+    return Ok(());
+  }
   let was_shown = {
     let mut shown = state.shown.lock().unwrap();
     for (_, webview) in portal_webviews(&app) {

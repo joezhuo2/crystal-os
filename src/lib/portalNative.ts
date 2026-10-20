@@ -90,7 +90,7 @@ export function snapshotAndHidePortal(onSnapshot: (url: string) => void) {
       onSnapshot(url);
       await nextPaint();
     }
-    await invoke<void>("portal_hide");
+    await invoke<void>("portal_hide", { park: true });
     return url;
   });
 }
