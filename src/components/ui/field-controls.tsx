@@ -23,6 +23,7 @@ import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn, toLocalDateStr } from "@/lib/utils";
+import { parseTimeInput, suggestTimes } from "@/lib/timeInput";
 
 /* ── shared styling ── */
 
@@ -734,31 +735,144 @@ export function TimeField({
   title,
   "aria-label": ariaLabel,
 }: TimeFieldProps) {
-  // Quarter-hour slots, plus the current value when it sits off the grid.
-  const options = useMemo<SelectOption[]>(() => {
-    const slots: string[] = [];
-    for (let minutes = 0; minutes < 24 * 60; minutes += 15) {
-      const h = String(Math.floor(minutes / 60)).padStart(2, "0");
-      const m = String(minutes % 60).padStart(2, "0");
-      slots.push(`${h}:${m}`);
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<string | null>(null);
+  const [active, setActive] = useState(0);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const navigated = useRef(false);
+
+  const slots = useMemo(() => {
+    const typed = draft === null ? "" : draft;
+    const list = suggestTimes(typed, (slot) => formatTime(slot) ?? slot);
+    const exact = parseTimeInput(typed, value);
+    if (typed && exact && !list.includes(exact)) return [exact, ...list];
+    if (!typed && value && !list.includes(value)) return [...list, value].sort();
+    return list;
+  }, [draft, value]);
+
+  const pos = usePopupPosition(open, wrapRef, panelRef, true, slots.length);
+  const dismissRefs = useMemo(() => [wrapRef, panelRef], []);
+
+  const commit = (text: string | null) => {
+    setDraft(null);
+    if (text === null) return;
+    const next = parseTimeInput(text, value);
+    if (next && next !== value) onChange(next);
+  };
+  const close = useCallback(() => {
+    setOpen(false);
+    setDraft(null);
+  }, []);
+  useDismiss(open, close, dismissRefs);
+
+  useEffect(() => {
+    if (!open) return;
+    navigated.current = false;
+    setActive(draft ? 0 : Math.max(0, slots.indexOf(value)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, draft]);
+
+  useEffect(() => {
+    if (!open) return;
+    listRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [open, active]);
+
+  const pick = (slot: string) => {
+    onChange(slot);
+    setDraft(null);
+    setOpen(false);
+  };
+
+  const onKeyDown = (e: ReactKeyboardEvent) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!open) return setOpen(true);
+      navigated.current = true;
+      setActive((i) => Math.max(0, Math.min(slots.length - 1, i + (e.key === "ArrowDown" ? 1 : -1))));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const typed = draft !== null && !navigated.current ? parseTimeInput(draft, value) : null;
+      if (typed) pick(typed);
+      else if (open && slots[active]) pick(slots[active]);
+    } else if (e.key === "Tab") {
+      commit(draft);
+      setOpen(false);
     }
-    if (value && !slots.includes(value)) {
-      slots.push(value);
-      slots.sort();
-    }
-    return slots.map((slot) => ({ value: slot, label: formatTime(slot) ?? slot }));
-  }, [value]);
+  };
 
   return (
-    <ThemedSelect
-      value={value}
-      onChange={onChange}
-      options={options}
-      className={className}
-      placeholder={placeholder}
-      disabled={disabled}
-      title={title}
-      aria-label={ariaLabel}
-    />
+    <>
+      <div
+        ref={wrapRef}
+        className={cn(TRIGGER_CLASS, "cursor-text py-0 focus-within:ring-1 focus-within:ring-primary/50", className)}
+      >
+        <input
+          ref={inputRef}
+          type="text"
+          role="combobox"
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          aria-autocomplete="list"
+          aria-label={ariaLabel}
+          title={title}
+          disabled={disabled}
+          placeholder={placeholder}
+          value={draft ?? (value ? formatTime(value) ?? value : "")}
+          onFocus={(e) => {
+            e.currentTarget.select();
+            setOpen(true);
+          }}
+          onClick={() => setOpen(true)}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            setOpen(true);
+          }}
+          onBlur={(e) => {
+            if (panelRef.current?.contains(e.relatedTarget as Node)) return;
+            commit(draft);
+          }}
+          onKeyDown={onKeyDown}
+          className="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+        />
+        <ChevronDown
+          className={cn("h-3.5 w-3.5 shrink-0 opacity-60 transition-transform", open && "rotate-180")}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            if (disabled) return;
+            if (open) close();
+            else {
+              inputRef.current?.focus();
+              setOpen(true);
+            }
+          }}
+        />
+      </div>
+
+      <Popup open={open} pos={pos} panelRef={panelRef} role="listbox">
+        <div ref={listRef} className="scrollbar-thin max-h-72 overflow-y-auto p-1">
+          {slots.length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">No matching time</div>}
+          {slots.map((slot, index) => (
+            <button
+              key={slot}
+              type="button"
+              role="option"
+              aria-selected={slot === value}
+              data-index={index}
+              tabIndex={-1}
+              onMouseDown={(e) => e.preventDefault()}
+              onMouseEnter={() => setActive(index)}
+              onClick={() => pick(slot)}
+              className={cn(ROW_CLASS, "rounded-lg", index === active ? "bg-primary/20 text-foreground" : "text-foreground/80")}
+            >
+              <span className="flex-1 truncate">{formatTime(slot) ?? slot}</span>
+              {slot === value && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
+            </button>
+          ))}
+        </div>
+      </Popup>
+    </>
   );
 }

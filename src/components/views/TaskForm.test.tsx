@@ -206,7 +206,7 @@ describe("TaskForm end time follows start time", () => {
   it("sets the end an hour after a new start", () => {
     render(<TaskForm onClose={() => {}} editingTask={editing} />);
     pickTime("Start time", /^8:00\s?AM$/i);
-    expect(screen.getByRole("combobox", { name: "End time" })).toHaveTextContent(/9:00\s?AM/i);
+    expect((screen.getByRole("combobox", { name: "End time" }) as HTMLInputElement).value).toMatch(/9:00\s?AM/i);
   });
 
   it("still lets the end be changed on its own afterwards", () => {
