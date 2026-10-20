@@ -1453,7 +1453,7 @@ export default function CalendarPage() {
           initial={{ "--view-fade": 0 }}
           animate={{ "--view-fade": 1 }}
           exit={{ "--view-fade": 0 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
         >
           {view === "month" ? (
             <MonthGrid

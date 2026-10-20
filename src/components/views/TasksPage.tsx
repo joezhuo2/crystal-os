@@ -822,7 +822,7 @@ function SnoozedSection({
 }
 
 /** Length of each half of the List/Board fade: out, then in. Matches .engine-view in index.css. */
-const VIEW_FADE_MS = 300;
+const VIEW_FADE_MS = 400;
 
 export default function TasksPage() {
   const tasks = useTasks();

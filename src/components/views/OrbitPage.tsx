@@ -65,7 +65,7 @@ import {
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 
 /** Length of each half of the Weekly/Monthly/Yearly fade: out, then in. Matches .orbit-view in index.css. */
-const VIEW_FADE_MS = 300;
+const VIEW_FADE_MS = 400;
 
 /** Names shown before the "+N more" button. */
 const NAMES_SHOWN = 5;
