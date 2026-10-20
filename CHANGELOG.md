@@ -5,6 +5,22 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.13] - 2026-10-20 - Precise times and hourly repeats.
+
+### Added
+
+- **Exact times** (issue #25). Every time field (task start and end, event start and end) is now a box you can type in: `9:07 pm`, `0930`, `21:05` or `9` all work. Typing an hour narrows the dropdown to that hour's quarter-hour slots (AM and PM), and an empty box lists the whole day as before. A bare hour keeps the AM/PM of the time already set; Enter takes the typed time, or the highlighted suggestion once you arrow into the list (`field-controls.tsx`, `timeInput.ts`).
+- **Hourly repeats** (issue #24). An event can repeat **Hourly**, every 1 to 23 hours, until an optional end date. The option is hidden for all-day events, and the hover card reads "Every 3 hours" (`CalendarPage.tsx`, `useGoogleCalendar.ts`, `TimeGrid.tsx`). Tasks keep their day-based repeats.
+
+### Changed
+
+- **Orbit opens on the newest review** (issue #18). The Weekly, Monthly and Yearly tabs now start on the period still running instead of the last finished one (`OrbitPage.tsx`).
+
+### Fixed
+
+- **Portal toasts for messages you send** (issue #12). The Portal no longer raises a desktop notification for the app you are looking at, so sending an Instagram message does not show up as a new notification from it (`notifications.ts`).
+- **Portal right-click flicker** (issue #7). The app's page is now hidden and swapped for its snapshot the moment the right button goes down, so the tab menu opens straight away instead of flashing first (`PortalNavbar.tsx`).
+
 ## [v0.11.12] - 2026-10-15 - Horizon motion and dragging.
 
 ### Added
