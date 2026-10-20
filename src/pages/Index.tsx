@@ -39,7 +39,7 @@ const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["terminal", "portal", "nebula
 const KEPT_BACKDROPS = 2;
 
 /** Long enough for the view's first content (and a preloaded chunk) to fade in. */
-const VIEW_ENTER_MS = 300;
+const VIEW_ENTER_MS = 400;
 
 /**
  * Fades a newly opened view in. Opacity on this wrapper would cut off the

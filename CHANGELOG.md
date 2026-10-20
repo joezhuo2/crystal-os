@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Every fade now runs at the same speed** (issue #23). Opening a page, its backdrop, the Engine List/Board switch, the Orbit period switch, the Horizon month/week/day switch and the Portal app switch all fade in 200 ms, so none feels slower than the others. The sidebar highlight glides in 300 ms instead of 500 ms (`index.css`, `TasksPage.tsx`, `OrbitPage.tsx`, `CalendarPage.tsx`, `Navigation.tsx`).
+- **Every fade now runs at the same speed** (issue #23). Opening a page, its backdrop, the Engine List/Board switch, the Orbit period switch, the Horizon month/week/day switch and the Portal app switch all fade in 300 ms, so none feels slower than the others. The sidebar highlight glides in 300 ms instead of 500 ms (`index.css`, `TasksPage.tsx`, `OrbitPage.tsx`, `CalendarPage.tsx`, `Navigation.tsx`).
 
 ### Fixed
 

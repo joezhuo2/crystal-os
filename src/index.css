@@ -679,7 +679,7 @@
   /* Placeholder content fades in on each app switch, matching the page fade
      done inside the webview (src-tauri/src/portal.rs). */
   .portal-fade {
-    animation: portal-fade-in 200ms ease-out;
+    animation: portal-fade-in 300ms ease-out;
   }
 
   @keyframes portal-fade-in {
@@ -1806,7 +1806,7 @@
     inset: 0;
     background-size: cover;
     background-position: center;
-    animation: image-backdrop-in 200ms ease-out;
+    animation: image-backdrop-in 300ms ease-out;
   }
 
   .image-backdrop-image[data-instant] {
@@ -1892,7 +1892,7 @@
   .view-enter[data-entering] :is(.glass-card, .glass-card-hover),
   .view-enter[data-entering] > :not(:has(.glass-card, .glass-card-hover)):not(.glass-card, .glass-card-hover),
   .view-enter[data-entering] :has(.glass-card, .glass-card-hover) > :not(:has(.glass-card, .glass-card-hover)):not(.glass-card, .glass-card-hover) {
-    animation: view-enter 200ms ease-out backwards;
+    animation: view-enter 300ms ease-out backwards;
   }
 
   @keyframes view-enter {
@@ -1904,11 +1904,11 @@
      A CSS animation outranks the inline opacity Motion leaves on task rows,
      and hands it back when it ends. */
   .engine-view[data-fade="out"] :is(.glass-card, .glass-card-hover, [data-fade-unit]) {
-    animation: engine-view-out 200ms ease-out both;
+    animation: engine-view-out 300ms ease-out both;
   }
 
   .engine-view[data-fade="in"] :is(.glass-card, .glass-card-hover, [data-fade-unit]) {
-    animation: engine-view-in 200ms ease-out both;
+    animation: engine-view-in 300ms ease-out both;
   }
 
   @keyframes engine-view-out {
@@ -3101,12 +3101,12 @@
      `both` holds the faded-out state while the next review loads. */
   .orbit-view[data-fade="out"] :is(.orbit-card, [data-fade-unit]),
   .orbit-view[data-fade="out"][data-fade-unit] {
-    animation: orbit-view-out 200ms ease-out both;
+    animation: orbit-view-out 300ms ease-out both;
   }
 
   .orbit-view[data-fade="in"] :is(.orbit-card, [data-fade-unit]),
   .orbit-view[data-fade="in"][data-fade-unit] {
-    animation: orbit-view-in 200ms ease-out both;
+    animation: orbit-view-in 300ms ease-out both;
   }
 
   @keyframes orbit-view-out {
@@ -3861,7 +3861,7 @@
     inset: 0;
     background-size: cover;
     background-position: center 55%;
-    animation: image-backdrop-in 200ms ease-out;
+    animation: image-backdrop-in 300ms ease-out;
   }
 
   .home-card-horizon {
