@@ -13,11 +13,7 @@
 
 Current release: **v0.11.13** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
----
-
-## 🧭 Contents
-
-[Features](#-features) · [Tech Stack](#-tech-stack) · [Install (Windows)](#-install-windows) · [Quick Start](#-quick-start) · [Project Structure](#-project-structure) · [The Archive (Obsidian integration)](#-the-archive-obsidian-integration) · [The Atmosphere (Living Sky)](#-the-atmosphere-living-sky) · [The Horizon (Google Calendar integration)](#-the-horizon-google-calendar-integration) · [Offline queue](#-offline-queue) · [Notifications](#-notifications) · [Time estimates and capacity](#-time-estimates-and-capacity) · [Notes and subtasks](#-notes-and-subtasks) · [Snoozing tasks](#-snoozing-tasks) · [Sorting and filtering](#-sorting-and-filtering) · [Pomodoro and tasks](#-pomodoro-and-tasks) · [Database Schema (Supabase)](#-database-schema-supabase) · [Key Commands](#-key-commands) · [Desktop App (Tauri)](#-desktop-app-tauri) · [The Nebula (coding agent)](#-the-nebula-coding-agent) · [Command Palette](#-command-palette) · [Customization](#-customization) · [Deployment](#-deployment) · [License](#-license)
+[Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
 ---
 
