@@ -77,6 +77,9 @@ function EmptyState({ onConnect, onCustom }: { onConnect: (app: PortalApp) => vo
   );
 }
 
+/** How long a snapshot outlives the webview coming back, covering its first frame. */
+const SNAPSHOT_HANDOFF_MS = 200;
+
 const NO_BADGES: Record<string, PortalBadge> = {};
 
 export default function PortalPage() {
@@ -149,7 +152,7 @@ export default function PortalPage() {
       snapshotAndHidePortal((url) => {
         taken = url;
         if (!cancelled) replaceSnapshot({ id: active.id, url });
-      })
+      }, () => cancelled)
         .then(() => {
           if (taken && cancelled && snapshotRef.current?.url !== taken) URL.revokeObjectURL(taken);
         })
@@ -182,7 +185,14 @@ export default function PortalPage() {
           portalUnloader.markLoaded(active.id);
           if (cancelled) return;
           setError((prev) => (prev ? null : prev));
-          if (snapshotRef.current) replaceSnapshot(null);
+          // The webview takes a frame to draw once moved back, so the snapshot
+          // stays under it a moment instead of giving way to the skeleton.
+          const held = snapshotRef.current;
+          if (held) {
+            window.setTimeout(() => {
+              if (snapshotRef.current === held) replaceSnapshot(null);
+            }, SNAPSHOT_HANDOFF_MS);
+          }
         })
         .catch((err) => {
           if (!cancelled) setError({ id: active.id, message: errorText(err) });

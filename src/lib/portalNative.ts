@@ -74,9 +74,10 @@ export function hidePortal() {
  * Captures the app on screen, then hides every app webview. Resolves to an
  * object URL of the picture (the caller revokes it), or null when there was
  * nothing to capture. Used when a menu or dialog opens over the Portal, so
- * the page stays visible behind it.
+ * the page stays visible behind it. Nothing is hidden once `isStale` says
+ * the overlay has closed.
  */
-export function snapshotAndHidePortal(onSnapshot: (url: string) => void) {
+export function snapshotAndHidePortal(onSnapshot: (url: string) => void, isStale: () => boolean = () => false) {
   return inOrder(async () => {
     let url: string | null = null;
     try {
@@ -85,10 +86,21 @@ export function snapshotAndHidePortal(onSnapshot: (url: string) => void) {
     } catch (err) {
       console.warn("[portal] snapshot failed", err);
     }
+    // The overlay may be gone by the time the picture is ready; parking the
+    // app then would only flash the placeholder before it comes back.
+    if (isStale()) {
+      if (url) URL.revokeObjectURL(url);
+      return null;
+    }
     if (url) {
       await decoded(url);
+      if (isStale()) {
+        URL.revokeObjectURL(url);
+        return null;
+      }
       onSnapshot(url);
       await nextPaint();
+      if (isStale()) return url;
     }
     await invoke<void>("portal_hide", { park: true });
     return url;
