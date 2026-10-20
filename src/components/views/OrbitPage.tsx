@@ -613,12 +613,12 @@ export default function OrbitPage() {
   };
 
   const [target, setTarget] = useState<Target>(() =>
-    landing === "current" ? { kind: "weekly", offset: maxOffset.weekly } : { kind: store.view, offset: 0 },
+    landing === "current" ? { kind: "weekly", offset: maxOffset.weekly } : { kind: store.view, offset: maxOffset[store.view] },
   );
   const [offsets, setOffsets] = useState<Record<ReviewKind, number>>(() => ({
-    weekly: landing === "current" ? maxOffset.weekly : 0,
-    monthly: 0,
-    yearly: 0,
+    weekly: maxOffset.weekly,
+    monthly: maxOffset.monthly,
+    yearly: maxOffset.yearly,
   }));
 
   // Once a running period's review turns ready it is offset 0, so a view one
