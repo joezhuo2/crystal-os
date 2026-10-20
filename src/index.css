@@ -130,22 +130,13 @@
   /* Desktop sidebar (Navigation.tsx). The shell is a fixed 64px slot in the
      page row; the panel is positioned over the page and widens on its own,
      so expanding never re-lays out <main>. `data-expanded` is set on hover
-     without a React render. On the Portal (`data-push`) the slot widens with
-     the panel, because the app's native webview would cover an overlay. */
+     without a React render. */
   .sidebar-shell {
     position: relative;
     z-index: 30;
     flex-shrink: 0;
     width: 64px;
     height: 100vh;
-  }
-
-  .sidebar-shell[data-push] {
-    transition: width 300ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .sidebar-shell[data-push][data-expanded] {
-    width: 256px;
   }
 
   .sidebar-panel {

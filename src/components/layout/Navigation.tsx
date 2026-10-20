@@ -1,11 +1,11 @@
-import { memo, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings, SquareTerminal, Orbit, Sparkles, AppWindow } from "lucide-react";
 import { m } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
 import { usePortal } from "@/hooks/usePortal";
 import { useFocusMuted } from "@/hooks/usePomodoro";
 import { badgeLabel, type PortalBadge } from "@/lib/portalApps";
-import { selectBadgeTotal } from "@/lib/portalStore";
+import { portal, selectBadgeTotal } from "@/lib/portalStore";
 import { useNow, useOrbitReady } from "@/hooks/useOrbitReview";
 import { readyTitle } from "@/lib/orbitReview";
 
@@ -177,7 +177,18 @@ const SidebarButton = memo(function SidebarButton({
  */
 export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const shellRef = useRef<HTMLDivElement>(null);
-  const setExpanded = (on: boolean) => shellRef.current?.toggleAttribute("data-expanded", on);
+  const releaseHover = useRef<(() => void) | null>(null);
+  // Over the Portal the app's native webview would cover the expanded panel,
+  // so it is swapped for a snapshot while the pointer is on the sidebar.
+  const setExpanded = (on: boolean) => {
+    shellRef.current?.toggleAttribute("data-expanded", on);
+    if (on && activeTab === "portal" && isDesktop() && !releaseHover.current) releaseHover.current = portal.occlude();
+    else if (!on) {
+      releaseHover.current?.();
+      releaseHover.current = null;
+    }
+  };
+  useEffect(() => () => releaseHover.current?.(), []);
   // A running focus session mutes the Portal's badges (v0.9.5).
   const portalTotal = selectBadgeTotal(usePortal());
   const portalBadge = useFocusMuted() ? null : portalTotal;
@@ -248,7 +259,7 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   );
 
   return (
-    <div ref={shellRef} className="sidebar-shell hidden md:block" data-push={mode === "portal" ? "" : undefined}>
+    <div ref={shellRef} className="sidebar-shell hidden md:block">
       <aside
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
