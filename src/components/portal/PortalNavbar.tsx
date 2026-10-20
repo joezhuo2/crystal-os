@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Reorder } from "framer-motion";
 import { ArrowLeft, ArrowRight, ExternalLink, LogOut, Plus, RotateCw, Trash2 } from "lucide-react";
 import {
@@ -141,15 +141,22 @@ export default function PortalNavbar({
     if (open) {
       openedAt.current = performance.now();
       setOpenMenuId(id);
+      setArmed(false);
     } else if (!justOpened()) {
       setOpenMenuId((current) => (current === id ? null : current));
     }
   };
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const timer = window.setTimeout(() => setArmed(false), 1500);
+    return () => window.clearTimeout(timer);
+  }, [armed]);
   const afterOpen = (run: () => void) => (e: Event) => {
     if (justOpened()) e.preventDefault();
     else run();
   };
-  usePortalOcclusion(openMenuId !== null || confirm !== null);
+  usePortalOcclusion(openMenuId !== null || confirm !== null || armed);
 
   const active = apps.find((a) => a.id === activeId) ?? null;
 
@@ -179,6 +186,9 @@ export default function PortalNavbar({
                 <Reorder.Item
                   as="li"
                   value={app.id}
+                  onPointerDown={(e) => {
+                    if (desktop && e.button === 2) setArmed(true);
+                  }}
                   className="shrink-0 list-none"
                   whileDrag={{ scale: 1.05, zIndex: 10 }}
                 >
