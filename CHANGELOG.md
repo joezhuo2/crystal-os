@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Sidebar highlight starts at once** (issue #23). Clicking a section now moves the highlight before the new page renders, so heavy pages (Nebula, Archive, Orbit) no longer hold it back (`Index.tsx`).
 
+- **No blink before a page fades in** (issue #23). The page, its backdrop and theme now swap in one step, and the loading spinner between pages is gone, so the old page stays up until the new one is ready. Every page's code is now fetched in the background after startup, not just the three most used, so Nebula, Archive and Orbit open without a download wait (`Index.tsx`, `viewLoader.ts`).
+
 ## [v0.11.13] - 2026-10-20 - Precise times and hourly repeats.
 
 ### Added

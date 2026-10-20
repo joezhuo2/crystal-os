@@ -102,7 +102,7 @@ export function preloadViews(current: TabId) {
   preloaded = true;
   const order = preloadOrder(current);
   const run = async () => {
-    for (const tab of order) await loaders[tab]().catch(() => undefined);
+    for (const tab of [...order, ...(Object.keys(loaders) as TabId[])]) await loaders[tab]().catch(() => undefined);
   };
   const idle = () => {
     if ("requestIdleCallback" in window) window.requestIdleCallback(() => void run(), { timeout: 5000 });

@@ -64,15 +64,6 @@ function ViewEnter({ fade, children }: { fade: boolean; children: React.ReactNod
   );
 }
 
-/** Shown for the moment a view's chunk is still loading. */
-function ViewFallback() {
-  return (
-    <div className="flex h-40 items-center justify-center" role="status" aria-label="Loading">
-      <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
-    </div>
-  );
-}
-
 const closeTaskForm = () => {
   appUi.setShowTaskForm(false);
   appUi.setEditingTask(null);
@@ -138,8 +129,8 @@ const Index = () => {
   // Most recent backdrop tabs first. Updated during render, so the new tab's
   // backdrop mounts in the same commit as its page.
   const [keptBackdrops, setKeptBackdrops] = useState<TabId[]>([]);
-  if (BACKDROP_TABS.has(activeTab) && keptBackdrops[0] !== activeTab) {
-    setKeptBackdrops([activeTab, ...keptBackdrops.filter((t) => t !== activeTab)].slice(0, KEPT_BACKDROPS));
+  if (BACKDROP_TABS.has(viewTab) && keptBackdrops[0] !== viewTab) {
+    setKeptBackdrops([viewTab, ...keptBackdrops.filter((t) => t !== viewTab)].slice(0, KEPT_BACKDROPS));
   }
 
   // The search bar is an overlay over whichever tab is open.
@@ -177,12 +168,12 @@ const Index = () => {
   // the Portal's, the Horizon's, the Engine's and the Orbit's palettes go on
   // <body> too for them to pick up.
   useEffect(() => {
-    document.body.classList.toggle("portal-theme", activeTab === "portal");
-    document.body.classList.toggle("horizon-theme", activeTab === "calendar");
-    document.body.classList.toggle("engine-theme", activeTab === "tasks");
-    document.body.classList.toggle("orbit-theme", activeTab === "orbit");
-    document.body.classList.toggle("obsidian-theme", activeTab === "archive");
-  }, [activeTab]);
+    document.body.classList.toggle("portal-theme", viewTab === "portal");
+    document.body.classList.toggle("horizon-theme", viewTab === "calendar");
+    document.body.classList.toggle("engine-theme", viewTab === "tasks");
+    document.body.classList.toggle("orbit-theme", viewTab === "orbit");
+    document.body.classList.toggle("obsidian-theme", viewTab === "archive");
+  }, [viewTab]);
 
   // Hide the Portal's native webview as soon as another tab is picked. The
   // page only unmounts after its exit animation, and the webview would sit
@@ -200,21 +191,21 @@ const Index = () => {
   if (!session) return <LoginPage />;
 
   const rootClass =
-    activeTab === "terminal"
+    viewTab === "terminal"
       ? "terminal-root bg-black"
-      : activeTab === "portal"
+      : viewTab === "portal"
         ? "portal-root"
-        : activeTab === "nebula"
+        : viewTab === "nebula"
           ? "nebula-root"
-          : activeTab === "weather"
+          : viewTab === "weather"
             ? "atmosphere-root"
-            : activeTab === "archive"
+            : viewTab === "archive"
               ? "obsidian-root"
-              : activeTab === "calendar"
+              : viewTab === "calendar"
                 ? "horizon-root"
-                : activeTab === "tasks"
+                : viewTab === "tasks"
                   ? "engine-root"
-                  : activeTab === "orbit"
+                  : viewTab === "orbit"
                     ? "orbit-root"
                     : "mesh-gradient-bg";
   const backdrop = (tab: TabId) => {
@@ -242,7 +233,7 @@ const Index = () => {
 
   // The Nebula page, sidebar, and backdrop read their colours from these.
   const rootStyle =
-    activeTab === "nebula"
+    viewTab === "nebula"
       ? ({ "--nebula-a": nebulaTheme.colors[0], "--nebula-b": nebulaTheme.colors[1], "--nebula-c": nebulaTheme.colors[2] } as React.CSSProperties)
       : undefined;
 
@@ -253,7 +244,7 @@ const Index = () => {
             coming back skips the WebGL setup, canvas restart or image decode.
             Sorted, so switching never moves a backdrop's DOM node. */}
         {[...keptBackdrops].sort().map((tab) => (
-          <BackdropSlot key={tab} active={tab === activeTab}>
+          <BackdropSlot key={tab} active={tab === viewTab}>
             {backdrop(tab)}
           </BackdropSlot>
         ))}
@@ -262,7 +253,7 @@ const Index = () => {
           {/* The last view leaves at once and the next fades in. Keyed, so
               each switch mounts a fresh ViewEnter. */}
           <ViewEnter key={viewTab} fade={!still}>
-            <Suspense fallback={<ViewFallback />}>
+            <Suspense fallback={null}>
               <View onNavigate={setActiveTab} />
             </Suspense>
           </ViewEnter>
