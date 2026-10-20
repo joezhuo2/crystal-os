@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Portal right-click flicker** (issue #7). The app's page is now hidden and swapped for its snapshot the moment the right button goes down, so the tab menu opens straight away instead of flashing first (`PortalNavbar.tsx`).
 - **Escape closes the Portal tab menu**, and the page stays hidden across the short gap between pressing the right button and the menu opening, so the menu no longer flashes now and then (`PortalNavbar.tsx`, `PortalPage.tsx`).
 - **The sidebar opens over the Portal** instead of pushing the app aside, like every other page. While the pointer is on the sidebar the app shows as a snapshot behind it (`Navigation.tsx`).
+- **No flash when a menu or the sidebar covers a Portal app.** The app is now moved off screen and back instead of hidden and shown, so it no longer repaints from a blank frame (`portal.rs`, `portalNative.ts`).
 
 ## [v0.11.12] - 2026-10-15 - Horizon motion and dragging.
 
