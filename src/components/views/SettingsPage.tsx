@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, FolderOpen, Gauge, ImagePlus, Keyboard, ListTodo, Orbit, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
+import { Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Keyboard, ListTodo, Orbit, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 import NebulaSettingsSection from "@/components/nebula/NebulaSettingsSection";
 import InstallerSection from "@/components/views/InstallerSection";
@@ -17,6 +17,7 @@ import { KEYMAP, KEYMAP_CATEGORY_LABELS, bindingFor, bindingFromEvent, formatBin
 import { findConflict } from "@/lib/keymapConflicts";
 import { isDesktop } from "@/lib/platform";
 import { MAX_CACHE_MINUTES, MAX_UNLOAD_DELAY, perfSettings, usePerfSettings } from "@/lib/perfSettings";
+import { privacySettings, usePrivacyMode } from "@/lib/privacySettings";
 import { atmosphere, useAtmosphere } from "@/lib/atmosphereStore";
 import { IMAGE_TYPES } from "@/lib/atmosphereImage";
 import { buildDiagnosticsReport } from "@/lib/diagnostics";
@@ -472,6 +473,7 @@ export default function SettingsPage() {
   const [editing, setEditing] = useState<HotkeyAction>("toggle");
   const [dialogOpen, setDialogOpen] = useState(false);
   const perf = usePerfSettings();
+  const privacyMode = usePrivacyMode();
   const sky = useAtmosphere();
   const orbit = useOrbitStore();
   const notifications = useNotifySettings();
@@ -816,6 +818,15 @@ export default function SettingsPage() {
               <ImageBlurSlider value={sky.imageBlur} />
             </Row>
           )}
+        </Section>
+
+        <Section id="privacy" icon={EyeOff} title="Privacy">
+          <Row
+            title="Privacy mode"
+            description="Blurs money amounts in The Vault, The Orbit, the Home page and search, and the names and previews of Archive notes until you open one. Handy when sharing your screen."
+          >
+            <Switch checked={privacyMode} onCheckedChange={privacySettings.setEnabled} />
+          </Row>
         </Section>
 
         <Section id="performance" icon={Gauge} title="Performance">

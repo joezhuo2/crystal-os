@@ -24,6 +24,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionEntry[] = [
   { id: "notifications", title: "Notifications", hint: "Do Not Disturb, reminders", keywords: ["do not disturb", "dnd", "task due times", "task reminders", "deadline", "calendar reminders", "remind before events", "pomodoro", "portal messages", "orbit reviews", "habit reminders", "startup", "test"] },
   { id: "orbit", title: "The Orbit", hint: "Auto-export reviews", keywords: ["auto-export reviews", "weekly", "monthly", "yearly", "review"] },
   { id: "atmosphere", title: "The Atmosphere", hint: "Weather effects, aurora, background", keywords: ["weather effects", "aurora", "background image", "image blur", "sky"] },
+  { id: "privacy", title: "Privacy", hint: "Privacy mode", keywords: ["privacy mode", "blur", "hide money", "amounts", "screen share", "archive notes"] },
   { id: "performance", title: "Performance", hint: "Performance mode", keywords: ["performance mode", "animations", "transitions", "backdrops", "cache", "lazy load", "portal unload delay", "speed"] },
   { id: "install", title: "Install & update", hint: "Version, updates", keywords: ["update", "version", "installer", "upgrade"], desktopOnly: true },
   { id: "diagnostics", title: "Diagnostics", hint: "Error report", keywords: ["error report", "copy diagnostics", "debug", "bug"] },
