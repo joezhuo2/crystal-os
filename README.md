@@ -275,6 +275,7 @@ src/
 │   ├── installerNative.ts      # Desktop installer bridge (installer_* and update_* commands, version helpers)
 │   ├── homeTasks.ts            # Home Engine ordering: priority ranks, upcoming tasks
 │   ├── capacity.ts             # Task estimates, busy intervals from events, today's planned vs free time
+│   ├── freeSlot.ts             # "next 5h" in the palette: the next free block in the work day
 │   ├── capacitySettings.ts     # The Engine's work window (localStorage)
 │   ├── boardColumns.ts         # The Board's columns (every category, Overdue, Done) and what a drop does
 │   ├── taskView.ts             # The Engine's sort and filters, applied to List and Board, saved per device in localStorage
@@ -847,14 +848,15 @@ The toolbar's **Context** chip shows how full the current model's context window
 
 ## ⌨️ Command Palette
 
-The palette is an overlay over whichever page is open. `Cmd/Ctrl + K` opens it, and closes it again, while Crystal OS is focused (not while typing in the Terminal); on desktop, `Alt+Shift+Space` opens it from any app. The page behind it is lightly blurred and dimmed; `Escape` or a click outside the panel closes it, and focus goes back where it was. It renders inside the page root, so its panel, borders, selection, keys and result icons take the open page's palette (the Portal's and the Nebula's hex palettes are mapped in `.search-overlay` in `index.css`); over The Portal the native webview is swapped for a snapshot while it is open. It filters tasks and transactions locally and searches vault notes server-side (2+ characters, debounced 250 ms), and understands two natural-language prefixes:
+The palette is an overlay over whichever page is open. `Cmd/Ctrl + K` opens it, and closes it again, while Crystal OS is focused (not while typing in the Terminal); on desktop, `Alt+Shift+Space` opens it from any app. The page behind it is lightly blurred and dimmed; `Escape` or a click outside the panel closes it, and focus goes back where it was. It renders inside the page root, so its panel, borders, selection, keys and result icons take the open page's palette (the Portal's and the Nebula's hex palettes are mapped in `.search-overlay` in `index.css`); over The Portal the native webview is swapped for a snapshot while it is open. It filters tasks and transactions locally and searches vault notes server-side (2+ characters, debounced 250 ms), and understands three natural-language prefixes:
 
 | Input | Result |
 |-------|--------|
 | `add Buy milk` | Creates a task |
 | `log 25 for Lunch` | Records an expense |
+| `next 5h` | Finds the next free 5-hour block (`1.5h` and `2 hours` work too), today or in the next 14 days, inside the work day set in **Settings → The Engine** and around timed events in the calendar picked in The Horizon. Selecting it opens The Horizon's create-event form on that slot. Without a connected calendar it only looks at the work day |
 | *"Add a new event"* | Opens The Horizon's create-event form for today |
-| *anything else* | Filters tasks, transactions, vault notes and Settings sections; **Quick Add** is always offered as the first row |
+| *anything else* | Filters tasks, transactions, vault notes and Settings sections; **Quick Add** is always offered as the first row (after the free block for `next …`) |
 
 Selecting a note result opens it in The Archive.
 
