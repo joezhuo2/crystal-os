@@ -2,6 +2,7 @@ import { Coins, Folder, Gauge, Settings2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { nebula } from "@/hooks/useHarness";
+import { useShortcut } from "@/hooks/useShortcut";
 import { harness } from "@/lib/harness/store";
 import { formatTokens, totalOf } from "@/lib/harness/tokenLedger";
 import { EFFORTS, MODES, TIERS, type ChatMeta, type ContextUsage, type Effort, type Ledger, type Tier } from "@/lib/harness/types";
@@ -60,6 +61,7 @@ export default function NebulaToolbar({ chat, projectPath, projectName, running,
   const setEffort = (effort: Effort) => {
     if (harness.setChatOptions(chat.id, { effort }) && chat.tier === "high") nebula.restartClaude(chat.id);
   };
+  useShortcut("nebula.cycleEffort", () => setEffort(EFFORTS[(EFFORTS.findIndex((e) => e.id === chat.effort) + 1) % EFFORTS.length].id), !running);
 
   return (
     <div className="nebula-panel flex flex-wrap items-center gap-2 px-3 py-2">
