@@ -871,6 +871,7 @@ export default function TasksPage() {
   };
 
   useShortcut("engine.cycleView", () => switchView(selected === "list" ? "kanban" : "list"));
+  useShortcut("engine.newTask", () => setShowTaskForm(true));
 
   // Child tasks show inside their parent, not in the lists. Sort & Filter
   // (src/lib/taskView.ts) picks and orders the top-level tasks for both views.
