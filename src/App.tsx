@@ -7,6 +7,7 @@ import { LazyMotion } from "framer-motion";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { shouldRetry } from "@/lib/apiRequest";
 import { useUpdateNotice } from "@/hooks/useUpdateNotice";
+import { ChangelogNotice } from "@/components/ChangelogNotice";
 import { useAutoLocate } from "@/hooks/useAutoLocate";
 import { cacheTimeMs, perfSettings } from "@/lib/perfSettings";
 import { retimeCachedQueries } from "@/lib/queryCacheTime";
@@ -52,6 +53,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <UpdateNotice />
+          <ChangelogNotice />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
