@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.24] - 2026-10-21 - Free time finder.
+
+### Added
+
+- **Find the next free block from the command palette** (issue #43). Type `next 5h` (or `next 1.5h`, `next 2 hours`) and the first row shows the next free stretch of that length, today or in the next 14 days, inside the work day from **Settings → The Engine** and around the timed events in the calendar picked in The Horizon. Selecting it opens The Horizon's create-event form already set to that slot. Without a connected calendar it looks at the work day alone (`freeSlot.ts`, `CommandPalette.tsx`, `CalendarPage.tsx`, `appUi.ts`).
+
 ## [v0.11.23] - 2026-10-21 - Timer QoL.
 
 ### Changed

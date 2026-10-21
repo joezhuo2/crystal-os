@@ -693,6 +693,7 @@ function EventForm({
   editingEvent,
   defaultDate,
   defaultTime,
+  defaultEndTime,
   onClose,
 }: {
   calendarId: string;
@@ -700,11 +701,12 @@ function EventForm({
   defaultDate: string;
   /** Start time for a new event, e.g. the slot clicked in the week view. */
   defaultTime?: string;
+  defaultEndTime?: string;
   onClose: () => void;
 }) {
   const newStart = defaultTime ?? "09:00";
   // An hour long, without running past midnight.
-  const newEnd = fromMinutes(Math.min(toMinutes(newStart) + 60, 23 * 60 + 59));
+  const newEnd = defaultEndTime ?? fromMinutes(Math.min(toMinutes(newStart) + 60, 23 * 60 + 59));
   const create = useCreateEvent();
   const update = useUpdateEvent();
   const initialRecurrence = parseRecurrence(editingEvent?.recurrence ?? null);
@@ -1151,6 +1153,7 @@ export default function CalendarPage() {
     event: CalendarEvent | null;
     date: string;
     time?: string;
+    endTime?: string;
   }>({ open: false, event: null, date: toLocalDateStr() });
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
 
@@ -1263,8 +1266,8 @@ export default function CalendarPage() {
   );
   const color = activeCalendar?.backgroundColor || DEFAULT_COLOR;
 
-  const openCreate = (date: string, time?: string) =>
-    setFormState({ open: true, event: null, date, time });
+  const openCreate = (date: string, time?: string, endTime?: string) =>
+    setFormState({ open: true, event: null, date, time, endTime });
   const openEdit = (event: CalendarEvent) => {
     recordRecent({ kind: "event", id: event.id, title: event.summary, calendarId, date: event.startDate });
     setFormState({ open: true, event, date: event.startDate });
@@ -1300,8 +1303,10 @@ export default function CalendarPage() {
   // request either way so it cannot fire again on a later visit.
   useEffect(() => {
     if (!showEventForm || status.isPending) return;
+    const slot = appUi.getState().newEventSlot;
     setShowEventForm(false);
-    if (connected) openCreate(toLocalDateStr());
+    appUi.setNewEventSlot(null);
+    if (connected) openCreate(slot?.date ?? toLocalDateStr(), slot?.start, slot?.end);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showEventForm, connected, status.isPending]);
 
@@ -1545,11 +1550,12 @@ export default function CalendarPage() {
         {formState.open && (
           <EventForm
             // Remount on target change so the form state re-initialises.
-            key={formState.event?.id ?? `new-${formState.date}-${formState.time ?? ""}`}
+            key={formState.event?.id ?? `new-${formState.date}-${formState.time ?? ""}-${formState.endTime ?? ""}`}
             calendarId={calendarId}
             editingEvent={formState.event}
             defaultDate={formState.date}
             defaultTime={formState.time}
+            defaultEndTime={formState.endTime}
             onClose={closeForm}
           />
         )}

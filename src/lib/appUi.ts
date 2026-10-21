@@ -24,6 +24,8 @@ export interface AppUiState {
   quickAddDraft: string;
   /** Requests that the Horizon open its "New Event" form. */
   showEventForm: boolean;
+  /** Where that form starts, e.g. a free slot found by the palette; null for today. */
+  newEventSlot: { date: string; start: string; end: string } | null;
   /** Requests that the Horizon open this event's edit form, on its date. */
   openEvent: { id: string; calendarId: string; date: string } | null;
   /** Requests that Settings unfold, scroll to and flash this section. */
@@ -39,6 +41,7 @@ const initialState: AppUiState = {
   showQuickAdd: false,
   quickAddDraft: "",
   showEventForm: false,
+  newEventSlot: null,
   openEvent: null,
   settingsSection: null,
 };
@@ -71,6 +74,7 @@ export const appUi = {
   setShowQuickAdd: (show: boolean) => set("showQuickAdd", show),
   setQuickAddDraft: (text: string) => set("quickAddDraft", text),
   setShowEventForm: (show: boolean) => set("showEventForm", show),
+  setNewEventSlot: (slot: AppUiState["newEventSlot"]) => set("newEventSlot", slot),
   setOpenEvent: (target: AppUiState["openEvent"]) => set("openEvent", target),
   setSettingsSection: (id: string | null) => set("settingsSection", id),
 
