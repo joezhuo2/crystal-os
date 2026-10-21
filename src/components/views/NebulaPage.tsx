@@ -7,9 +7,10 @@ import NebulaToolbar from "@/components/nebula/NebulaToolbar";
 import NewProjectDialog from "@/components/nebula/NewProjectDialog";
 import ProjectSidebar from "@/components/nebula/ProjectSidebar";
 import { startHarnessSession, useActiveChatLoader, useHarness } from "@/hooks/useHarness";
+import { useShortcut } from "@/hooks/useShortcut";
 import { isDesktop } from "@/lib/platform";
 import { candidates } from "@/lib/harness/modelRouter";
-import { selectActiveChat, selectProjectTokens } from "@/lib/harness/store";
+import { harness, selectActiveChat, selectProjectTokens } from "@/lib/harness/store";
 
 export default function NebulaPage() {
   const desktop = isDesktop();
@@ -17,6 +18,10 @@ export default function NebulaPage() {
   const [newProject, setNewProject] = useState(false);
   const chat = selectActiveChat(state);
   useActiveChatLoader(chat?.id ?? null);
+  useShortcut("nebula.newChat", () => {
+    const projectId = chat?.projectId ?? state.projects[0]?.id;
+    if (projectId) harness.createChat(projectId);
+  }, desktop);
 
   useEffect(() => {
     startHarnessSession();
