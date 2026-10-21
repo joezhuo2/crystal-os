@@ -11,6 +11,7 @@ import {
   takeUnsent,
   taskDueAlerts,
   taskEndsOnDate,
+  taskReminderAlerts,
 } from "./notifications";
 
 function task(overrides: Partial<Task> = {}): Task {
@@ -104,6 +105,38 @@ describe("taskDueAlerts", () => {
   it("gives each repeat its own key", () => {
     const t = task({ repeat: { kind: "days", every: 1 } });
     expect(taskDueAlerts([t], at("2026-10-07T17:01:00"))[0].key).toBe("task:t1:2026-10-07");
+  });
+});
+
+describe("taskReminderAlerts", () => {
+  const before = { when: "before", lead: 30 } as const;
+  const dayStart = { when: "dayStart", lead: 30 } as const;
+
+  it("reminds within the lead before a timed task is due", () => {
+    expect(taskReminderAlerts([task()], at("2026-10-05T16:29:00"), before)).toEqual([]);
+    expect(taskReminderAlerts([task()], at("2026-10-05T16:40:00"), before)).toEqual([
+      { key: "remind:t1:2026-10-05", title: "Due soon: File taxes", body: "Due at 5:00 PM, in 20 min" },
+    ]);
+    expect(taskReminderAlerts([task()], at("2026-10-05T17:00:00"), before)).toEqual([]);
+  });
+
+  it("reaches across midnight in before mode", () => {
+    const t = task({ startDate: "2026-10-06", endDate: "2026-10-06", endTime: "00:15" });
+    const [alert] = taskReminderAlerts([t], at("2026-10-05T23:50:00"), before);
+    expect(alert.key).toBe("remind:t1:2026-10-06");
+  });
+
+  it("reminds from the start of the due day, untimed tasks included", () => {
+    expect(taskReminderAlerts([task()], at("2026-10-05T00:05:00"), dayStart)).toHaveLength(1);
+    expect(taskReminderAlerts([task()], at("2026-10-04T23:59:00"), dayStart)).toEqual([]);
+    expect(taskReminderAlerts([task()], at("2026-10-05T17:00:00"), dayStart)).toEqual([]);
+    const [alert] = taskReminderAlerts([task({ endTime: "", priority: "high" })], at("2026-10-05T20:00:00"), dayStart);
+    expect(alert).toEqual({ key: "remind:t1:2026-10-05", title: "Due today: File taxes", body: "Due today · high priority" });
+  });
+
+  it("skips completed and snoozed tasks", () => {
+    expect(taskReminderAlerts([task({ completed: true })], at("2026-10-05T09:00:00"), dayStart)).toEqual([]);
+    expect(taskReminderAlerts([task({ someday: true })], at("2026-10-05T09:00:00"), dayStart)).toEqual([]);
   });
 });
 
