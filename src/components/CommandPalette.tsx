@@ -60,6 +60,7 @@ const ITEM = "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer";
 /** Icons for the Settings sections, matching their headers on the Settings page. */
 const SECTION_ICONS: Record<string, React.ElementType> = {
   shortcuts: Keyboard,
+  keymap: Keyboard,
   startup: Power,
   vault: FolderOpen,
   nebula: Sparkles,
