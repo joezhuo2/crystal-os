@@ -63,6 +63,7 @@ import { useTasks, type Task } from "@/contexts/AppContext";
 import { dotsForDate, taskColor, tasksForDate } from "@/lib/horizonDots";
 import { awakeTasks } from "@/lib/snooze";
 import { splitByParent } from "@/lib/subtasks";
+import { useShortcut } from "@/hooks/useShortcut";
 import { useToday } from "@/hooks/useToday";
 
 const CALENDAR_STORAGE_KEY = "crystal-os-google-calendar";
@@ -1336,6 +1337,8 @@ export default function CalendarPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openEventRequest, view, focusDate, calendarId, eventsQuery.isPending, eventsQuery.isError, events]);
+
+  useShortcut("horizon.cycleView", () => setView(VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]), connected);
 
   if (!connected) {
     return (
