@@ -193,6 +193,10 @@ export interface CompletionRecord {
   title: string;
   /** ISO timestamp. */
   completedAt: string;
+  /** The completed task; null once it is deleted. */
+  taskId?: string | null;
+  /** The task's category when it was completed. */
+  categoryId?: string | null;
 }
 
 export interface FocusRecord {
@@ -215,6 +219,14 @@ export interface ReviewTask {
   repeat?: RepeatRule;
   /** ISO timestamp. */
   createdAt?: string;
+  categoryId?: string;
+  estimateMinutes?: number;
+}
+
+export interface ReviewCategory {
+  id: string;
+  name: string;
+  color?: string;
 }
 
 export interface ReviewTransaction {
@@ -251,6 +263,8 @@ export interface ReviewData {
   habitChecks?: HabitCheck[];
   /** Local day the review is built on; a running period only counts habit days up to it. Defaults to now. */
   today?: string;
+  /** Task categories, to name the estimate rows. */
+  categories?: ReviewCategory[];
 }
 
 /* ------------------------------------------------------------------ *
@@ -363,6 +377,8 @@ export interface Review {
   focusPerMonth: number;
   /** Where the focus went: a slice per task, then Other and No task. */
   focusByTask: FocusSlice[];
+  /** Estimated against focused time for completed tasks, per category. */
+  estimates: EstimateRow[];
   agenda: AgendaItem[];
   next: ReviewPeriod;
   /** Habits active in the period, in manager order. */
@@ -463,6 +479,85 @@ export function focusByTask(
   return slices;
 }
 
+/** One category's completed tasks: how their focus time compared with their estimates. */
+export interface EstimateRow {
+  key: string;
+  label: string;
+  color?: string;
+  tasks: number;
+  estimateMinutes: number;
+  actualMinutes: number;
+  /** Mean of actual − estimate per task: positive is an over-run. */
+  avgDiffMinutes: number;
+  /** Mean of (actual − estimate) / estimate per task, as a whole percent. */
+  avgDiffPercent: number;
+}
+
+/** Focus logged just after the tick still counts toward it: unlinking on completion logs the last run. */
+const COMPLETION_GRACE_MS = 5 * 60 * 1000;
+
+/**
+ * Each task completed in the period that has an estimate and focus logged to
+ * it, compared by category. A task's focus is what was logged to it since its
+ * previous completion (repeating tasks), up to this one.
+ */
+export function estimateAccuracy(
+  period: ReviewPeriod,
+  data: Pick<ReviewData, "completions" | "focus" | "tasks" | "categories">,
+): EstimateRow[] {
+  const completions = [...data.completions].sort((a, b) => a.completedAt.localeCompare(b.completedAt));
+  type Group = { label: string; color?: string; tasks: number; estimate: number; actual: number; diff: number; pct: number };
+  const groups = new Map<string, Group>();
+  const previous = new Map<string, number>();
+  for (const c of completions) {
+    if (!c.taskId) continue;
+    const at = new Date(c.completedAt).getTime() + COMPLETION_GRACE_MS;
+    const since = previous.get(c.taskId) ?? -Infinity;
+    previous.set(c.taskId, at);
+    if (!inPeriod(dayOfInstant(c.completedAt), period)) continue;
+    const task = data.tasks.find((t) => t.id === c.taskId);
+    const estimate = task?.estimateMinutes;
+    if (!estimate) continue;
+    const seconds = data.focus
+      .filter((f) => {
+        if (f.taskId !== c.taskId) return false;
+        const end = new Date(f.endedAt).getTime();
+        return end > since && end <= at;
+      })
+      .reduce((sum, f) => sum + f.seconds, 0);
+    if (seconds <= 0) continue;
+    const actual = seconds / 60;
+    const category = data.categories?.find((cat) => cat.id === (c.categoryId ?? task?.categoryId));
+    const key = category ? category.id : "none";
+    const group = groups.get(key) ?? { label: category?.name ?? "No category", color: category?.color, tasks: 0, estimate: 0, actual: 0, diff: 0, pct: 0 };
+    group.tasks += 1;
+    group.estimate += estimate;
+    group.actual += actual;
+    group.diff += actual - estimate;
+    group.pct += (actual - estimate) / estimate;
+    groups.set(key, group);
+  }
+  return [...groups]
+    .map(([key, g]) => ({
+      key,
+      label: g.label,
+      color: g.color,
+      tasks: g.tasks,
+      estimateMinutes: Math.round(g.estimate),
+      actualMinutes: Math.round(g.actual),
+      avgDiffMinutes: Math.round(g.diff / g.tasks),
+      avgDiffPercent: Math.round((g.pct / g.tasks) * 100),
+    }))
+    .sort((a, b) => b.tasks - a.tasks || a.label.localeCompare(b.label));
+}
+
+/** "+12 min (+20%)", "−5 min (−10%)", "on target". */
+export function formatEstimateDiff(row: Pick<EstimateRow, "avgDiffMinutes" | "avgDiffPercent">): string {
+  if (row.avgDiffMinutes === 0) return "on target";
+  const sign = row.avgDiffMinutes > 0 ? "+" : "−";
+  return `${sign}${formatMinutes(Math.abs(row.avgDiffMinutes))} (${sign}${Math.abs(row.avgDiffPercent)}%)`;
+}
+
 /** The first day a review needs data from: the start of its trend window. */
 export function dataStart(period: ReviewPeriod): string {
   return shiftPeriod(period, -TREND_WINDOW[period.kind]).start;
@@ -518,6 +613,7 @@ export function buildReview(period: ReviewPeriod, data: ReviewData): Review {
     focusPerWeek: Math.round((stats.focusMinutes / days.length) * 7),
     focusPerMonth: Math.round(stats.focusMinutes / focusByMonth.length),
     focusByTask: focusByTask(period, data.focus, data.tasks),
+    estimates: estimateAccuracy(period, data),
     agenda: buildAgenda(next, data),
     next,
     habits,
@@ -683,6 +779,18 @@ export function toMarkdown(review: Review, reflection?: Reflection, now: Date = 
         ]
       : []),
     "",
+    ...(review.estimates.length > 0
+      ? [
+          "## Estimates vs actual",
+          "",
+          "| Category | Tasks | Estimated | Focused | Average over/under |",
+          "| --- | ---: | ---: | ---: | ---: |",
+          ...review.estimates.map(
+            (e) => `| ${cell(e.label)} | ${e.tasks} | ${formatMinutes(e.estimateMinutes)} | ${formatMinutes(e.actualMinutes)} | ${formatEstimateDiff(e)} |`,
+          ),
+          "",
+        ]
+      : []),
     "## Money",
     "",
     `| | This ${unit} | Last ${unit} |`,
