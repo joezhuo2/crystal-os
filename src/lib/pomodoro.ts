@@ -171,7 +171,8 @@ export const pomodoro = {
     const remaining = secondsLeft();
     stopTimer();
     logFocus(remaining);
-    set({ ...state, running: false, remaining: durationOf(state.phase) });
+    // Resetting a break skips it, back to the focus that came before.
+    set({ ...state, running: false, phase: "focus", remaining: state.workDuration });
   },
 
   /** Change the current phase's length. Ignored while running. */
