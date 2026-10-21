@@ -353,6 +353,7 @@ The middleware is mounted on both the dev server and `vite preview`. It is **not
 - **Quick Add** — appends a `- **HH:MM** text` bullet under a `## YYYY-MM-DD` heading, creating the note (and any parent directories) when missing. Supplied tags are merged into the note's frontmatter; the existing YAML list style (inline or block) is preserved and no other key is reformatted.
 - **Editing** — **Edit** in the reader opens the whole file, frontmatter included, in CodeMirror (`src/components/views/NoteEditor.tsx`, loaded only when first used). **Save** or Ctrl+S writes it back with the `mtime` it was opened at; if Obsidian saved the note in between, the save is refused and you choose **Discard mine, load theirs** or **Overwrite with mine**. Unsaved edits survive switching notes or tabs as a draft until the window closes.
 - **Caching** — parsed notes are cached per path and invalidated on `mtime` change.
+- **Keyboard shortcuts** — **N** opens Quick Add to write a new note and **/** jumps to **Search the vault**. Both are ignored while you type in a field or a dialog is open, and can be rebound in Settings.
 
 ### Layout
 
