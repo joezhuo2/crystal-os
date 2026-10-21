@@ -3,8 +3,10 @@ import type { Task } from "@/contexts/AppContext";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 import { DEFAULT_WORK, DEFAULT_BREAK, type PomodoroState } from "./pomodoro";
 import type { PortalState } from "./portalStore";
+import type { Habit } from "./habits";
 import {
   TASK_GRACE_MS,
+  habitReminderAlerts,
   eventAlerts,
   pomodoroAlert,
   portalAlerts,
@@ -239,5 +241,42 @@ describe("takeUnsent", () => {
     expect(takeUnsent([a], 2000)).toEqual([]);
     const threeDays = 3 * 24 * 60 * 60 * 1000;
     expect(takeUnsent([a], 1000 + threeDays)).toEqual([a]);
+  });
+});
+
+describe("habitReminderAlerts", () => {
+  const habit: Habit = {
+    id: "h1",
+    name: "Read",
+    color: "hsl(190 95% 82%)",
+    position: 0,
+    createdAt: new Date("2026-10-01T12:00:00").toISOString(),
+    archivedAt: null,
+  };
+  const at = (time: string) => new Date(`2026-10-05T${time}:00`);
+  const reminders = { h1: { time: "20:00", perDay: 2 } };
+
+  it("stays quiet before the reminder time and once the habit is ticked", () => {
+    expect(habitReminderAlerts([habit], [], reminders, at("19:59"))).toEqual([]);
+    expect(habitReminderAlerts([habit], [{ habitId: "h1", day: "2026-10-05" }], reminders, at("20:30"))).toEqual([]);
+    expect(habitReminderAlerts([habit], [], {}, at("20:30"))).toEqual([]);
+  });
+
+  it("reminds once an hour up to the daily limit", () => {
+    expect(habitReminderAlerts([habit], [], reminders, at("20:00")).map((a) => a.key)).toEqual(["habit:h1:2026-10-05:0"]);
+    expect(habitReminderAlerts([habit], [], reminders, at("21:15")).map((a) => a.key)).toEqual(["habit:h1:2026-10-05:1"]);
+    expect(habitReminderAlerts([habit], [], reminders, at("22:00"))).toEqual([]);
+    expect(habitReminderAlerts([habit], [], { h1: { time: "20:00", perDay: 0 } }, at("23:30"))).toHaveLength(1);
+  });
+
+  it("tags a launch reminder with the launch, past the limit too", () => {
+    const [alert] = habitReminderAlerts([habit], [], reminders, at("23:00"), "abc");
+    expect(alert.key).toBe("habit:h1:2026-10-05:launch:abc");
+    expect(alert.title).toBe("Habit: Read");
+  });
+
+  it("skips archived habits", () => {
+    const archived = { ...habit, archivedAt: new Date("2026-10-04T12:00:00").toISOString() };
+    expect(habitReminderAlerts([archived], [], reminders, at("20:30"))).toEqual([]);
   });
 });
