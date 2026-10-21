@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Rebindable in-app shortcuts** (issue #13). Single-key shortcuts now act on the page in front. They never fire while you type in a field, while the Terminal has focus or while a dialog or menu is open, and rebinds are saved on this device (`keymap.ts`, `useShortcut.ts`).
 - **Switch pages from the keyboard** (issue #13). **J** goes to the next page down the sidebar and **K** to the one above, wrapping at the ends (`Index.tsx`, `Navigation.tsx`, `stepTab.ts`).
+- **Engine shortcuts** (issue #13). **V** switches List and Board, **N** adds a task, **C** edits categories and **S** opens Sort & Filter (`TasksPage.tsx`, `CategoryManager.tsx`, `TaskViewMenu.tsx`).
 
 ## [v0.11.14] - 2026-10-20 - Snappier page changes.
 

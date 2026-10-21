@@ -3,6 +3,7 @@ import { ArrowDownWideNarrow, ArrowUpNarrowWide, RotateCcw, Search, SlidersHoriz
 import { useTaskCategories, type Priority } from "@/contexts/AppContext";
 import { DateField, Popup, ThemedSelect, usePopupPosition } from "@/components/ui/field-controls";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { useShortcut } from "@/hooks/useShortcut";
 import { MAX_ESTIMATE } from "@/lib/capacity";
 import {
   DUE_RANGES,
@@ -245,6 +246,7 @@ export function TaskViewMenu() {
   const panelRef = useRef<HTMLDivElement>(null);
   const pos = usePopupPosition(open, triggerRef, panelRef, false, filters.due.range === "custom");
   const close = useCallback(() => setOpen(false), []);
+  useShortcut("engine.sort", () => setOpen(true));
   // Escape goes through the overlay stack, so it closes an open select inside
   // the panel first and the panel on the next press.
   useEscapeKey(close, open);

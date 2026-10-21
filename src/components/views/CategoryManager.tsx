@@ -3,6 +3,7 @@ import { useAppActions, useFinancialCategories, useTaskCategories } from "@/cont
 import { m, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, Settings } from "lucide-react";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { useShortcut } from "@/hooks/useShortcut";
 
 type Mode = "task" | "financial";
 
@@ -166,6 +167,7 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
 
 export function CategoryManagerButton({ mode, label }: { mode: Mode; label?: string }) {
   const [open, setOpen] = useState(false);
+  useShortcut("engine.editCategories", () => setOpen(true), mode === "task");
   return (
     <>
       <button
