@@ -433,6 +433,7 @@ As with the vault, the middleware is mounted on the dev server and `vite preview
 - **Dates** — Google's `date`/`dateTime` union is flattened server-side into the `YYYY-MM-DD` + `HH:MM` strings the rest of the app uses, and an all-day event's exclusive end date is shifted back so it reads inclusively. Wall-clock parts are read off Google's own strings, so an event shows the time its calendar says it is, not the server's.
 - **Recurrence** — the form writes a single `RRULE` (daily/weekly/monthly/yearly, with an optional end date). Listing expands a series into instances, so editing or deleting one asks whether you mean *this event* or *all events*; leaving the repeat field alone never rewrites the series.
 - **Deleting** — the only destructive action in the app behind a confirmation dialog. Nothing is removed until you confirm.
+- **Keyboard shortcuts** — `V` cycles month, week, day and agenda; `N` opens the New Event form; `T` opens today in the month view; `Shift+Q` disconnects Google Calendar (no confirmation, as with the button).
 
 ### Safety
 
