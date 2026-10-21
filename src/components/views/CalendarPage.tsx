@@ -1339,6 +1339,7 @@ export default function CalendarPage() {
   }, [openEventRequest, view, focusDate, calendarId, eventsQuery.isPending, eventsQuery.isError, events]);
 
   useShortcut("horizon.cycleView", () => setView(VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]), connected);
+  useShortcut("horizon.newEvent", () => openCreate(toLocalDateStr()), connected);
 
   if (!connected) {
     return (
