@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.23] - 2026-10-21 - Timer QoL.
+
+### Changed
+
+- **Reset skips a break** (issue #56). Pressing reset (on the Tasks page or in the tray) during a break goes straight back to a fresh focus phase, the time it had before the break, instead of restarting the break. The button reads **Skip break** on hover while a break is showing (`pomodoro.ts`, `PomodoroTimer.tsx`).
+- **Timer edits are in minutes** (issue #56). Clicking the time while paused now takes a number of minutes: type `40` and press Enter for a 40-minute timer, in place of the old `HH:MM` entry (`PomodoroTimer.tsx`).
+
 ## [v0.11.22] - 2026-10-21 - Quieter updates.
 
 ### Changed

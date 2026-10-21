@@ -47,6 +47,15 @@ describe("pomodoro store", () => {
     expect(pomodoro.getState()).toMatchObject({ running: false, remaining: DEFAULT_WORK });
   });
 
+  it("reset during a break skips it back to a fresh focus", () => {
+    pomodoro.start();
+    vi.advanceTimersByTime(DEFAULT_WORK * 1000);
+    pomodoro.start();
+    vi.advanceTimersByTime(60_000);
+    pomodoro.reset();
+    expect(pomodoro.getState()).toMatchObject({ phase: "focus", running: false, remaining: DEFAULT_WORK });
+  });
+
   it("setDuration changes the current phase and is ignored while running", () => {
     pomodoro.setDuration(600);
     expect(pomodoro.getState()).toMatchObject({ workDuration: 600, remaining: 600 });
@@ -136,7 +145,7 @@ describe("focus sessions", () => {
     pomodoro.start();
     vi.advanceTimersByTime(120_000);
     pomodoro.reset();
-    expect(pomodoro.getState().phase).toBe("break");
+    expect(pomodoro.getState().phase).toBe("focus");
     expect(record).not.toHaveBeenCalled();
   });
 });
