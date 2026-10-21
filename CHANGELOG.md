@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.21] - 2026-10-21 - Configurable backgrounds.
+
+### Added
+
+- **Your own background per page** (issue #26). The Horizon, Engine, Orbit and Portal pages, and the Archive's Home box, can each use a PNG or JPEG of your own in place of the bundled black hole, stored on this device only, with separate blur behind the page and behind its Home box, and an image opacity for both (`backdropSettings.ts`, `imageBackdrop.ts`, `ImageBackdrop.tsx`, `HomePage.tsx`, `HomeSpaces.tsx`).
+- **Backgrounds section in Settings** (issue #26). Pick a page, then its image, **Page blur**, **Home box blur** and **Image opacity**, or **Reset** the amounts. "background", "wallpaper", "opacity" and "home widgets" in the command palette find the section (`SettingsPage.tsx`, `settingsSections.ts`).
+
 ## [v0.11.20] - 2026-10-21 - Pulse reminders.
 
 ### Added
