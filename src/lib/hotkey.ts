@@ -5,12 +5,13 @@
  */
 
 /** Mirrors `HotkeyAction` in src-tauri/src/hotkey.rs. */
-export type HotkeyAction = "toggle" | "palette" | "home";
+export type HotkeyAction = "toggle" | "palette" | "home" | "dnd";
 
 export const DEFAULT_ACCELERATORS: Record<HotkeyAction, string> = {
   toggle: "Alt+Space",
   palette: "Alt+Shift+Space",
   home: "Alt+Shift+KeyH",
+  dnd: "Alt+Shift+KeyD",
 };
 
 export const HOTKEY_COPY: Record<HotkeyAction, { title: string; description: string }> = {
@@ -25,6 +26,10 @@ export const HOTKEY_COPY: Record<HotkeyAction, { title: string; description: str
   home: {
     title: "Go to Home",
     description: "Shows Crystal OS from any app and opens the Home page, from whichever tab you were on.",
+  },
+  dnd: {
+    title: "Do Not Disturb",
+    description: "Turns Do Not Disturb on or off from any app, without showing Crystal OS.",
   },
 };
 

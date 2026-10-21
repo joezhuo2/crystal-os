@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.26] - 2026-10-21 - DND hotkey.
+
+### Added
+
+- **Do Not Disturb hotkey** (issue #11). A fourth global hotkey, `Alt+Shift+D` by default, turns Do Not Disturb on or off from any app without showing the window. A toast confirms it while Crystal OS is focused; from another app a desktop notification does, even as DND turns on. Change it under **Settings → Keyboard shortcuts** like the others; it is saved as `dndShortcut` and cannot share a combo with them. "do not disturb" and "dnd" in the command palette find the shortcut too (`hotkey.rs`, `hotkey.ts`, `useGlobalHotkey.ts`, `Index.tsx`, `SettingsPage.tsx`, `settingsSections.ts`).
+
 ## [v0.11.25] - 2026-10-21 - Estimates vs actual.
 
 ### Added

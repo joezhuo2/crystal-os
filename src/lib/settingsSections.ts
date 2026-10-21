@@ -15,7 +15,7 @@ export interface SettingsSectionEntry {
 }
 
 export const SETTINGS_SECTIONS: readonly SettingsSectionEntry[] = [
-  { id: "shortcuts", title: "Keyboard shortcuts", hint: "Global hotkeys, search bar", keywords: ["hotkey", "keybinding", "show hide", "open search bar", "go to home", "ctrl k"] },
+  { id: "shortcuts", title: "Keyboard shortcuts", hint: "Global hotkeys, search bar", keywords: ["hotkey", "keybinding", "show hide", "open search bar", "go to home", "do not disturb", "dnd", "ctrl k"] },
   { id: "keymap", title: "In-app shortcuts", hint: "Single-key shortcuts, rebind keys", keywords: ["keyboard shortcuts", "keybinding", "rebind", "hotkey", "keymap", "reset shortcuts"] },
   { id: "startup", title: "Startup", hint: "Launch at login", keywords: ["launch at login", "autostart", "boot"], desktopOnly: true },
   { id: "vault", title: "Vault", hint: "Obsidian vault folder", keywords: ["obsidian", "vault folder", "notes", "archive"], desktopOnly: true },

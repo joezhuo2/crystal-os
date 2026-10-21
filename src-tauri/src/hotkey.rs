@@ -1,11 +1,13 @@
 //! Global hotkeys that work from any app.
 //!
-//! Three actions, each with its own combo:
+//! Four actions, each with its own combo:
 //! - [`HotkeyAction::Toggle`] shows and focuses the window, or hides it when
 //!   it already has focus.
 //! - [`HotkeyAction::Palette`] shows the window and focuses the command
 //!   palette's search bar.
 //! - [`HotkeyAction::Home`] shows the window and switches to the Home tab.
+//! - [`HotkeyAction::Dnd`] turns Do Not Disturb on or off, without showing
+//!   the window.
 //!
 //! The combos live in `settings.json` in the app config dir (next to
 //! `.env.local`), so they are registered in Rust at startup, before the webview
@@ -26,6 +28,9 @@ const OPEN_PALETTE_EVENT: &str = "palette://open";
 /// Event the webview listens for to switch to the Home tab.
 const OPEN_HOME_EVENT: &str = "home://open";
 
+/// Event the webview listens for to flip Do Not Disturb.
+const TOGGLE_DND_EVENT: &str = "dnd://toggle";
+
 /// No shortcut registered for an action.
 const NO_ID: u32 = 0;
 
@@ -35,6 +40,7 @@ const NO_ID: u32 = 0;
 static TOGGLE_ID: AtomicU32 = AtomicU32::new(NO_ID);
 static PALETTE_ID: AtomicU32 = AtomicU32::new(NO_ID);
 static HOME_ID: AtomicU32 = AtomicU32::new(NO_ID);
+static DND_ID: AtomicU32 = AtomicU32::new(NO_ID);
 
 #[derive(Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -42,16 +48,18 @@ pub enum HotkeyAction {
   Toggle,
   Palette,
   Home,
+  Dnd,
 }
 
 impl HotkeyAction {
-  const ALL: [HotkeyAction; 3] = [HotkeyAction::Toggle, HotkeyAction::Palette, HotkeyAction::Home];
+  const ALL: [HotkeyAction; 4] = [HotkeyAction::Toggle, HotkeyAction::Palette, HotkeyAction::Home, HotkeyAction::Dnd];
 
   fn default_accelerator(self) -> &'static str {
     match self {
       HotkeyAction::Toggle => "Alt+Space",
       HotkeyAction::Palette => "Alt+Shift+Space",
       HotkeyAction::Home => "Alt+Shift+KeyH",
+      HotkeyAction::Dnd => "Alt+Shift+KeyD",
     }
   }
 
@@ -62,6 +70,7 @@ impl HotkeyAction {
       HotkeyAction::Toggle => "globalShortcut",
       HotkeyAction::Palette => "paletteShortcut",
       HotkeyAction::Home => "homeShortcut",
+      HotkeyAction::Dnd => "dndShortcut",
     }
   }
 
@@ -70,6 +79,7 @@ impl HotkeyAction {
       HotkeyAction::Toggle => "show or hide Crystal OS",
       HotkeyAction::Palette => "open the search bar",
       HotkeyAction::Home => "go to Home",
+      HotkeyAction::Dnd => "turn Do Not Disturb on or off",
     }
   }
 
@@ -78,6 +88,7 @@ impl HotkeyAction {
       HotkeyAction::Toggle => &TOGGLE_ID,
       HotkeyAction::Palette => &PALETTE_ID,
       HotkeyAction::Home => &HOME_ID,
+      HotkeyAction::Dnd => &DND_ID,
     }
   }
 }
@@ -102,6 +113,7 @@ pub struct HotkeyStatuses {
   toggle: HotkeyStatus,
   palette: HotkeyStatus,
   home: HotkeyStatus,
+  dnd: HotkeyStatus,
 }
 
 impl HotkeyStatuses {
@@ -110,6 +122,7 @@ impl HotkeyStatuses {
       HotkeyAction::Toggle => &mut self.toggle,
       HotkeyAction::Palette => &mut self.palette,
       HotkeyAction::Home => &mut self.home,
+      HotkeyAction::Dnd => &mut self.dnd,
     }
   }
 }
@@ -122,6 +135,7 @@ impl Default for HotkeyState {
       toggle: HotkeyStatus::unregistered(HotkeyAction::Toggle),
       palette: HotkeyStatus::unregistered(HotkeyAction::Palette),
       home: HotkeyStatus::unregistered(HotkeyAction::Home),
+      dnd: HotkeyStatus::unregistered(HotkeyAction::Dnd),
     }))
   }
 }
@@ -185,6 +199,8 @@ pub fn plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
         open_palette(app);
       } else if id == HOME_ID.load(Ordering::SeqCst) {
         open_home(app);
+      } else if id == DND_ID.load(Ordering::SeqCst) {
+        let _ = app.emit(TOGGLE_DND_EVENT, ());
       }
     })
     .build()
