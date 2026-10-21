@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { isDesktop } from "@/lib/platform";
 import type { HotkeyAction } from "@/lib/hotkey";
+import { notifySettings } from "@/lib/notifySettings";
+import { notify } from "@/lib/notifications";
 
 /** Mirrors `HotkeyStatus` in src-tauri/src/hotkey.rs. */
 export interface HotkeyStatus {
@@ -18,6 +20,9 @@ const OPEN_PALETTE_EVENT = "palette://open";
 
 /** Emitted by Rust after the Home hotkey shows and focuses the window. */
 const OPEN_HOME_EVENT = "home://open";
+
+/** Emitted by Rust when the Do Not Disturb hotkey is pressed. */
+const TOGGLE_DND_EVENT = "dnd://toggle";
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   const core = await import("@tauri-apps/api/core");
@@ -80,6 +85,40 @@ export function useHomeHotkey(onHome: () => void) {
 
     import("@tauri-apps/api/event").then(({ listen }) =>
       listen(OPEN_HOME_EVENT, () => onHomeRef.current()).then((fn) => {
+        if (cancelled) fn();
+        else unlisten = fn;
+      }),
+    );
+
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, []);
+}
+
+/**
+ * Flips Do Not Disturb and says so: a toast in the window, or a desktop
+ * notification (shown even as DND turns on) while another app has focus.
+ */
+export function toggleDoNotDisturb() {
+  const on = !notifySettings.getState().doNotDisturb;
+  notifySettings.setFlag("doNotDisturb", on);
+  const title = on ? "Do Not Disturb on" : "Do Not Disturb off";
+  const body = on ? "Notifications are silenced." : "Notifications are back on.";
+  if (document.hasFocus()) toast(title, { description: body });
+  else void notify({ title, body }, true);
+}
+
+/** Desktop Do Not Disturb hotkey. Mount once, outside any view that unmounts. A no-op on the web. */
+export function useDndHotkey() {
+  useEffect(() => {
+    if (!isDesktop()) return;
+    let cancelled = false;
+    let unlisten: (() => void) | undefined;
+
+    import("@tauri-apps/api/event").then(({ listen }) =>
+      listen(TOGGLE_DND_EVENT, toggleDoNotDisturb).then((fn) => {
         if (cancelled) fn();
         else unlisten = fn;
       }),
