@@ -92,8 +92,6 @@ export interface TaskReminderTiming {
   lead: number;
 }
 
-export const DEFAULT_TASK_REMINDER: TaskReminderTiming = { when: "before", lead: 30 };
-
 /**
  * Open tasks due soon, ahead of their "Due now" alert. "dayStart" covers every
  * task ending today (timed or not) until its end time; "before" covers timed

@@ -5,6 +5,7 @@ import {
   MAX_EVENT_LEAD,
   NOTIFY_SETTINGS_KEY,
   clampEventLead,
+  clampTaskLead,
   notifySettings,
   parseNotifySettings,
 } from "./notifySettings";
@@ -45,5 +46,18 @@ describe("notify settings", () => {
     localStorage.setItem(NOTIFY_SETTINGS_KEY, JSON.stringify({ eventLead: 5000 }));
     notifySettings._reset();
     expect(notifySettings.getState().eventLead).toBe(MAX_EVENT_LEAD);
+  });
+
+  it("stores task reminder options and falls back on bad values", () => {
+    notifySettings.setTaskReminderWhen("dayStart");
+    notifySettings.setTaskReminderRepeat("everyLaunch");
+    notifySettings.setTaskLead("0");
+    notifySettings._reset();
+    expect(notifySettings.getState()).toMatchObject({ taskReminderWhen: "dayStart", taskReminderRepeat: "everyLaunch", taskLead: 1 });
+    expect(parseNotifySettings(JSON.stringify({ taskReminderWhen: "x", taskReminderRepeat: 3 }))).toMatchObject({
+      taskReminderWhen: "before",
+      taskReminderRepeat: "once",
+    });
+    expect(clampTaskLead("abc")).toBe(30);
   });
 });

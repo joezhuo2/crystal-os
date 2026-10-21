@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTasks } from "@/contexts/AppContext";
 import { calendarEventsQuery, calendarWasConnected, useCalendarStatus } from "@/hooks/useGoogleCalendar";
-import { DEFAULT_TASK_REMINDER, deliver, eventAlerts, taskDueAlerts, taskReminderAlerts } from "@/lib/notifications";
+import { deliver, eventAlerts, taskDueAlerts, taskReminderAlerts } from "@/lib/notifications";
 import { useNotifySettings } from "@/lib/notifySettings";
 import { usesSidecar } from "@/lib/platform";
 
@@ -12,6 +12,8 @@ const CHECK_MS = 30 * 1000;
 const EVENTS_REFRESH_MS = 10 * 60 * 1000;
 /** Matches CalendarPage's key, so reminders follow the calendar picked in The Horizon. */
 const CALENDAR_STORAGE_KEY = "crystal-os-google-calendar";
+/** Tags "every launch" reminders, so the sent log repeats them next launch but not within this one. */
+const LAUNCH = Date.now().toString(36);
 
 function selectedCalendar(): string {
   try {
@@ -74,7 +76,11 @@ export default function NotificationScheduler() {
       const now = new Date();
       deliver([
         ...(s.tasks ? taskDueAlerts(t, now) : []),
-        ...(s.tasks ? taskReminderAlerts(t, now, DEFAULT_TASK_REMINDER) : []),
+        ...(s.taskReminders
+          ? taskReminderAlerts(t, now, { when: s.taskReminderWhen, lead: s.taskLead }).map((a) =>
+              s.taskReminderRepeat === "everyLaunch" ? { ...a, key: `${a.key}:${LAUNCH}` } : a,
+            )
+          : []),
         ...(s.calendar ? eventAlerts(e, now, s.eventLead) : []),
       ]);
     };

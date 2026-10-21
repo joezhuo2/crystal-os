@@ -6,6 +6,7 @@ import NebulaSettingsSection from "@/components/nebula/NebulaSettingsSection";
 import InstallerSection from "@/components/views/InstallerSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import HotkeySettingsDialog from "@/components/HotkeySettingsDialog";
@@ -347,10 +348,20 @@ function NumberInput({
   );
 }
 
-function EventLeadInput({ value, disabled }: { value: number; disabled: boolean }) {
+function EventLeadInput({
+  value,
+  disabled,
+  onCommit = notifySettings.setEventLead,
+  label = "Minutes before an event to remind",
+}: {
+  value: number;
+  disabled: boolean;
+  onCommit?: (value: string) => void;
+  label?: string;
+}) {
   const [draft, setDraft] = useState<string | null>(null);
   const commit = () => {
-    if (draft !== null) notifySettings.setEventLead(draft);
+    if (draft !== null) onCommit(draft);
     setDraft(null);
   };
   return (
@@ -370,7 +381,7 @@ function EventLeadInput({ value, disabled }: { value: number; disabled: boolean 
           if (e.key === "Escape") setDraft(null);
         }}
         className="h-8 w-24 text-right"
-        aria-label="Minutes before an event to remind"
+        aria-label={label}
       />
       <span className="text-xs text-muted-foreground">minutes</span>
     </div>
@@ -665,6 +676,55 @@ export default function SettingsPage() {
           </Row>
           <Row title="Task due times" description="When an open task reaches its end time, including each repeat.">
             <Switch checked={notifications.tasks} onCheckedChange={(on) => notifySettings.setFlag("tasks", on)} />
+          </Row>
+          <Row title="Task reminders" description="A heads-up before an open task is due, ahead of its due-time notification.">
+            <Switch checked={notifications.taskReminders} onCheckedChange={(on) => notifySettings.setFlag("taskReminders", on)} />
+          </Row>
+          <Row
+            title="Remind tasks"
+            description="From the start of the day a task is due (untimed tasks too), or a set number of minutes before its end time."
+          >
+            <Select
+              value={notifications.taskReminderWhen}
+              onValueChange={(v) => notifySettings.setTaskReminderWhen(v as "dayStart" | "before")}
+              disabled={!notifications.taskReminders}
+            >
+              <SelectTrigger className="h-8 w-44" aria-label="When to remind about tasks">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dayStart">At the start of the day</SelectItem>
+                <SelectItem value="before">Minutes before</SelectItem>
+              </SelectContent>
+            </Select>
+          </Row>
+          {notifications.taskReminderWhen === "before" && (
+            <Row title="Remind before tasks" description={`How many minutes before a task's end time. 1 to ${MAX_EVENT_LEAD} (a day).`}>
+              <EventLeadInput
+                value={notifications.taskLead}
+                disabled={!notifications.taskReminders}
+                onCommit={notifySettings.setTaskLead}
+                label="Minutes before a task to remind"
+              />
+            </Row>
+          )}
+          <Row
+            title="Show task reminders"
+            description="Once per task and day, or again each time Crystal OS launches while the reminder still applies."
+          >
+            <Select
+              value={notifications.taskReminderRepeat}
+              onValueChange={(v) => notifySettings.setTaskReminderRepeat(v as "once" | "everyLaunch")}
+              disabled={!notifications.taskReminders}
+            >
+              <SelectTrigger className="h-8 w-44" aria-label="How often task reminders show">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="once">On one launch</SelectItem>
+                <SelectItem value="everyLaunch">On every launch</SelectItem>
+              </SelectContent>
+            </Select>
           </Row>
           <Row
             title="Calendar reminders"
