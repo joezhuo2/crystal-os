@@ -62,6 +62,7 @@ export default function NebulaToolbar({ chat, projectPath, projectName, running,
     if (harness.setChatOptions(chat.id, { effort }) && chat.tier === "high") nebula.restartClaude(chat.id);
   };
   useShortcut("nebula.cycleEffort", () => setEffort(EFFORTS[(EFFORTS.findIndex((e) => e.id === chat.effort) + 1) % EFFORTS.length].id), !running);
+  useShortcut("nebula.cycleMode", () => void nebula.setMode(chat.id, MODES[(MODES.findIndex((m) => m.id === chat.mode) + 1) % MODES.length].id));
 
   return (
     <div className="nebula-panel flex flex-wrap items-center gap-2 px-3 py-2">

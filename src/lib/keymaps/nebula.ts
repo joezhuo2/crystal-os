@@ -4,4 +4,5 @@ export const NEBULA_KEYS: KeymapAction[] = [
   { id: "nebula.newChat", category: "nebula", title: "New chat", defaultKey: "KeyN" },
   { id: "nebula.newProject", category: "nebula", title: "New project", defaultKey: "KeyP" },
   { id: "nebula.cycleEffort", category: "nebula", title: "Cycle thinking effort", defaultKey: "KeyE" },
+  { id: "nebula.cycleMode", category: "nebula", title: "Cycle permission mode", defaultKey: "KeyM" },
 ];
