@@ -63,6 +63,7 @@ import { useTasks, type Task } from "@/contexts/AppContext";
 import { dotsForDate, taskColor, tasksForDate } from "@/lib/horizonDots";
 import { awakeTasks } from "@/lib/snooze";
 import { splitByParent } from "@/lib/subtasks";
+import { useShortcut } from "@/hooks/useShortcut";
 import { useToday } from "@/hooks/useToday";
 
 const CALENDAR_STORAGE_KEY = "crystal-os-google-calendar";
@@ -1337,6 +1338,17 @@ export default function CalendarPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openEventRequest, view, focusDate, calendarId, eventsQuery.isPending, eventsQuery.isError, events]);
 
+  useShortcut("horizon.cycleView", () => setView(VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]), connected);
+  useShortcut("horizon.newEvent", () => openCreate(toLocalDateStr()), connected);
+  const disconnectCalendar = () => {
+    if (disconnect.isPending) return;
+    disconnect.mutate(undefined, {
+      onSuccess: () => toast.success("Google Calendar disconnected"),
+    });
+  };
+  useShortcut("horizon.signOut", disconnectCalendar, connected);
+  useShortcut("horizon.openToday", () => setSelectedDay(toLocalDateStr()), connected && view === "month");
+
   if (!connected) {
     return (
       <m.div
@@ -1417,11 +1429,7 @@ export default function CalendarPage() {
           )}
           <GlassTip label="Disconnect Google Calendar" side="bottom" colors={HORIZON_TIP}>
             <button
-              onClick={() => {
-                disconnect.mutate(undefined, {
-                  onSuccess: () => toast.success("Google Calendar disconnected"),
-                });
-              }}
+              onClick={disconnectCalendar}
               disabled={disconnect.isPending}
               aria-label="Disconnect Google Calendar"
               className="glass-card-hover px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-colors"
