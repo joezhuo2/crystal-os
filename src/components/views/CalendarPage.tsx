@@ -1347,6 +1347,7 @@ export default function CalendarPage() {
     });
   };
   useShortcut("horizon.signOut", disconnectCalendar, connected);
+  useShortcut("horizon.openToday", () => setSelectedDay(toLocalDateStr()), connected && view === "month");
 
   if (!connected) {
     return (
