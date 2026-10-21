@@ -4,6 +4,7 @@ import { Minimize2, Plus, RotateCw, SquareTerminal, X } from "lucide-react";
 import type { Terminal } from "@xterm/xterm";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { isDesktop } from "@/lib/platform";
+import { useShortcut } from "@/hooks/useShortcut";
 import {
   MAX_TERMINALS,
   TerminalHub,
@@ -413,6 +414,8 @@ export default function TerminalPage() {
     },
     [activeKey, closeTab, cycle, newTab],
   );
+
+  useShortcut("terminal.newTab", () => void newTab(), desktop);
 
   const refresh = useCallback(async () => {
     const pane = activeKey ? panes.current.get(activeKey) : undefined;
