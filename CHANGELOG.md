@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.17] - 2026-10-21 - Changelog after updates.
+
+### Added
+
+- **What's new popup after an update** (issue #55). The first launch after Crystal OS updates opens a fixed-size popup over the Home screen with the changelog for every version since the one you had, scrolling when it is long. Close it with the button in the top right corner or Esc. A fresh install shows nothing (`changelog.ts`, `ChangelogDialog.tsx`, `ChangelogNotice.tsx`, `App.tsx`).
+
 ## [v0.11.16] - 2026-10-20 - Task deadline reminders.
 
 ### Added
