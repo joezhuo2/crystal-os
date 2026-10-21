@@ -1,6 +1,7 @@
 /**
- * The Atmosphere's custom background image: checked, scaled down, and kept
- * in IndexedDB (localStorage is too small for images). One image at a time.
+ * Custom background images: checked, scaled down, and kept in IndexedDB
+ * (localStorage is too small for images). The Atmosphere's is stored under
+ * the default key; each page's own (backdropSettings.ts) under its own key.
  */
 
 export const IMAGE_TYPES = ["image/png", "image/jpeg"] as const;
@@ -121,18 +122,18 @@ async function run<T>(mode: IDBTransactionMode, act: (store: IDBObjectStore) => 
 
 const hasDb = () => typeof indexedDB !== "undefined";
 
-export async function loadImage(): Promise<Blob | null> {
+export async function loadImage(key = KEY): Promise<Blob | null> {
   if (!hasDb()) return null;
-  const value = await run<unknown>("readonly", (s) => s.get(KEY));
+  const value = await run<unknown>("readonly", (s) => s.get(key));
   return value instanceof Blob ? value : null;
 }
 
-export async function saveImage(blob: Blob): Promise<void> {
+export async function saveImage(blob: Blob, key = KEY): Promise<void> {
   if (!hasDb()) throw new Error("This browser cannot store images.");
-  await run("readwrite", (s) => s.put(blob, KEY));
+  await run("readwrite", (s) => s.put(blob, key));
 }
 
-export async function deleteImage(): Promise<void> {
+export async function deleteImage(key = KEY): Promise<void> {
   if (!hasDb()) return;
-  await run("readwrite", (s) => s.delete(KEY));
+  await run("readwrite", (s) => s.delete(key));
 }

@@ -1824,9 +1824,9 @@
     animation-play-state: paused !important;
   }
 
+  /* No `to`: the fade ends at the image's own opacity (backdropSettings.ts). */
   @keyframes image-backdrop-in {
     from { opacity: 0; }
-    to   { opacity: 1; }
   }
 
   @media (prefers-reduced-motion: reduce) {

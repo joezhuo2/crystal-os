@@ -3,7 +3,9 @@
  * one), the Orbit (a pale tilted one) and the Portal (a warm, peach and rose
  * one), shown behind each page and behind its box on the Home tab. Each image
  * is blurred once on a canvas with the Atmosphere's Image blur scale
- * (blurImage, the same bake), so no place pays for a live CSS blur.
+ * (blurImage, the same bake), so no place pays for a live CSS blur. Each
+ * page's image, blurs and opacity can be changed in Settings
+ * (backdropSettings.ts).
  */
 import { useEffect, useState } from "react";
 import horizonImage from "@/assets/horizon-backdrop.webp";
@@ -12,8 +14,12 @@ import orbitImage from "@/assets/orbit-backdrop.webp";
 import portalImage from "@/assets/portal-backdrop.webp";
 import archiveImage from "@/assets/archive-backdrop.jpg";
 import { blurImage } from "@/lib/atmosphereImage";
+import { backdropSettings, useBackdropSettings, type BackdropImage } from "@/lib/backdropSettings";
 
-export type BackdropImage = "horizon" | "engine" | "orbit" | "portal" | "archive";
+export type { BackdropImage };
+
+/** Where an image is shown: behind its page, or behind its box on the Home tab. */
+export type BackdropPlace = "page" | "card";
 
 const IMAGES: Record<BackdropImage, string> = {
   horizon: horizonImage,
@@ -23,11 +29,6 @@ const IMAGES: Record<BackdropImage, string> = {
   // Home box only; The Archive page keeps its amethyst cave.
   archive: archiveImage,
 };
-
-/** Image blur (0–100) behind a page. */
-export const PAGE_BACKDROP_BLUR = 15;
-/** Image blur (0–100) behind a page's box on the Home tab. */
-export const CARD_BACKDROP_BLUR = 25;
 
 const baked = new Map<string, Promise<string>>();
 /** Bakes that have finished, and decoded, so a remount can show them at once. */
@@ -43,11 +44,10 @@ function decoded(url: string): Promise<string> {
   );
 }
 
-function bake(image: BackdropImage, amount: number): Promise<string> {
-  const key = `${image}:${amount}`;
+function bake(src: string, amount: number): Promise<string> {
+  const key = `${src}:${amount}`;
   let url = baked.get(key);
   if (!url) {
-    const src = IMAGES[image];
     url = fetch(src)
       .then((res) => res.blob())
       .then((blob) => blurImage(blob, amount))
@@ -64,18 +64,26 @@ function bake(image: BackdropImage, amount: number): Promise<string> {
   return url;
 }
 
-/** True once `image` at `amount` has been baked and decoded. */
-export function isBackdropReady(image: BackdropImage, amount: number): boolean {
-  return ready.has(`${image}:${amount}`);
+function source(image: BackdropImage, place: BackdropPlace) {
+  const c = backdropSettings.getState()[image];
+  return { src: c.customUrl ?? IMAGES[image], amount: place === "page" ? c.pageBlur : c.cardBlur, opacity: c.opacity };
+}
+
+/** True once `image` has been baked and decoded for `place` under the current settings. */
+export function isBackdropReady(image: BackdropImage, place: BackdropPlace): boolean {
+  const { src, amount } = source(image, place);
+  return ready.has(`${src}:${amount}`);
 }
 
 /**
- * Object URL of `image` blurred by `amount`, or null while it bakes. A bake
- * that already finished is returned on the first render, so revisiting a tab
- * does not flash an empty backdrop.
+ * Object URL of `image` blurred for `place` (null while it bakes), and the
+ * opacity (0–1) to show it at. A bake that already finished is returned on
+ * the first render, so revisiting a tab does not flash an empty backdrop.
  */
-export function useImageBackdrop(image: BackdropImage, amount: number): string | null {
-  const key = `${image}:${amount}`;
+export function useImageBackdrop(image: BackdropImage, place: BackdropPlace): { url: string | null; opacity: number } {
+  useBackdropSettings();
+  const { src, amount, opacity } = source(image, place);
+  const key = `${src}:${amount}`;
   const [state, setState] = useState(() => ({ key, url: ready.get(key) ?? null }));
   let current = state;
   if (state.key !== key) {
@@ -85,10 +93,10 @@ export function useImageBackdrop(image: BackdropImage, amount: number): string |
   useEffect(() => {
     if (ready.has(key)) return;
     let live = true;
-    bake(image, amount).then((u) => live && setState({ key, url: u }));
+    bake(src, amount).then((u) => live && setState({ key, url: u }));
     return () => {
       live = false;
     };
-  }, [key, image, amount]);
-  return current.url;
+  }, [key, src, amount]);
+  return { url: current.url, opacity: opacity / 100 };
 }

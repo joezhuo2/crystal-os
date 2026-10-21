@@ -21,7 +21,7 @@ import { useAtmosphere } from "@/lib/atmosphereStore";
 import { auroraStrength, pineRidge } from "@/lib/atmosphereScene";
 import { useVaultNotes } from "@/hooks/useVault";
 import { usesSidecar } from "@/lib/platform";
-import { CARD_BACKDROP_BLUR, useImageBackdrop } from "@/lib/imageBackdrop";
+import { useImageBackdrop } from "@/lib/imageBackdrop";
 import {
   useCalendarEvents,
   calendarWasConnected,
@@ -64,7 +64,7 @@ function Clock({ onClick }: { onClick?: () => void }) {
 
   const hours = time.getHours();
   const greeting = hours < 12 ? "Good Morning" : hours < 17 ? "Good Afternoon" : "Good Evening";
-  const backdropUrl = useImageBackdrop("orbit", CARD_BACKDROP_BLUR);
+  const { url: backdropUrl, opacity: backdropOpacity } = useImageBackdrop("orbit", "card");
   const teaser = useOrbitTeaser(time);
   const { unseen } = useOrbitReady(time);
 
@@ -83,7 +83,7 @@ function Clock({ onClick }: { onClick?: () => void }) {
   return (
     <div className="home-space home-space-orbit">
       <span aria-hidden="true" className="home-backdrop-scene">
-        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />}
+        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")`, opacity: backdropOpacity }} />}
       </span>
       <div onClick={openOrbit} className="home-card-orbit h-full p-6 cursor-pointer group">
         <div className="flex items-center justify-between gap-2 mb-2">
@@ -220,7 +220,7 @@ function WeatherWidget({ onClick }: { onClick?: () => void }) {
 function ArchiveWidget({ onClick }: { onClick?: () => void }) {
   const { setSelectedNotePath, setShowQuickAdd, setQuickAddDraft } = appUi;
   const [activeTag, setActiveTag] = useState<string | null>(null);
-  const backdropUrl = useImageBackdrop("archive", CARD_BACKDROP_BLUR);
+  const { url: backdropUrl, opacity: backdropOpacity } = useImageBackdrop("archive", "card");
   const { data, isLoading, error } = useVaultNotes({
     tag: activeTag ?? undefined,
     limit: 4,
@@ -235,7 +235,7 @@ function ArchiveWidget({ onClick }: { onClick?: () => void }) {
   return (
     <div className="home-space home-space-archive">
       <span aria-hidden="true" className="home-backdrop-scene">
-        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />}
+        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")`, opacity: backdropOpacity }} />}
       </span>
       <div onClick={onClick} className="home-card-archive h-full p-6 cursor-pointer group">
         <div className="flex items-center justify-between mb-3">
@@ -346,7 +346,7 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
   // asks once the calendar has been connected (from the Horizon tab).
   const status = useCalendarStatus(!usesSidecar() || calendarWasConnected());
   const connected = status.data?.connected === true;
-  const backdropUrl = useImageBackdrop("horizon", CARD_BACKDROP_BLUR);
+  const { url: backdropUrl, opacity: backdropOpacity } = useImageBackdrop("horizon", "card");
 
   // Local midnight today through local midnight tomorrow.
   const range = useMemo(() => {
@@ -381,7 +381,7 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
   return (
     <div className="home-space home-space-horizon">
       <span aria-hidden="true" className="home-backdrop-scene">
-        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />}
+        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")`, opacity: backdropOpacity }} />}
       </span>
       <div onClick={onClick} className="home-card-horizon h-full p-6 cursor-pointer group">
         <div className="flex items-center justify-between mb-3">
@@ -465,7 +465,7 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
   const loading = useAppLoading();
   // Live, so snoozed tasks wake at midnight without a reload.
   const today = useToday();
-  const backdropUrl = useImageBackdrop("engine", CARD_BACKDROP_BLUR);
+  const { url: backdropUrl, opacity: backdropOpacity } = useImageBackdrop("engine", "card");
 
   const isOverdue = (t: Task) => isTaskOverdue(t, today);
 
@@ -520,7 +520,7 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
   return (
     <div className="home-space home-space-engine">
       <span aria-hidden="true" className="home-backdrop-scene">
-        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />}
+        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")`, opacity: backdropOpacity }} />}
       </span>
       <div onClick={onClick} className="home-card-engine h-full p-6 cursor-pointer group">
         <div className="flex items-center justify-between mb-3">

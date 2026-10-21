@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Keyboard, ListTodo, Orbit, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
+import { Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Images, Keyboard, ListTodo, Orbit, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 import NebulaSettingsSection from "@/components/nebula/NebulaSettingsSection";
 import InstallerSection from "@/components/views/InstallerSection";
@@ -20,6 +20,7 @@ import { MAX_CACHE_MINUTES, MAX_UNLOAD_DELAY, perfSettings, usePerfSettings } fr
 import { privacySettings, usePrivacyMode } from "@/lib/privacySettings";
 import { atmosphere, useAtmosphere } from "@/lib/atmosphereStore";
 import { IMAGE_TYPES } from "@/lib/atmosphereImage";
+import { BACKDROP_IMAGES, backdropSettings, useBackdropSettings, type BackdropImage } from "@/lib/backdropSettings";
 import { buildDiagnosticsReport } from "@/lib/diagnostics";
 import { MAX_EVENT_LEAD, notifySettings, useNotifySettings } from "@/lib/notifySettings";
 import { notify } from "@/lib/notifications";
@@ -224,11 +225,21 @@ function Combo({ children, error }: { children: React.ReactNode; error?: boolean
 }
 
 /**
- * Picks, previews and removes The Atmosphere's background image. The file is
- * checked and stored by atmosphereStore; failures show as a toast and keep
- * the current background. Removing the user's image goes back to the default.
+ * Picks, previews and removes a background image. The file is checked and
+ * stored by `onChoose`; failures show as a toast and keep the current
+ * background. Removing the user's image goes back to the default.
  */
-function AtmosphereImagePicker({ imageUrl, custom }: { imageUrl: string | null; custom: boolean }) {
+function ImagePicker({
+  imageUrl,
+  custom,
+  onChoose,
+  onClear,
+}: {
+  imageUrl: string | null;
+  custom: boolean;
+  onChoose: (file: File) => Promise<void>;
+  onClear: () => void;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
@@ -236,7 +247,7 @@ function AtmosphereImagePicker({ imageUrl, custom }: { imageUrl: string | null; 
     if (!file) return;
     setBusy(true);
     try {
-      await atmosphere.setImage(file);
+      await onChoose(file);
     } catch (err) {
       toast.error("Could not use that image", { description: err instanceof Error ? err.message : undefined });
     } finally {
@@ -266,7 +277,7 @@ function AtmosphereImagePicker({ imageUrl, custom }: { imageUrl: string | null; 
         {busy ? "Saving…" : custom ? "Change" : "Choose image"}
       </Button>
       {custom && (
-        <Button variant="ghost" size="sm" disabled={busy} onClick={() => atmosphere.clearImage()} aria-label="Remove background image and use the default">
+        <Button variant="ghost" size="sm" disabled={busy} onClick={onClear} aria-label="Remove background image and use the default">
           <Trash2 className="w-4 h-4" />
         </Button>
       )}
@@ -275,11 +286,11 @@ function AtmosphereImagePicker({ imageUrl, custom }: { imageUrl: string | null; 
 }
 
 /**
- * How much the Atmosphere's background image is blurred. Moves freely while
- * dragging and re-blurs the image once on release, since each blur is a
+ * A 0–100% amount, such as how much a background image is blurred. Moves
+ * freely while dragging and commits once on release, since each blur is a
  * canvas pass over the whole image.
  */
-function ImageBlurSlider({ value }: { value: number }) {
+function PercentSlider({ value, label, onCommit }: { value: number; label: string; onCommit: (v: number) => void }) {
   const [draft, setDraft] = useState<number | null>(null);
   const shown = draft ?? value;
   return (
@@ -292,13 +303,73 @@ function ImageBlurSlider({ value }: { value: number }) {
         value={[shown]}
         onValueChange={([v]) => setDraft(v)}
         onValueCommit={([v]) => {
-          atmosphere.setImageBlur(v);
+          onCommit(v);
           setDraft(null);
         }}
-        aria-label="Image blur"
+        aria-label={label}
       />
       <span className="w-9 text-right text-xs tabular-nums text-muted-foreground">{shown}%</span>
     </div>
+  );
+}
+
+const BACKDROP_LABELS: Record<BackdropImage, string> = {
+  horizon: "The Horizon",
+  engine: "The Engine",
+  orbit: "The Orbit",
+  portal: "The Portal",
+  archive: "The Archive (Home box)",
+};
+
+/** Picks a page, then its background image, blurs and opacity. */
+function BackgroundsSettings() {
+  const all = useBackdropSettings();
+  const [page, setPage] = useState<BackdropImage>("horizon");
+  const c = all[page];
+  return (
+    <>
+      <Row title="Page" description="The page whose background the settings below change.">
+        <Select value={page} onValueChange={(v) => setPage(v as BackdropImage)}>
+          <SelectTrigger className="h-8 w-52" aria-label="Page to change the background of">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {BACKDROP_IMAGES.map((i) => (
+              <SelectItem key={i} value={i}>
+                {BACKDROP_LABELS[i]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Row>
+      <Row
+        title="Background image"
+        description="Shown behind the page and its box on the Home tab. Choose a PNG or JPEG of your own (stored on this device only), or remove yours to go back to the default."
+      >
+        <ImagePicker
+          imageUrl={c.customUrl}
+          custom={!!c.customUrl}
+          onChoose={(file) => backdropSettings.setImage(page, file)}
+          onClear={() => backdropSettings.clearImage(page)}
+        />
+      </Row>
+      {page !== "archive" && (
+        <Row title="Page blur" description="How much the image is blurred behind the page, from sharp (0%) to heavily frosted (100%).">
+          <PercentSlider key={`${page}-page`} value={c.pageBlur} label="Page blur" onCommit={(v) => backdropSettings.setAmount(page, "pageBlur", v)} />
+        </Row>
+      )}
+      <Row title="Home box blur" description="How much the image is blurred behind the page's box on the Home tab.">
+        <PercentSlider key={`${page}-card`} value={c.cardBlur} label="Home box blur" onCommit={(v) => backdropSettings.setAmount(page, "cardBlur", v)} />
+      </Row>
+      <Row title="Image opacity" description="How strongly the image shows, behind both the page and its Home box. Lower lets the page's own colour through.">
+        <PercentSlider key={`${page}-opacity`} value={c.opacity} label="Image opacity" onCommit={(v) => backdropSettings.setAmount(page, "opacity", v)} />
+      </Row>
+      <Row title="Reset" description="Puts this page's blurs and opacity back to their defaults. Keeps your image.">
+        <Button variant="outline" size="sm" onClick={() => backdropSettings.resetAmounts(page)}>
+          Reset
+        </Button>
+      </Row>
+    </>
   );
 }
 
@@ -818,16 +889,20 @@ export default function SettingsPage() {
             title="Background image"
             description="Shown behind the page and the Home box, under frosted glass, with the sky's tint and effects drawn over it. A misty forest lake by default; choose a PNG or JPEG of your own (stored on this device only), or remove yours to go back to the default."
           >
-            <AtmosphereImagePicker imageUrl={sky.imageUrl} custom={sky.customImage} />
+            <ImagePicker imageUrl={sky.imageUrl} custom={sky.customImage} onChoose={atmosphere.setImage} onClear={atmosphere.clearImage} />
           </Row>
           {sky.imageUrl && (
             <Row
               title="Image blur"
               description="How much the glass blurs the background image, from sharp (0%) to heavily frosted (100%)."
             >
-              <ImageBlurSlider value={sky.imageBlur} />
+              <PercentSlider value={sky.imageBlur} label="Image blur" onCommit={atmosphere.setImageBlur} />
             </Row>
           )}
+        </Section>
+
+        <Section id="backgrounds" icon={Images} title="Backgrounds">
+          <BackgroundsSettings />
         </Section>
 
         <Section id="privacy" icon={EyeOff} title="Privacy">
