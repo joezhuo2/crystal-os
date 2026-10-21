@@ -526,6 +526,8 @@ Stored in `tasks.snoozed_until` and `tasks.someday` ([migration 0007](supabase/m
 
 ## 🔽 Sorting and filtering
 
+**Keyboard shortcuts (The Engine).** **V** switches between List and Board, **N** opens the new task form, **C** opens the task categories, and **S** opens Sort & Filter. They are single keys, ignored while typing or with a dialog open.
+
 **Sort & Filter.** A themed button directly right of **Categories** on The Engine's toolbar opens a glass popover (it fades and scales open and closed, like the themed selects). Click outside or press Escape to close it; Escape closes a select inside it first. The button shows the active sort ("· Name ↓") when it is not the default, and a badge with the number of active filters.
 
 **Sort.** Default (open before done, then priority: the old order), Due date, Start date, Priority, Estimate, Name or Created, ascending or descending. Tasks with no estimate or no created date always sort last.
