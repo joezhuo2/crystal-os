@@ -22,6 +22,7 @@ export default function NebulaPage() {
     const projectId = chat?.projectId ?? state.projects[0]?.id;
     if (projectId) harness.createChat(projectId);
   }, desktop);
+  useShortcut("nebula.newProject", () => setNewProject(true), desktop);
 
   useEffect(() => {
     startHarnessSession();
