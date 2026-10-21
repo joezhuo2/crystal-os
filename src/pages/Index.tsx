@@ -128,6 +128,7 @@ const Index = () => {
   const View = views[viewTab];
   useHomeHotkey(() => setActiveTab("home"));
   useShortcut("general.nextPage", () => setActiveTab((t) => stepTab(visibleTabIds(), t, 1)));
+  useShortcut("general.previousPage", () => setActiveTab((t) => stepTab(visibleTabIds(), t, -1)));
 
   // Most recent backdrop tabs first. Updated during render, so the new tab's
   // backdrop mounts in the same commit as its page.
