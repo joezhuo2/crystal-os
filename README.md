@@ -746,6 +746,8 @@ Whatever the switches say, hiding the window to the tray or minimising it now st
 
 Change any of them with **Change** in Settings. All are saved in `%APPDATA%\com.crystalos.desktop\settings.json`, and no two can share a combo. If another app already owns one, Crystal OS still starts and shows a toast.
 
+**Keyboard shortcuts.** Inside the app, **J** goes to the next page down the sidebar and **K** to the previous one, wrapping at the ends. They are ignored while typing in a field or terminal, or while a dialog or menu is open.
+
 **Always ready.** The hotkeys only work while Crystal OS is running, so the app stays running in the tray:
 
 - **Launch at login** is on by default. The first time you open the packaged app it registers itself to start at sign-in with `--hidden`, which keeps the window in the tray until you press a hotkey. Turn it off in Settings; the choice is saved as `launchAtLogin` in `settings.json`. Debug builds (`npm run dev:desktop`) never register.
