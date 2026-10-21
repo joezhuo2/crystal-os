@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.22] - 2026-10-21 - Quieter updates.
+
+### Changed
+
+- **What's new popup is now optional and off by default** (issue #59). After an update the changelog popup no longer opens on its own; switch on **Settings → Notifications → What's new after updates** to see it. The last version you ran is still recorded while it is off, so switching it on later does not replay older releases. "what's new", "changelog" and "release notes" in the command palette find the switch (`changelogSettings.ts`, `ChangelogNotice.tsx`, `SettingsPage.tsx`, `settingsSections.ts`).
+
 ## [v0.11.21] - 2026-10-21 - Configurable backgrounds.
 
 ### Added
