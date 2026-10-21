@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Engine shortcuts** (issue #13). **V** switches List and Board, **N** adds a task, **C** edits categories and **S** opens Sort & Filter (`TasksPage.tsx`, `CategoryManager.tsx`, `TaskViewMenu.tsx`).
 - **Horizon shortcuts** (issue #13). **V** cycles Month, Week, Day and Agenda, **N** opens New Event, **T** opens today in Month view and **Shift+Q** disconnects Google Calendar (`CalendarPage.tsx`).
 - **Archive shortcuts** (issue #13). **N** opens Quick Add to write a note and **/** jumps to Search the vault (`ArchivePage.tsx`).
+- **Nebula shortcuts** (issue #13). **N** starts a new chat, **P** a new project, **E** cycles the effort and **M** cycles Auto, Manual and Plan mode (`NebulaPage.tsx`, `NebulaToolbar.tsx`).
 
 ## [v0.11.14] - 2026-10-20 - Snappier page changes.
 
