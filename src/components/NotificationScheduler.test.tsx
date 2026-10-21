@@ -21,6 +21,11 @@ vi.mock("@/hooks/useGoogleCalendar", () => ({
   calendarWasConnected: () => false,
   useCalendarStatus: () => ({ data: undefined }),
 }));
+const habitsData = {
+  habits: [{ id: "h1", name: "Read", color: "", position: 0, createdAt: "2026-10-01T12:00:00Z", archivedAt: null }],
+  checks: [] as { habitId: string; day: string }[],
+};
+vi.mock("@/hooks/useHabits", () => ({ useHabitsData: () => ({ data: habitsData }) }));
 vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: undefined }) }));
 vi.mock("@/lib/platform", () => ({ isDesktop: () => false, usesSidecar: () => false }));
 
@@ -34,12 +39,14 @@ class FakeNotification {
 
 import NotificationScheduler from "./NotificationScheduler";
 import { notifySettings } from "@/lib/notifySettings";
+import { habitReminders } from "@/lib/habitReminders";
 
 const flush = () => act(async () => undefined);
 
 beforeEach(() => {
   localStorage.clear();
   notifySettings._reset();
+  habitReminders._reset();
   shown.mockReset();
   vi.stubGlobal("Notification", FakeNotification);
   vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
@@ -64,5 +71,17 @@ describe("NotificationScheduler task reminders", () => {
 
     await act(async () => vi.advanceTimersByTime(30 * 1000));
     expect(shown).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("NotificationScheduler habit reminders", () => {
+  it("reminds about a habit not ticked by its time, once per hour slot", async () => {
+    habitReminders.setTime("h1", "16:30");
+    render(<NotificationScheduler />);
+    await flush();
+    expect(shown).toHaveBeenCalledWith("Habit: Read");
+
+    await act(async () => vi.advanceTimersByTime(30 * 1000));
+    expect(shown.mock.calls.filter(([t]) => t === "Habit: Read")).toHaveLength(1);
   });
 });
