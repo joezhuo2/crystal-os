@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.18] - 2026-10-21 - Habit reminders.
+
+### Added
+
+- **Habit reminders** (issue #44). Set a reminder time per habit with the bell in The Orbit's habit manager. A native notification shows if the habit is not ticked by then, repeating hourly up to a per-habit number of times a day (0 = no limit).
+- **Habit reminder options in Settings → Notifications** (issue #44). A **Habit reminders** switch and a **Remind habits on every startup** option that reminds once per launch for habits past their time and not ticked.
+
 ## [v0.11.17] - 2026-10-21 - Changelog after updates.
 
 ### Added

@@ -1,6 +1,6 @@
 /**
  * Native notifications: desktop toasts for task due times, calendar
- * reminders, Pomodoro phase changes and Portal unread counts.
+ * reminders, habit reminders, Pomodoro phase changes and Portal unread counts.
  *
  * The planners here are pure (what to say, and when), so they are tested
  * directly. `notify` delivers through tauri-plugin-notification on desktop
@@ -14,6 +14,8 @@
 
 import type { Task } from "@/contexts/AppContext";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
+import type { HabitReminder } from "@/lib/habitReminders";
+import { indexChecks, isActiveOn, sortHabits, type Habit, type HabitCheck } from "@/lib/habits";
 import { notifySettings } from "@/lib/notifySettings";
 import { isDesktop } from "@/lib/platform";
 import { pomodoro, selectFocusMuted, type PomodoroState } from "@/lib/pomodoro";
@@ -149,6 +151,42 @@ export function eventAlerts(events: CalendarEvent[], now: Date, leadMinutes: num
       key: `event:${event.calendarId}:${event.id}:${event.startISO}`,
       title: event.summary || "(No title)",
       body: event.location ? `${when} · ${event.location}` : when,
+    });
+  }
+  return alerts;
+}
+
+/** Time between repeat reminders for a habit still not ticked. */
+export const HABIT_REMIND_EVERY_MS = 60 * MINUTE;
+
+/**
+ * Active habits not ticked today whose reminder time has passed. Each hour
+ * after that time is its own reminder, up to the habit's `perDay` (0: no
+ * limit). With `launch`, one reminder per habit tagged with that launch
+ * instead, ignoring the limit: the "remind on every startup" toast.
+ */
+export function habitReminderAlerts(
+  habits: Habit[],
+  checks: HabitCheck[],
+  reminders: Record<string, HabitReminder>,
+  now: Date,
+  launch?: string,
+): PlannedAlert[] {
+  const today = toLocalDateStr(now);
+  const done = indexChecks(checks);
+  const alerts: PlannedAlert[] = [];
+  for (const habit of sortHabits(habits)) {
+    const reminder = reminders[habit.id];
+    if (!reminder || !isActiveOn(habit, today) || done.get(habit.id)?.has(today)) continue;
+    const at = new Date(`${today}T${reminder.time}:00`);
+    const since = now.getTime() - at.getTime();
+    if (since < 0) continue;
+    const slot = Math.floor(since / HABIT_REMIND_EVERY_MS);
+    if (!launch && reminder.perDay > 0 && slot >= reminder.perDay) continue;
+    alerts.push({
+      key: `habit:${habit.id}:${today}:${launch ? `launch:${launch}` : slot}`,
+      title: `Habit: ${habit.name}`,
+      body: `Not ticked yet today · reminder set for ${clockLabel(at)}`,
     });
   }
   return alerts;

@@ -753,6 +753,22 @@ export default function SettingsPage() {
           >
             <Switch checked={notifications.reviews} onCheckedChange={(on) => notifySettings.setFlag("reviews", on)} />
           </Row>
+          <Row
+            title="Habit reminders"
+            description="When a habit is not ticked by the reminder time set on it (the bell in The Orbit's habit manager), up to its count a day, an hour apart."
+          >
+            <Switch checked={notifications.habitReminders} onCheckedChange={(on) => notifySettings.setFlag("habitReminders", on)} />
+          </Row>
+          <Row
+            title="Remind habits on every startup"
+            description="Also each time Crystal OS launches, for every habit past its reminder time and not ticked yet, even after its count for the day."
+          >
+            <Switch
+              checked={notifications.habitReminderStartup}
+              disabled={!notifications.habitReminders}
+              onCheckedChange={(on) => notifySettings.setFlag("habitReminderStartup", on)}
+            />
+          </Row>
           <Row title="Test" description="Shows a notification now, even with Do Not Disturb on. The first one asks for permission.">
             <TestNotificationButton />
           </Row>

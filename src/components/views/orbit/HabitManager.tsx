@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Archive, GripVertical, Plus } from "lucide-react";
+import { Archive, Bell, BellRing, GripVertical, Plus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { useHabitActions, useHabitsData } from "@/hooks/useHabits";
 import { HABIT_COLORS, HABIT_NAME_MAX, type Habit } from "@/lib/habits";
+import { MAX_HABIT_REMINDERS_PER_DAY, habitReminders, useHabitReminders } from "@/lib/habitReminders";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
@@ -69,6 +70,50 @@ function ColorPicker({ value, onChange, label }: { value: string; onChange: (col
   );
 }
 
+/** A reminder time for one habit and how many hourly reminders a day it gets. */
+function ReminderPicker({ habit }: { habit: Habit }) {
+  const reminder = useHabitReminders()[habit.id];
+  const [perDay, setPerDay] = useState<string | null>(null);
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center gap-2">
+        <input
+          type="time"
+          value={reminder?.time ?? ""}
+          onChange={(e) => habitReminders.setTime(habit.id, e.target.value || null)}
+          aria-label={`Reminder time for ${habit.name}`}
+          className="orbit-textarea py-1.5 text-xs w-32"
+        />
+        {reminder && (
+          <button type="button" className="orbit-button-ghost text-xs" onClick={() => habitReminders.setTime(habit.id, null)}>
+            No reminder
+          </button>
+        )}
+      </div>
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <input
+          type="number"
+          min={0}
+          max={MAX_HABIT_REMINDERS_PER_DAY}
+          disabled={!reminder}
+          value={perDay ?? reminder?.perDay ?? 1}
+          onChange={(e) => setPerDay(e.target.value)}
+          onBlur={() => {
+            if (perDay !== null) habitReminders.setPerDay(habit.id, perDay);
+            setPerDay(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+          aria-label={`Reminders a day for ${habit.name}`}
+          className="orbit-textarea py-1.5 text-xs w-16 text-right"
+        />
+        times a day, an hour apart, until ticked (0 = no limit)
+      </label>
+    </div>
+  );
+}
+
 function HabitRow({
   habit,
   dragging,
@@ -85,6 +130,8 @@ function HabitRow({
   const { updateHabit } = useHabitActions();
   const [name, setName] = useState(habit.name);
   const [picking, setPicking] = useState(false);
+  const [reminding, setReminding] = useState(false);
+  const reminder = useHabitReminders()[habit.id];
   useEffect(() => setName(habit.name), [habit.name]);
 
   const commitName = () => {
@@ -136,6 +183,17 @@ function HabitRow({
           aria-label="Habit name"
           className="orbit-habit-name"
         />
+        <GlassTip label="Reminder" hint={reminder ? `At ${reminder.time}` : "Off"} tone="orbit">
+          <button
+            type="button"
+            className="orbit-icon-button"
+            aria-label={`Reminder for ${habit.name}`}
+            aria-expanded={reminding}
+            onClick={() => setReminding((r) => !r)}
+          >
+            {reminder ? <BellRing className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
+          </button>
+        </GlassTip>
         <GlassTip label="Remove" hint="Its history stays in past reviews" tone="orbit">
           <button type="button" className="orbit-icon-button orbit-habit-archive" onClick={onArchive} aria-label={`Remove ${habit.name}`}>
             <Archive className="w-3.5 h-3.5" />
@@ -147,12 +205,17 @@ function HabitRow({
           <ColorPicker value={habit.color} onChange={(color) => void updateHabit(habit.id, { color })} label={`Colour of ${habit.name}`} />
         </div>
       )}
+      {reminding && (
+        <div className="mt-2.5 pl-7">
+          <ReminderPicker habit={habit} />
+        </div>
+      )}
     </li>
   );
 }
 
 /**
- * Add, rename, recolour, reorder and remove habits. Removing archives: the
+ * Add, rename, recolour, reorder, set reminders for and remove habits. Removing archives: the
  * habit leaves the Today card, and its check-offs still count in reviews of
  * the periods it was active in.
  */

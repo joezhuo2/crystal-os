@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTasks } from "@/contexts/AppContext";
 import { calendarEventsQuery, calendarWasConnected, useCalendarStatus } from "@/hooks/useGoogleCalendar";
-import { deliver, eventAlerts, taskDueAlerts, taskReminderAlerts } from "@/lib/notifications";
+import { useHabitsData } from "@/hooks/useHabits";
+import { useHabitReminders } from "@/lib/habitReminders";
+import { deliver, eventAlerts, takeUnsent, habitReminderAlerts, taskDueAlerts, taskReminderAlerts } from "@/lib/notifications";
 import { useNotifySettings } from "@/lib/notifySettings";
 import { usesSidecar } from "@/lib/platform";
 
@@ -34,13 +36,15 @@ function useHour(): number {
 }
 
 /**
- * Task due-time and calendar notifications (src/lib/notifications.ts).
+ * Task due-time, habit and calendar notifications (src/lib/notifications.ts).
  * Renders nothing; mounted while signed in, on every tab.
  */
 export default function NotificationScheduler() {
   const settings = useNotifySettings();
   const tasks = useTasks();
   const hour = useHour();
+  const habits = useHabitsData();
+  const reminders = useHabitReminders();
 
   // On desktop, asking for the status starts the sidecar, so it is only asked
   // once the calendar has been connected (as the Home card does).
@@ -66,12 +70,15 @@ export default function NotificationScheduler() {
   });
 
   // The check reads the latest data through refs, so the timer is set up once.
-  const latest = useRef({ settings, tasks, events: events.data?.events ?? [] });
-  latest.current = { settings, tasks, events: events.data?.events ?? [] };
+  const current = { settings, tasks, events: events.data?.events ?? [], habits: habits.data, reminders };
+  const latest = useRef(current);
+  latest.current = current;
 
   useEffect(() => {
+    // The startup habit reminder waits for the habits to load and for Do Not Disturb to end.
+    let startupPending = true;
     const check = () => {
-      const { settings: s, tasks: t, events: e } = latest.current;
+      const { settings: s, tasks: t, events: e, habits: h, reminders: r } = latest.current;
       if (s.doNotDisturb) return;
       const now = new Date();
       deliver([
@@ -83,6 +90,16 @@ export default function NotificationScheduler() {
           : []),
         ...(s.calendar ? eventAlerts(e, now, s.eventLead) : []),
       ]);
+      if (!s.habitReminders || !h) return;
+      const habitAlerts = habitReminderAlerts(h.habits, h.checks, r, now);
+      if (startupPending && s.habitReminderStartup) {
+        // The launch toast stands in for the hourly one due now, so only one shows.
+        takeUnsent(habitAlerts);
+        deliver(habitReminderAlerts(h.habits, h.checks, r, now, LAUNCH));
+      } else {
+        deliver(habitAlerts);
+      }
+      startupPending = false;
     };
     check();
     const id = window.setInterval(check, CHECK_MS);
