@@ -316,7 +316,7 @@ src-tauri/
 │   ├── lib.rs                  # App setup: plugins, tray, hotkeys, command registration
 │   ├── window.rs               # Show/hide-to-tray close behaviour
 │   ├── tray.rs                 # System tray menu + Pomodoro status updates
-│   ├── hotkey.rs               # RegisterHotKey bindings (Alt+Space, Alt+Shift+Space, Alt+Shift+H)
+│   ├── hotkey.rs               # RegisterHotKey bindings (Alt+Space, Alt+Shift+Space, Alt+Shift+H, Alt+Shift+D)
 │   ├── autostart.rs            # Launch-at-login (--hidden) registration
 │   ├── settings.rs             # settings.json read/write (hotkeys, vaultPath, launchAtLogin, installerSourceDir)
 │   ├── vault.rs                # Native vault I/O: list/read/write/status/watch
@@ -464,7 +464,7 @@ Categories, habits, focus sessions and settings are not queued and still report 
 
 ## 🔔 Notifications
 
-Crystal OS shows native toasts (Windows notifications on desktop through `tauri-plugin-notification`, the browser's Notification API on the web). The first one asks for permission. **Settings → Notifications** has a switch for each kind, the reminder lead time, a **Do Not Disturb** switch that silences them all without touching the others, and **Send test**. **What's new after updates** (off by default) opens the changelog popup on the first launch after an update.
+Crystal OS shows native toasts (Windows notifications on desktop through `tauri-plugin-notification`, the browser's Notification API on the web). The first one asks for permission. **Settings → Notifications** has a switch for each kind, the reminder lead time, a **Do Not Disturb** switch that silences them all without touching the others (also on a global hotkey, `Alt+Shift+D` by default, changed in **Settings → Keyboard shortcuts**), and **Send test**. **What's new after updates** (off by default) opens the changelog popup on the first launch after an update.
 
 - **Task due times.** When an open task reaches its end time ("Due now: File taxes", with the priority if it is high or urgent), including each occurrence of a repeating task. A due time is still announced up to 10 minutes late, so a sleeping timer or opening the app just after it does not lose it.
 - **Task reminders.** A heads-up before an open task is due, ahead of its "Due now" toast. **Remind tasks** picks **At the start of the day** (every open task ending today, untimed ones too, until its end time: "Due today: File taxes") or **Minutes before** (timed tasks within **Remind before tasks** of their end time, 30 by default, 1 to 1440, across midnight too: "Due soon: File taxes", "Due at 5:00 PM, in 20 min"). **Show task reminders** picks **On one launch** (once per task and day) or **On every launch** (again each time Crystal OS starts while the reminder still applies). While Do Not Disturb is on nothing is shown or recorded, so a reminder still due appears once it is turned off. Completed and snoozed tasks stay quiet.
@@ -762,11 +762,12 @@ Or let CI do steps 1 to 3: bump the version in `package.json`, `src-tauri/Cargo.
 
 Whatever the switches say, hiding the window to the tray or minimising it now stops the backdrop animation loops, freezes CSS animations, and pauses polling (weather refresh, calendar and vault refetches); stale data refetches when the window comes back. Closing the window with its **×** now goes through the same path as the tray and hotkey, so it also trims memory.
 
-**Global hotkeys.** Three combos work from any app:
+**Global hotkeys.** Four combos work from any app:
 
 - `Alt+Space` shows Crystal OS; press it again while the app is in front to hide it, including while you are typing in a Portal app. It does not touch the search bar. Saved as `globalShortcut`.
 - `Alt+Shift+Space` shows Crystal OS and opens the search bar over the current page. Saved as `paletteShortcut`.
 - `Alt+Shift+H` shows Crystal OS if it is hidden and opens the Home page; if the window is already open it just switches to Home, from any tab. Saved as `homeShortcut`.
+- `Alt+Shift+D` turns Do Not Disturb on or off without showing Crystal OS. A toast confirms it while the window is focused; from another app a desktop notification does, even as DND turns on. Saved as `dndShortcut`.
 
 Change any of them with **Change** in Settings. All are saved in `%APPDATA%\com.crystalos.desktop\settings.json`, and no two can share a combo. If another app already owns one, Crystal OS still starts and shows a toast.
 
