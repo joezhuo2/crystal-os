@@ -1340,6 +1340,13 @@ export default function CalendarPage() {
 
   useShortcut("horizon.cycleView", () => setView(VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]), connected);
   useShortcut("horizon.newEvent", () => openCreate(toLocalDateStr()), connected);
+  const disconnectCalendar = () => {
+    if (disconnect.isPending) return;
+    disconnect.mutate(undefined, {
+      onSuccess: () => toast.success("Google Calendar disconnected"),
+    });
+  };
+  useShortcut("horizon.signOut", disconnectCalendar, connected);
 
   if (!connected) {
     return (
@@ -1421,11 +1428,7 @@ export default function CalendarPage() {
           )}
           <GlassTip label="Disconnect Google Calendar" side="bottom" colors={HORIZON_TIP}>
             <button
-              onClick={() => {
-                disconnect.mutate(undefined, {
-                  onSuccess: () => toast.success("Google Calendar disconnected"),
-                });
-              }}
+              onClick={disconnectCalendar}
               disabled={disconnect.isPending}
               aria-label="Disconnect Google Calendar"
               className="glass-card-hover px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-colors"
