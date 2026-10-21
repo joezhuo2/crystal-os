@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Nebula shortcuts** (issue #13). **N** starts a new chat, **P** a new project, **E** cycles the effort and **M** cycles Auto, Manual and Plan mode (`NebulaPage.tsx`, `NebulaToolbar.tsx`).
 - **New terminal tab with T** (issue #13), when the focus is outside the shell; Ctrl+Shift+T still works inside it (`TerminalPage.tsx`).
 - **Orbit shortcut** (issue #13). **V** cycles the Weekly, Monthly and Yearly review (`OrbitPage.tsx`).
+- **Rebind shortcuts in Settings** (issue #13). The new **In-app shortcuts** section lists every shortcut by page. Click a key to record a new one, reset one or all, and see a warning when two clash (`SettingsPage.tsx`, `keymapConflicts.ts`).
 
 ## [v0.11.14] - 2026-10-20 - Snappier page changes.
 

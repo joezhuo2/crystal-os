@@ -12,6 +12,8 @@ import HotkeySettingsDialog from "@/components/HotkeySettingsDialog";
 import { useGlobalHotkeys } from "@/hooks/useGlobalHotkey";
 import { usePickVault, useVaultStatus } from "@/hooks/useVault";
 import { HOTKEY_COPY, formatAccelerator, paletteShortcutLabel, type HotkeyAction } from "@/lib/hotkey";
+import { KEYMAP, KEYMAP_CATEGORY_LABELS, bindingFor, bindingFromEvent, formatBinding, setBinding, useKeymapOverrides, type KeymapCategory } from "@/lib/keymap";
+import { findConflict } from "@/lib/keymapConflicts";
 import { isDesktop } from "@/lib/platform";
 import { MAX_CACHE_MINUTES, MAX_UNLOAD_DELAY, perfSettings, usePerfSettings } from "@/lib/perfSettings";
 import { atmosphere, useAtmosphere } from "@/lib/atmosphereStore";
@@ -392,6 +394,67 @@ function TestNotificationButton() {
   );
 }
 
+function KeymapSettings() {
+  const overrides = useKeymapOverrides();
+  const [recording, setRecording] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!recording) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.repeat) return;
+      if (e.code === "Escape") return setRecording(null);
+      const binding = bindingFromEvent(e);
+      if (!binding) return;
+      setBinding(recording, binding);
+      setRecording(null);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [recording]);
+
+  const groups = (Object.keys(KEYMAP_CATEGORY_LABELS) as KeymapCategory[])
+    .map((category) => ({ category, actions: KEYMAP.filter((a) => a.category === category) }))
+    .filter((g) => g.actions.length > 0);
+
+  if (groups.length === 0) return <p className="text-sm text-muted-foreground">No in-app shortcuts yet.</p>;
+
+  return (
+    <>
+      {groups.map(({ category, actions }) => (
+        <div key={category} className="space-y-3 pt-3 first:pt-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{KEYMAP_CATEGORY_LABELS[category]}</p>
+          {actions.map((action) => {
+            const binding = bindingFor(action.id) ?? action.defaultKey;
+            const clash = findConflict(KEYMAP, action, binding, bindingFor);
+            const overridden = action.id in overrides;
+            return (
+              <Row key={action.id} title={action.title} description={clash ? `Also used by “${clash.title}”.` : ""}>
+                <Button variant="outline" size="sm" onClick={() => setRecording(recording === action.id ? null : action.id)}>
+                  {recording === action.id ? "Press a key… (Esc to cancel)" : formatBinding(binding)}
+                </Button>
+                {overridden && (
+                  <Button variant="ghost" size="sm" onClick={() => setBinding(action.id, null)}>
+                    Reset
+                  </Button>
+                )}
+              </Row>
+            );
+          })}
+        </div>
+      ))}
+      {Object.keys(overrides).length > 0 && (
+        <div className="pt-3">
+          <Button variant="outline" size="sm" onClick={() => Object.keys(overrides).forEach((id) => setBinding(id, null))}>
+            Reset all
+          </Button>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function SettingsPage() {
   const desktop = isDesktop();
   const hotkeys = useGlobalHotkeys();
@@ -526,6 +589,10 @@ export default function SettingsPage() {
           <Row title="Open search bar" description="Opens or closes the search bar over any page while Crystal OS is focused.">
             <Combo>{paletteShortcutLabel()}</Combo>
           </Row>
+        </Section>
+
+        <Section id="keymap" icon={Keyboard} title="In-app shortcuts">
+          <KeymapSettings />
         </Section>
 
         {hotkeys.launchAtLogin !== null && (
