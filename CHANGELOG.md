@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.20] - 2026-10-21 - Pulse reminders.
+
+### Added
+
+- **Pulse reminders** (issue #45). A calendar reminder for an event with a location now shows 10 minutes before it is time to leave, with the leave-by time and drive ("Leave by 2:15 PM (45 min drive)"), timed from your current location with OpenStreetMap Nominatim and OSRM. Meeting links, places that cannot be found and a refused location fall back to the default lead (`pulse.ts`, `notifications.ts`, `NotificationScheduler.tsx`).
+- **Pulse reminders switch in Settings → Notifications** (issue #45). On by default; **Remind before events** (30 minutes by default) is the fallback lead. "pulse", "leave by" and "travel time" in the command palette find the section (`SettingsPage.tsx`, `notifySettings.ts`, `settingsSections.ts`).
+
 ## [v0.11.19] - 2026-10-21 - Privacy mode.
 
 ### Added
