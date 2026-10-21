@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.15] - 2026-10-20 - Keyboard navigation.
+
+### Added
+
+- **Rebindable in-app shortcuts** (issue #13). Single-key shortcuts now act on the page in front. They never fire while you type in a field, while the Terminal has focus or while a dialog or menu is open, and rebinds are saved on this device (`keymap.ts`, `useShortcut.ts`).
+
 ## [v0.11.14] - 2026-10-20 - Snappier page changes.
 
 ### Changed
