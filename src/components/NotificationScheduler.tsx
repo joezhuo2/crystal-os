@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTasks } from "@/contexts/AppContext";
 import { calendarEventsQuery, calendarWasConnected, useCalendarStatus } from "@/hooks/useGoogleCalendar";
-import { deliver, eventAlerts, taskDueAlerts } from "@/lib/notifications";
+import { DEFAULT_TASK_REMINDER, deliver, eventAlerts, taskDueAlerts, taskReminderAlerts } from "@/lib/notifications";
 import { useNotifySettings } from "@/lib/notifySettings";
 import { usesSidecar } from "@/lib/platform";
 
@@ -72,7 +72,11 @@ export default function NotificationScheduler() {
       const { settings: s, tasks: t, events: e } = latest.current;
       if (s.doNotDisturb) return;
       const now = new Date();
-      deliver([...(s.tasks ? taskDueAlerts(t, now) : []), ...(s.calendar ? eventAlerts(e, now, s.eventLead) : [])]);
+      deliver([
+        ...(s.tasks ? taskDueAlerts(t, now) : []),
+        ...(s.tasks ? taskReminderAlerts(t, now, DEFAULT_TASK_REMINDER) : []),
+        ...(s.calendar ? eventAlerts(e, now, s.eventLead) : []),
+      ]);
     };
     check();
     const id = window.setInterval(check, CHECK_MS);

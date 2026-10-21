@@ -86,6 +86,43 @@ export function taskDueAlerts(tasks: Task[], now: Date): PlannedAlert[] {
   return alerts;
 }
 
+export interface TaskReminderTiming {
+  /** "dayStart" reminds from the start of the day a task is due; "before" `lead` minutes ahead of its end time. */
+  when: "dayStart" | "before";
+  lead: number;
+}
+
+export const DEFAULT_TASK_REMINDER: TaskReminderTiming = { when: "before", lead: 30 };
+
+/**
+ * Open tasks due soon, ahead of their "Due now" alert. "dayStart" covers every
+ * task ending today (timed or not) until its end time; "before" covers timed
+ * tasks whose end time is within `lead` minutes, across midnight too.
+ */
+export function taskReminderAlerts(tasks: Task[], now: Date, timing: TaskReminderTiming): PlannedAlert[] {
+  const today = toLocalDateStr(now);
+  const dates = timing.when === "before" ? [today, addDays(today, 1)] : [today];
+  const alerts: PlannedAlert[] = [];
+  for (const task of awakeTasks(tasks, today)) {
+    if (task.completed) continue;
+    const timed = /^\d{2}:\d{2}$/.test(task.endTime);
+    for (const date of dates) {
+      if (!taskEndsOnDate(task, date)) continue;
+      const due = timed ? new Date(`${date}T${task.endTime}:00`) : null;
+      const left = due ? due.getTime() - now.getTime() : null;
+      if (left !== null && left <= 0) continue;
+      if (timing.when === "before" && (left === null || left > timing.lead * MINUTE)) continue;
+      const priority = task.priority === "urgent" || task.priority === "high" ? ` · ${task.priority} priority` : "";
+      alerts.push({
+        key: `remind:${task.id}:${date}`,
+        title: `${timing.when === "before" ? "Due soon" : "Due today"}: ${task.name}`,
+        body: `${due && left !== null ? `Due at ${clockLabel(due)}, in ${minutesLabel(Math.ceil(left / MINUTE))}` : "Due today"}${priority}`,
+      });
+    }
+  }
+  return alerts;
+}
+
 function minutesLabel(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);
