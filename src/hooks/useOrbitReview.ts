@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { useAppLoading, useTasks, useTransactions } from "@/contexts/AppContext";
+import { useAppLoading, useTaskCategories, useTasks, useTransactions } from "@/contexts/AppContext";
 import { useHabitsData } from "@/hooks/useHabits";
 import { useVaultNotes } from "@/hooks/useVault";
 import { useCalendarEvents, useCalendarStatus } from "@/hooks/useGoogleCalendar";
@@ -78,7 +78,7 @@ async function fetchHistory(from: string, to: string): Promise<History> {
   const [completions, focus] = await Promise.all([
     supabase
       .from("task_completions")
-      .select("title, completed_at")
+      .select("title, completed_at, task_id, category_id")
       .gte("completed_at", min)
       .lt("completed_at", max)
       .order("completed_at")
@@ -88,7 +88,12 @@ async function fetchHistory(from: string, to: string): Promise<History> {
   const error = completions.error ?? focus.error;
   if (error) throw new OrbitHistoryError(error.message, isMissingTable(error));
   return {
-    completions: (completions.data ?? []).map((r) => ({ title: r.title as string, completedAt: r.completed_at as string })),
+    completions: (completions.data ?? []).map((r) => ({
+      title: r.title as string,
+      completedAt: r.completed_at as string,
+      taskId: (r.task_id as string | null) ?? null,
+      categoryId: (r.category_id as string | null) ?? null,
+    })),
     focus: ((focus.data ?? []) as unknown as Record<string, unknown>[]).map((r) => ({
       endedAt: r.ended_at as string,
       seconds: Number(r.seconds),
@@ -139,6 +144,7 @@ export interface OrbitReviewResult {
 export function useOrbitReview(period: ReviewPeriod, enabled = true): OrbitReviewResult {
   const tasks = useTasks();
   const transactions = useTransactions();
+  const categories = useTaskCategories();
   const appLoading = useAppLoading();
   const history = useHistory(dataStart(period), period.end, enabled);
   const notes = useAllNotes();
@@ -167,12 +173,13 @@ export function useOrbitReview(period: ReviewPeriod, enabled = true): OrbitRevie
       habits: habits.data?.habits ?? [],
       habitChecks: habits.data?.checks ?? [],
       today: toLocalDateStr(),
+      categories,
     };
     return buildReview(period, data);
     // A period is a value: its key names it, so a fresh object with the same
     // key must not rebuild the review.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history.data, history.error, tasks, transactions, notes.data, events.data, habits.data, period.kind, period.key]);
+  }, [history.data, history.error, tasks, transactions, categories, notes.data, events.data, habits.data, period.kind, period.key]);
 
   return {
     review,

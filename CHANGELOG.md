@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.25] - 2026-10-21 - Estimates vs actual.
+
+### Added
+
+- **Estimates vs actual in The Orbit** (issue #49). A new card in the weekly, monthly and yearly reviews compares each completed task's time estimate with the Pomodoro focus logged to it, and shows per category the tasks counted, the time estimated and focused, and the average over- or under-run per task in minutes and percent. A repeating task counts the focus since its previous completion. Tasks with no estimate or no focus logged are left out, and the card is hidden when none qualify. The exported review note gets the same table under **Estimates vs actual** (`orbitReview.ts`, `useOrbitReview.ts`, `OrbitPage.tsx`).
+
 ## [v0.11.24] - 2026-10-21 - Free time finder.
 
 ### Added

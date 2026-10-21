@@ -13,6 +13,7 @@ import {
   Loader2,
   Minus,
   Sparkles,
+  Timer,
   TrendingDown,
   TrendingUp,
   Wallet,
@@ -42,6 +43,7 @@ import {
   agendaDayLabel,
   exportPath,
   formatClockTime,
+  formatEstimateDiff,
   formatMinutes,
   formatMoney,
   formatTrendValue,
@@ -256,6 +258,45 @@ function TrendsCard({ review }: { review: Review }) {
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+function EstimatesCard({ review }: { review: Review }) {
+  const unit = unitOf(review.period.kind);
+  return (
+    <section className="orbit-card" aria-labelledby="orbit-estimates">
+      <CardTitle icon={Timer}>
+        <span id="orbit-estimates">Estimates vs actual</span>
+      </CardTitle>
+      <ul className="space-y-2">
+        {review.estimates.map((e) => (
+          <li key={e.key} className="flex items-center justify-between gap-3 min-w-0">
+            <span className="flex items-center gap-2 min-w-0">
+              {e.color && <span className="orbit-habit-dot" style={{ background: e.color }} aria-hidden="true" />}
+              <span className="min-w-0">
+                <span className="block truncate text-sm">{e.label}</span>
+                <span className="block text-xs text-muted-foreground tabular-nums">
+                  {e.tasks} {e.tasks === 1 ? "task" : "tasks"} · {formatMinutes(e.estimateMinutes)} estimated · {formatMinutes(e.actualMinutes)} focused
+                </span>
+              </span>
+            </span>
+            <GlassTip
+              label={formatEstimateDiff(e)}
+              hint={`Average ${e.avgDiffMinutes > 0 ? "over-run" : e.avgDiffMinutes < 0 ? "under-run" : "difference"} per task this ${unit}`}
+              tone="orbit"
+            >
+              <span
+                className={`text-sm font-semibold tabular-nums shrink-0 ${e.avgDiffMinutes > 0 ? "orbit-text-rust" : e.avgDiffMinutes < 0 ? "orbit-text-ice" : ""}`}
+                tabIndex={0}
+              >
+                {formatEstimateDiff(e)}
+              </span>
+            </GlassTip>
+          </li>
+        ))}
+      </ul>
+      <p className="text-[11px] text-muted-foreground mt-3">Completed tasks with an estimate and Pomodoro focus logged to them.</p>
     </section>
   );
 }
@@ -793,6 +834,7 @@ export default function OrbitPage() {
               <MoneyCard review={review} />
               <TrendsCard review={review} />
               <VaultCard review={review} unavailable={vaultUnavailable} />
+              {review.estimates.length > 0 && <EstimatesCard review={review} />}
               {review.habits.length > 0 && (
                 <HabitsCard
                   review={review}

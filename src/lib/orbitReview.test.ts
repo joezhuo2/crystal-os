@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   buildAgenda,
   buildReview,
+  estimateAccuracy,
   exportPath,
+  formatEstimateDiff,
   focusByTask,
   inProgressPeriod,
   isoWeek,
@@ -214,6 +216,83 @@ describe("focus by task", () => {
     expect(md).toContain("### By task");
     expect(md).toContain("- Write report: 30 min (75%)");
     expect(md).toContain("- No task: 10 min (25%)");
+  });
+});
+
+describe("estimates vs actual", () => {
+  const week = periodContaining("weekly", "2026-10-01");
+  const categories = [
+    { id: "work", name: "Work", color: "hsl(0 0% 50%)" },
+    { id: "home", name: "Home" },
+  ];
+  const task = (id: string, estimateMinutes: number | undefined, categoryId = "work") => ({
+    id,
+    name: id,
+    startDate: "2026-10-01",
+    endDate: "2026-10-01",
+    completed: true,
+    categoryId,
+    estimateMinutes,
+  });
+  const run = (taskId: string, minutes: number, day = "2026-10-01", time = "10:00") => ({
+    endedAt: iso(day, time),
+    seconds: minutes * 60,
+    taskId,
+  });
+  const done = (taskId: string, day = "2026-10-01", time = "12:00", categoryId: string | null = null) => ({
+    title: taskId,
+    completedAt: iso(day, time),
+    taskId,
+    categoryId,
+  });
+
+  it("averages each category's over- and under-runs", () => {
+    const rows = estimateAccuracy(week, {
+      tasks: [task("a", 60), task("b", 30), task("c", 60, "home")],
+      completions: [done("a"), done("b"), done("c")],
+      focus: [run("a", 50), run("a", 40), run("b", 15), run("c", 30)],
+      categories,
+    });
+    expect(rows).toEqual([
+      { key: "work", label: "Work", color: "hsl(0 0% 50%)", tasks: 2, estimateMinutes: 90, actualMinutes: 105, avgDiffMinutes: 8, avgDiffPercent: 0 },
+      { key: "home", label: "Home", color: undefined, tasks: 1, estimateMinutes: 60, actualMinutes: 30, avgDiffMinutes: -30, avgDiffPercent: -50 },
+    ]);
+  });
+
+  it("leaves out tasks without an estimate or focus, and other periods", () => {
+    const rows = estimateAccuracy(week, {
+      tasks: [task("a", undefined), task("b", 30), task("c", 30)],
+      completions: [done("a"), done("b"), done("c", "2026-09-20")],
+      focus: [run("a", 20), run("c", 20, "2026-09-20", "10:00")],
+      categories,
+    });
+    expect(rows).toEqual([]);
+  });
+
+  it("counts a repeating task's focus only since its previous completion, and uses the category it was completed in", () => {
+    const rows = estimateAccuracy(week, {
+      tasks: [task("r", 30, "home")],
+      completions: [done("r", "2026-09-30", "12:00", "work"), done("r", "2026-10-01", "12:00", "work")],
+      focus: [run("r", 30, "2026-09-30", "11:00"), run("r", 45, "2026-10-01", "11:00"), run("r", 5, "2026-10-01", "12:03")],
+      categories,
+    });
+    expect(rows.map((r) => [r.label, r.tasks, r.actualMinutes, r.avgDiffMinutes])).toEqual([
+      ["Work", 2, 80, 10],
+    ]);
+  });
+
+  it("formats the average and lands in the exported note", () => {
+    expect(formatEstimateDiff({ avgDiffMinutes: 75, avgDiffPercent: 25 })).toBe("+1 h 15 min (+25%)");
+    expect(formatEstimateDiff({ avgDiffMinutes: -5, avgDiffPercent: -10 })).toBe("−5 min (−10%)");
+    expect(formatEstimateDiff({ avgDiffMinutes: 0, avgDiffPercent: 0 })).toBe("on target");
+    const review = buildReview(week, {
+      ...empty,
+      tasks: [task("a", 60)],
+      completions: [done("a")],
+      focus: [run("a", 90)],
+      categories,
+    });
+    expect(toMarkdown(review)).toContain("| Work | 1 | 1 h | 1 h 30 min | +30 min (+50%) |");
   });
 });
 
