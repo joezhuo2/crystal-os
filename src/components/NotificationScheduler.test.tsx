@@ -85,3 +85,23 @@ describe("NotificationScheduler habit reminders", () => {
     expect(shown.mock.calls.filter(([t]) => t === "Habit: Read")).toHaveLength(1);
   });
 });
+
+describe("NotificationScheduler habit startup reminders", () => {
+  it("shows one launch reminder past the daily count, and none with habit reminders off", async () => {
+    habitReminders.setTime("h1", "12:00");
+    notifySettings.setFlag("habitReminderStartup", true);
+    const { unmount } = render(<NotificationScheduler />);
+    await flush();
+    expect(shown.mock.calls.filter(([t]) => t === "Habit: Read")).toHaveLength(1);
+    await act(async () => vi.advanceTimersByTime(30 * 1000));
+    expect(shown.mock.calls.filter(([t]) => t === "Habit: Read")).toHaveLength(1);
+    unmount();
+
+    shown.mockReset();
+    notifySettings.setFlag("habitReminders", false);
+    habitReminders.setTime("h1", "16:30");
+    render(<NotificationScheduler />);
+    await flush();
+    expect(shown).not.toHaveBeenCalledWith("Habit: Read");
+  });
+});

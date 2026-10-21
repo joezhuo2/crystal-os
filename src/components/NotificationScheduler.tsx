@@ -4,7 +4,7 @@ import { useTasks } from "@/contexts/AppContext";
 import { calendarEventsQuery, calendarWasConnected, useCalendarStatus } from "@/hooks/useGoogleCalendar";
 import { useHabitsData } from "@/hooks/useHabits";
 import { useHabitReminders } from "@/lib/habitReminders";
-import { deliver, eventAlerts, habitReminderAlerts, taskDueAlerts, taskReminderAlerts } from "@/lib/notifications";
+import { deliver, eventAlerts, takeUnsent, habitReminderAlerts, taskDueAlerts, taskReminderAlerts } from "@/lib/notifications";
 import { useNotifySettings } from "@/lib/notifySettings";
 import { usesSidecar } from "@/lib/platform";
 
@@ -75,6 +75,8 @@ export default function NotificationScheduler() {
   latest.current = current;
 
   useEffect(() => {
+    // The startup habit reminder waits for the habits to load and for Do Not Disturb to end.
+    let startupPending = true;
     const check = () => {
       const { settings: s, tasks: t, events: e, habits: h, reminders: r } = latest.current;
       if (s.doNotDisturb) return;
@@ -87,8 +89,17 @@ export default function NotificationScheduler() {
             )
           : []),
         ...(s.calendar ? eventAlerts(e, now, s.eventLead) : []),
-        ...(h ? habitReminderAlerts(h.habits, h.checks, r, now) : []),
       ]);
+      if (!s.habitReminders || !h) return;
+      const habitAlerts = habitReminderAlerts(h.habits, h.checks, r, now);
+      if (startupPending && s.habitReminderStartup) {
+        // The launch toast stands in for the hourly one due now, so only one shows.
+        takeUnsent(habitAlerts);
+        deliver(habitReminderAlerts(h.habits, h.checks, r, now, LAUNCH));
+      } else {
+        deliver(habitAlerts);
+      }
+      startupPending = false;
     };
     check();
     const id = window.setInterval(check, CHECK_MS);

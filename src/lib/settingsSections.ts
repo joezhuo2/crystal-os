@@ -21,7 +21,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionEntry[] = [
   { id: "vault", title: "Vault", hint: "Obsidian vault folder", keywords: ["obsidian", "vault folder", "notes", "archive"], desktopOnly: true },
   { id: "nebula", title: "The Nebula", hint: "API keys, models, projects folder", keywords: ["nvidia", "nim", "omniroute", "api key", "model", "claude", "projects folder", "coding agent", "mcp"], desktopOnly: true },
   { id: "engine", title: "The Engine", hint: "Work day hours", keywords: ["tasks", "work day starts", "work day ends", "capacity", "fits today"] },
-  { id: "notifications", title: "Notifications", hint: "Do Not Disturb, reminders", keywords: ["do not disturb", "dnd", "task due times", "task reminders", "deadline", "calendar reminders", "remind before events", "pomodoro", "portal messages", "orbit reviews", "test"] },
+  { id: "notifications", title: "Notifications", hint: "Do Not Disturb, reminders", keywords: ["do not disturb", "dnd", "task due times", "task reminders", "deadline", "calendar reminders", "remind before events", "pomodoro", "portal messages", "orbit reviews", "habit reminders", "startup", "test"] },
   { id: "orbit", title: "The Orbit", hint: "Auto-export reviews", keywords: ["auto-export reviews", "weekly", "monthly", "yearly", "review"] },
   { id: "atmosphere", title: "The Atmosphere", hint: "Weather effects, aurora, background", keywords: ["weather effects", "aurora", "background image", "image blur", "sky"] },
   { id: "performance", title: "Performance", hint: "Performance mode", keywords: ["performance mode", "animations", "transitions", "backdrops", "cache", "lazy load", "portal unload delay", "speed"] },

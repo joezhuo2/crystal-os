@@ -15,7 +15,7 @@ export const MAX_EVENT_LEAD = 1440;
 /** Minutes before a task's end time that its "Due soon" reminder shows, by default. */
 export const DEFAULT_TASK_LEAD = 30;
 
-type Flag = "doNotDisturb" | "tasks" | "calendar" | "pomodoro" | "portal" | "reviews" | "taskReminders";
+type Flag = "doNotDisturb" | "tasks" | "calendar" | "pomodoro" | "portal" | "reviews" | "taskReminders" | "habitReminders" | "habitReminderStartup";
 
 export interface NotifySettings {
   /** Silences every notification without changing the per-kind switches. */
@@ -40,6 +40,10 @@ export interface NotifySettings {
   taskLead: number;
   /** "once": each reminder shows once. "everyLaunch": again on each launch while it applies. */
   taskReminderRepeat: "once" | "everyLaunch";
+  /** A toast for a habit not ticked by the reminder time set on it in the habit manager. */
+  habitReminders: boolean;
+  /** Also a habit reminder on each launch, for habits past their time and not ticked, beyond the daily count. */
+  habitReminderStartup: boolean;
 }
 
 export const DEFAULT_NOTIFY_SETTINGS: NotifySettings = {
@@ -54,6 +58,8 @@ export const DEFAULT_NOTIFY_SETTINGS: NotifySettings = {
   taskReminderWhen: "before",
   taskLead: DEFAULT_TASK_LEAD,
   taskReminderRepeat: "once",
+  habitReminders: true,
+  habitReminderStartup: false,
 };
 
 /** Whole minutes within range. Anything unreadable falls back to the default. */
@@ -93,6 +99,8 @@ export function parseNotifySettings(raw: string | null): NotifySettings {
     taskReminderWhen: stored.taskReminderWhen === "dayStart" ? "dayStart" : "before",
     taskLead: "taskLead" in stored ? clampTaskLead(stored.taskLead) : DEFAULT_TASK_LEAD,
     taskReminderRepeat: stored.taskReminderRepeat === "everyLaunch" ? "everyLaunch" : "once",
+    habitReminders: flag("habitReminders"),
+    habitReminderStartup: flag("habitReminderStartup"),
   };
 }
 
