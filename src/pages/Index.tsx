@@ -5,7 +5,7 @@ import { recordRecent } from "@/lib/recents";
 import { useAuth } from "@/contexts/AuthContext";
 import LoginPage from "@/components/auth/LoginPage";
 import AppSplash from "@/components/layout/AppSplash";
-import { SidebarNav, BottomNav, type TabId } from "@/components/layout/Navigation";
+import { SidebarNav, BottomNav, visibleTabIds, type TabId } from "@/components/layout/Navigation";
 import { AnimatePresence } from "framer-motion";
 import CommandPalette from "@/components/CommandPalette";
 import TerminalStatic from "@/components/layout/TerminalStatic";
@@ -27,6 +27,8 @@ import { useOrbitStore } from "@/lib/orbitStore";
 import OrbitAutoExport from "@/components/views/orbit/OrbitAutoExport";
 import OrbitReadyNotifier from "@/components/views/orbit/OrbitReadyNotifier";
 import NotificationScheduler from "@/components/NotificationScheduler";
+import { useShortcut } from "@/hooks/useShortcut";
+import { stepTab } from "@/lib/stepTab";
 import { LazyTaskForm, LazyTransactionDrawer, lazyViews as views, preloadViews, recordVisit } from "@/lib/viewLoader";
 
 /** Tabs with a page backdrop of their own. */
@@ -125,6 +127,8 @@ const Index = () => {
   const viewTab = useDeferredValue(activeTab);
   const View = views[viewTab];
   useHomeHotkey(() => setActiveTab("home"));
+  useShortcut("general.nextPage", () => setActiveTab((t) => stepTab(visibleTabIds(), t, 1)));
+  useShortcut("general.previousPage", () => setActiveTab((t) => stepTab(visibleTabIds(), t, -1)));
 
   // Most recent backdrop tabs first. Updated during render, so the new tab's
   // backdrop mounts in the same commit as its page.

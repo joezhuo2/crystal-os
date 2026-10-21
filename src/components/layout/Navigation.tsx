@@ -44,6 +44,15 @@ const nebulaTab: Tab = { id: "nebula", label: "The Nebula", icon: Sparkles };
 /** Top of the bottom group, above The Nebula. */
 const archiveTab: Tab = { id: "archive", label: "The Archive", icon: BookOpen };
 
+export const visibleTabIds = (): TabId[] => [
+  ...tabs.map((t) => t.id),
+  archiveTab.id,
+  ...(isDesktop() ? [nebulaTab.id] : []),
+  portalTab.id,
+  ...(isDesktop() ? [terminalTab.id] : []),
+  settingsTab.id,
+];
+
 /** The phone bar has no bottom group, so The Archive stays in its row. */
 const bottomTabs: Tab[] = [...tabs, archiveTab];
 
