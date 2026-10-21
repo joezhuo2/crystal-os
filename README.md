@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-863%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.11.25-6366F1)
+![Version](https://img.shields.io/badge/version-0.11.26-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.11.25** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.11.26** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 [Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
