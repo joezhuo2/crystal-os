@@ -33,6 +33,7 @@ import { FocusPie } from "@/components/views/orbit/FocusPie";
 import { TodayCard } from "@/components/views/orbit/TodayCard";
 import { OrbitHistoryError, useNow, useOrbitReview, type OrbitReviewResult } from "@/hooks/useOrbitReview";
 import { useCreateNote, vaultErrorCode } from "@/hooks/useVault";
+import { useShortcut } from "@/hooks/useShortcut";
 import { useAppActivity } from "@/lib/appActivity";
 import {
   REFLECTION_PROMPTS,
@@ -674,6 +675,11 @@ export default function OrbitPage() {
     setOutDone(false);
     timer.current = window.setTimeout(() => setOutDone(true), VIEW_FADE_MS);
   };
+
+  useShortcut("orbit.cycleView", () => {
+    const next = REVIEW_KINDS[(REVIEW_KINDS.indexOf(target.kind) + 1) % REVIEW_KINDS.length];
+    go({ kind: next, offset: offsets[next] });
+  });
 
   const liveReady = !live.result.loading && (!!live.result.review || !!live.result.historyError);
   useEffect(() => {
