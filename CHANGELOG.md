@@ -5,6 +5,14 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.16] - 2026-10-20 - Task deadline reminders.
+
+### Added
+
+- **Task reminders before a deadline** (issue #48). A notification before an open task is due, ahead of its "Due now" toast: "Due today" from the start of the day it is due (untimed tasks too), or "Due soon" a set number of minutes before its end time (30 by default, 1 to 1440, across midnight). Completed and snoozed tasks stay quiet (`notifications.ts`, `NotificationScheduler.tsx`).
+- **Task reminder options in Settings → Notifications** (issue #48). A **Task reminders** switch, **Remind tasks** (At the start of the day or Minutes before), **Remind before tasks** and **Show task reminders** (On one launch, or On every launch while the reminder still applies). "task reminders" and "deadline" in the command palette find the section (`notifySettings.ts`, `SettingsPage.tsx`, `settingsSections.ts`).
+- **Task reminders follow Do Not Disturb** (issue #48). While it is on nothing is shown or recorded, so a reminder still due appears once it is turned off (`NotificationScheduler.test.tsx`).
+
 ## [v0.11.15] - 2026-10-20 - Keyboard navigation.
 
 ### Added
