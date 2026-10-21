@@ -17,7 +17,7 @@ import { parseStateFile } from "@/lib/harness/store";
 import type { ChatMeta } from "@/lib/harness/types";
 import { isDesktop } from "@/lib/platform";
 import { badgeLabel } from "@/lib/portalApps";
-import { CARD_BACKDROP_BLUR, useImageBackdrop } from "@/lib/imageBackdrop";
+import { useImageBackdrop } from "@/lib/imageBackdrop";
 import { portal, selectBadgeTotal } from "@/lib/portalStore";
 import { listTerminals } from "@/lib/terminalNative";
 
@@ -97,7 +97,7 @@ export function PortalSpace({ onClick }: { onClick?: () => void }) {
   const state = usePortal();
   const { apps, badges } = state;
   const unread = selectBadgeTotal(state);
-  const backdropUrl = useImageBackdrop("portal", CARD_BACKDROP_BLUR);
+  const { url: backdropUrl, opacity: backdropOpacity } = useImageBackdrop("portal", "card");
   const shown = apps.slice(0, 6);
 
   const openApp = (e: React.MouseEvent, id: string) => {
@@ -109,7 +109,7 @@ export function PortalSpace({ onClick }: { onClick?: () => void }) {
   return (
     <div className="home-space home-space-portal">
       <span aria-hidden="true" className="home-backdrop-scene">
-        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")` }} />}
+        {backdropUrl && <span className="home-backdrop-image" style={{ backgroundImage: `url("${backdropUrl}")`, opacity: backdropOpacity }} />}
       </span>
       <div onClick={onClick} className="home-card-portal h-full p-6 cursor-pointer group">
         <div className="flex items-center justify-between mb-3">
