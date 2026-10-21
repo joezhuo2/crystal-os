@@ -14,6 +14,7 @@
 import { useSyncExternalStore } from "react";
 import { focusManager } from "@tanstack/react-query";
 import { perfSettings } from "@/lib/perfSettings";
+import { privacySettings } from "@/lib/privacySettings";
 import { isDesktop } from "@/lib/platform";
 
 export const VISIBILITY_EVENT = "app://visibility";
@@ -71,7 +72,7 @@ let started = false;
 /**
  * Starts tracking, once. Also:
  * - puts `app-hidden` / `perf-still` / `perf-backdrop-still` on <html>, which pause or stop CSS
- *   animations (index.css);
+ *   animations (index.css), and `privacy-mode`, which blurs private content;
  * - tells React Query the app is unfocused while hidden, which stops
  *   `refetchInterval` polling and refetches stale data on return.
  */
@@ -84,8 +85,10 @@ export function startAppActivity() {
     root.classList.toggle("app-hidden", !state.visible);
     root.classList.toggle("perf-still", perfSettings.getState().reduceTransitions);
     root.classList.toggle("perf-backdrop-still", perfSettings.getState().stillBackdrops);
+    root.classList.toggle("privacy-mode", privacySettings.getState());
   };
   appActivity.subscribe(apply);
+  privacySettings.subscribe(apply);
   perfSettings.subscribe(() => {
     update();
     apply();

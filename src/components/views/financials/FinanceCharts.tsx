@@ -59,7 +59,7 @@ function Tip({ x, y, width, title, rows }: { x: number; y: number; width: number
       {rows.map((r) => (
         <p key={r.name} style={{ color: "hsl(215 20% 75%)" }}>
           <span className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ background: r.color }} />
-          {r.name}: {r.value}
+          {r.name}: <span data-private>{r.value}</span>
         </p>
       ))}
     </div>
@@ -139,7 +139,7 @@ export function LineAreaChart<K extends string, R extends { [key in K]: number }
           )}
         </defs>
         {ticks.map((t) => (
-          <text key={t} x={Y_AXIS_WIDTH - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize={10} fill={AXIS_TEXT}>
+          <text data-private key={t} x={Y_AXIS_WIDTH - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize={10} fill={AXIS_TEXT}>
             {t.toFixed(2)}
           </text>
         ))}

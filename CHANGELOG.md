@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.19] - 2026-10-21 - Privacy mode.
+
+### Added
+
+- **Privacy mode** (issue #47). On by default: money amounts in The Vault, The Orbit, the Home page's Vault card and command palette transaction results are blurred, and so are the names and previews of Archive notes until you open one (`privacySettings.ts`, `appActivity.ts`, `index.css`).
+- **Privacy mode switch in Settings → Privacy** (issue #47). "privacy", "blur" and "hide money" in the command palette find the section (`SettingsPage.tsx`, `settingsSections.ts`).
+
 ## [v0.11.18] - 2026-10-21 - Habit reminders.
 
 ### Added

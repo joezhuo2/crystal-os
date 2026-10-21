@@ -653,18 +653,18 @@ function VaultSticker({ onClick }: { onClick?: () => void }) {
       ) : (
         <>
           <div className="flex items-baseline gap-2 mb-2">
-            <span className={`text-3xl font-bold tabular-nums ${summary.net >= 0 ? "text-accent" : "text-red-400"}`}>
+            <span data-private className={`text-3xl font-bold tabular-nums ${summary.net >= 0 ? "text-accent" : "text-red-400"}`}>
               {summary.net >= 0 ? "+" : "−"}
               {money(summary.net)}
             </span>
             <span className="text-sm text-muted-foreground">net in {monthName}</span>
           </div>
-          <p className="text-xs text-muted-foreground tabular-nums">
+          <p data-private className="text-xs text-muted-foreground tabular-nums">
             {money(summary.income)} in · {money(summary.spent)} out
           </p>
           {summary.top && (
             <p className="text-xs text-muted-foreground mt-1 truncate">
-              Top spend: <span className="text-foreground/80">{summary.top.name}</span> {money(summary.top.amount)}
+              Top spend: <span className="text-foreground/80">{summary.top.name}</span> <span data-private>{money(summary.top.amount)}</span>
             </p>
           )}
         </>

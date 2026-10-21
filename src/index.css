@@ -4190,6 +4190,13 @@ html.app-hidden *::after {
   animation-play-state: paused !important;
 }
 
+/* Privacy mode: money amounts and unopened Archive notes are blurred.
+   Set by src/lib/appActivity.ts from src/lib/privacySettings.ts. */
+html.privacy-mode [data-private] {
+  filter: blur(5px);
+  user-select: none;
+}
+
 /* "Reduce transitions": animations jump to their end state and transitions are
    instant, except in the page backdrops (the "Still backdrops" switch below). Loading indicators (spin, pulse, the Portal's spinners) keep
    moving so progress stays visible, and so do the small controls marked
