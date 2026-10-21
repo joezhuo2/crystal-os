@@ -27,6 +27,7 @@ import {
   vaultErrorCode,
   type VaultNote,
 } from "@/hooks/useVault";
+import { useShortcut } from "@/hooks/useShortcut";
 import { isDesktop } from "@/lib/platform";
 import { useDebouncedValue } from "@/lib/utils";
 import {
@@ -659,6 +660,8 @@ export default function ArchivePage() {
     setQuickAddDraft("");
     setShowQuickAdd(true);
   };
+
+  useShortcut("archive.newNote", openQuickAdd);
 
   const header = (
     <div className="flex items-center justify-between gap-4 mb-4">
