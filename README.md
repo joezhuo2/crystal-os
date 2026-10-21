@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-863%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.11.21-6366F1)
+![Version](https://img.shields.io/badge/version-0.11.22-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.11.21** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.11.22** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 [Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
@@ -73,7 +73,7 @@ For using Crystal OS rather than working on it. To build from source, skip to [Q
 2. Run it. The installer is not code-signed yet, so Windows SmartScreen may say "Windows protected your PC": click **More info**, then **Run anyway**.
 3. Crystal OS installs for your user only (no admin prompt), opens, and adds a gem icon to the tray. It needs WebView2, which Windows 11 already has.
 
-From then on, **Settings → Install & update → Check for updates** installs new versions in place. The first launch after an update opens a **What's new** popup with the changelog for every version since the one you had; close it with the button in its top right corner or Esc.
+From then on, **Settings → Install & update → Check for updates** installs new versions in place. With **Settings → Notifications → What's new after updates** switched on (off by default), the first launch after an update opens a **What's new** popup with the changelog for every version since the one you had; close it with the button in its top right corner or Esc.
 
 ### First-run setup
 
@@ -463,7 +463,7 @@ Categories, habits, focus sessions and settings are not queued and still report 
 
 ## 🔔 Notifications
 
-Crystal OS shows native toasts (Windows notifications on desktop through `tauri-plugin-notification`, the browser's Notification API on the web). The first one asks for permission. **Settings → Notifications** has a switch for each kind, the reminder lead time, a **Do Not Disturb** switch that silences them all without touching the others, and **Send test**.
+Crystal OS shows native toasts (Windows notifications on desktop through `tauri-plugin-notification`, the browser's Notification API on the web). The first one asks for permission. **Settings → Notifications** has a switch for each kind, the reminder lead time, a **Do Not Disturb** switch that silences them all without touching the others, and **Send test**. **What's new after updates** (off by default) opens the changelog popup on the first launch after an update.
 
 - **Task due times.** When an open task reaches its end time ("Due now: File taxes", with the priority if it is high or urgent), including each occurrence of a repeating task. A due time is still announced up to 10 minutes late, so a sleeping timer or opening the app just after it does not lose it.
 - **Task reminders.** A heads-up before an open task is due, ahead of its "Due now" toast. **Remind tasks** picks **At the start of the day** (every open task ending today, untimed ones too, until its end time: "Due today: File taxes") or **Minutes before** (timed tasks within **Remind before tasks** of their end time, 30 by default, 1 to 1440, across midnight too: "Due soon: File taxes", "Due at 5:00 PM, in 20 min"). **Show task reminders** picks **On one launch** (once per task and day) or **On every launch** (again each time Crystal OS starts while the reminder still applies). While Do Not Disturb is on nothing is shown or recorded, so a reminder still due appears once it is turned off. Completed and snoozed tasks stay quiet.

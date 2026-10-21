@@ -18,6 +18,7 @@ import { findConflict } from "@/lib/keymapConflicts";
 import { isDesktop } from "@/lib/platform";
 import { MAX_CACHE_MINUTES, MAX_UNLOAD_DELAY, perfSettings, usePerfSettings } from "@/lib/perfSettings";
 import { privacySettings, usePrivacyMode } from "@/lib/privacySettings";
+import { changelogSettings, useShowChangelog } from "@/lib/changelogSettings";
 import { atmosphere, useAtmosphere } from "@/lib/atmosphereStore";
 import { IMAGE_TYPES } from "@/lib/atmosphereImage";
 import { BACKDROP_IMAGES, backdropSettings, useBackdropSettings, type BackdropImage } from "@/lib/backdropSettings";
@@ -545,6 +546,7 @@ export default function SettingsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const perf = usePerfSettings();
   const privacyMode = usePrivacyMode();
+  const showChangelog = useShowChangelog();
   const sky = useAtmosphere();
   const orbit = useOrbitStore();
   const notifications = useNotifySettings();
@@ -746,6 +748,12 @@ export default function SettingsPage() {
             description="Silences every notification below while it is on, without changing their switches."
           >
             <Switch checked={notifications.doNotDisturb} onCheckedChange={(on) => notifySettings.setFlag("doNotDisturb", on)} />
+          </Row>
+          <Row
+            title="What's new after updates"
+            description="Opens the changelog for the new version the first time you launch after an update. Off by default."
+          >
+            <Switch checked={showChangelog} onCheckedChange={changelogSettings.setEnabled} />
           </Row>
           <Row title="Task due times" description="When an open task reaches its end time, including each repeat.">
             <Switch checked={notifications.tasks} onCheckedChange={(on) => notifySettings.setFlag("tasks", on)} />
