@@ -25,23 +25,14 @@ export default function PomodoroTimer() {
 
   const handleTimeClick = () => {
     if (running) return;
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    setEditValue(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    setEditValue(String(Math.floor(seconds / 60)));
     setEditing(true);
     setTimeout(() => inputRef.current?.select(), 0);
   };
 
   const commitEdit = () => {
-    const match = editValue.match(/^(\d{1,2}):(\d{2})$/);
-    if (match) {
-      const h = parseInt(match[1], 10);
-      const m = parseInt(match[2], 10);
-      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-        const newDuration = h * 3600 + m * 60;
-        pomodoro.setDuration(newDuration);
-      }
-    }
+    const m = Number(editValue.trim());
+    if (Number.isInteger(m) && m >= 1 && m <= 1439) pomodoro.setDuration(m * 60);
     setEditing(false);
   };
 
@@ -75,14 +66,15 @@ export default function PomodoroTimer() {
               onBlur={commitEdit}
               onKeyDown={handleKeyDown}
               className="w-28 text-center text-3xl font-bold tabular-nums bg-transparent border-b border-primary outline-none"
-              placeholder="HH:MM"
-              maxLength={5}
+              inputMode="numeric"
+              placeholder="min"
+              maxLength={4}
             />
           ) : (
             <span
               className={`text-3xl font-bold tabular-nums ${!running ? "cursor-pointer hover:text-primary transition-colors" : ""}`}
               onClick={handleTimeClick}
-              title={!running ? "Click to edit time" : undefined}
+              title={!running ? "Click to set minutes" : undefined}
             >
               {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
             </span>
