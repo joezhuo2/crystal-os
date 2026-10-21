@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useAppActions, useFinancialCategories, useTaskCategories, useTasks, useTransactions, type Task } from "@/contexts/AppContext";
 import { nestTargets } from "@/lib/subtasks";
 import { canSnooze, formatSnoozeDate, ownSnoozed, snoozePresets, snoozeTitle, snoozeUpdates, UNSNOOZE } from "@/lib/snooze";
@@ -48,12 +48,20 @@ import {
   Gauge,
   Download,
   Bug,
+  CalendarSearch,
 } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
 import { usePortalOcclusion } from "@/hooks/usePortal";
 import { readRecents, type RecentItem } from "@/lib/recents";
 import { SETTINGS_SECTIONS, settingsSectionValue } from "@/lib/settingsSections";
+import { calendarWasConnected, useCalendarEvents, useCalendarStatus } from "@/hooks/useGoogleCalendar";
+import { pickedCalendarId } from "@/hooks/useTodayCapacity";
+import { capacityWindow, useCapacitySettings } from "@/lib/capacitySettings";
+import { formatEstimate } from "@/lib/capacity";
+import { findFreeSlot, FREE_SLOT_DAYS, parseFreeSlotQuery } from "@/lib/freeSlot";
+import { fromMinutes } from "@/lib/timeGrid";
+import { usesSidecar } from "@/lib/platform";
 
 const ITEM = "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer";
 
@@ -162,6 +170,31 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
               .includes(search.toLowerCase()),
         )
       : [];
+
+  // ---------- "next 5h": the next free block in The Horizon ----------
+  const slotMinutes = parseFreeSlotQuery(search);
+  const capacity = useCapacitySettings();
+  const calendarStatus = useCalendarStatus(slotMinutes !== null && (!usesSidecar() || calendarWasConnected()));
+  const calendarConnected = calendarStatus.data?.connected === true;
+  const slotRange = useMemo(() => {
+    const now = new Date();
+    return {
+      calendarId: pickedCalendarId(),
+      timeMin: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString(),
+      timeMax: new Date(now.getFullYear(), now.getMonth(), now.getDate() + FREE_SLOT_DAYS).toISOString(),
+    };
+  }, []);
+  const slotEvents = useCalendarEvents(slotRange, slotMinutes !== null && calendarConnected);
+  const slotLoading = calendarStatus.isLoading || (calendarConnected && slotEvents.isLoading);
+  const freeSlot =
+    slotMinutes === null || slotLoading
+      ? null
+      : findFreeSlot({
+          events: slotEvents.data?.events ?? [],
+          now: new Date(),
+          minutes: slotMinutes,
+          window: capacityWindow(capacity),
+        });
 
   // ---------- Search the Obsidian vault ----------
   const vaultQuery = !addPrefix && !logPrefix ? search.trim() : "";
@@ -274,6 +307,21 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
     setShowTransactionForm(true);
   };
 
+  const handleFreeSlot = () => {
+    if (!freeSlot) return close();
+    if (calendarConnected) {
+      appUi.setNewEventSlot({ date: freeSlot.date, start: fromMinutes(freeSlot.start), end: fromMinutes(freeSlot.end) });
+      setShowEventForm(true);
+    }
+    handleNavigate("calendar");
+  };
+
+  const slotDay = (date: string) => {
+    const today = toLocalDateStr();
+    const tomorrow = toLocalDateStr(new Date(Date.now() + 86400000));
+    return date === today ? "Today" : date === tomorrow ? "Tomorrow" : formatSnoozeDate(date, today);
+  };
+
   const handleAddEvent = () => {
     // The Horizon owns the event form, so flag the request and navigate there.
     setShowEventForm(true);
@@ -319,7 +367,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
           // Vault notes are matched server-side (including on body text), and
           // Quick Add is always offered — neither can pass a local substring
           // test against the raw query, so they opt out of cmdk's filter.
-          if (value === "quick-add-vault" || value.startsWith("note-")) return 1;
+          if (value === "quick-add-vault" || value === "free-slot" || value.startsWith("note-")) return 1;
           if (value.toLowerCase().includes(search.toLowerCase())) return 1;
           return 0;
         }}
@@ -427,7 +475,35 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                 ) : (
                 <>
 
-                {/* ── Quick Add to the vault — always the first row ── */}
+                {/* ── "next 5h": the next free block ── */}
+                {slotMinutes !== null && (
+                  <CommandGroup heading="The Horizon">
+                    <CommandItem value="free-slot" onSelect={handleFreeSlot} className={ITEM}>
+                      <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                        <CalendarSearch className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {slotLoading
+                            ? `Looking for a free ${formatEstimate(slotMinutes)} block…`
+                            : freeSlot
+                              ? `Next free ${formatEstimate(slotMinutes)}: ${slotDay(freeSlot.date)}, ${fromMinutes(freeSlot.start)}–${fromMinutes(freeSlot.end)}`
+                              : `No free ${formatEstimate(slotMinutes)} block in the next ${FREE_SLOT_DAYS} days`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {!slotLoading && !calendarConnected
+                            ? "Work day only: connect Google Calendar to skip your events"
+                            : freeSlot
+                              ? "Create an event in that slot"
+                              : `Within your work day, ${capacity.dayStart}–${capacity.dayEnd} (Settings → The Engine)`}
+                        </p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground/40" />
+                    </CommandItem>
+                  </CommandGroup>
+                )}
+
+                {/* ── Quick Add to the vault — the first row, after a free-slot answer ── */}
                 <CommandGroup heading="Vault">
                   <CommandItem
                     value="quick-add-vault"

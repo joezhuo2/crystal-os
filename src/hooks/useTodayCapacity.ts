@@ -9,7 +9,7 @@ import { toLocalDateStr } from "@/lib/utils";
 /** Matches CalendarPage's key, so free time follows the calendar picked in The Horizon. */
 const CALENDAR_STORAGE_KEY = "crystal-os-google-calendar";
 
-function pickedCalendarId(): string {
+export function pickedCalendarId(): string {
   try {
     return localStorage.getItem(CALENDAR_STORAGE_KEY) ?? "primary";
   } catch {

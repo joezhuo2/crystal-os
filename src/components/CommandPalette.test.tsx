@@ -16,6 +16,12 @@ vi.mock("@/contexts/AppContext", () => ({
 vi.mock("@/hooks/useVault", () => ({ useVaultNotes: () => ({ data: undefined }) }));
 vi.mock("@/hooks/usePortal", () => ({ usePortalOcclusion: () => {} }));
 vi.mock("@/lib/platform", async (orig) => ({ ...(await orig<object>()), isDesktop: () => false }));
+let calendarEvents: unknown[] = [];
+vi.mock("@/hooks/useGoogleCalendar", () => ({
+  calendarWasConnected: () => true,
+  useCalendarStatus: () => ({ data: { connected: true }, isLoading: false }),
+  useCalendarEvents: () => ({ data: { events: calendarEvents }, isLoading: false }),
+}));
 
 const { default: CommandPalette } = await import("./CommandPalette");
 
@@ -137,5 +143,33 @@ describe("Command palette Settings sections", () => {
     expect(appUi.getState().settingsSection).toBe("atmosphere");
     expect(onNavigate).toHaveBeenCalledWith("settings");
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe("Command palette free-slot finder", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    calendarEvents = [];
+  });
+
+  it("finds the next free block around events and opens the Horizon form on it", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 9, 5, 8, 0));
+    calendarEvents = [
+      {
+        id: "e1",
+        allDay: false,
+        startDate: "2026-10-05",
+        startTime: "09:00",
+        endDate: "2026-10-05",
+        endTime: "12:00",
+      },
+    ];
+    renderPalette();
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "next 2h" } });
+    fireEvent.click(screen.getByText("Next free 2h: Today, 12:00–14:00"));
+    expect(appUi.getState().newEventSlot).toEqual({ date: "2026-10-05", start: "12:00", end: "14:00" });
+    expect(appUi.getState().showEventForm).toBe(true);
+    expect(onNavigate).toHaveBeenCalledWith("calendar");
   });
 });
