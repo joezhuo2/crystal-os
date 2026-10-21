@@ -130,27 +130,44 @@ function minutesLabel(minutes: number): string {
   return m ? `${h} h ${m} min` : `${h} h`;
 }
 
+/** A Pulse reminder shows this many minutes before it is time to leave. */
+export const PULSE_BUFFER_MINUTES = 10;
+
 /**
  * Timed events that start within `leadMinutes` of `now` and have not started
  * yet. All-day events get no reminder. Opening the app inside the window
- * still reminds, with the time actually left.
+ * still reminds, with the time actually left. An event whose location has a
+ * travel time in `travel` (minutes, by location) reminds PULSE_BUFFER_MINUTES
+ * before it is time to leave instead, and says when that is.
  */
-export function eventAlerts(events: CalendarEvent[], now: Date, leadMinutes: number): PlannedAlert[] {
+export function eventAlerts(
+  events: CalendarEvent[],
+  now: Date,
+  leadMinutes: number,
+  travel: Record<string, number> = {},
+): PlannedAlert[] {
   const alerts: PlannedAlert[] = [];
   for (const event of events) {
     if (event.allDay) continue;
     const start = Date.parse(event.startISO);
     if (!Number.isFinite(start)) continue;
     const left = start - now.getTime();
+    const drive = event.location ? travel[event.location.trim()] : undefined;
+    const lead = drive === undefined ? leadMinutes : drive + PULSE_BUFFER_MINUTES;
     // A zero lead reminds as the event starts, inside the same grace as tasks.
-    const inWindow = leadMinutes > 0 ? left > 0 && left <= leadMinutes * MINUTE : left <= 0 && -left <= TASK_GRACE_MS;
+    const inWindow = lead > 0 ? left > 0 && left <= lead * MINUTE : left <= 0 && -left <= TASK_GRACE_MS;
     if (!inWindow) continue;
     const mins = Math.ceil(left / MINUTE);
     const when = mins > 0 ? `In ${minutesLabel(mins)}, at ${clockLabel(new Date(start))}` : `Now, at ${clockLabel(new Date(start))}`;
+    const leaveAt = new Date(start - (drive ?? 0) * MINUTE);
+    const leave =
+      drive === undefined
+        ? ""
+        : ` · ${leaveAt.getTime() > now.getTime() ? `Leave by ${clockLabel(leaveAt)}` : "Leave now"} (${minutesLabel(drive)} drive)`;
     alerts.push({
       key: `event:${event.calendarId}:${event.id}:${event.startISO}`,
       title: event.summary || "(No title)",
-      body: event.location ? `${when} · ${event.location}` : when,
+      body: `${when}${leave}${event.location ? ` · ${event.location}` : ""}`,
     });
   }
   return alerts;

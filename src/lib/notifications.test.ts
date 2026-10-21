@@ -173,6 +173,21 @@ describe("eventAlerts", () => {
   it("skips all-day events", () => {
     expect(eventAlerts([event({ allDay: true })], at("2026-10-05T14:45:00"), 30)).toEqual([]);
   });
+
+  it("reminds ten minutes before leave-by time when travel is known", () => {
+    const e = event({ location: "Main St" });
+    const travel = { "Main St": 45 };
+    expect(eventAlerts([e], at("2026-10-05T14:04:00"), 30, travel)).toEqual([]);
+    const [alert] = eventAlerts([e], at("2026-10-05T14:05:00"), 30, travel);
+    expect(alert.body).toBe("In 55 min, at 3:00 PM · Leave by 2:15 PM (45 min drive) · Main St");
+    expect(eventAlerts([e], at("2026-10-05T14:20:00"), 30, travel)[0].body).toContain("Leave now");
+  });
+
+  it("falls back to the default lead when travel is unknown", () => {
+    const e = event({ location: "Somewhere" });
+    expect(eventAlerts([e], at("2026-10-05T14:05:00"), 30, { "Main St": 45 })).toEqual([]);
+    expect(eventAlerts([e], at("2026-10-05T14:30:00"), 30, { "Main St": 45 })).toHaveLength(1);
+  });
 });
 
 describe("pomodoroAlert", () => {

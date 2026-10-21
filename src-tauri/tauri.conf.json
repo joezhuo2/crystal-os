@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Crystal OS",
-  "version": "0.11.19",
+  "version": "0.11.20",
   "identifier": "com.crystalos.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -31,7 +31,7 @@
       "dangerousDisableAssetCspModification": ["style-src"],
       "csp": {
         "default-src": "'self'",
-        "connect-src": "'self' ipc: http://ipc.localhost http://127.0.0.1:8787 https://*.supabase.co wss://*.supabase.co https://api.weather.gc.ca",
+        "connect-src": "'self' ipc: http://ipc.localhost http://127.0.0.1:8787 https://*.supabase.co wss://*.supabase.co https://api.weather.gc.ca https://nominatim.openstreetmap.org https://router.project-osrm.org",
         "img-src": "'self' data: blob: https:",
         "style-src": "'self' 'unsafe-inline'",
         "font-src": "'self' data:"
