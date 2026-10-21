@@ -138,7 +138,7 @@ export function MoneyBars({
             {bars.map((b) => {
               const h = b.value ? Math.max(3, (b.value / max) * (plot - 4)) : 0;
               return (
-                <GlassTip key={b.title} label={`${g.label}, ${b.title.toLowerCase()}`} hint={formatMoney(b.value)} tone="orbit">
+                <GlassTip key={b.title} label={`${g.label}, ${b.title.toLowerCase()}`} detail={<span data-private className="glass-tooltip-hint">{formatMoney(b.value)}</span>} tone="orbit">
                   <g>
                     <rect x={b.x} y={0} width={bar} height={plot} rx={4} className="orbit-chart-track" />
                     {h > 0 && <rect x={b.x} y={plot - h} width={bar} height={h} rx={4} className={b.cls} />}

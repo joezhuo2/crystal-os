@@ -105,12 +105,12 @@ const NoteRow = memo(function NoteRow({
       data-active={active || undefined}
       className="obsidian-note w-full text-left px-3 py-2.5 rounded-lg transition-colors border"
     >
-      <p className="text-sm font-medium truncate">{note.title}</p>
+      <p data-private={!active || undefined} className="text-sm font-medium truncate">{note.title}</p>
       <p className="text-xs text-muted-foreground truncate mt-0.5">
         {note.tags.length > 0 ? note.tags.join(" · ") : "untagged"} — {date}
       </p>
       {note.matchContext && (
-        <p className="text-[11px] text-muted-foreground/70 mt-1 line-clamp-2">
+        <p data-private={!active || undefined} className="text-[11px] text-muted-foreground/70 mt-1 line-clamp-2">
           {note.matchContext}
         </p>
       )}
@@ -266,8 +266,8 @@ function ConnectionGroup({
               title={n.path}
               className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
             >
-              <span className="block text-sm truncate">{n.title}</span>
-              <span className="block text-[11px] text-muted-foreground truncate">{n.path}</span>
+              <span data-private className="block text-sm truncate">{n.title}</span>
+              <span data-private className="block text-[11px] text-muted-foreground truncate">{n.path}</span>
             </button>
           </li>
         ))}
@@ -308,7 +308,7 @@ function RelatedGroup({
               title={n.path}
               className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
             >
-              <span className="block text-sm truncate">{n.title}</span>
+              <span data-private className="block text-sm truncate">{n.title}</span>
               <span className="block text-[11px] text-muted-foreground truncate">{shared.join(" · ")}</span>
             </button>
           </li>

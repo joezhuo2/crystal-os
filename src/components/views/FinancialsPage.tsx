@@ -162,7 +162,7 @@ function CategoryDonut() {
       <div className="flex flex-wrap gap-3 mt-3">
         {data.map((d) => (
           <span key={d.name} className="flex items-center gap-1.5 text-xs font-medium text-foreground/80">
-            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.color }} /> {d.name}: ${d.value.toFixed(2)}
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.color }} /> {d.name}: <span data-private>${d.value.toFixed(2)}</span>
           </span>
         ))}
       </div>
@@ -300,7 +300,7 @@ function TransactionList() {
               <p className="text-sm font-medium truncate">{tx.name}</p>
               <p className="text-[10px] text-muted-foreground">{cat?.name} · {tx.date}</p>
             </div>
-            <span className={`text-sm font-semibold tabular-nums ${tx.type === "income" ? "text-accent" : "text-foreground"}`}>
+            <span data-private className={`text-sm font-semibold tabular-nums ${tx.type === "income" ? "text-accent" : "text-foreground"}`}>
               {tx.type === "income" ? "+" : "-"}${tx.amount.toFixed(2)}
             </span>
             <button onClick={() => { setEditingTransaction(tx); setShowTransactionForm(true); }} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary">

@@ -210,13 +210,13 @@ function MoneyCard({ review }: { review: Review }) {
         <span id="orbit-money">Money</span>
       </CardTitle>
       <div className="flex items-baseline gap-2 mb-1">
-        <span className={`orbit-stat ${net < 0 ? "orbit-stat-rust" : ""}`}>
+        <span data-private className={`orbit-stat ${net < 0 ? "orbit-stat-rust" : ""}`}>
           {net >= 0 ? "+" : "−"}
           {formatMoney(Math.abs(net))}
         </span>
         <span className="orbit-stat-label">net</span>
       </div>
-      <p className="text-xs text-muted-foreground mb-2 tabular-nums">
+      <p data-private className="text-xs text-muted-foreground mb-2 tabular-nums">
         {formatMoney(stats.income)} in · {formatMoney(stats.expenses)} out ·{" "}
         <span className={spendDiff > 0 ? "orbit-text-rust" : spendDiff < 0 ? "orbit-text-ice" : ""}>
           spending {spendDiff === 0 ? "level" : `${spendDiff > 0 ? "up" : "down"} ${formatMoney(Math.abs(spendDiff))}`} vs last {unit}

@@ -603,7 +603,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                               <p className="text-sm font-medium truncate">{tx.name}</p>
                               <p className="text-xs text-muted-foreground">
                                 {cat?.name ?? "Uncategorized"} ·{" "}
-                                <span className={tx.type === "income" ? "text-emerald-400" : "text-red-400"}>
+                                <span data-private className={tx.type === "income" ? "text-emerald-400" : "text-red-400"}>
                                   {tx.type === "income" ? "+" : "-"}${tx.amount.toFixed(2)}
                                 </span>
                               </p>
