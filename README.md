@@ -72,7 +72,7 @@ For using Crystal OS rather than working on it. To build from source, skip to [Q
 2. Run it. The installer is not code-signed yet, so Windows SmartScreen may say "Windows protected your PC": click **More info**, then **Run anyway**.
 3. Crystal OS installs for your user only (no admin prompt), opens, and adds a gem icon to the tray. It needs WebView2, which Windows 11 already has.
 
-From then on, **Settings → Install & update → Check for updates** installs new versions in place.
+From then on, **Settings → Install & update → Check for updates** installs new versions in place. The first launch after an update opens a **What's new** popup with the changelog for every version since the one you had; close it with the button in its top right corner or Esc.
 
 ### First-run setup
 
@@ -226,6 +226,8 @@ src/
 │   │   ├── PomodoroTimer.tsx   # Focus timer component
 │   │   ├── PomodoroTask.tsx    # "Focusing on" task picker and drop target under Start/Reset
 │   │   └── CategoryManager.tsx # Category CRUD for tasks/finances
+│   ├── ChangelogDialog.tsx     # Fixed-size, scrollable "What's new" popup
+│   ├── ChangelogNotice.tsx     # Opens ChangelogDialog on the first launch after an update
 │   ├── CommandPalette.tsx      # Search, NL commands, vault note results
 │   ├── NotificationScheduler.tsx # Checks task due times and calendar reminders every 30 s while signed in
 │   └── QuickAddDialog.tsx      # Append a capture to a vault note
@@ -266,6 +268,7 @@ src/
 │   ├── portalApps.ts           # Portal presets, URL/id validation, badge parsing
 │   ├── portalStore.ts          # Module-level Portal store: apps, active app, badges
 │   ├── portalNative.ts         # Desktop Portal bridge (portal_* commands)
+│   ├── changelog.ts            # Last-launched version (localStorage) and CHANGELOG.md sections since it
 │   ├── installerNative.ts      # Desktop installer bridge (installer_* and update_* commands, version helpers)
 │   ├── homeTasks.ts            # Home Engine ordering: priority ranks, upcoming tasks
 │   ├── capacity.ts             # Task estimates, busy intervals from events, today's planned vs free time
