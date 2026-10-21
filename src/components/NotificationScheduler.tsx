@@ -7,6 +7,7 @@ import { useHabitReminders } from "@/lib/habitReminders";
 import { deliver, eventAlerts, takeUnsent, habitReminderAlerts, taskDueAlerts, taskReminderAlerts } from "@/lib/notifications";
 import { useNotifySettings } from "@/lib/notifySettings";
 import { usesSidecar } from "@/lib/platform";
+import { useTravelTimes } from "@/lib/pulse";
 
 /** How often due times and reminders are checked. */
 const CHECK_MS = 30 * 1000;
@@ -69,8 +70,11 @@ export default function NotificationScheduler() {
     refetchIntervalInBackground: true,
   });
 
+  const eventList = events.data?.events ?? [];
+  const travel = useTravelTimes(eventList, wantEvents);
+
   // The check reads the latest data through refs, so the timer is set up once.
-  const current = { settings, tasks, events: events.data?.events ?? [], habits: habits.data, reminders };
+  const current = { settings, tasks, events: eventList, travel, habits: habits.data, reminders };
   const latest = useRef(current);
   latest.current = current;
 
@@ -78,7 +82,7 @@ export default function NotificationScheduler() {
     // The startup habit reminder waits for the habits to load and for Do Not Disturb to end.
     let startupPending = true;
     const check = () => {
-      const { settings: s, tasks: t, events: e, habits: h, reminders: r } = latest.current;
+      const { settings: s, tasks: t, events: e, travel, habits: h, reminders: r } = latest.current;
       if (s.doNotDisturb) return;
       const now = new Date();
       deliver([
@@ -88,7 +92,7 @@ export default function NotificationScheduler() {
               s.taskReminderRepeat === "everyLaunch" ? { ...a, key: `${a.key}:${LAUNCH}` } : a,
             )
           : []),
-        ...(s.calendar ? eventAlerts(e, now, s.eventLead) : []),
+        ...(s.calendar ? eventAlerts(e, now, s.eventLead, travel) : []),
       ]);
       if (!s.habitReminders || !h) return;
       const habitAlerts = habitReminderAlerts(h.habits, h.checks, r, now);
