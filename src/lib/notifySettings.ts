@@ -15,7 +15,7 @@ export const MAX_EVENT_LEAD = 1440;
 /** Minutes before a task's end time that its "Due soon" reminder shows, by default. */
 export const DEFAULT_TASK_LEAD = 30;
 
-type Flag = "doNotDisturb" | "tasks" | "calendar" | "pomodoro" | "portal" | "reviews" | "taskReminders" | "habitReminders" | "habitReminderStartup";
+type Flag = "doNotDisturb" | "tasks" | "calendar" | "pomodoro" | "portal" | "reviews" | "taskReminders" | "habitReminders" | "habitReminderStartup" | "pulse";
 
 export interface NotifySettings {
   /** Silences every notification without changing the per-kind switches. */
@@ -24,8 +24,10 @@ export interface NotifySettings {
   tasks: boolean;
   /** A toast `eventLead` minutes before each timed calendar event. */
   calendar: boolean;
-  /** Minutes, 0 to MAX_EVENT_LEAD. 0 reminds when the event starts. */
+  /** Minutes, 0 to MAX_EVENT_LEAD. 0 reminds when the event starts. Pulse falls back to it. */
   eventLead: number;
+  /** Pulse: an event with a location reminds 10 minutes before it is time to leave, timed from where you are. */
+  pulse: boolean;
   /** A toast when a focus or break phase runs out. */
   pomodoro: boolean;
   /** A toast when a Portal app's unread count goes up (apps can opt out one by one). */
@@ -51,6 +53,7 @@ export const DEFAULT_NOTIFY_SETTINGS: NotifySettings = {
   tasks: true,
   calendar: true,
   eventLead: DEFAULT_EVENT_LEAD,
+  pulse: true,
   pomodoro: true,
   portal: true,
   reviews: true,
@@ -92,6 +95,7 @@ export function parseNotifySettings(raw: string | null): NotifySettings {
     tasks: flag("tasks"),
     calendar: flag("calendar"),
     eventLead: "eventLead" in stored ? clampEventLead(stored.eventLead) : DEFAULT_EVENT_LEAD,
+    pulse: flag("pulse"),
     pomodoro: flag("pomodoro"),
     portal: flag("portal"),
     reviews: flag("reviews"),

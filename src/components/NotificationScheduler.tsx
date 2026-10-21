@@ -71,7 +71,7 @@ export default function NotificationScheduler() {
   });
 
   const eventList = events.data?.events ?? [];
-  const travel = useTravelTimes(eventList, wantEvents);
+  const travel = useTravelTimes(eventList, wantEvents && settings.pulse);
 
   // The check reads the latest data through refs, so the timer is set up once.
   const current = { settings, tasks, events: eventList, travel, habits: habits.data, reminders };

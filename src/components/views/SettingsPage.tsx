@@ -735,8 +735,18 @@ export default function SettingsPage() {
             <Switch checked={notifications.calendar} onCheckedChange={(on) => notifySettings.setFlag("calendar", on)} />
           </Row>
           <Row
+            title="Pulse reminders"
+            description="For an event with a location, remind 10 minutes before it is time to leave, with the leave-by time and drive, worked out from your current location (OpenStreetMap). When the drive cannot be timed, the default below is used."
+          >
+            <Switch
+              checked={notifications.pulse}
+              disabled={!notifications.calendar}
+              onCheckedChange={(on) => notifySettings.setFlag("pulse", on)}
+            />
+          </Row>
+          <Row
             title="Remind before events"
-            description={`How many minutes before an event its reminder shows. 0 reminds as it starts. Up to ${MAX_EVENT_LEAD} (a day).`}
+            description={`Default minutes before an event its reminder shows. 0 reminds as it starts. Up to ${MAX_EVENT_LEAD} (a day).`}
           >
             <EventLeadInput value={notifications.eventLead} disabled={!notifications.calendar} />
           </Row>
