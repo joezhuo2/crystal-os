@@ -663,6 +663,9 @@ export default function ArchivePage() {
 
   useShortcut("archive.newNote", openQuickAdd);
 
+  const searchRef = useRef<HTMLInputElement>(null);
+  useShortcut("archive.search", () => searchRef.current?.select());
+
   const header = (
     <div className="flex items-center justify-between gap-4 mb-4">
       <div>
@@ -701,6 +704,7 @@ export default function ArchivePage() {
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background/30">
             <Search className="w-4 h-4 text-muted-foreground/50 shrink-0" />
             <input
+              ref={searchRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search the vault…"
