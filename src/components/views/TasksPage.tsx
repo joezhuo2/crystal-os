@@ -28,6 +28,7 @@ import { ChecklistEditor, ChildTaskRow, SubtaskChip } from "./TaskSubtasks";
 import { SnoozeButton, SnoozeChip, UnsnoozeButton } from "./TaskSnooze";
 import { canSnooze, ownSnoozed, snoozedSections, splitSnoozed } from "@/lib/snooze";
 import { useToday } from "@/hooks/useToday";
+import { useShortcut } from "@/hooks/useShortcut";
 import { activeFilterCount, applyTaskView, taskView, useTaskView } from "@/lib/taskView";
 import { TaskViewMenu } from "./TaskViewMenu";
 import { CompletionCheck, StrikeText } from "./TaskCompletion";
@@ -868,6 +869,8 @@ export default function TasksPage() {
       fadeTimer.current = window.setTimeout(() => setFade(null), VIEW_FADE_MS);
     }, VIEW_FADE_MS);
   };
+
+  useShortcut("engine.cycleView", () => switchView(selected === "list" ? "kanban" : "list"));
 
   // Child tasks show inside their parent, not in the lists. Sort & Filter
   // (src/lib/taskView.ts) picks and orders the top-level tasks for both views.
