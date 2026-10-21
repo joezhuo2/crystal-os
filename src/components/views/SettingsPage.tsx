@@ -677,7 +677,7 @@ export default function SettingsPage() {
           <Row title="Task due times" description="When an open task reaches its end time, including each repeat.">
             <Switch checked={notifications.tasks} onCheckedChange={(on) => notifySettings.setFlag("tasks", on)} />
           </Row>
-          <Row title="Task reminders" description="A heads-up before an open task is due, ahead of its due-time notification.">
+          <Row title="Task reminders" description="A heads-up before an open task is due, ahead of its due-time notification. Held while Do Not Disturb is on and shown once it is off, if the task is still due.">
             <Switch checked={notifications.taskReminders} onCheckedChange={(on) => notifySettings.setFlag("taskReminders", on)} />
           </Row>
           <Row
