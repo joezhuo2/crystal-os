@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChangelogDialog } from "@/components/ChangelogDialog";
 import { changelogSince, takeUpdatedFrom } from "@/lib/changelog";
+import { changelogSettings } from "@/lib/changelogSettings";
 
 declare const __APP_VERSION__: string | undefined;
 
@@ -11,7 +12,7 @@ export function ChangelogNotice() {
   useEffect(() => {
     if (!version) return;
     const from = takeUpdatedFrom(version);
-    if (!from) return;
+    if (!from || !changelogSettings.getState()) return;
     let cancelled = false;
     import("../../CHANGELOG.md?raw")
       .then(({ default: markdown }) => {
