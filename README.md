@@ -38,6 +38,7 @@ Current release: **v0.11.18** — see [CHANGELOG.md](CHANGELOG.md) for release h
 | **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, notifications, vault folder, Nebula keys, models and look, and downloading or building an installer. A search box (Ctrl+F) hides sections that don't match and unfolds the ones that do. **In-app shortcuts** lists every single-key shortcut by page; click one to record a new key (Esc cancels), with a warning if another action on that page or a general one already uses it, a Reset per row and a **Reset all**. Shortcuts are single keys and are ignored while you type or a dialog is open; rebinds are saved in localStorage (`crystal-os-keymap`). Click a section's header to fold it away (remembered on this device); switches and sliders glide instead of snapping. **Diagnostics** copies recent errors (unhandled rejections, uncaught errors, failed Supabase saves) with the app version for a bug report; on desktop they are also logged to `diagnostics.log` |
 | **⌨️ Command Palette** | Global search over tasks, transactions, vault note bodies and Settings sections (picking one scrolls to it and unfolds it), plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event. With nothing typed it lists your 8 most recently opened tasks, notes and events to reopen in one step |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
+| **🙈 Privacy mode** | On by default: money amounts (The Vault, The Orbit, the Home page, search results) and the names and previews of Archive notes you have not opened are blurred, so the screen is safe to share. Switch it off in Settings → Privacy |
 | **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar |
 
 ---
@@ -257,6 +258,7 @@ src/
 │   ├── daylight.ts             # Daylight left / time to sunrise, and day length change (sunrise equation)
 │   ├── notifications.ts        # Desktop toasts: what to say and when (tasks, events, Pomodoro, Portal), delivery, Do Not Disturb
 │   ├── notifySettings.ts       # Notification switches and the event reminder lead time (localStorage)
+│   ├── privacySettings.ts      # Privacy mode switch (localStorage, on by default); blurs [data-private] content
 │   ├── appUi.ts                # Transient UI store: open forms, Quick Add draft, selected note, palette jump requests (useAppUi(selector))
 │   ├── recents.ts              # Recently opened tasks, notes and events for the command palette (localStorage, per user)
 │   ├── settingsSections.ts     # Settings sections and their keywords, for the command palette to search and jump to
@@ -470,6 +472,15 @@ Crystal OS shows native toasts (Windows notifications on desktop through `tauri-
 - **Habit reminders.** Set a time on a habit with the bell in The Orbit's habit manager ("Habit: Read", "Not ticked yet today · reminder set for 8:00 PM"). From that time it reminds once an hour while the habit is not ticked today, up to its **times a day** (1 by default, 0 for no limit until midnight). **Remind habits on every startup** also reminds once on each launch for every habit past its time and not ticked, even after its count for the day. Reminder times are kept on this device in `localStorage` (`crystal-os-habit-reminders`); archived habits stay quiet.
 
 What to say and when lives in `src/lib/notifications.ts` (pure, tested); `src/components/NotificationScheduler.tsx` checks tasks and events every 30 s while signed in, and the Pomodoro and Portal stores are watched from `main.tsx`. Each task and event reminder is shown once: its key is kept in `localStorage` (`crystal-os-notified`, two days), so a restart does not repeat it. Settings are saved in `crystal-os-notifications`.
+
+## 🙈 Privacy mode
+
+**Settings → Privacy → Privacy mode** (on by default) blurs anything marked private, so a shared screen or a glance over your shoulder gives nothing away:
+
+- **Money.** Amounts in The Vault (transactions, category totals, chart axes and tooltips), The Orbit's Money card, the Home page's Vault card and transaction results in the command palette.
+- **The Archive.** Note names and search previews in the list, and the names of linked and related notes, until you open the note.
+
+`src/lib/privacySettings.ts` keeps the switch in `localStorage` (`crystal-os-privacy-mode`); `src/lib/appActivity.ts` puts `privacy-mode` on `<html>`, and `index.css` blurs every element with `data-private` while it is there.
 
 ## ⏱️ Time estimates and capacity
 
