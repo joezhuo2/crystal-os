@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.28] - 2026-10-22 - Private Home.
+
+### Fixed
+
+- **Privacy mode now covers the Home cards** (issue #69). With privacy mode on, the Archive card's note names, the Horizon card's event names, the Engine card's task names and next-task nudge, and the Nebula card's last chat title are blurred like money amounts. Counts, times and app names stay readable (`HomePage.tsx`, `CapacityBar.tsx`, `HomeSpaces.tsx`).
+
 ## [v0.11.27] - 2026-10-22 - Nebula save to vault.
 
 ### Added

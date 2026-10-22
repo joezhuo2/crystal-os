@@ -70,7 +70,7 @@ export function NebulaSpace({ onClick }: { onClick?: () => void }) {
             {latest && (
               <p className="text-sm truncate text-white/80">
                 <span className="text-white/45">Last · </span>
-                {latest.title || "Untitled chat"}
+                <span data-private>{latest.title || "Untitled chat"}</span>
                 <span className="text-[10px] text-white/40 ml-2">
                   {formatDistanceToNow(latest.updatedAt, { addSuffix: true })}
                 </span>

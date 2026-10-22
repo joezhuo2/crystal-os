@@ -297,7 +297,7 @@ function ArchiveWidget({ onClick }: { onClick?: () => void }) {
                   className="w-full flex items-center gap-2 text-left group/note"
                 >
                   <BookOpen className="w-3.5 h-3.5 text-purple-300/60 shrink-0" />
-                  <span className="text-sm truncate group-hover/note:text-primary transition-colors">
+                  <span data-private className="text-sm truncate group-hover/note:text-primary transition-colors">
                     {note.title}
                   </span>
                   <span className="ml-auto text-[10px] text-muted-foreground/50 shrink-0">
@@ -421,7 +421,7 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
                     className="flex items-center gap-3"
                   >
                     <CalendarClock className="w-3.5 h-3.5 text-primary/60 shrink-0" />
-                    <span className="text-sm truncate">{event.summary || "(no title)"}</span>
+                    <span data-private className="text-sm truncate">{event.summary || "(no title)"}</span>
                     {event.location && (
                       <span className="text-[10px] text-muted-foreground/60 truncate hidden sm:inline">
                         {event.location}
@@ -582,7 +582,7 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
                         <Check className="w-2.5 h-2.5 text-accent opacity-0 group-hover/check:opacity-100" />
                       </button>
                     </GlassTip>
-                    <span className="text-sm truncate">{task.name}</span>
+                    <span data-private className="text-sm truncate">{task.name}</span>
                     {progress[task.id] && <SubtaskChip {...progress[task.id]} />}
                     <span className={`ml-auto text-[10px] font-semibold shrink-0 ${PRIORITY_CLASS[task.priority]}`}>
                       {label}

@@ -198,7 +198,7 @@ export function CapacityStrip({
         )}
         {capacity.unestimated > 0 && <> · {capacity.unestimated} unestimated</>}
       </p>
-      {suggestion && <p className="text-[11px] italic text-primary/90 truncate">{suggestion.text}</p>}
+      {suggestion && <p data-private className="text-[11px] italic text-primary/90 truncate">{suggestion.text}</p>}
     </div>
   );
 }
