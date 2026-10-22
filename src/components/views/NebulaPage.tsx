@@ -66,6 +66,7 @@ export default function NebulaPage() {
               <>
                 <NebulaToolbar
                   chat={chat}
+                  messages={runtime?.messages ?? []}
                   projectPath={project.path}
                   projectName={project.name}
                   running={Boolean(runtime?.running)}

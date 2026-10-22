@@ -1,17 +1,21 @@
-import { Coins, Folder, Gauge, Settings2 } from "lucide-react";
+import { Coins, Download, Folder, Gauge, Settings2 } from "lucide-react";
+import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { nebula } from "@/hooks/useHarness";
 import { useShortcut } from "@/hooks/useShortcut";
+import { useCreateNote } from "@/hooks/useVault";
+import { chatNotePath, chatToMarkdown } from "@/lib/harness/chatExport";
 import { harness } from "@/lib/harness/store";
 import { formatTokens, totalOf } from "@/lib/harness/tokenLedger";
-import { EFFORTS, MODES, TIERS, type ChatMeta, type ContextUsage, type Effort, type Ledger, type Tier } from "@/lib/harness/types";
+import { EFFORTS, MODES, TIERS, type ChatMessage, type ChatMeta, type ContextUsage, type Effort, type Ledger, type Tier } from "@/lib/harness/types";
 import NebulaThemeControls from "./NebulaThemeControls";
 import NebulaTip from "./NebulaTip";
 import TokenPanel from "./TokenPanel";
 
 interface Props {
   chat: ChatMeta;
+  messages: ChatMessage[];
   projectPath: string;
   projectName: string;
   running: boolean;
@@ -50,7 +54,7 @@ function ContextMeter({ context }: { context: ContextUsage | null }) {
 }
 
 /** Folder, model tier, effort, mode, context, tokens, and the look popover for one chat. */
-export default function NebulaToolbar({ chat, projectPath, projectName, running, chatTokens, projectTokens, allTime, context, claudeModel, mediumChain }: Props) {
+export default function NebulaToolbar({ chat, messages, projectPath, projectName, running, chatTokens, projectTokens, allTime, context, claudeModel, mediumChain }: Props) {
   // A chat with no usage yet (e.g. just opened from its folder) shows what the project has used.
   const showProject = Object.keys(chatTokens).length === 0;
   const total = totalOf(showProject ? projectTokens : chatTokens);
@@ -62,6 +66,15 @@ export default function NebulaToolbar({ chat, projectPath, projectName, running,
     if (harness.setChatOptions(chat.id, { effort }) && chat.tier === "high") nebula.restartClaude(chat.id);
   };
   useShortcut("nebula.cycleEffort", () => setEffort(EFFORTS[(EFFORTS.findIndex((e) => e.id === chat.effort) + 1) % EFFORTS.length].id), !running);
+  const create = useCreateNote();
+  const saveToVault = () =>
+    create.mutate(
+      { path: chatNotePath(chat, projectName), content: chatToMarkdown({ chat, messages, projectName, projectPath }), overwrite: true },
+      {
+        onSuccess: (res) => toast.success(res.created ? "Chat saved to vault" : "Chat updated in vault", { description: res.path }),
+        onError: (err) => toast.error("Could not save the chat", { description: err.message }),
+      },
+    );
   useShortcut("nebula.cycleMode", () => void nebula.setMode(chat.id, MODES[(MODES.findIndex((m) => m.id === chat.mode) + 1) % MODES.length].id));
 
   return (
@@ -151,6 +164,22 @@ export default function NebulaToolbar({ chat, projectPath, projectName, running,
             <TokenPanel chatTokens={chatTokens} projectTokens={projectTokens} projectName={projectName} allTime={allTime} />
           </PopoverContent>
         </Popover>
+
+        <NebulaTip
+          label={messages.length === 0 ? "Nothing to save yet" : "Save chat to vault"}
+          hint={messages.length === 0 ? undefined : chatNotePath(chat, projectName)}
+          side="bottom"
+        >
+          <button
+            type="button"
+            className="nebula-chip disabled:opacity-40"
+            aria-label="Save chat to vault"
+            disabled={messages.length === 0 || create.isPending}
+            onClick={saveToVault}
+          >
+            <Download className="h-3.5 w-3.5" />
+          </button>
+        </NebulaTip>
 
         <Popover>
           <PopoverTrigger className="nebula-chip" aria-label="Nebula look">
