@@ -165,15 +165,21 @@ export default function NebulaToolbar({ chat, messages, projectPath, projectName
           </PopoverContent>
         </Popover>
 
-        <button
-          type="button"
-          className="nebula-chip disabled:opacity-40"
-          aria-label="Save chat to vault"
-          disabled={messages.length === 0 || create.isPending}
-          onClick={saveToVault}
+        <NebulaTip
+          label={messages.length === 0 ? "Nothing to save yet" : "Save chat to vault"}
+          hint={messages.length === 0 ? undefined : chatNotePath(chat, projectName)}
+          side="bottom"
         >
-          <Download className="h-3.5 w-3.5" />
-        </button>
+          <button
+            type="button"
+            className="nebula-chip disabled:opacity-40"
+            aria-label="Save chat to vault"
+            disabled={messages.length === 0 || create.isPending}
+            onClick={saveToVault}
+          >
+            <Download className="h-3.5 w-3.5" />
+          </button>
+        </NebulaTip>
 
         <Popover>
           <PopoverTrigger className="nebula-chip" aria-label="Nebula look">
