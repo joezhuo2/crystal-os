@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.27] - 2026-10-22 - Nebula save to vault.
+
+### Added
+
+- **Save a Nebula chat to the vault** (issue #53). A download button in the Nebula toolbar, between the token chip and the look button, writes the open chat to your Obsidian vault as `Nebula/<project>/<chat title> (<id>).md`: frontmatter, then each turn under its speaker, with thinking folded away and tool calls on one line. Saving again replaces the note with the longer chat. Its hover text uses your Nebula colours and shows where the note goes; the button is greyed out until the chat has a message (`chatExport.ts`, `NebulaToolbar.tsx`, `NebulaPage.tsx`).
+
 ## [v0.11.26] - 2026-10-21 - DND hotkey.
 
 ### Added
