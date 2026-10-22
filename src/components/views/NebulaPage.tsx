@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FolderPlus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatView from "@/components/nebula/ChatView";
+import DiffReview from "@/components/nebula/DiffReview";
 import NebulaSetupCard from "@/components/nebula/NebulaSetupCard";
 import NebulaToolbar from "@/components/nebula/NebulaToolbar";
 import NewProjectDialog from "@/components/nebula/NewProjectDialog";
@@ -77,6 +78,7 @@ export default function NebulaPage() {
                   claudeModel={state.config!.claudeModel}
                   mediumChain={candidates("medium", state.config!).map((c) => c.label).join(" → ")}
                 />
+                <DiffReview key={project.path} cwd={project.path} chatTitle={chat.title} running={Boolean(runtime?.running)} />
                 <ChatView chat={chat} messages={runtime?.messages ?? []} running={Boolean(runtime?.running)} stopping={Boolean(runtime?.stopping)} loaded={Boolean(runtime?.loaded)} banner={runtime?.banner ?? null} />
               </>
             ) : (
