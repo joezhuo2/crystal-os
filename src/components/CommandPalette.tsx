@@ -49,6 +49,7 @@ import {
   Download,
   Bug,
   CalendarSearch,
+  PanelLeft,
 } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
@@ -69,6 +70,7 @@ const ITEM = "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer";
 const SECTION_ICONS: Record<string, React.ElementType> = {
   shortcuts: Keyboard,
   keymap: Keyboard,
+  navbar: PanelLeft,
   startup: Power,
   vault: FolderOpen,
   nebula: Sparkles,

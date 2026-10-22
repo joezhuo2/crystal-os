@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.29] - 2026-10-22 - Customizable navbar.
+
+### Added
+
+- **Customizable sidebar** (issue #42). A new **Settings → Navigation** section lists every page under **Top of the sidebar** and **Pinned to the bottom**: move a page up or down, switch it between the two groups, or hide it. Settings is always shown so the switch stays reachable, and **Reset** brings back the default layout. The layout is saved on this device (`crystal-os-nav`), and the phone bar and the **J**/**K** page shortcuts follow the same order. "navbar", "sidebar" and "reorder" in the command palette find the section (`navSettings.ts`, `Navigation.tsx`, `SettingsPage.tsx`, `settingsSections.ts`, `CommandPalette.tsx`).
+
 ## [v0.11.28] - 2026-10-22 - Private Home.
 
 ### Fixed

@@ -8,10 +8,10 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-863%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.11.28-6366F1)
+![Version](https://img.shields.io/badge/version-0.11.29-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Current release: **v0.11.28** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.11.29** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 [Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
@@ -39,7 +39,7 @@ Current release: **v0.11.28** — see [CHANGELOG.md](CHANGELOG.md) for release h
 | **⌨️ Command Palette** | Global search over tasks, transactions, vault note bodies and Settings sections (picking one scrolls to it and unfolds it), plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event. With nothing typed it lists your 8 most recently opened tasks, notes and events to reopen in one step |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
 | **🙈 Privacy mode** | On by default: money amounts (The Vault, The Orbit, the Home page, search results) the names and previews of Archive notes you have not opened, and the note, event, task and chat names on the Home cards are blurred, so the screen is safe to share. Switch it off in Settings → Privacy |
-| **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar |
+| **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar. **Settings → Navigation** reorders the sidebar's pages, hides the ones you do not use, and picks which sit at the top or pinned to the bottom (Settings is always shown); the phone bar and **J**/**K** follow the same order |
 
 ---
 
@@ -259,6 +259,7 @@ src/
 │   ├── notifications.ts        # Desktop toasts: what to say and when (tasks, events, Pomodoro, Portal), delivery, Do Not Disturb
 │   ├── notifySettings.ts       # Notification switches and the event reminder lead time (localStorage)
 │   ├── pulse.ts                # Pulse reminders: drive time to an event's location (Nominatim + OSRM), cached
+│   ├── navSettings.ts          # Sidebar layout: page order, hidden pages, top or bottom group (localStorage)
 │   ├── privacySettings.ts      # Privacy mode switch (localStorage, on by default); blurs [data-private] content
 │   ├── appUi.ts                # Transient UI store: open forms, Quick Add draft, selected note, palette jump requests (useAppUi(selector))
 │   ├── recents.ts              # Recently opened tasks, notes and events for the command palette (localStorage, per user)
@@ -772,7 +773,7 @@ Whatever the switches say, hiding the window to the tray or minimising it now st
 
 Change any of them with **Change** in Settings. All are saved in `%APPDATA%\com.crystalos.desktop\settings.json`, and no two can share a combo. If another app already owns one, Crystal OS still starts and shows a toast.
 
-**Keyboard shortcuts.** Inside the app, **J** goes to the next page down the sidebar and **K** to the previous one, wrapping at the ends. They are ignored while typing in a field or terminal, or while a dialog or menu is open.
+**Keyboard shortcuts.** Inside the app, **J** goes to the next page down the sidebar and **K** to the previous one (in the order set in **Settings → Navigation**, skipping hidden pages), wrapping at the ends. They are ignored while typing in a field or terminal, or while a dialog or menu is open.
 
 **Always ready.** The hotkeys only work while Crystal OS is running, so the app stays running in the tray:
 

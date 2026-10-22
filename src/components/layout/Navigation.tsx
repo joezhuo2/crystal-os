@@ -8,6 +8,7 @@ import { badgeLabel, type PortalBadge } from "@/lib/portalApps";
 import { portal, selectBadgeTotal } from "@/lib/portalStore";
 import { useNow, useOrbitReady } from "@/hooks/useOrbitReview";
 import { readyTitle } from "@/lib/orbitReview";
+import { navLayout, navSettings, useNavSettings } from "@/lib/navSettings";
 
 export type TabId = "home" | "orbit" | "tasks" | "calendar" | "financials" | "weather" | "archive" | "portal" | "nebula" | "terminal" | "settings";
 
@@ -17,44 +18,34 @@ interface Tab {
   icon: React.ElementType;
 }
 
-const tabs: Tab[] = [
-  { id: "home", label: "The Pulse", icon: Home },
-  { id: "orbit", label: "The Orbit", icon: Orbit },
-  { id: "tasks", label: "The Engine", icon: ListTodo },
-  { id: "calendar", label: "The Horizon", icon: Calendar },
-  { id: "financials", label: "The Vault", icon: Wallet },
-  { id: "weather", label: "The Atmosphere", icon: CloudSun },
-];
+/** Every page's label and icon. Their order and grouping come from Settings → Navigation (src/lib/navSettings.ts). */
+export const TAB_INFO: Record<TabId, Tab> = {
+  home: { id: "home", label: "The Pulse", icon: Home },
+  orbit: { id: "orbit", label: "The Orbit", icon: Orbit },
+  tasks: { id: "tasks", label: "The Engine", icon: ListTodo },
+  calendar: { id: "calendar", label: "The Horizon", icon: Calendar },
+  financials: { id: "financials", label: "The Vault", icon: Wallet },
+  weather: { id: "weather", label: "The Atmosphere", icon: CloudSun },
+  archive: { id: "archive", label: "The Archive", icon: BookOpen },
+  // Agents run in Rust (src-tauri/src/harness/).
+  nebula: { id: "nebula", label: "The Nebula", icon: Sparkles },
+  // On the web the page explains that embedding needs the desktop app (src-tauri/src/portal.rs).
+  portal: { id: "portal", label: "The Portal", icon: AppWindow },
+  // The shell runs in Rust (src-tauri/src/terminal.rs).
+  terminal: { id: "terminal", label: "Terminal", icon: SquareTerminal },
+  settings: { id: "settings", label: "Settings", icon: Settings },
+};
 
-/** Pinned to the bottom of the sidebar, apart from the views above. */
-const settingsTab: Tab = { id: "settings", label: "Settings", icon: Settings };
+/** The Nebula and the Terminal need the desktop app. */
+export const tabAvailable = (id: TabId) => isDesktop() || (id !== "nebula" && id !== "terminal");
 
-/** Desktop only, above Settings. The shell runs in Rust (src-tauri/src/terminal.rs). */
-const terminalTab: Tab = { id: "terminal", label: "Terminal", icon: SquareTerminal };
+export const visibleTabIds = (): TabId[] => {
+  const { top, bottom } = navLayout(navSettings.getState(), tabAvailable);
+  return [...top, ...bottom];
+};
 
-/**
- * Above Terminal. Shown on the web too, where the page explains that embedding
- * needs the desktop app (src-tauri/src/portal.rs).
- */
-const portalTab: Tab = { id: "portal", label: "The Portal", icon: AppWindow };
-
-/** Desktop only, above The Portal. Agents run in Rust (src-tauri/src/harness/). */
-const nebulaTab: Tab = { id: "nebula", label: "The Nebula", icon: Sparkles };
-
-/** Top of the bottom group, above The Nebula. */
-const archiveTab: Tab = { id: "archive", label: "The Archive", icon: BookOpen };
-
-export const visibleTabIds = (): TabId[] => [
-  ...tabs.map((t) => t.id),
-  archiveTab.id,
-  ...(isDesktop() ? [nebulaTab.id] : []),
-  portalTab.id,
-  ...(isDesktop() ? [terminalTab.id] : []),
-  settingsTab.id,
-];
-
-/** The phone bar has no bottom group, so The Archive stays in its row. */
-const bottomTabs: Tab[] = [...tabs, archiveTab];
+/** The phone bar has room for the views, not the tools. */
+const PHONE_TABS = new Set<TabId>(["home", "orbit", "tasks", "calendar", "financials", "weather", "archive"]);
 
 /** The Terminal, Portal, Nebula, Atmosphere, Archive, Horizon, Engine, and Orbit tabs restyle the sidebar to match their pages. */
 type SidebarMode = "default" | "terminal" | "portal" | "nebula" | "atmosphere" | "obsidian" | "horizon" | "engine" | "orbit";
@@ -202,6 +193,7 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const portalTotal = selectBadgeTotal(usePortal());
   const portalBadge = useFocusMuted() ? null : portalTotal;
   const orbitReady = useOrbitReady(useNow());
+  const layout = navLayout(useNavSettings(), tabAvailable);
   const mode: SidebarMode =
     activeTab === "terminal"
       ? "terminal"
@@ -266,6 +258,12 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
       onSelect={onTabChange}
     />
   );
+  const navButton = (id: TabId) =>
+    id === "orbit" && orbitReady.unseen.length
+      ? button(TAB_INFO.orbit, "dot", readyTitle(orbitReady.unseen))
+      : id === "portal"
+        ? button(TAB_INFO.portal, portalBadge)
+        : button(TAB_INFO[id]);
 
   return (
     <div ref={shellRef} className="sidebar-shell hidden md:block">
@@ -311,18 +309,8 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
             </div>
           </div>
         </button>
-        <nav className="flex flex-col gap-1">
-          {tabs.map((tab) =>
-            tab.id === "orbit" && orbitReady.unseen.length ? button(tab, "dot", readyTitle(orbitReady.unseen)) : button(tab),
-          )}
-        </nav>
-        <div className="mt-auto flex flex-col gap-1">
-          {button(archiveTab)}
-          {isDesktop() && button(nebulaTab)}
-          {button(portalTab, portalBadge)}
-          {isDesktop() && button(terminalTab)}
-          {button(settingsTab)}
-        </div>
+        <nav className="flex flex-col gap-1">{layout.top.map(navButton)}</nav>
+        <div className="mt-auto flex flex-col gap-1">{layout.bottom.map(navButton)}</div>
       </aside>
     </div>
   );
@@ -330,9 +318,11 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
 
 export function BottomNav({ activeTab, onTabChange }: SidebarNavProps) {
   const orbitReady = useOrbitReady(useNow());
+  const { top, bottom } = navLayout(useNavSettings(), tabAvailable);
+  const phoneTabs = [...top, ...bottom].filter((id) => PHONE_TABS.has(id)).map((id) => TAB_INFO[id]);
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass-card rounded-none border-l-0 border-r-0 border-b-0 px-2 py-1 flex justify-around">
-      {bottomTabs.map((tab) => {
+      {phoneTabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
           <button
