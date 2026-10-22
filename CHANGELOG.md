@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.30] - 2026-10-22 - Nebula diff review.
+
+### Added
+
+- **Nebula diff review** (issue #46). After each run in a project folder that is a git repository, a **Changes** pane opens above the chat with the changed files (added, modified, deleted or renamed, with line counts) and each file's diff. **Accept** marks a file for the commit; **Revert** (click twice) restores it from the last commit, or deletes it if it is new. A commit message is generated from the chat's title and the files, editable before you **Commit** the accepted files (or all of them when none are accepted); other changes in the folder are left alone. The pane can be refreshed, collapsed, or hidden until the next run, and is not shown outside git repositories (`git.rs`, `diffReview.ts`, `native.ts`, `DiffReview.tsx`, `NebulaPage.tsx`).
+
 ## [v0.11.29] - 2026-10-22 - Customizable navbar.
 
 ### Added
