@@ -2,6 +2,7 @@
  * Webview side of the Nebula native module (src-tauri/src/harness/). Desktop
  * only: nothing from `@tauri-apps/*` loads until a function here is called.
  */
+import type { ChangedFile } from "./diffReview";
 import type { ProbeResult } from "./modelRouter";
 import type { Effort, Mode, NebulaConfig } from "./types";
 
@@ -100,6 +101,11 @@ export const harnessNative = {
   chatLoad: (id: string) => invoke<string | null>("harness_chat_load", { id }),
   chatSave: (id: string, json: string) => invoke<void>("harness_chat_save", { id, json }),
   chatDelete: (id: string) => invoke<void>("harness_chat_delete", { id }),
+  gitStatus: (cwd: string) => invoke<ChangedFile[]>("harness_git_status", { cwd }),
+  gitDiff: (cwd: string, path: string, untracked: boolean) => invoke<string>("harness_git_diff", { cwd, path, untracked }),
+  gitRevert: (cwd: string, path: string, origPath: string | null, untracked: boolean) =>
+    invoke<void>("harness_git_revert", { cwd, path, origPath, untracked }),
+  gitCommit: (cwd: string, paths: string[], message: string) => invoke<string>("harness_git_commit", { cwd, paths, message }),
   onLine: (handler: (event: LineEvent) => void) => listen<LineEvent>("harness://line", handler),
   onExit: (handler: (event: ExitEvent) => void) => listen<ExitEvent>("harness://exit", handler),
   onInstall: (handler: (line: string) => void) => listen<string>("harness://install", handler),

@@ -8,6 +8,7 @@
 mod claude;
 mod config;
 mod discovery;
+pub(crate) mod git;
 pub(crate) mod job;
 mod process;
 
