@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Images, Keyboard, ListTodo, Orbit, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Images, Keyboard, ListTodo, Orbit, PanelLeft, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 import NebulaSettingsSection from "@/components/nebula/NebulaSettingsSection";
 import InstallerSection from "@/components/views/InstallerSection";
@@ -28,6 +28,8 @@ import { notify } from "@/lib/notifications";
 import { capacitySettings, useCapacitySettings } from "@/lib/capacitySettings";
 import { TimeField } from "@/components/ui/field-controls";
 import { appUi, useAppUi } from "@/lib/appUi";
+import { TAB_INFO, tabAvailable } from "@/components/layout/Navigation";
+import { ALWAYS_SHOWN, navSettings, useNavSettings } from "@/lib/navSettings";
 
 const COLLAPSED_KEY = "crystal-os-settings-collapsed";
 
@@ -210,6 +212,66 @@ function Row({ title, description, children }: { title: string; description: str
       </div>
       <div className="flex items-center gap-2 shrink-0">{children}</div>
     </div>
+  );
+}
+
+/** Settings → Navigation: each page's place, group and visibility in the sidebar. */
+function NavigationSettings() {
+  const nav = useNavSettings();
+  const groups = [
+    { bottom: false, label: "Top of the sidebar" },
+    { bottom: true, label: "Pinned to the bottom" },
+  ];
+  return (
+    <>
+      {groups.map(({ bottom, label }) => {
+        const ids = nav.order.filter((id) => tabAvailable(id) && nav.bottom.includes(id) === bottom);
+        return (
+          <div key={label} className="py-3 first:pt-0">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
+            {ids.length === 0 && <p className="text-xs text-muted-foreground py-2">No pages here.</p>}
+            {ids.map((id, i) => {
+              const tab = TAB_INFO[id];
+              const hidden = nav.hidden.includes(id);
+              return (
+                <Row
+                  key={id}
+                  title={tab.label}
+                  description={id === ALWAYS_SHOWN ? "Always shown, so this page stays reachable." : hidden ? "Hidden from the sidebar." : "Shown in the sidebar."}
+                >
+                  <Button variant="ghost" size="icon" className="h-8 w-8" disabled={i === 0} onClick={() => navSettings.move(id, -1)} aria-label={`Move ${tab.label} up`}>
+                    <ArrowUp className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" disabled={i === ids.length - 1} onClick={() => navSettings.move(id, 1)} aria-label={`Move ${tab.label} down`}>
+                    <ArrowDown className="w-4 h-4" />
+                  </Button>
+                  <Select value={bottom ? "bottom" : "top"} onValueChange={(v) => navSettings.setBottom(id, v === "bottom")}>
+                    <SelectTrigger className="h-8 w-[6.5rem] text-xs" aria-label={`${tab.label} position`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="top" className="text-xs">Top</SelectItem>
+                      <SelectItem value="bottom" className="text-xs">Bottom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Switch
+                    checked={!hidden}
+                    disabled={id === ALWAYS_SHOWN}
+                    onCheckedChange={(on) => navSettings.setHidden(id, !on)}
+                    aria-label={`Show ${tab.label}`}
+                  />
+                </Row>
+              );
+            })}
+          </div>
+        );
+      })}
+      <Row title="Reset navigation" description="Back to the default order, with every page shown.">
+        <Button variant="outline" size="sm" onClick={navSettings.reset}>
+          Reset
+        </Button>
+      </Row>
+    </>
   );
 }
 
@@ -679,6 +741,10 @@ export default function SettingsPage() {
 
         <Section id="keymap" icon={Keyboard} title="In-app shortcuts">
           <KeymapSettings />
+        </Section>
+
+        <Section id="navbar" icon={PanelLeft} title="Navigation">
+          <NavigationSettings />
         </Section>
 
         {hotkeys.launchAtLogin !== null && (
