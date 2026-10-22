@@ -38,7 +38,7 @@ Current release: **v0.11.27** — see [CHANGELOG.md](CHANGELOG.md) for release h
 | **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, notifications, vault folder, Nebula keys, models and look, and downloading or building an installer. A search box (Ctrl+F) hides sections that don't match and unfolds the ones that do. **In-app shortcuts** lists every single-key shortcut by page; click one to record a new key (Esc cancels), with a warning if another action on that page or a general one already uses it, a Reset per row and a **Reset all**. Shortcuts are single keys and are ignored while you type or a dialog is open; rebinds are saved in localStorage (`crystal-os-keymap`). Click a section's header to fold it away (remembered on this device); switches and sliders glide instead of snapping. **Diagnostics** copies recent errors (unhandled rejections, uncaught errors, failed Supabase saves) with the app version for a bug report; on desktop they are also logged to `diagnostics.log` |
 | **⌨️ Command Palette** | Global search over tasks, transactions, vault note bodies and Settings sections (picking one scrolls to it and unfolds it), plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event. With nothing typed it lists your 8 most recently opened tasks, notes and events to reopen in one step |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
-| **🙈 Privacy mode** | On by default: money amounts (The Vault, The Orbit, the Home page, search results) and the names and previews of Archive notes you have not opened are blurred, so the screen is safe to share. Switch it off in Settings → Privacy |
+| **🙈 Privacy mode** | On by default: money amounts (The Vault, The Orbit, the Home page, search results) the names and previews of Archive notes you have not opened, and the note, event, task and chat names on the Home cards are blurred, so the screen is safe to share. Switch it off in Settings → Privacy |
 | **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar |
 
 ---
@@ -482,6 +482,7 @@ What to say and when lives in `src/lib/notifications.ts` (pure, tested); `src/co
 
 - **Money.** Amounts in The Vault (transactions, category totals, chart axes and tooltips), The Orbit's Money card, the Home page's Vault card and transaction results in the command palette.
 - **The Archive.** Note names and search previews in the list, and the names of linked and related notes, until you open the note.
+- **Home.** The note names on the Archive card, event names on the Horizon card, task names and the next-task nudge on the Engine card, and the last chat's title on the Nebula card. Counts, times and app names stay readable.
 
 `src/lib/privacySettings.ts` keeps the switch in `localStorage` (`crystal-os-privacy-mode`); `src/lib/appActivity.ts` puts `privacy-mode` on `<html>`, and `index.css` blurs every element with `data-private` while it is there.
 
