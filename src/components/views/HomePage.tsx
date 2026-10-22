@@ -297,7 +297,7 @@ function ArchiveWidget({ onClick }: { onClick?: () => void }) {
                   className="w-full flex items-center gap-2 text-left group/note"
                 >
                   <BookOpen className="w-3.5 h-3.5 text-purple-300/60 shrink-0" />
-                  <span className="text-sm truncate group-hover/note:text-primary transition-colors">
+                  <span data-private className="text-sm truncate group-hover/note:text-primary transition-colors">
                     {note.title}
                   </span>
                   <span className="ml-auto text-[10px] text-muted-foreground/50 shrink-0">
