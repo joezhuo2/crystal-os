@@ -1,7 +1,5 @@
 <p align="center"><img src="docs/images/banner.png" alt="Crystal OS" width="100%"></p>
 
-> A personal productivity dashboard built with React, TypeScript, Supabase, your Google Calendar, and your Obsidian vault. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
-
 ![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
@@ -10,6 +8,8 @@
 ![Tests](https://img.shields.io/badge/tests-863%20passing-brightgreen)
 ![Version](https://img.shields.io/badge/version-0.11.30-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
+
+> A personal productivity dashboard built with React, TypeScript, Supabase, your Google Calendar, and your Obsidian vault. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
 Current release: **v0.11.30** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
