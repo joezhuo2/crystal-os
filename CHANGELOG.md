@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.12.3] - 2026-10-25 - Task time-blocking.
+
+### Added
+
+- **Drag a task onto the Horizon grid** (issue #76). The week and day views show a tray of your open tasks above the grid. Drag one onto a day and a dashed outline with the start and end times shows where it will land, snapped to 10 minutes like a dragged event; drop it and an event named after the task is created there, as long as the task's estimate (30 minutes when it has none) (`CalendarPage.tsx`, `TimeGrid.tsx`, `timeGrid.ts`).
+
 ## [v0.12.2] - 2026-10-25 - Portal message toasts.
 
 ### Fixed
