@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { findConflict } from "./keymapConflicts";
-import type { KeymapAction } from "./keymap";
+import { KEYMAP, type KeymapAction } from "./keymap";
 
 const actions: KeymapAction[] = [
   { id: "general.a", category: "general", title: "A", defaultKey: "KeyA" },
@@ -22,5 +22,12 @@ describe("findConflict", () => {
   it("ignores other categories and the action itself", () => {
     expect(findConflict(actions, actions[1], "KeyD", bindingOf)).toBeUndefined();
     expect(findConflict(actions, actions[1], "KeyB", bindingOf)).toBeUndefined();
+  });
+});
+
+describe("default keymap", () => {
+  it("has no clashing defaults", () => {
+    const defaultOf = (id: string) => KEYMAP.find((a) => a.id === id)?.defaultKey;
+    expect(KEYMAP.filter((a) => findConflict(KEYMAP, a, a.defaultKey, defaultOf)).map((a) => a.id)).toEqual([]);
   });
 });
