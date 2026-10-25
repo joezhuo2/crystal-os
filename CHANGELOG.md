@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.33] - 2026-10-24 - Nebula global search.
+
+### Added
+
+- **Nebula chats in the global search** (issue #82). Typing two or more characters in the search bar now also lists up to five Nebula chats whose title or message text matches, under **Nebula Chats**, with the matching line (or the project name when only the title matches). Picking one opens the chat in The Nebula. The saved chat files are read directly, so searching starts no agents; chats open in this session are searched live. Desktop only; results are blurred in Privacy Mode (`chatSearch.ts`, `useHarness.ts`, `CommandPalette.tsx`).
+
 ## [v0.11.32] - 2026-10-24 - Quieter timer reset.
 
 ### Changed
