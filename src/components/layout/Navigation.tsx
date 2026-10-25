@@ -95,6 +95,16 @@ const activePillStyle: Record<SidebarMode, React.CSSProperties> = {
     border: "1px solid rgb(186 230 253 / 0.42)",
     boxShadow: "0 0 18px rgb(125 211 252 / 0.3)",
   },
+  settings: {
+    background: "rgb(244 114 182 / 0.18)",
+    border: "1px solid rgb(251 182 160 / 0.4)",
+    boxShadow: "0 0 18px rgb(244 114 182 / 0.3)",
+  },
+  home: {
+    background: "rgb(246 220 164 / 0.16)",
+    border: "1px solid rgb(246 220 164 / 0.38)",
+    boxShadow: "0 0 18px rgb(207 224 255 / 0.25)",
+  },
 };
 
 /**

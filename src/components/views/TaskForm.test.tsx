@@ -19,6 +19,10 @@ vi.mock("@/contexts/AppContext", () => ({
   useTasks: () => tasks,
 }));
 
+vi.mock("@/hooks/useVault", () => ({
+  useVaultNotes: () => ({ data: { notes: [{ path: "Projects/Plan.md", title: "Plan" }] } }),
+}));
+
 // jsdom has no layout, so ThemedSelect's keep-the-active-row-visible call needs a stub.
 Element.prototype.scrollIntoView = () => {};
 
@@ -238,5 +242,29 @@ describe("TaskForm end time follows start time", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
     expect(rescheduleTasks).not.toHaveBeenCalled();
     expect(updateTask).toHaveBeenCalledWith("t1", expect.objectContaining({ repeat: expect.anything() }));
+  });
+});
+
+describe("TaskForm linked note", () => {
+  beforeEach(() => {
+    addTask.mockClear();
+    updateTask.mockClear();
+  });
+
+  it("links a searched vault note", () => {
+    render(<TaskForm onClose={() => {}} editingTask={editing} />);
+    fireEvent.change(screen.getByLabelText("Search vault notes"), { target: { value: "pl" } });
+    fireEvent.click(screen.getByText("Plan"));
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    expect(updateTask).toHaveBeenCalledWith("t1", expect.objectContaining({ notePath: "Projects/Plan.md" }));
+  });
+
+  it("clears an existing link", () => {
+    render(<TaskForm onClose={() => {}} editingTask={{ ...editing, notePath: "Projects/Plan.md" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Unlink note" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    const updates = updateTask.mock.calls[0][1];
+    expect("notePath" in updates).toBe(true);
+    expect(updates.notePath).toBeUndefined();
   });
 });

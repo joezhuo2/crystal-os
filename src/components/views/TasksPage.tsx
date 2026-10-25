@@ -24,6 +24,7 @@ import { CategoryManagerButton } from "./CategoryManager";
 import { CapacityCard } from "./CapacityBar";
 import { clampEstimate, ESTIMATE_PRESETS, formatEstimate, MAX_ESTIMATE } from "@/lib/capacity";
 import { canNest, MAX_NOTES, nestTargets, splitByParent, subtaskProgress, taskDrag, type ChecklistItem } from "@/lib/subtasks";
+import { NoteLinkButton, NoteNavigateContext, NotePicker } from "./TaskNoteLink";
 import { ChecklistEditor, ChildTaskRow, SubtaskChip } from "./TaskSubtasks";
 import { SnoozeButton, SnoozeChip, UnsnoozeButton } from "./TaskSnooze";
 import { canSnooze, ownSnoozed, snoozedSections, splitSnoozed } from "@/lib/snooze";
@@ -33,6 +34,7 @@ import { activeFilterCount, applyTaskView, taskView, useTaskView } from "@/lib/t
 import { TaskViewMenu } from "./TaskViewMenu";
 import { CompletionCheck, StrikeText } from "./TaskCompletion";
 import { useCompletionHold } from "@/hooks/useCompletionHold";
+import type { TabId } from "@/components/layout/Navigation";
 
 const NO_CHILDREN: Task[] = [];
 
@@ -234,6 +236,11 @@ const TaskItem = memo(function TaskItem({
                 {priority}
                 {category}
               </div>
+              {task.notePath && (
+                <div className="flex">
+                  <NoteLinkButton path={task.notePath} />
+                </div>
+              )}
               {(estimate || repeat) && (
                 <div className="flex items-center gap-2 min-w-0">
                   {estimate}
@@ -276,6 +283,7 @@ const TaskItem = memo(function TaskItem({
                   <StickyNote className="w-2.5 h-2.5" />
                 </span>
               )}
+              {task.notePath && <NoteLinkButton path={task.notePath} />}
             </div>
           </div>
           {rescheduleButton}
@@ -507,6 +515,7 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
   });
   const [estimate, setEstimate] = useState<number | undefined>(editingTask?.estimateMinutes);
   const [notes, setNotes] = useState(editingTask?.notes ?? "");
+  const [notePath, setNotePath] = useState(editingTask?.notePath);
   const [checklist, setChecklist] = useState<ChecklistItem[]>(editingTask?.checklist ?? []);
   const [parentId, setParentId] = useState(editingTask?.parentId ?? NO_PARENT);
   // A task with children of its own cannot be nested (one level deep).
@@ -524,12 +533,13 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
     const rule = buildRepeat(repeat);
     const details = {
       notes: notes.trim() ? notes : undefined,
+      notePath,
       checklist: checklist.length ? checklist : undefined,
       parentId: parentId === NO_PARENT ? undefined : parentId,
     };
     if (editingTask) {
       // Always send repeat, undefined included: updateTask clears the repeat for it.
-      // Same for estimateMinutes, notes, checklist and parentId: undefined clears them.
+      // Same for estimateMinutes, notes, checklist and parentId: undefined clears them (notePath too).
       const updates = { ...form, ...details, repeat: rule, estimateMinutes: estimate, completed: editingTask.completed };
       // A date or time change gets an Undo that puts the whole edit back.
       const moved = (["startDate", "startTime", "endDate", "endTime"] as const).some((k) => form[k] !== editingTask[k]);
@@ -669,6 +679,10 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
             placeholder="Details, links, anything to remember…"
             className="w-full bg-secondary/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/50 resize-y"
           />
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Linked note</p>
+          <NotePicker value={notePath} onChange={setNotePath} />
         </div>
         <div>
           <p className="text-xs text-muted-foreground mb-1">Checklist</p>
@@ -825,7 +839,7 @@ function SnoozedSection({
 /** Length of each half of the List/Board fade: out, then in. Matches .engine-view in index.css. */
 const VIEW_FADE_MS = 200;
 
-export default function TasksPage() {
+export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) => void }) {
   const tasks = useTasks();
   const { updateTask, rescheduleTasks } = useAppActions();
   const { setShowTaskForm } = appUi;
@@ -951,6 +965,7 @@ export default function TasksPage() {
   };
 
   return (
+    <NoteNavigateContext.Provider value={onNavigate}>
     <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex glass-card p-0.5 rounded-lg">
@@ -1070,5 +1085,6 @@ export default function TasksPage() {
         </div>
       </div>
     </m.div>
+    </NoteNavigateContext.Provider>
   );
 }

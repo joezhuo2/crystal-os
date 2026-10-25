@@ -6,12 +6,12 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-863%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.12.0-6366F1)
+![Version](https://img.shields.io/badge/version-0.12.1-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 > A personal productivity dashboard built with React, TypeScript, Supabase, your Google Calendar, and your Obsidian vault. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
-Current release: **v0.12.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.12.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 [Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
@@ -507,6 +507,8 @@ The bar is green while the work fits, amber past 85% of free time, and red with 
 ## 📝 Notes and subtasks
 
 **Notes.** The task form has a **Notes** box for free text (up to 10,000 characters). A task with notes shows a note icon on its card.
+
+**Linked note.** The task form has a **Linked note** search over your Obsidian vault. Pick a note to link it (the unlink button clears it); the task card then shows a note icon that opens the note in The Archive. Needs the optional `note_path` column from `supabase/migrations/0009_task_note_link.sql`.
 
 **Subtasks.** A task has two kinds of subtask, counted together:
 

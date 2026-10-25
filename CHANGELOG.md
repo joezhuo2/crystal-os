@@ -5,6 +5,16 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.12.1] - 2026-10-25 - Obsidian task link.
+
+### Added
+
+- **Link a task to a vault note.** The task form has a **Linked note** search over your Obsidian vault; pick a note to link it, or unlink it again. A linked task shows a note icon on its card (List and Board) that opens the note in The Archive. The link is stored in a new nullable `note_path` column, added by `supabase/migrations/0009_task_note_link.sql` and only sent for tasks that have a link, so tasks keep saving before the migration is applied. Events are not linked: Google Calendar events have nowhere to keep it (issue #90) (`TasksPage.tsx`, `TaskNoteLink.tsx`, `AppContext.tsx`, `subtasks.ts`).
+
+### Fixed
+
+- **Sidebar highlight on Home and Settings.** The active tab's pill had no style on those two pages; it now glows white-gold on Home and rose on Settings (`Navigation.tsx`).
+
 ## [v0.12.0] - 2026-10-25 - Home and Settings backdrops.
 
 ### Added

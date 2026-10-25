@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canNest,
   cleanChecklist,
+  cleanNotePath,
   cleanNotes,
   describeProgress,
   makeItem,
@@ -131,5 +132,15 @@ describe("progress", () => {
     expect(describeProgress({ open: 0, total: 1 })).toBe("Subtask done");
     expect(describeProgress({ open: 1, total: 1 })).toBe("+1 subtask");
     expect(describeProgress({ open: 0, total: 0 })).toBe("");
+  });
+});
+
+describe("cleanNotePath", () => {
+  it("trims and forward-slashes a path", () => {
+    expect(cleanNotePath("  Projects\\Anamnesis.md ")).toBe("Projects/Anamnesis.md");
+  });
+  it("returns undefined for blank or non-string input", () => {
+    expect(cleanNotePath("   ")).toBeUndefined();
+    expect(cleanNotePath(null)).toBeUndefined();
   });
 });
