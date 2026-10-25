@@ -816,6 +816,22 @@ export default function SettingsPage() {
             <Switch checked={notifications.doNotDisturb} onCheckedChange={(on) => notifySettings.setFlag("doNotDisturb", on)} />
           </Row>
           <Row
+            title="Scheduled Do Not Disturb"
+            description="Also silences every notification each day between these times, such as 10 PM to 7 AM. Reminders held meanwhile show once it ends."
+          >
+            <Switch checked={notifications.dndSchedule} onCheckedChange={(on) => notifySettings.setFlag("dndSchedule", on)} />
+          </Row>
+          {notifications.dndSchedule && (
+            <>
+              <Row title="Quiet from" description="When the scheduled Do Not Disturb starts.">
+                <TimeField value={notifications.dndFrom} aria-label="Quiet from" onChange={(v) => notifySettings.setDndTime("dndFrom", v)} className="w-32 px-2" />
+              </Row>
+              <Row title="Quiet until" description="When it ends. Earlier than the start runs past midnight.">
+                <TimeField value={notifications.dndTo} aria-label="Quiet until" onChange={(v) => notifySettings.setDndTime("dndTo", v)} className="w-32 px-2" />
+              </Row>
+            </>
+          )}
+          <Row
             title="What's new after updates"
             description="Opens the changelog for the new version the first time you launch after an update. Off by default."
           >
