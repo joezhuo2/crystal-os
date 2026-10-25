@@ -1970,6 +1970,15 @@
     background: #000;
   }
 
+  /* The Pulse (Home): a star torn apart by a black hole (home-backdrop.jpg),
+     so the palette is its rose-peach core over indigo. */
+  .home-root {
+    background: #04040f;
+    --primary: 14 90% 80%;
+    --primary-foreground: 240 50% 8%;
+    --muted-foreground: 250 28% 82%;
+  }
+
   /* The sign-in screen (LoginPage.tsx): the Orbit's palette over the boot
      splash's backdrop and glass (.boot-scene, .boot-glass in index.html). */
   .auth-card {
