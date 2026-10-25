@@ -146,6 +146,19 @@ describe("period stats", () => {
     expect(review.focusByDay.find((d) => d.day === "2026-10-01")?.minutes).toBe(60);
     expect(review.focusPerDay).toBe(9);
   });
+
+  it("counts habits done per day up to today", () => {
+    const h = { id: "h1", name: "h1", color: "red", position: 0, createdAt: iso("2026-09-01"), archivedAt: null } as never;
+    const review = buildReview(week, {
+      ...empty,
+      today: "2026-10-01",
+      habits: [h],
+      habitChecks: [{ habitId: "h1", day: "2026-10-01" }],
+    });
+    expect(review.habitsByDay.at(-1)).toEqual({ day: "2026-10-01", done: 1 });
+    expect(review.habitsByDay.find((d) => d.day === "2026-09-30")?.done).toBe(0);
+    expect(review.habitsByDay.some((d) => d.day > "2026-10-01")).toBe(false);
+  });
 });
 
 describe("focus by task", () => {
@@ -421,4 +434,5 @@ describe("ready announcements", () => {
     expect(readyTitle(["weekly", "monthly"])).toBe("Weekly and monthly reviews ready");
     expect(readyTitle(["weekly", "monthly", "yearly"])).toBe("Weekly, monthly and yearly reviews ready");
   });
+
 });

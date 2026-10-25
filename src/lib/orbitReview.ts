@@ -7,7 +7,7 @@
  * "YYYY-MM-DD" strings throughout, compared as strings.
  */
 
-import { overallRate, summarizeHabits, type Habit, type HabitCheck, type HabitSummary } from "@/lib/habits";
+import { habitDay, indexChecks, overallRate, summarizeHabits, type Habit, type HabitCheck, type HabitSummary } from "@/lib/habits";
 import { addDays, cleanRepeat, taskFallsOnDate, toLocalDateStr, type RepeatRule } from "@/lib/utils";
 
 export type ReviewKind = "weekly" | "monthly" | "yearly";
@@ -368,6 +368,8 @@ export interface Review {
   notePaths: string[];
   /** Focus minutes on each day of the period. */
   focusByDay: { day: string; minutes: number }[];
+  /** Habits done on each day of the period up to the review's day; later days are left out. */
+  habitsByDay: { day: string; done: number }[];
   /** Focus minutes in each month of the period ("YYYY-MM"), for the yearly chart. */
   focusByMonth: { month: string; minutes: number }[];
   focusPerDay: number;
@@ -591,6 +593,11 @@ export function buildReview(period: ReviewPeriod, data: ReviewData): Review {
 
   const next = shiftPeriod(period, 1);
   const habits = habitSummaries(period, data);
+  const checkIndex = indexChecks(data.habitChecks ?? []);
+  const reviewDay = data.today ?? toLocalDateStr();
+  const habitsByDay = days
+    .filter((day) => day <= reviewDay)
+    .map((day) => ({ day, done: habitDay(day, data.habits ?? [], checkIndex, reviewDay).done.length }));
   const trends = TREND_DEFS.filter((def) => def.id !== "habitRate" || habits.length > 0).map((def) => ({
     ...def,
     value: stats[def.id],
@@ -608,6 +615,7 @@ export function buildReview(period: ReviewPeriod, data: ReviewData): Review {
     noteTitles: notes.map((n) => n.title),
     notePaths: notes.map((n) => n.path),
     focusByDay,
+    habitsByDay,
     focusByMonth,
     focusPerDay: Math.round(stats.focusMinutes / days.length),
     focusPerWeek: Math.round((stats.focusMinutes / days.length) * 7),

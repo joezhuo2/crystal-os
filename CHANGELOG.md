@@ -5,6 +5,14 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.12.4] - 2026-10-25 - Orbit mood correlations.
+
+### Added
+
+- **A Mood card on weekly and monthly reviews** (issue #89). It reads the mood you logged in Today from each day's vault note in the period and pairs it with the habits done and the focus minutes that day. For each it shows a correlation label (none, weak, moderate or strong, positive or negative; "not enough days" under five days with a mood) and the average mood on days at or below the median against days above it. The card is left off the yearly review (`MoodCard.tsx`, `moodCorrelation.ts`, `OrbitPage.tsx`).
+- **Habits done per day on the review** (issue #89). Each review now carries a per-day count of habits done, up to the review's day (`orbitReview.ts`).
+- **Reading several notes at once** (issue #89). `useRawNotes` fetches a list of vault notes, sharing the editor's cache keys (`useVault.ts`).
+
 ## [v0.12.3] - 2026-10-25 - Task time-blocking.
 
 ### Added
