@@ -264,6 +264,18 @@ export function useUpdateEvent() {
         jsonInit("PATCH", { ...input, recurringEventId }),
       );
     },
+    // A single occurrence moves on screen at once; a failed save refetches it back.
+    onMutate: ({ eventId, scope, input }) => {
+      if (scope !== "single") return;
+      const { allDay, startDate, endDate, startTime = "", endTime = "" } = input;
+      queryClient.setQueriesData<{ events: CalendarEvent[] }>(
+        { queryKey: ["gcal", "events"] },
+        (data) => data && { ...data, events: data.events.map((e) => (e.id === eventId ? { ...e, allDay, startDate, endDate, startTime, endTime } : e)) },
+      );
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["gcal", "events"] });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gcal", "events"] });
     },
