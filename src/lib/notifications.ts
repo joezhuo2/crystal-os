@@ -231,12 +231,13 @@ export function pomodoroAlert(prev: PomodoroState, next: PomodoroState): Planned
 /**
  * One toast per app whose unread count went up between two Portal states.
  * The first title an app reports after loading only sets its baseline, and
- * apps with notifications off are skipped.
+ * apps with notifications off are skipped, as is `inApp`, the app the user is
+ * typing in, whose rises are their own sends and reads.
  */
-export function portalAlerts(prev: PortalState, next: PortalState): PlannedAlert[] {
+export function portalAlerts(prev: PortalState, next: PortalState, inApp: string | null = null): PlannedAlert[] {
   const alerts: PlannedAlert[] = [];
   for (const app of next.apps) {
-    if (app.notify === false || !(app.id in prev.reported)) continue;
+    if (app.notify === false || app.id === inApp || !(app.id in prev.reported)) continue;
     const before = prev.badges[app.id];
     const after = next.badges[app.id];
     if (after === undefined || after === before) continue;
@@ -358,26 +359,36 @@ export function initNotificationBridges(): () => void {
     if (alert && notifySettings.getState().pomodoro) void notify(alert);
   });
 
+  let windowFocused = document.hasFocus();
+  const stopFocus = isDesktop()
+    ? import("@tauri-apps/api/window")
+        .then(({ getCurrentWindow }) =>
+          getCurrentWindow().onFocusChanged(({ payload }) => {
+            windowFocused = payload;
+          }),
+        )
+        .catch((err) => {
+          console.warn("[notifications] could not track window focus:", err);
+          return undefined;
+        })
+    : Promise.resolve(undefined);
+
   let lastPortal = portal.getState();
   const stopPortal = portal.subscribe(() => {
     const next = portal.getState();
-    const alerts = portalAlerts(lastPortal, next);
+    const inApp = windowFocused && !document.hasFocus() ? next.activeId : null;
+    const alerts = portalAlerts(lastPortal, next, inApp);
     lastPortal = next;
     // While Crystal OS has focus the sidebar badge already says it, and a
     // running focus session mutes the Portal altogether.
     if (alerts.length === 0 || !notifySettings.getState().portal || document.hasFocus()) return;
     if (selectFocusMuted(pomodoro.getState())) return;
-    // The Portal's own webview takes focus from this document, so an app open
-    // on screen is being watched: its own sends and reads are not news.
-    const watching = document.body.classList.contains("portal-theme") && document.visibilityState === "visible";
-    for (const alert of alerts) {
-      if (watching && alert.key === `portal:${next.activeId}`) continue;
-      void notify(alert);
-    }
+    for (const alert of alerts) void notify(alert);
   });
 
   return () => {
     stopPomodoro();
     stopPortal();
+    void stopFocus.then((stop) => stop?.());
   };
 }
