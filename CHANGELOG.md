@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.12.2] - 2026-10-25 - Portal message toasts.
+
+### Fixed
+
+- **Portal message toasts** (issue #12). Toasts for a Portal app are skipped only while you are typing in that app: the Crystal OS window is focused and the app's page has the keyboard, which is when a rise in its unread count is your own sent message or read. Received messages pop up again while Crystal OS sits on The Portal behind other windows or in the tray, and while you are in a different Portal app, so Discord toasts are back. The last fix muted the open app whenever The Portal was the current tab and the window counted as visible (`notifications.ts`).
+
 ## [v0.12.1] - 2026-10-25 - Obsidian task link.
 
 ### Added
