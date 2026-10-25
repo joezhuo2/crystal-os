@@ -100,11 +100,11 @@ export function snapMinutes(minutes: number, step = 30): number {
 }
 
 /** Minutes a dragged block snaps to. */
-export const DRAG_STEP_MINUTES = 15;
+export const DRAG_STEP_MINUTES = 10;
 
 /**
  * Where a block that started at `startMin` and lasts `durationMin` lands after
- * being dragged `deltaMin` minutes: snapped to DRAG_STEP_MINUTES and kept
+ * being dragged `deltaMin` minutes: snapped to the nearest DRAG_STEP_MINUTES and kept
  * within the day, so its end never passes 23:59.
  */
 export function draggedStart(startMin: number, durationMin: number, deltaMin: number): number {

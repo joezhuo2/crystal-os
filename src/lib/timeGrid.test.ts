@@ -95,10 +95,11 @@ describe("layoutDay", () => {
 });
 
 describe("draggedStart", () => {
-  it("snaps to 15 minutes", () => {
-    expect(draggedStart(540, 30, 7)).toBe(540);
-    expect(draggedStart(540, 30, 8)).toBe(555);
-    expect(draggedStart(540, 30, -20)).toBe(525);
+  it("snaps to the nearest 10 minutes", () => {
+    expect(draggedStart(540, 30, 4)).toBe(540);
+    expect(draggedStart(540, 30, 5)).toBe(550);
+    expect(draggedStart(540, 30, -16)).toBe(520);
+    expect(draggedStart(545, 30, 0)).toBe(550);
   });
 
   it("stays inside the day", () => {
