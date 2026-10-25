@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.31] - 2026-10-24 - Timer hotkeys.
+
+### Added
+
+- **Timer hotkeys** (issue #75). On The Engine, **P** pauses or continues the Pomodoro timer and **R** resets it (during a break, skips it). Both are listed under The Engine in **Settings → In-app shortcuts** to rebind or reset, and are ignored while you type or a dialog is open. A test now checks that no two default shortcuts clash (`engine.ts`, `PomodoroTimer.tsx`, `keymapConflicts.test.ts`).
+
 ## [v0.11.30] - 2026-10-22 - Nebula diff review.
 
 ### Added

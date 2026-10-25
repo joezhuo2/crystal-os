@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Play, Pause, RotateCcw } from "lucide-react";
 import { pomodoro } from "@/lib/pomodoro";
 import { usePomodoro } from "@/hooks/usePomodoro";
+import { useShortcut } from "@/hooks/useShortcut";
 import PomodoroTask from "./PomodoroTask";
 
 export default function PomodoroTimer() {
@@ -12,6 +13,8 @@ export default function PomodoroTimer() {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  useShortcut("engine.timerToggle", pomodoro.toggle);
+  useShortcut("engine.timerReset", pomodoro.reset);
 
   const total = isBreak ? breakDuration : workDuration;
   const progress = (total - seconds) / total;
