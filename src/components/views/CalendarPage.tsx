@@ -23,7 +23,8 @@ import {
 import { toast } from "sonner";
 import { addDays, toLocalDateStr } from "@/lib/utils";
 import { undoToast } from "@/lib/undo";
-import { fromMinutes, toMinutes, weekDates } from "@/lib/timeGrid";
+import { formatEstimate } from "@/lib/capacity";
+import { fromMinutes, taskBlockMinutes, toMinutes, weekDates } from "@/lib/timeGrid";
 import { withStartTime } from "@/lib/autoEndTime";
 import TimeGrid from "./TimeGrid";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
@@ -1273,6 +1274,32 @@ export default function CalendarPage() {
     setFormState({ open: true, event, date: event.startDate });
   };
   const closeForm = () => setFormState((s) => ({ ...s, open: false }));
+  const createEvent = useCreateEvent();
+  const [dragTask, setDragTask] = useState<Task | null>(null);
+  const openTasks = useMemo(() => tasks.filter((t) => !t.completed), [tasks]);
+  const blockTask = (date: string, startTime: string, endTime: string) => {
+    const task = dragTask;
+    setDragTask(null);
+    if (!task) return;
+    createEvent.mutate(
+      {
+        calendarId,
+        input: {
+          summary: task.name,
+          allDay: false,
+          startDate: date,
+          endDate: date,
+          startTime,
+          endTime,
+          timeZone: localTimeZone(),
+        },
+      },
+      {
+        onSuccess: () => toast.success("Time blocked", { description: task.name }),
+        onError: (err) => toast.error("Could not block the time", { description: err.message }),
+      },
+    );
+  };
   const moveUpdate = useUpdateEvent();
   const moveEvent = (event: CalendarEvent, date: string, startTime: string, endTime: string) => {
     const before = eventInputOf(event, undefined);
@@ -1490,8 +1517,38 @@ export default function CalendarPage() {
               onCreateAt={openCreate}
               onEdit={openEdit}
               onMoveEvent={moveEvent}
+              dropMinutes={dragTask ? taskBlockMinutes(dragTask.estimateMinutes) : undefined}
+              onDropTask={blockTask}
               onSelectDate={view === "week" ? openDay : undefined}
               header={
+                <>
+                {openTasks.length > 0 && (
+                  <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-thin pb-1">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest shrink-0">
+                      Drag onto the grid
+                    </span>
+                    {openTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = "copy";
+                          e.dataTransfer.setData("text/plain", task.name);
+                          setDragTask(task);
+                        }}
+                        onDragEnd={() => setDragTask(null)}
+                        className="shrink-0 max-w-[12rem] truncate cursor-grab rounded-md border-l-2 px-2 py-1 text-[11px]"
+                        style={{
+                          borderColor: taskColor(task),
+                          background: `color-mix(in srgb, ${taskColor(task)} 18%, transparent)`,
+                        }}
+                      >
+                        {task.name}
+                        {task.estimateMinutes ? ` · ${formatEstimate(task.estimateMinutes)}` : ""}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <h2 className="text-lg font-semibold">{gridTitle}</h2>
                   <div className="flex items-center gap-1">
@@ -1517,6 +1574,7 @@ export default function CalendarPage() {
                     </button>
                   </div>
                 </div>
+                </>
               }
             />
           ) : (
