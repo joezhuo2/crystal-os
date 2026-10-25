@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.34] - 2026-10-24 - Scheduled Do Not Disturb.
+
+### Added
+
+- **Scheduled Do Not Disturb** (issue #77). A new **Settings → Notifications → Scheduled Do Not Disturb** switch silences every notification each day between **Quiet from** and **Quiet until** (10 PM to 7 AM by default), on top of the manual switch. A start later than the end runs past midnight. Task and habit reminders and Orbit review announcements held during quiet hours show once they end. "quiet hours" in the search finds the setting (`notifySettings.ts`, `notifications.ts`, `NotificationScheduler.tsx`, `OrbitReadyNotifier.tsx`, `SettingsPage.tsx`, `settingsSections.ts`).
+
 ## [v0.11.33] - 2026-10-24 - Nebula global search.
 
 ### Added

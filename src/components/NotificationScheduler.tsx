@@ -5,7 +5,7 @@ import { calendarEventsQuery, calendarWasConnected, useCalendarStatus } from "@/
 import { useHabitsData } from "@/hooks/useHabits";
 import { useHabitReminders } from "@/lib/habitReminders";
 import { deliver, eventAlerts, takeUnsent, habitReminderAlerts, taskDueAlerts, taskReminderAlerts } from "@/lib/notifications";
-import { useNotifySettings } from "@/lib/notifySettings";
+import { isQuiet, useNotifySettings } from "@/lib/notifySettings";
 import { usesSidecar } from "@/lib/platform";
 import { useTravelTimes } from "@/lib/pulse";
 
@@ -83,8 +83,8 @@ export default function NotificationScheduler() {
     let startupPending = true;
     const check = () => {
       const { settings: s, tasks: t, events: e, travel, habits: h, reminders: r } = latest.current;
-      if (s.doNotDisturb) return;
       const now = new Date();
+      if (isQuiet(s, now)) return;
       deliver([
         ...(s.tasks ? taskDueAlerts(t, now) : []),
         ...(s.taskReminders

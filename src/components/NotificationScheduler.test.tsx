@@ -74,6 +74,21 @@ describe("NotificationScheduler task reminders", () => {
   });
 });
 
+describe("NotificationScheduler Do Not Disturb schedule", () => {
+  it("holds a reminder until the scheduled quiet hours end", async () => {
+    notifySettings.setFlag("dndSchedule", true);
+    notifySettings.setDndTime("dndFrom", "16:00");
+    notifySettings.setDndTime("dndTo", "16:45");
+    render(<NotificationScheduler />);
+    await flush();
+    expect(shown).not.toHaveBeenCalled();
+
+    await act(async () => vi.advanceTimersByTime(6 * 60 * 1000));
+    expect(shown).toHaveBeenCalledWith("Due soon: File taxes");
+    expect(shown).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("NotificationScheduler habit reminders", () => {
   it("reminds about a habit not ticked by its time, once per hour slot", async () => {
     habitReminders.setTime("h1", "16:30");
