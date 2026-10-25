@@ -48,7 +48,7 @@ export const visibleTabIds = (): TabId[] => {
 const PHONE_TABS = new Set<TabId>(["home", "orbit", "tasks", "calendar", "financials", "weather", "archive"]);
 
 /** The Terminal, Portal, Nebula, Atmosphere, Archive, Horizon, Engine, and Orbit tabs restyle the sidebar to match their pages. */
-type SidebarMode = "default" | "terminal" | "portal" | "nebula" | "atmosphere" | "obsidian" | "horizon" | "engine" | "orbit";
+type SidebarMode = "default" | "terminal" | "portal" | "nebula" | "atmosphere" | "obsidian" | "horizon" | "engine" | "orbit" | "settings" | "home";
 
 interface SidebarNavProps {
   activeTab: TabId;
@@ -211,7 +211,11 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
                   ? "engine"
                   : activeTab === "orbit"
                     ? "orbit"
-                    : "default";
+                    : activeTab === "settings"
+                      ? "settings"
+                      : activeTab === "home"
+                        ? "home"
+                        : "default";
   const terminal = mode === "terminal";
   const sidebarClass = terminal
     ? "sidebar-terminal"
@@ -229,7 +233,11 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
                 ? "sidebar-engine"
                 : mode === "orbit"
                   ? "sidebar-orbit"
-                  : "";
+                  : mode === "settings"
+                    ? "sidebar-settings"
+                    : mode === "home"
+                      ? "sidebar-home"
+                      : "";
   const gradientClass =
     mode === "portal"
       ? "portal-gradient-text"
@@ -245,7 +253,11 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
                 ? "engine-title"
                 : mode === "orbit"
                   ? "orbit-title"
-                  : "text-gradient-indigo";
+                  : mode === "settings"
+                    ? "settings-title"
+                    : mode === "home"
+                      ? "home-title"
+                      : "text-gradient-indigo";
 
   const button = (tab: Tab, badge?: PortalBadge | null, badgeTitle?: string) => (
     <SidebarButton

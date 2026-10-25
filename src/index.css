@@ -1970,6 +1970,93 @@
     background: #000;
   }
 
+  /* The Pulse (Home): a white-gold black hole in deep navy (home-backdrop.webp)
+     behind the page; the app's default palette and the Home boxes stay. */
+  .home-root {
+    background: #04040f;
+  }
+
+  .home-title {
+    background: linear-gradient(100deg, #fffaf0, #f6dca4 35%, #cfe0ff 70%, #8ea6e8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .sidebar-home {
+    background: linear-gradient(180deg, rgb(22 28 60 / 0.72) 0%, rgb(4 6 18 / 0.85) 50%, rgb(40 36 30 / 0.6) 100%);
+    border-color: transparent;
+    box-shadow:
+      inset -1px 0 0 rgb(246 220 164 / 0.3),
+      6px 0 28px rgb(207 224 255 / 0.14);
+  }
+
+  .sidebar-home button svg {
+    filter: drop-shadow(0 0 4px rgb(246 220 164 / 0.5));
+  }
+
+  /* Settings: a star torn apart by a rose and indigo black hole
+     (settings-backdrop.jpg), its panels in a frosted glass from that image. */
+  .settings-root {
+    background: #04040f;
+  }
+
+  /* Settings' palette: the torn star's rose and peach over deep indigo. On
+     <body> as well (Index.tsx) so portalled menus and the search bar follow it. */
+  .settings-root,
+  body.settings-theme {
+    --background: 245 45% 5%;
+    --popover: 280 32% 11%;
+    --card: 280 30% 13%;
+    --secondary: 285 26% 19%;
+    --muted: 285 24% 16%;
+    --border: 330 30% 28%;
+    --input: 330 30% 28%;
+    --primary: 350 85% 72%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 18 90% 74%;
+    --accent: 345 75% 62%;
+    --accent-foreground: 0 0% 100%;
+    --glow-indigo: 345 80% 66%;
+    --glow-emerald: 345 80% 66%;
+    --muted-foreground: 330 22% 80%;
+    --glass-border: 15 100% 92%;
+  }
+
+  .settings-title {
+    background: linear-gradient(100deg, #fff1ea, #fbb6a0 35%, #f472b6 65%, #8b7cf6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .sidebar-settings {
+    background: linear-gradient(180deg, rgb(52 20 46 / 0.72) 0%, rgb(6 5 22 / 0.85) 50%, rgb(30 26 78 / 0.6) 100%);
+    border-color: transparent;
+    box-shadow:
+      inset -1px 0 0 rgb(251 182 160 / 0.3),
+      6px 0 28px rgb(244 114 182 / 0.14);
+  }
+
+  .sidebar-settings button svg {
+    filter: drop-shadow(0 0 4px rgb(251 182 160 / 0.5));
+  }
+
+  /* Panels: dark rose-indigo glass, so text reads over the bright core. Same
+     opacity as the Engine's panels. */
+  .settings-root main {
+    --glass-card-blur: blur(14px) saturate(1.25);
+    --glass-card-bg: linear-gradient(160deg, rgb(44 16 40 / 0.6), rgb(8 6 28 / 0.7));
+    --glass-card-border: rgb(255 222 214 / 0.16);
+    --glass-card-shadow: 0 8px 32px rgb(4 2 18 / 0.45), inset 0 1px 0 rgb(255 236 230 / 0.1);
+    --glass-hover-bg: var(--glass-card-bg);
+    --glass-hover-border: var(--glass-card-border);
+    --glass-hover-shadow: var(--glass-card-shadow);
+    --glass-hover-hover-border: rgb(251 164 150 / 0.45);
+    --glass-hover-hover-shadow: 0 8px 32px rgb(4 2 18 / 0.45), 0 0 30px rgb(236 110 140 / 0.24),
+      inset 0 1px 0 rgb(255 236 230 / 0.14);
+  }
+
   /* The sign-in screen (LoginPage.tsx): the Orbit's palette over the boot
      splash's backdrop and glass (.boot-scene, .boot-glass in index.html). */
   .auth-card {
@@ -4315,6 +4402,13 @@ html.perf-still .horizon-dot-cascade {
     --so-accent-2: var(--portal-b);
     --so-surface: hsl(var(--popover));
     --so-bg: hsl(var(--background));
+  }
+
+  .home-root .search-overlay {
+    --so-accent: #f6dca4;
+    --so-accent-2: #cfe0ff;
+    --so-surface: rgb(10 14 34);
+    --so-bg: #04040f;
   }
 
   .nebula-root .search-overlay {

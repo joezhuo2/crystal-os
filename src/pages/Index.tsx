@@ -32,7 +32,7 @@ import { stepTab } from "@/lib/stepTab";
 import { LazyTaskForm, LazyTransactionDrawer, lazyViews as views, preloadViews, recordVisit } from "@/lib/viewLoader";
 
 /** Tabs with a page backdrop of their own. */
-const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["terminal", "portal", "nebula", "weather", "archive", "calendar", "tasks", "orbit"]);
+const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["home", "settings", "terminal", "portal", "nebula", "weather", "archive", "calendar", "tasks", "orbit"]);
 
 /**
  * How many page backdrops stay mounted: the current one and the last one
@@ -178,6 +178,7 @@ const Index = () => {
     document.body.classList.toggle("engine-theme", viewTab === "tasks");
     document.body.classList.toggle("orbit-theme", viewTab === "orbit");
     document.body.classList.toggle("obsidian-theme", viewTab === "archive");
+    document.body.classList.toggle("settings-theme", viewTab === "settings");
   }, [viewTab]);
 
   // Hide the Portal's native webview as soon as another tab is picked. The
@@ -212,7 +213,11 @@ const Index = () => {
                   ? "engine-root"
                   : viewTab === "orbit"
                     ? "orbit-root"
-                    : "mesh-gradient-bg";
+                    : viewTab === "home"
+                      ? "home-root"
+                      : viewTab === "settings"
+                        ? "settings-root"
+                      : "mesh-gradient-bg";
   const backdrop = (tab: TabId) => {
     switch (tab) {
       case "terminal":
@@ -231,6 +236,10 @@ const Index = () => {
         return <ImageBackdrop image="engine" />;
       case "orbit":
         return <ImageBackdrop image="orbit" />;
+      case "home":
+        return <ImageBackdrop image="home" />;
+      case "settings":
+        return <ImageBackdrop image="settings" />;
       default:
         return null;
     }

@@ -377,6 +377,8 @@ function PercentSlider({ value, label, onCommit }: { value: number; label: strin
 }
 
 const BACKDROP_LABELS: Record<BackdropImage, string> = {
+  home: "The Pulse (Home)",
+  settings: "Settings",
   horizon: "The Horizon",
   engine: "The Engine",
   orbit: "The Orbit",
