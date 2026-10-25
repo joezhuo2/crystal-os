@@ -112,3 +112,16 @@ export function draggedStart(startMin: number, durationMin: number, deltaMin: nu
   const snapped = Math.round((startMin + deltaMin) / DRAG_STEP_MINUTES) * DRAG_STEP_MINUTES;
   return Math.max(0, Math.min(latest, snapped));
 }
+
+export const DEFAULT_TASK_BLOCK_MINUTES = 30;
+
+export function taskBlockMinutes(estimateMinutes?: number | null): number {
+  return estimateMinutes && estimateMinutes > 0
+    ? Math.min(Math.round(estimateMinutes), MINUTES_PER_DAY - 1)
+    : DEFAULT_TASK_BLOCK_MINUTES;
+}
+
+export function dropSlot(offsetMin: number, durationMin: number): { startMin: number; endMin: number } {
+  const startMin = draggedStart(0, durationMin, offsetMin);
+  return { startMin, endMin: startMin + durationMin };
+}
