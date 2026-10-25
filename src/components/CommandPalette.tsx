@@ -63,6 +63,9 @@ import { formatEstimate } from "@/lib/capacity";
 import { findFreeSlot, FREE_SLOT_DAYS, parseFreeSlotQuery } from "@/lib/freeSlot";
 import { fromMinutes } from "@/lib/timeGrid";
 import { usesSidecar } from "@/lib/platform";
+import { useNebulaSearchIndex } from "@/hooks/useHarness";
+import { harness } from "@/lib/harness/store";
+import { searchChats } from "@/lib/harness/chatSearch";
 
 const ITEM = "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer";
 
@@ -207,6 +210,12 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   );
   const matchedNotes = debouncedVaultQuery.length >= 2 ? (vaultData?.notes ?? []) : [];
 
+  // ---------- Search Nebula chats (desktop) ----------
+  const chatQuery = vaultQuery.length >= 2 ? vaultQuery : "";
+  const nebulaIndex = useNebulaSearchIndex(chatQuery !== "");
+  const matchedChats = searchChats(nebulaIndex.chats, nebulaIndex.messagesOf, chatQuery);
+  const projectName = (id: string) => nebulaIndex.projects.find((p) => p.id === id)?.name ?? "Project";
+
   // ---------- Handlers ----------
   const handleNavigate = (tab: TabId) => {
     onNavigate(tab);
@@ -218,6 +227,11 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
     setQuickAddDraft(addPrefix || logPrefix ? "" : search.trim());
     close();
     setShowQuickAdd(true);
+  };
+
+  const handleOpenChat = (chatId: string) => {
+    harness.setActiveChat(chatId);
+    handleNavigate("nebula");
   };
 
   const handleOpenNote = (notePath: string) => {
@@ -366,10 +380,11 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
       <Command
         className="bg-transparent"
         filter={(value, search) => {
-          // Vault notes are matched server-side (including on body text), and
+          // Vault notes are matched server-side (including on body text), Nebula
+          // chats on their messages, and
           // Quick Add is always offered — neither can pass a local substring
           // test against the raw query, so they opt out of cmdk's filter.
-          if (value === "quick-add-vault" || value === "free-slot" || value.startsWith("note-")) return 1;
+          if (value === "quick-add-vault" || value === "free-slot" || value.startsWith("note-") || value.startsWith("nebula-chat-")) return 1;
           if (value.toLowerCase().includes(search.toLowerCase())) return 1;
           return 0;
         }}
@@ -713,6 +728,31 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                             <p className="text-xs text-muted-foreground truncate">
                               {note.matchContext ?? (note.tags.length ? note.tags.join(" · ") : note.path)}
                             </p>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </>
+                )}
+
+                {/* ── Matching Nebula chats ── */}
+                {matchedChats.length > 0 && (
+                  <>
+                    <CommandSeparator className="my-1" />
+                    <CommandGroup heading="Nebula Chats">
+                      {matchedChats.map(({ chat, snippet }) => (
+                        <CommandItem
+                          key={chat.id}
+                          value={`nebula-chat-${chat.id}`}
+                          onSelect={() => handleOpenChat(chat.id)}
+                          className={ITEM}
+                        >
+                          <div className="search-overlay-icon-alt flex items-center justify-center w-8 h-8 rounded-lg shrink-0">
+                            <Sparkles className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0" data-private>
+                            <p className="text-sm font-medium truncate">{chat.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">{snippet ?? projectName(chat.projectId)}</p>
                           </div>
                         </CommandItem>
                       ))}
