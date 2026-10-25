@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.32] - 2026-10-24 - Quieter timer reset.
+
+### Changed
+
+- **Timer reset button** (issue #74). Hovering the Pomodoro's reset button no longer shows a "Reset" or "Skip break" tooltip; screen readers still announce it (`PomodoroTimer.tsx`).
+
 ## [v0.11.31] - 2026-10-24 - Timer hotkeys.
 
 ### Added
