@@ -1976,6 +1976,25 @@
     background: #04040f;
   }
 
+  .home-title {
+    background: linear-gradient(100deg, #fffaf0, #f6dca4 35%, #cfe0ff 70%, #8ea6e8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .sidebar-home {
+    background: linear-gradient(180deg, rgb(22 28 60 / 0.72) 0%, rgb(4 6 18 / 0.85) 50%, rgb(40 36 30 / 0.6) 100%);
+    border-color: transparent;
+    box-shadow:
+      inset -1px 0 0 rgb(246 220 164 / 0.3),
+      6px 0 28px rgb(207 224 255 / 0.14);
+  }
+
+  .sidebar-home button svg {
+    filter: drop-shadow(0 0 4px rgb(246 220 164 / 0.5));
+  }
+
   /* Settings: a star torn apart by a rose and indigo black hole
      (settings-backdrop.jpg), its panels in a frosted glass from that image. */
   .settings-root {
