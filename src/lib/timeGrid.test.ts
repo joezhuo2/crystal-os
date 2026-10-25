@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
-import { draggedStart, fromMinutes, layoutDay, snapMinutes, toMinutes, weekDates } from "./timeGrid";
+import { draggedStart, dropSlot, fromMinutes, layoutDay, snapMinutes, taskBlockMinutes, toMinutes, weekDates } from "./timeGrid";
 
 function event(id: string, start: string, end: string, extra: Partial<CalendarEvent> = {}): CalendarEvent {
   return {
@@ -105,5 +105,27 @@ describe("draggedStart", () => {
   it("stays inside the day", () => {
     expect(draggedStart(30, 60, -500)).toBe(0);
     expect(draggedStart(1300, 60, 500)).toBe(1439 - 60);
+  });
+});
+
+describe("taskBlockMinutes", () => {
+  it("uses the estimate, else 30 minutes", () => {
+    expect(taskBlockMinutes(45)).toBe(45);
+    expect(taskBlockMinutes(undefined)).toBe(30);
+    expect(taskBlockMinutes(null)).toBe(30);
+    expect(taskBlockMinutes(0)).toBe(30);
+    expect(taskBlockMinutes(1440)).toBe(1439);
+  });
+});
+
+describe("dropSlot", () => {
+  it("snaps the start to 10 minutes and sizes the block", () => {
+    expect(dropSlot(543, 45)).toEqual({ startMin: 540, endMin: 585 });
+    expect(dropSlot(546, 30)).toEqual({ startMin: 550, endMin: 580 });
+  });
+
+  it("stays inside the day", () => {
+    expect(dropSlot(-20, 30)).toEqual({ startMin: 0, endMin: 30 });
+    expect(dropSlot(1430, 60)).toEqual({ startMin: 1379, endMin: 1439 });
   });
 });
