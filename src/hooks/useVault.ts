@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiRequest, shouldRetry } from "@/lib/apiRequest";
 import { isDesktop } from "@/lib/platform";
 import {
@@ -167,6 +167,11 @@ export function useQuickAdd() {
   });
 }
 
+const fetchRawNote = (notePath: string) =>
+  isDesktop()
+    ? readRawNoteNative(notePath)
+    : request<RawNote>(`${API_BASE}/raw?path=${encodeURIComponent(notePath)}`);
+
 /**
  * A note's whole file for the editor. Fetched fresh each time editing starts
  * and kept out of the "vault" key, so live updates from disk refetch the
@@ -175,15 +180,28 @@ export function useQuickAdd() {
 export function useRawNote(notePath: string | null) {
   return useQuery<RawNote>({
     queryKey: ["vault-edit", notePath],
-    queryFn: () =>
-      isDesktop()
-        ? readRawNoteNative(notePath as string)
-        : request<RawNote>(`${API_BASE}/raw?path=${encodeURIComponent(notePath as string)}`),
+    queryFn: () => fetchRawNote(notePath as string),
     enabled: !!notePath,
     gcTime: 0,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     retry: retryVault,
+  });
+}
+
+export function useRawNotes(paths: string[]) {
+  return useQueries({
+    queries: paths.map((notePath) => ({
+      queryKey: ["vault-edit", notePath],
+      queryFn: () => fetchRawNote(notePath),
+      staleTime: Infinity,
+      refetchOnWindowFocus: false,
+      retry: retryVault,
+    })),
+    combine: (results) => ({
+      loading: results.some((r) => r.isLoading),
+      contents: results.map((r) => r.data?.content ?? null),
+    }),
   });
 }
 

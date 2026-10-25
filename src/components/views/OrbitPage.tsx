@@ -31,6 +31,7 @@ import {
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { FocusBars, FocusMonthBars, MoneyBars, TaskOrbit } from "@/components/views/orbit/OrbitCharts";
 import { FocusPie } from "@/components/views/orbit/FocusPie";
+import { MoodCard } from "@/components/views/orbit/MoodCard";
 import { TodayCard } from "@/components/views/orbit/TodayCard";
 import { OrbitHistoryError, useNow, useOrbitReview, type OrbitReviewResult } from "@/hooks/useOrbitReview";
 import { useCreateNote, vaultErrorCode } from "@/hooks/useVault";
@@ -833,6 +834,7 @@ export default function OrbitPage() {
               <FocusCard review={review} />
               <MoneyCard review={review} />
               <TrendsCard review={review} />
+              <MoodCard review={review} />
               <VaultCard review={review} unavailable={vaultUnavailable} />
               {review.estimates.length > 0 && <EstimatesCard review={review} />}
               {review.habits.length > 0 && (
