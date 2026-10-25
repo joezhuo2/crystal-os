@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.12.6] - 2026-10-25 - Nebula project instructions.
+
+### Added
+
+- **Per-project instructions for the Nebula agent** (issue #81). "Project instructions..." in a project's menu opens an editor for free-text instructions (up to 8000 characters). They are kept per project in localStorage, shown as a small file icon beside the project name, dropped when the project is removed, and sent ahead of the first prompt of a chat and again whenever the engine changes or a lost Claude session restarts. They stay separate from the folder's own CLAUDE.md or AGENTS.md. Touches `src/lib/harness/projectInstructions.ts`, `src/lib/harness/session.ts`, `src/components/nebula/ProjectInstructionsDialog.tsx` and `src/components/nebula/ProjectSidebar.tsx`.
+
 ## [v0.12.5] - 2026-10-25 - Nebula saved prompts.
 
 ### Added
