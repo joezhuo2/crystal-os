@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.11.35] - 2026-10-24 - Event drag target overlay.
+
+### Changed
+
+- **Dragging events in The Horizon** (issue #84). While you drag a timed event in the week or day view, a dashed outline shows where it will land in the target day, with its new start and end times. Drags now snap to the nearest 10 minutes (was 15). The event moves there as soon as you let go instead of after the save comes back; if the save fails, it goes back where it was. Undo, and edits to a single occurrence from the form, land at once too (`timeGrid.ts`, `TimeGrid.tsx`, `useGoogleCalendar.ts`).
+
 ## [v0.11.34] - 2026-10-24 - Scheduled Do Not Disturb.
 
 ### Added
