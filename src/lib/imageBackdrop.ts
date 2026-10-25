@@ -8,6 +8,7 @@
  * (backdropSettings.ts).
  */
 import { useEffect, useState } from "react";
+import homeImage from "@/assets/home-backdrop.jpg";
 import horizonImage from "@/assets/horizon-backdrop.webp";
 import engineImage from "@/assets/engine-backdrop.webp";
 import orbitImage from "@/assets/orbit-backdrop.webp";
@@ -22,6 +23,8 @@ export type { BackdropImage };
 export type BackdropPlace = "page" | "card";
 
 const IMAGES: Record<BackdropImage, string> = {
+  // Behind the whole Home tab, a star torn by a rose and indigo black hole.
+  home: homeImage,
   horizon: horizonImage,
   engine: engineImage,
   orbit: orbitImage,

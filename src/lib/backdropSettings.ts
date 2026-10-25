@@ -9,9 +9,9 @@
 import { useSyncExternalStore } from "react";
 import { checkImage, deleteImage, loadImage, prepareImage, saveImage } from "@/lib/atmosphereImage";
 
-export type BackdropImage = "horizon" | "engine" | "orbit" | "portal" | "archive";
+export type BackdropImage = "home" | "horizon" | "engine" | "orbit" | "portal" | "archive";
 
-export const BACKDROP_IMAGES: readonly BackdropImage[] = ["horizon", "engine", "orbit", "portal", "archive"];
+export const BACKDROP_IMAGES: readonly BackdropImage[] = ["home", "horizon", "engine", "orbit", "portal", "archive"];
 
 /** Default image blur (0–100) behind a page. */
 export const PAGE_BACKDROP_BLUR = 15;
