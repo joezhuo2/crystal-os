@@ -5,6 +5,14 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.12.0] - 2026-10-25 - Home and Settings backdrops.
+
+### Added
+
+- **Home backdrop.** The Pulse sits on a white-gold black hole in deep navy (`home-backdrop.webp`), with a navy-and-gold sidebar, a white-gold Crystal logo and a matching Ctrl+K search bar. The Home cards keep their own looks (`index.css`, `Navigation.tsx`, `Index.tsx`).
+- **Settings backdrop.** Settings sits on a rose-and-indigo black hole tearing a star apart (`settings-backdrop.jpg`), with dark rose glass panels so text reads, pink highlights in place of the green accent (menus, switches and the search bar too), and a rose sidebar and Crystal logo.
+- **Settings → Backgrounds** now lists Home and Settings, so both images, blurs and opacity can be changed (`backdropSettings.ts`, `imageBackdrop.ts`).
+
 ## [v0.11.35] - 2026-10-24 - Event drag target overlay.
 
 ### Changed
