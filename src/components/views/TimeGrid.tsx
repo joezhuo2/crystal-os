@@ -385,6 +385,24 @@ export default function TimeGrid({
                 );
               })}
 
+              {drag?.moved && drag.date === date && (
+                <div
+                  aria-hidden="true"
+                  data-drop-target
+                  className="absolute inset-x-0.5 z-20 rounded-md border-2 border-dashed px-1.5 py-0.5 text-[11px] leading-tight pointer-events-none"
+                  style={{
+                    top: drag.minutes * PX_PER_MIN,
+                    height: Math.max(drag.durationMin * PX_PER_MIN - 1, 14),
+                    borderColor: `color-mix(in srgb, ${color} 80%, transparent)`,
+                    background: `color-mix(in srgb, ${color} 12%, transparent)`,
+                  }}
+                >
+                  <span className="font-medium">
+                    {shortTime(fromMinutes(drag.minutes))} – {shortTime(fromMinutes(drag.minutes + drag.durationMin))}
+                  </span>
+                </div>
+              )}
+
               {timed.map(({ event, startMin, endMin, column, columns: lanes }) => {
                 const height = (endMin - startMin) * PX_PER_MIN;
                 const dragging = drag?.id === event.id && drag.moved;

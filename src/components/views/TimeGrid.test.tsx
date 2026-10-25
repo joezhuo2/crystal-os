@@ -105,6 +105,22 @@ describe("TimeGrid", () => {
     expect(onEdit).not.toHaveBeenCalled();
   });
 
+  it("outlines where the event will land while dragging, snapped to 10 minutes", () => {
+    const onMoveEvent = vi.fn();
+    const { container } = render(
+      <TimeGrid dates={["2026-09-30"]} events={[base]} color="#60a5fa" onEdit={() => {}} onCreateAt={() => {}} onMoveEvent={onMoveEvent} />,
+    );
+    const block = screen.getByRole("button", { name: /Standup/ });
+    fireEvent.pointerDown(block, { clientX: 10, clientY: 100, button: 0, pointerId: 1 });
+    fireEvent.pointerMove(block, { clientX: 10, clientY: 157, pointerId: 1 });
+    const target = container.querySelector("[data-drop-target]") as HTMLElement;
+    expect(target.style.top).toBe(`${(10 * 60 + 10) * 0.8}px`);
+    expect(target.textContent).toMatch(/10:10.*10:40/);
+    fireEvent.pointerUp(block, { clientX: 10, clientY: 157, pointerId: 1 });
+    expect(container.querySelector("[data-drop-target]")).toBeNull();
+    expect(onMoveEvent).toHaveBeenCalledWith(base, "2026-09-30", "10:10", "10:40");
+  });
+
   it("treats a press without travel as a click", () => {
     const onMoveEvent = vi.fn();
     const onEdit = vi.fn();
