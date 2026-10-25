@@ -92,7 +92,7 @@ export default function PomodoroTimer() {
         >
           {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
         </button>
-        <button onClick={pomodoro.reset} title={isBreak ? "Skip break" : "Reset"} className="p-2.5 rounded-full bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors">
+        <button onClick={pomodoro.reset} aria-label={isBreak ? "Skip break" : "Reset"} className="p-2.5 rounded-full bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors">
           <RotateCcw className="w-4 h-4" />
         </button>
       </div>
