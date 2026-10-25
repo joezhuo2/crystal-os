@@ -16,7 +16,7 @@ import { ascNullsLast, loadInPages, mergePage } from "@/lib/pagedLoad";
 import { appUi } from "@/lib/appUi";
 import { setRecentsOwner } from "@/lib/recents";
 import { clampEstimate } from "@/lib/capacity";
-import { cleanChecklist, cleanNotes, tickAll, untickAll, type ChecklistItem } from "@/lib/subtasks";
+import { cleanChecklist, cleanNotePath, cleanNotes, tickAll, untickAll, type ChecklistItem } from "@/lib/subtasks";
 import { cleanSnoozeDate, clearedSnooze } from "@/lib/snooze";
 import { reconcileFocusTask } from "@/lib/focusTask";
 import { restorePatch, undoToast } from "@/lib/undo";
@@ -54,6 +54,8 @@ export type Task = {
   notes?: string;
   /** The task's checklist, or undefined for none. */
   checklist?: ChecklistItem[];
+  /** Vault-relative path of the Obsidian note linked to this task, or undefined for none. */
+  notePath?: string;
   /** The task this one is nested under (one level deep), or undefined at the top level. */
   parentId?: string;
   /** Hidden until the start of this day ("YYYY-MM-DD"), or undefined. See src/lib/snooze.ts. */
@@ -237,6 +239,7 @@ type TaskRow = ReturnType<typeof mapTaskToDb> & {
   created_at?: string;
   estimate_minutes?: number | null;
   notes?: string | null;
+  note_path?: string | null;
   checklist?: ChecklistItem[] | null;
   parent_id?: string | null;
   snoozed_until?: string | null;
@@ -259,6 +262,7 @@ function mapTaskFromDb(row: TaskRow): Task {
     repeat: normalizeRepeat(row.repeat_kind, row.repeat_days, row.repeat_weekdays),
     estimateMinutes: clampEstimate(row.estimate_minutes),
     notes: cleanNotes(row.notes),
+    notePath: cleanNotePath(row.note_path),
     checklist: cleanChecklist(row.checklist),
     parentId: row.parent_id || undefined,
     snoozedUntil: cleanSnoozeDate(row.snoozed_until),
@@ -284,6 +288,7 @@ function mapTaskToDb(task: Omit<Task, "id">) {
     // The same for migration 0006's columns.
     ...(cleanNotes(task.notes) ? { notes: cleanNotes(task.notes) } : {}),
     ...(cleanChecklist(task.checklist) ? { checklist: cleanChecklist(task.checklist) } : {}),
+    ...(cleanNotePath(task.notePath) ? { note_path: cleanNotePath(task.notePath) } : {}),
     ...(task.parentId ? { parent_id: task.parentId } : {}),
     // And for migration 0007's.
     ...(cleanSnoozeDate(task.snoozedUntil) ? { snoozed_until: cleanSnoozeDate(task.snoozedUntil) } : {}),
@@ -734,6 +739,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const notes = cleanNotes(updates.notes);
     const notesChanged = "notes" in updates;
     if (notesChanged && (notes !== undefined || current?.notes !== undefined)) dbUpdates.notes = notes ?? null;
+    const notePath = cleanNotePath(updates.notePath);
+    const notePathChanged = "notePath" in updates;
+    if (notePathChanged && (notePath !== undefined || current?.notePath !== undefined)) dbUpdates.note_path = notePath ?? null;
     const checklist = cleanChecklist(updates.checklist);
     const checklistChanged = "checklist" in updates;
     if (checklistChanged && (checklist !== undefined || current?.checklist !== undefined)) {
@@ -769,6 +777,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               ...(repeatChanged ? { repeat } : {}),
               ...(estimateChanged ? { estimateMinutes: estimate } : {}),
               ...(notesChanged ? { notes } : {}),
+              ...(notePathChanged ? { notePath } : {}),
               ...(checklistChanged ? { checklist } : {}),
               ...(parentChanged ? { parentId } : {}),
               ...(snoozeChanged ? { snoozedUntil } : {}),

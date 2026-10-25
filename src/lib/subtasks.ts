@@ -147,3 +147,9 @@ export function describeProgress({ open, total }: { open: number; total: number 
   if (open === 0) return total === 1 ? "Subtask done" : `All ${total} done`;
   return `+${open} subtask${open === 1 ? "" : "s"}`;
 }
+
+export function cleanNotePath(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  const path = raw.trim().replace(/\\/g, "/");
+  return path && path.length <= 1000 ? path : undefined;
+}
