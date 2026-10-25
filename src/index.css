@@ -4117,6 +4117,54 @@
       animation: none;
     }
   }
+
+  /* On the Pulse the page's black hole shows through every box, so the boxes'
+     own scenes step aside and each box, and every plain glass panel, wears one
+     frosted rose-and-indigo glass taken from that image. */
+  .home-root {
+    --glass-card-blur: blur(14px) saturate(1.25);
+    --glass-card-bg: linear-gradient(160deg, rgb(56 24 52 / 0.2), rgb(8 6 30 / 0.42));
+    --glass-card-border: rgb(255 222 214 / 0.16);
+    --glass-card-shadow: 0 8px 32px rgb(4 2 18 / 0.45), inset 0 1px 0 rgb(255 236 230 / 0.1);
+    --glass-hover-bg: var(--glass-card-bg);
+    --glass-hover-border: var(--glass-card-border);
+    --glass-hover-shadow: var(--glass-card-shadow);
+    --glass-hover-hover-border: rgb(251 164 150 / 0.45);
+    --glass-hover-hover-shadow: 0 8px 32px rgb(4 2 18 / 0.45), 0 0 30px rgb(236 110 140 / 0.24),
+      inset 0 1px 0 rgb(255 236 230 / 0.14);
+  }
+
+  .home-root .home-space {
+    --primary: 14 90% 80%;
+    --accent: 14 90% 80%;
+    --muted-foreground: 250 28% 82%;
+  }
+
+  /* !important: some boxes' scenes are switched on by attribute selectors. */
+  .home-root .home-space::before,
+  .home-root .home-space::after,
+  .home-root :is(.home-backdrop-scene, .home-atmo-scene) {
+    display: none !important;
+  }
+
+  .home-root :is(.home-card-orbit, .home-card-atmosphere, .home-card-archive, .home-card-horizon,
+      .home-card-engine, .home-card-nebula, .home-card-portal, .home-card-terminal) {
+    border-radius: 1rem;
+    color: #fff6f3;
+    background: var(--glass-card-bg);
+    border: 1px solid var(--glass-card-border);
+    text-shadow: 0 1px 8px rgb(6 4 20 / 0.75);
+    box-shadow: var(--glass-card-shadow);
+    backdrop-filter: var(--glass-card-blur);
+    transition: border-color 300ms, box-shadow 300ms;
+  }
+
+  .home-root :is(.home-card-orbit, .home-card-atmosphere, .home-card-archive, .home-card-horizon,
+      .home-card-engine, .home-card-nebula, .home-card-portal, .home-card-terminal):hover,
+  .home-root .glass-card-emerald:hover {
+    border-color: var(--glass-hover-hover-border);
+    box-shadow: var(--glass-hover-hover-shadow);
+  }
 }
 
 /* Sliders glide between steps instead of jumping: the thumb's positioning
