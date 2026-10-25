@@ -6,12 +6,12 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-863%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.11.32-6366F1)
+![Version](https://img.shields.io/badge/version-0.11.33-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 > A personal productivity dashboard built with React, TypeScript, Supabase, your Google Calendar, and your Obsidian vault. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
-Current release: **v0.11.32** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.11.33** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 [Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
@@ -36,7 +36,7 @@ Current release: **v0.11.32** — see [CHANGELOG.md](CHANGELOG.md) for release h
 | **🔔 Notifications** | Desktop toasts before a task is due (from the start of its day or a set number of minutes ahead, once or on every launch), when a task reaches its end time, before each timed calendar event (30 minutes by default, set in Settings; with **Pulse**, 10 minutes before it is time to leave for an event with a location), when a Pomodoro focus or break runs out, when a Portal app's unread count goes up while Crystal OS is not focused (per app, from its right-click menu), when an Orbit review is ready, and when a habit is not ticked by its reminder time. A switch per kind and a Do Not Disturb switch in **Settings → Notifications**. See [Notifications](#-notifications) |
 | **🖥️ Desktop shell** | Native Tauri window with PowerShell terminal, tray (Pomodoro + Quick Add), always-on global hotkeys, and launch-at-login — the web build is unaffected |
 | **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, notifications, vault folder, Nebula keys, models and look, and downloading or building an installer. A search box (Ctrl+F) hides sections that don't match and unfolds the ones that do. **In-app shortcuts** lists every single-key shortcut by page; click one to record a new key (Esc cancels), with a warning if another action on that page or a general one already uses it, a Reset per row and a **Reset all**. Shortcuts are single keys and are ignored while you type or a dialog is open; rebinds are saved in localStorage (`crystal-os-keymap`). Click a section's header to fold it away (remembered on this device); switches and sliders glide instead of snapping. **Diagnostics** copies recent errors (unhandled rejections, uncaught errors, failed Supabase saves) with the app version for a bug report; on desktop they are also logged to `diagnostics.log` |
-| **⌨️ Command Palette** | Global search over tasks, transactions, vault note bodies and Settings sections (picking one scrolls to it and unfolds it), plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event. With nothing typed it lists your 8 most recently opened tasks, notes and events to reopen in one step |
+| **⌨️ Command Palette** | Global search over tasks, transactions, vault note bodies, Nebula chats (by title or message text, with the matching line; picking one opens it in The Nebula, desktop) and Settings sections (picking one scrolls to it and unfolds it), plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event. With nothing typed it lists your 8 most recently opened tasks, notes and events to reopen in one step |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
 | **🙈 Privacy mode** | On by default: money amounts (The Vault, The Orbit, the Home page, search results) the names and previews of Archive notes you have not opened, and the note, event, task and chat names on the Home cards are blurred, so the screen is safe to share. Switch it off in Settings → Privacy |
 | **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar. **Settings → Navigation** reorders the sidebar's pages, hides the ones you do not use, and picks which sit at the top or pinned to the bottom (Settings is always shown); the phone bar and **J**/**K** follow the same order |

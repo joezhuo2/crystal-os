@@ -3,6 +3,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { Task } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
 import { recordRecent, setRecentsOwner } from "@/lib/recents";
+import { ACTIVE_KEY } from "@/lib/harness/store";
+import type { ChatMessage, ChatMeta } from "@/lib/harness/types";
 
 let tasks: Task[] = [];
 
@@ -21,6 +23,16 @@ vi.mock("@/hooks/useGoogleCalendar", () => ({
   calendarWasConnected: () => true,
   useCalendarStatus: () => ({ data: { connected: true }, isLoading: false }),
   useCalendarEvents: () => ({ data: { events: calendarEvents }, isLoading: false }),
+}));
+
+let nebulaChats: ChatMeta[] = [];
+let nebulaMessages: Record<string, ChatMessage[]> = {};
+vi.mock("@/hooks/useHarness", () => ({
+  useNebulaSearchIndex: () => ({
+    chats: nebulaChats,
+    projects: [{ id: "p1", name: "crystal-os", path: "C:/code/crystal-os", createdAt: 0 }],
+    messagesOf: (id: string) => nebulaMessages[id],
+  }),
 }));
 
 const { default: CommandPalette } = await import("./CommandPalette");
@@ -171,5 +183,35 @@ describe("Command palette free-slot finder", () => {
     expect(appUi.getState().newEventSlot).toEqual({ date: "2026-10-05", start: "12:00", end: "14:00" });
     expect(appUi.getState().showEventForm).toBe(true);
     expect(onNavigate).toHaveBeenCalledWith("calendar");
+  });
+});
+
+describe("Command palette Nebula chats", () => {
+  afterEach(() => {
+    nebulaChats = [];
+    nebulaMessages = {};
+  });
+
+  const chat = (id: string, title: string): ChatMeta => ({
+    id, projectId: "p1", title, createdAt: 0, updatedAt: 0, pinned: false, tier: "high", effort: "medium", mode: "auto",
+  });
+
+  it("finds a chat by its messages and opens it in The Nebula", () => {
+    nebulaChats = [chat("c1", "Refactor"), chat("c2", "Docs")];
+    nebulaMessages = { c1: [{ id: "m1", role: "user", blocks: [{ kind: "text", text: "the login loop again" }], createdAt: 0 }] };
+    renderPalette();
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "login" } });
+    const group = screen.getByText("Nebula Chats").closest("[cmdk-group]") as HTMLElement;
+    expect([...group.querySelectorAll("[cmdk-item] p")].map((p) => p.textContent)).toEqual(["Refactor", "the login loop again"]);
+    fireEvent.click(screen.getByText("Refactor"));
+    expect(localStorage.getItem(ACTIVE_KEY)).toBe("c1");
+    expect(onNavigate).toHaveBeenCalledWith("nebula");
+  });
+
+  it("shows the project name when only the title matches", () => {
+    nebulaChats = [chat("c1", "Fix login")];
+    renderPalette();
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "login" } });
+    expect(screen.getByText("crystal-os")).toBeTruthy();
   });
 });
