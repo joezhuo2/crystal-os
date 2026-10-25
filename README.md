@@ -508,6 +508,8 @@ The bar is green while the work fits, amber past 85% of free time, and red with 
 
 **Notes.** The task form has a **Notes** box for free text (up to 10,000 characters). A task with notes shows a note icon on its card.
 
+**Linked note.** The task form has a **Linked note** search over your Obsidian vault. Pick a note to link it (the unlink button clears it); the task card then shows a note icon that opens the note in The Archive. Needs the optional `note_path` column from `supabase/migrations/0009_task_note_link.sql`.
+
 **Subtasks.** A task has two kinds of subtask, counted together:
 
 - **Checklist items**, light rows that live on the task. Add, tick, rename (click the text), drag to reorder and delete them in the task form or straight on the card.
