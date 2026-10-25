@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { useNow } from "@/hooks/useOrbitReview";
 import { notify } from "@/lib/notifications";
-import { useNotifySettings } from "@/lib/notifySettings";
+import { isQuiet, useNotifySettings } from "@/lib/notifySettings";
 import { periodLabel, readyTitle, reviewsToAnnounce } from "@/lib/orbitReview";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 
@@ -24,8 +24,8 @@ const TOAST_MS = 30_000;
 export default function OrbitReadyNotifier({ onOpen }: { onOpen: () => void }) {
   const now = useNow();
   const { seen, notified } = useOrbitStore();
-  const { reviews, doNotDisturb } = useNotifySettings();
-  const due = reviews && !doNotDisturb ? reviewsToAnnounce(now, seen, notified) : [];
+  const settings = useNotifySettings();
+  const due = settings.reviews && !isQuiet(settings, now) ? reviewsToAnnounce(now, seen, notified) : [];
   const dueKey = due.map((period) => `${period.kind}:${period.key}`).join(",");
 
   useEffect(() => {

@@ -16,7 +16,7 @@ import type { Task } from "@/contexts/AppContext";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 import type { HabitReminder } from "@/lib/habitReminders";
 import { indexChecks, isActiveOn, sortHabits, type Habit, type HabitCheck } from "@/lib/habits";
-import { notifySettings } from "@/lib/notifySettings";
+import { isQuiet, notifySettings } from "@/lib/notifySettings";
 import { isDesktop } from "@/lib/platform";
 import { pomodoro, selectFocusMuted, type PomodoroState } from "@/lib/pomodoro";
 import { portal, type PortalState } from "@/lib/portalStore";
@@ -317,12 +317,12 @@ function ensurePermission(): Promise<boolean> {
 }
 
 /**
- * Shows a desktop notification, unless Do Not Disturb is on. `force` skips
+ * Shows a desktop notification, unless Do Not Disturb is on or scheduled now. `force` skips
  * that check, for the test button in Settings. Resolves false when nothing
  * was shown.
  */
 export async function notify(alert: Pick<PlannedAlert, "title" | "body">, force = false): Promise<boolean> {
-  if (!force && notifySettings.getState().doNotDisturb) return false;
+  if (!force && isQuiet(notifySettings.getState(), new Date())) return false;
   if (!(await ensurePermission())) return false;
   try {
     if (isDesktop()) {
@@ -340,7 +340,7 @@ export async function notify(alert: Pick<PlannedAlert, "title" | "body">, force 
 
 /** Shows each alert that has not been shown before. */
 export function deliver(alerts: PlannedAlert[]) {
-  if (alerts.length === 0 || notifySettings.getState().doNotDisturb) return;
+  if (alerts.length === 0 || isQuiet(notifySettings.getState(), new Date())) return;
   for (const alert of takeUnsent(alerts)) void notify(alert);
 }
 
