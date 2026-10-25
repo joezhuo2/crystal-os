@@ -26,6 +26,7 @@ import {
   userMessage,
 } from "./claudeStream";
 import { buildHandoff } from "./handoff";
+import { INSTRUCTIONS_PREAMBLE, projectInstructions, withInstructions } from "./projectInstructions";
 import { decideDshPermission, PLAN_MODE_PREFIX, userChoice, type AcpPermissionOption } from "./modes";
 import { isRouteFailure, modelOptionValue, Router, type Candidate } from "./modelRouter";
 import type { ExitEvent, HarnessNative, LineEvent } from "./native";
@@ -273,7 +274,8 @@ export class HarnessSession {
     const turn: TurnControl = { requested: false, engaged: false, released, release, timers: [] };
     this.turns.set(chatId, turn);
 
-    const prompt = [handoff, chat.mode === "plan" && engine === "dsh" ? PLAN_MODE_PREFIX : null, text].filter(Boolean).join("\n\n");
+    const body = [handoff, chat.mode === "plan" && engine === "dsh" ? PLAN_MODE_PREFIX : null, text].filter(Boolean).join("\n\n");
+    const prompt = previous.length === 0 || handoff ? withInstructions(projectInstructions.forProject(project.id), body) : body;
     try {
       const run = engine === "dsh" ? this.runDshTurn(chat, project.path, prompt, turn) : this.runClaudeTurn(chat, project.path, prompt, config.claudeModel, turn);
       run.catch(() => undefined);
@@ -562,7 +564,7 @@ export class HarnessSession {
       const messages = harness.getState().runtime[chat.id]?.messages ?? [];
       const handoff = buildHandoff(messages.slice(0, -2), "claude");
       const fresh = harness.getState().chats.find((c) => c.id === chat.id)!;
-      return this.runClaudeTurn(fresh, workspace, [handoff, prompt].filter(Boolean).join("\n\n"), model, turn, true);
+      return this.runClaudeTurn(fresh, workspace, [prompt.includes(INSTRUCTIONS_PREAMBLE) ? null : withInstructions(projectInstructions.forProject(chat.projectId), "").trim(), handoff, prompt].filter(Boolean).join("\n\n"), model, turn, true);
     }
     throw new Error(result.text || "Claude Code reported an error");
   }

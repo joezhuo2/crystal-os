@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, Folder, Loader2, MessageSquarePlus, MoreHorizontal, Pencil, Pin, PinOff, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, FileText, Folder, Loader2, MessageSquarePlus, MoreHorizontal, Pencil, Pin, PinOff, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -14,8 +14,10 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { nebula, useHarness } from "@/hooks/useHarness";
+import { projectInstructions, useProjectInstructions } from "@/lib/harness/projectInstructions";
 import { savedPrompts } from "@/lib/harness/savedPrompts";
 import { harness, selectProjectChats } from "@/lib/harness/store";
+import ProjectInstructionsDialog from "./ProjectInstructionsDialog";
 import NewProjectDialog from "./NewProjectDialog";
 import NebulaTip from "./NebulaTip";
 
@@ -24,6 +26,8 @@ type Confirm = { kind: "chat"; id: string; title: string } | { kind: "project"; 
 /** Projects (folders) with their chats, newest first, pinned on top. */
 export default function ProjectSidebar() {
   const state = useHarness();
+  const instructions = useProjectInstructions();
+  const [editingInstructions, setEditingInstructions] = useState<{ id: string; name: string } | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [renaming, setRenaming] = useState<{ id: string; title: string } | null>(null);
   const [confirm, setConfirm] = useState<Confirm>(null);
@@ -72,6 +76,7 @@ export default function ProjectSidebar() {
                   >
                     <Folder className="h-3.5 w-3.5 shrink-0 text-[var(--nebula-a)]" />
                     <span className="truncate">{project.name}</span>
+                    {instructions[project.id] && <FileText className="h-3 w-3 shrink-0 text-white/40" aria-label="Has project instructions" />}
                   </button>
                 </NebulaTip>
                 <NebulaTip label="New chat" hint={`In ${project.name}`}>
@@ -85,6 +90,7 @@ export default function ProjectSidebar() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => harness.createChat(project.id)}>New chat</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEditingInstructions({ id: project.id, name: project.name })}>Project instructions…</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-red-400" onClick={() => setConfirm({ kind: "project", id: project.id, title: project.name, path: project.path })}>
                       Remove project…
@@ -158,6 +164,7 @@ export default function ProjectSidebar() {
         })}
       </div>
 
+      <ProjectInstructionsDialog project={editingInstructions} onClose={() => setEditingInstructions(null)} />
       <NewProjectDialog open={newProject} onOpenChange={setNewProject} />
 
       <AlertDialog open={confirm !== null} onOpenChange={(open) => !open && setConfirm(null)}>
@@ -180,6 +187,7 @@ export default function ProjectSidebar() {
                   nebula.closeWorkspace(confirm.path);
                   harness.removeProject(confirm.id);
                   savedPrompts.removeProject(confirm.id);
+                  projectInstructions.removeProject(confirm.id);
                 }
                 setConfirm(null);
               }}
