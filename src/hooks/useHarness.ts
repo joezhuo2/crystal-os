@@ -1,9 +1,11 @@
 import { useEffect, useSyncExternalStore } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { isDesktop } from "@/lib/platform";
 import { harnessNative } from "@/lib/harness/native";
 import { HarnessSession } from "@/lib/harness/session";
-import { harness } from "@/lib/harness/store";
+import { harness, parseChatFile, parseStateFile } from "@/lib/harness/store";
+import type { ChatMessage } from "@/lib/harness/types";
 
 /** The one session driving every Nebula chat (desktop only). */
 export const nebula = new HarnessSession(harnessNative, (title, body) => toast.success(title, { description: body }));
@@ -75,4 +77,27 @@ export function useActiveChatLoader(chatId: string | null) {
   useEffect(() => {
     if (chatId) void ensureChatLoaded(chatId);
   }, [chatId]);
+}
+
+/**
+ * Every chat with its messages, for the global search. Reads the saved files
+ * directly, so it starts no agents; chats open in this session use the live store.
+ */
+export function useNebulaSearchIndex(enabled: boolean) {
+  const { hydrated, chats, projects, runtime } = useHarness();
+  const saved = useQuery({
+    queryKey: ["nebula", "search-index"],
+    queryFn: async () => {
+      const index = parseStateFile(await harnessNative.stateLoad());
+      const files = await Promise.all(index.chats.map(async (c) => [c.id, parseChatFile(await harnessNative.chatLoad(c.id).catch(() => null)).messages] as const));
+      return { ...index, messages: Object.fromEntries(files) as Record<string, ChatMessage[]> };
+    },
+    enabled: enabled && isDesktop(),
+    staleTime: 30_000,
+  });
+  return {
+    chats: hydrated ? chats : (saved.data?.chats ?? []),
+    projects: hydrated ? projects : (saved.data?.projects ?? []),
+    messagesOf: (chatId: string) => (runtime[chatId]?.loaded ? runtime[chatId].messages : saved.data?.messages[chatId]),
+  };
 }
