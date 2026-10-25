@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ExitEvent, HarnessNative, LineEvent } from "./native";
+import { INSTRUCTIONS_PREAMBLE, projectInstructions } from "./projectInstructions";
 import { HarnessSession } from "./session";
 import { harness } from "./store";
 import type { NebulaConfig } from "./types";
@@ -70,6 +71,7 @@ beforeEach(() => {
   harness.setPersistence({ saveState: async () => undefined, saveChat: async () => undefined, deleteChat: async () => undefined });
   harness.hydrate(null);
   harness.setConfig(config);
+  projectInstructions._reset();
 });
 
 describe("HarnessSession (dsh)", () => {
@@ -155,6 +157,22 @@ describe("HarnessSession (dsh)", () => {
     await session.send(chat.id, "refactor");
     expect(sent.find((m) => m.id === 901)?.result).toEqual({ outcome: { outcome: "selected", optionId: "reject" } });
     expect(sent.find((m) => m.method === "session/prompt")?.params.prompt[0].text).toMatch(/^\[Plan mode\]/);
+  });
+
+  it("prepends project instructions to the first prompt only", async () => {
+    const { native, sent } = fakeNative((_model, emit, id) => emit({ jsonrpc: "2.0", id, result: { stopReason: "end_turn" } }));
+    const session = new HarnessSession(native);
+    await session.start();
+    const chat = setupChat("low");
+    projectInstructions.set(chat.projectId, "answer in French");
+    await session.send(chat.id, "first");
+    await session.send(chat.id, "second");
+    const prompts = sent.filter((m) => m.method === "session/prompt").map((m) => m.params.prompt[0].text as string);
+    expect(prompts[0]).toBe(`${INSTRUCTIONS_PREAMBLE}
+answer in French
+
+first`);
+    expect(prompts[1]).toBe("second");
   });
 
   it("retries without MCP servers when opening the session fails", async () => {
