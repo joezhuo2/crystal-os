@@ -178,6 +178,7 @@ const Index = () => {
     document.body.classList.toggle("engine-theme", viewTab === "tasks");
     document.body.classList.toggle("orbit-theme", viewTab === "orbit");
     document.body.classList.toggle("obsidian-theme", viewTab === "archive");
+    document.body.classList.toggle("settings-theme", viewTab === "settings");
   }, [viewTab]);
 
   // Hide the Portal's native webview as soon as another tab is picked. The

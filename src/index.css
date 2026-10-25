@@ -1982,10 +1982,31 @@
     background: #04040f;
   }
 
+  /* Settings' palette: the torn star's rose and peach over deep indigo. On
+     <body> as well (Index.tsx) so portalled menus and the search bar follow it. */
+  .settings-root,
+  body.settings-theme {
+    --background: 245 45% 5%;
+    --popover: 280 32% 11%;
+    --card: 280 30% 13%;
+    --secondary: 285 26% 19%;
+    --muted: 285 24% 16%;
+    --border: 330 30% 28%;
+    --input: 330 30% 28%;
+    --primary: 350 85% 72%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 18 90% 74%;
+    --accent: 345 75% 62%;
+    --accent-foreground: 0 0% 100%;
+    --glow-indigo: 345 80% 66%;
+    --glow-emerald: 345 80% 66%;
+    --muted-foreground: 330 22% 80%;
+    --glass-border: 15 100% 92%;
+  }
+
   /* Panels: dark rose-indigo glass, so text reads over the bright core. Same
      opacity as the Engine's panels. */
   .settings-root main {
-    --muted-foreground: 330 22% 80%;
     --glass-card-blur: blur(14px) saturate(1.25);
     --glass-card-bg: linear-gradient(160deg, rgb(44 16 40 / 0.6), rgb(8 6 28 / 0.7));
     --glass-card-border: rgb(255 222 214 / 0.16);
