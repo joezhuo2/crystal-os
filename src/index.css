@@ -2004,6 +2004,25 @@
     --glass-border: 15 100% 92%;
   }
 
+  .settings-title {
+    background: linear-gradient(100deg, #fff1ea, #fbb6a0 35%, #f472b6 65%, #8b7cf6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .sidebar-settings {
+    background: linear-gradient(180deg, rgb(52 20 46 / 0.72) 0%, rgb(6 5 22 / 0.85) 50%, rgb(30 26 78 / 0.6) 100%);
+    border-color: transparent;
+    box-shadow:
+      inset -1px 0 0 rgb(251 182 160 / 0.3),
+      6px 0 28px rgb(244 114 182 / 0.14);
+  }
+
+  .sidebar-settings button svg {
+    filter: drop-shadow(0 0 4px rgb(251 182 160 / 0.5));
+  }
+
   /* Panels: dark rose-indigo glass, so text reads over the bright core. Same
      opacity as the Engine's panels. */
   .settings-root main {
