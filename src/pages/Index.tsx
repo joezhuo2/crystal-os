@@ -32,7 +32,7 @@ import { stepTab } from "@/lib/stepTab";
 import { LazyTaskForm, LazyTransactionDrawer, lazyViews as views, preloadViews, recordVisit } from "@/lib/viewLoader";
 
 /** Tabs with a page backdrop of their own. */
-const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["home", "terminal", "portal", "nebula", "weather", "archive", "calendar", "tasks", "orbit"]);
+const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["home", "settings", "terminal", "portal", "nebula", "weather", "archive", "calendar", "tasks", "orbit"]);
 
 /**
  * How many page backdrops stay mounted: the current one and the last one
@@ -214,6 +214,8 @@ const Index = () => {
                     ? "orbit-root"
                     : viewTab === "home"
                       ? "home-root"
+                      : viewTab === "settings"
+                        ? "settings-root"
                       : "mesh-gradient-bg";
   const backdrop = (tab: TabId) => {
     switch (tab) {
@@ -235,6 +237,8 @@ const Index = () => {
         return <ImageBackdrop image="orbit" />;
       case "home":
         return <ImageBackdrop image="home" />;
+      case "settings":
+        return <ImageBackdrop image="settings" />;
       default:
         return null;
     }
