@@ -15,11 +15,16 @@ export const MAX_EVENT_LEAD = 1440;
 /** Minutes before a task's end time that its "Due soon" reminder shows, by default. */
 export const DEFAULT_TASK_LEAD = 30;
 
-type Flag = "doNotDisturb" | "tasks" | "calendar" | "pomodoro" | "portal" | "reviews" | "taskReminders" | "habitReminders" | "habitReminderStartup" | "pulse";
+type Flag = "doNotDisturb" | "dndSchedule" | "tasks" | "calendar" | "pomodoro" | "portal" | "reviews" | "taskReminders" | "habitReminders" | "habitReminderStartup" | "pulse";
 
 export interface NotifySettings {
   /** Silences every notification without changing the per-kind switches. */
   doNotDisturb: boolean;
+  /** Also silences every notification each day from `dndFrom` to `dndTo`. */
+  dndSchedule: boolean;
+  /** "HH:MM", local time. A start later than the end runs past midnight. */
+  dndFrom: string;
+  dndTo: string;
   /** A toast when a task reaches its end time. */
   tasks: boolean;
   /** A toast `eventLead` minutes before each timed calendar event. */
@@ -50,6 +55,9 @@ export interface NotifySettings {
 
 export const DEFAULT_NOTIFY_SETTINGS: NotifySettings = {
   doNotDisturb: false,
+  dndSchedule: false,
+  dndFrom: "22:00",
+  dndTo: "07:00",
   tasks: true,
   calendar: true,
   eventLead: DEFAULT_EVENT_LEAD,
@@ -79,6 +87,20 @@ export function clampTaskLead(value: unknown): number {
   return Math.min(MAX_EVENT_LEAD, Math.max(1, Math.round(n)));
 }
 
+const isClock = (value: unknown): value is string => typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+
+const clockMinutes = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3));
+
+/** True while Do Not Disturb is on, or `now` falls in its daily schedule. Equal times mean no window. */
+export function isQuiet(settings: Pick<NotifySettings, "doNotDisturb" | "dndSchedule" | "dndFrom" | "dndTo">, now: Date): boolean {
+  if (settings.doNotDisturb) return true;
+  if (!settings.dndSchedule) return false;
+  const from = clockMinutes(settings.dndFrom);
+  const to = clockMinutes(settings.dndTo);
+  const minute = now.getHours() * 60 + now.getMinutes();
+  return from <= to ? minute >= from && minute < to : minute >= from || minute < to;
+}
+
 /** Reads stored settings, keeping the default for any field that is missing or malformed. */
 export function parseNotifySettings(raw: string | null): NotifySettings {
   let data: unknown = null;
@@ -92,6 +114,9 @@ export function parseNotifySettings(raw: string | null): NotifySettings {
     typeof stored[key] === "boolean" ? (stored[key] as boolean) : DEFAULT_NOTIFY_SETTINGS[key];
   return {
     doNotDisturb: flag("doNotDisturb"),
+    dndSchedule: flag("dndSchedule"),
+    dndFrom: isClock(stored.dndFrom) ? stored.dndFrom : DEFAULT_NOTIFY_SETTINGS.dndFrom,
+    dndTo: isClock(stored.dndTo) ? stored.dndTo : DEFAULT_NOTIFY_SETTINGS.dndTo,
     tasks: flag("tasks"),
     calendar: flag("calendar"),
     eventLead: "eventLead" in stored ? clampEventLead(stored.eventLead) : DEFAULT_EVENT_LEAD,
@@ -155,6 +180,11 @@ export const notifySettings = {
     const taskLead = clampTaskLead(value);
     if (taskLead === state.taskLead) return;
     set({ ...state, taskLead });
+  },
+
+  /** Sets the start or end of the Do Not Disturb schedule; anything but "HH:MM" is ignored. */
+  setDndTime(key: "dndFrom" | "dndTo", value: string) {
+    if (isClock(value) && value !== state[key]) set({ ...state, [key]: value });
   },
 
   setTaskReminderWhen(when: NotifySettings["taskReminderWhen"]) {
