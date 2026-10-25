@@ -4404,6 +4404,13 @@ html.perf-still .horizon-dot-cascade {
     --so-bg: hsl(var(--background));
   }
 
+  .home-root .search-overlay {
+    --so-accent: #f6dca4;
+    --so-accent-2: #cfe0ff;
+    --so-surface: rgb(10 14 34);
+    --so-bg: #04040f;
+  }
+
   .nebula-root .search-overlay {
     --so-accent: var(--nebula-a);
     --so-accent-2: var(--nebula-c);
