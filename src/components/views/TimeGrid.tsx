@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { m } from "framer-motion";
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { parseRecurrence, type CalendarEvent } from "@/hooks/useGoogleCalendar";
@@ -6,7 +6,7 @@ import type { Task } from "@/contexts/AppContext";
 import { taskColor, tasksForDate } from "@/lib/horizonDots";
 import { toLocalDateStr } from "@/lib/utils";
 import { usePerfSettings } from "@/lib/perfSettings";
-import { MINUTES_PER_DAY, draggedStart, fromMinutes, layoutDay, snapMinutes } from "@/lib/timeGrid";
+import { MINUTES_PER_DAY, draggedStart, dropSlot, fromMinutes, layoutDay, snapMinutes } from "@/lib/timeGrid";
 
 /** Height of one hour, in px. */
 const HOUR_PX = 48;
@@ -109,6 +109,8 @@ export default function TimeGrid({
   onEdit,
   onSelectDate,
   onMoveEvent,
+  dropMinutes,
+  onDropTask,
   header,
 }: {
   /** Title and paging controls, drawn at the top of the card. */
@@ -125,6 +127,8 @@ export default function TimeGrid({
   onSelectDate?: (date: string) => void;
   /** Dragging a single-day timed event to another time or day. */
   onMoveEvent?: (event: CalendarEvent, date: string, startTime: string, endTime: string) => void;
+  dropMinutes?: number;
+  onDropTask?: (date: string, startTime: string, endTime: string) => void;
 }) {
   const today = toLocalDateStr();
   const now = useNowMinutes();
@@ -135,6 +139,13 @@ export default function TimeGrid({
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const suppressClick = useRef(false);
+  const [hover, setHover] = useState<{ date: string; minutes: number; durationMin: number } | null>(null);
+  const ghost = drag?.moved ? drag : hover;
+
+  const slotAt = (e: ReactDragEvent<HTMLElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return dropSlot((e.clientY - rect.top) / PX_PER_MIN, dropMinutes ?? 0);
+  };
 
   const firstDate = dates[0];
   const prevFirst = useRef(firstDate);
@@ -341,6 +352,22 @@ export default function TimeGrid({
               data-date={date}
               role="presentation"
               className="relative border-l border-white/5 cursor-pointer"
+              onDragOver={(e) => {
+                if (!dropMinutes) return;
+                e.preventDefault();
+                const { startMin } = slotAt(e);
+                setHover((h) => (h?.date === date && h.minutes === startMin ? h : { date, minutes: startMin, durationMin: dropMinutes }));
+              }}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setHover(null);
+              }}
+              onDrop={(e) => {
+                if (!dropMinutes) return;
+                e.preventDefault();
+                setHover(null);
+                const { startMin, endMin } = slotAt(e);
+                onDropTask?.(date, fromMinutes(startMin), fromMinutes(endMin));
+              }}
               onClick={(e) => {
                 // Only empty space creates; event blocks stop the click.
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -385,20 +412,20 @@ export default function TimeGrid({
                 );
               })}
 
-              {drag?.moved && drag.date === date && (
+              {ghost && ghost.date === date && (
                 <div
                   aria-hidden="true"
                   data-drop-target
                   className="absolute inset-x-0.5 z-20 rounded-md border-2 border-dashed px-1.5 py-0.5 text-[11px] leading-tight pointer-events-none"
                   style={{
-                    top: drag.minutes * PX_PER_MIN,
-                    height: Math.max(drag.durationMin * PX_PER_MIN - 1, 14),
+                    top: ghost.minutes * PX_PER_MIN,
+                    height: Math.max(ghost.durationMin * PX_PER_MIN - 1, 14),
                     borderColor: `color-mix(in srgb, ${color} 80%, transparent)`,
                     background: `color-mix(in srgb, ${color} 12%, transparent)`,
                   }}
                 >
                   <span className="font-medium">
-                    {shortTime(fromMinutes(drag.minutes))} – {shortTime(fromMinutes(drag.minutes + drag.durationMin))}
+                    {shortTime(fromMinutes(ghost.minutes))} – {shortTime(fromMinutes(ghost.minutes + ghost.durationMin))}
                   </span>
                 </div>
               )}
