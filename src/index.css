@@ -1982,9 +1982,12 @@
     background: #04040f;
   }
 
+  /* Panels: dark rose-indigo glass, so text reads over the bright core. Same
+     opacity as the Engine's panels. */
   .settings-root main {
+    --muted-foreground: 330 22% 80%;
     --glass-card-blur: blur(14px) saturate(1.25);
-    --glass-card-bg: linear-gradient(160deg, rgb(56 24 52 / 0.2), rgb(8 6 30 / 0.42));
+    --glass-card-bg: linear-gradient(160deg, rgb(44 16 40 / 0.6), rgb(8 6 28 / 0.7));
     --glass-card-border: rgb(255 222 214 / 0.16);
     --glass-card-shadow: 0 8px 32px rgb(4 2 18 / 0.45), inset 0 1px 0 rgb(255 236 230 / 0.1);
     --glass-hover-bg: var(--glass-card-bg);
