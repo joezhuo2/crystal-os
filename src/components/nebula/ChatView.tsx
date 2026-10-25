@@ -9,7 +9,9 @@ import { nebula } from "@/hooks/useHarness";
 import { stripAnsi } from "@/lib/harness/sanitize";
 import { harness } from "@/lib/harness/store";
 import type { Block, ChatMessage, ChatMeta } from "@/lib/harness/types";
+import { savedPrompts, usePendingInsert } from "@/lib/harness/savedPrompts";
 import NebulaTip from "./NebulaTip";
+import SavedPromptsMenu from "./SavedPromptsMenu";
 
 const ENGINE_LABEL = { dsh: "DeepSeek Harness", claude: "Claude Code" } as const;
 
@@ -177,6 +179,14 @@ export default function ChatView({ chat, messages, running, stopping, loaded, ba
     setDraft("");
   }, [chat.id]);
 
+  const appendDraft = (body: string) => setDraft((d) => (d.trim() ? `${d.trimEnd()}\n\n${body}` : body));
+
+  const pendingInsert = usePendingInsert();
+  useEffect(() => {
+    const body = savedPrompts.takeInsert();
+    if (body) appendDraft(body);
+  }, [pendingInsert, chat.id]);
+
   // Esc stops from anywhere on the page; open dialogs and menus consume it first.
   useEscapeKey(() => void nebula.stop(chat.id), running);
 
@@ -230,6 +240,7 @@ export default function ChatView({ chat, messages, running, stopping, loaded, ba
         }}
       >
         <div className="nebula-composer flex items-end gap-2 p-2">
+          <SavedPromptsMenu projectId={chat.projectId} draft={draft} onInsert={appendDraft} />
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

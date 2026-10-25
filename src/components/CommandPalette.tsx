@@ -64,7 +64,8 @@ import { findFreeSlot, FREE_SLOT_DAYS, parseFreeSlotQuery } from "@/lib/freeSlot
 import { fromMinutes } from "@/lib/timeGrid";
 import { usesSidecar } from "@/lib/platform";
 import { useNebulaSearchIndex } from "@/hooks/useHarness";
-import { harness } from "@/lib/harness/store";
+import { savedPrompts, useSavedPrompts } from "@/lib/harness/savedPrompts";
+import { harness, selectActiveChat } from "@/lib/harness/store";
 import { searchChats } from "@/lib/harness/chatSearch";
 
 const ITEM = "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer";
@@ -216,6 +217,10 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const matchedChats = searchChats(nebulaIndex.chats, nebulaIndex.messagesOf, chatQuery);
   const projectName = (id: string) => nebulaIndex.projects.find((p) => p.id === id)?.name ?? "Project";
 
+  const activeProjectId = selectActiveChat(harness.getState())?.projectId;
+  useSavedPrompts();
+  const projectPrompts = activeProjectId && isDesktop() ? savedPrompts.forProject(activeProjectId) : [];
+
   // ---------- Handlers ----------
   const handleNavigate = (tab: TabId) => {
     onNavigate(tab);
@@ -231,6 +236,11 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
 
   const handleOpenChat = (chatId: string) => {
     harness.setActiveChat(chatId);
+    handleNavigate("nebula");
+  };
+
+  const handleInsertPrompt = (body: string) => {
+    savedPrompts.queueInsert(body);
     handleNavigate("nebula");
   };
 
@@ -753,6 +763,26 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                           <div className="flex-1 min-w-0" data-private>
                             <p className="text-sm font-medium truncate">{chat.title}</p>
                             <p className="text-xs text-muted-foreground truncate">{snippet ?? projectName(chat.projectId)}</p>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </>
+                )}
+
+                {/* ── Saved prompts for the active Nebula project ── */}
+                {projectPrompts.length > 0 && (
+                  <>
+                    <CommandSeparator className="my-1" />
+                    <CommandGroup heading="Nebula Prompts">
+                      {projectPrompts.map((p) => (
+                        <CommandItem key={p.id} value={`nebula-prompt-${p.id} ${p.title}`} onSelect={() => handleInsertPrompt(p.body)} className={ITEM}>
+                          <div className="search-overlay-icon-alt flex items-center justify-center w-8 h-8 rounded-lg shrink-0">
+                            <Sparkles className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0" data-private>
+                            <p className="text-sm font-medium truncate">{p.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">{p.body}</p>
                           </div>
                         </CommandItem>
                       ))}

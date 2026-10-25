@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.12.5] - 2026-10-25 - Nebula saved prompts.
+
+### Added
+
+- **Saved prompts for each Nebula project** (issue #88). A book button beside the composer lists the project's prompts to insert into the input, saves the current input as a new prompt, and edits or deletes them (a title and a body each). The prompts are kept per project in localStorage and are dropped when the project is removed. The command palette gets a Nebula Prompts group for the active project; choosing one opens The Nebula with the prompt in the composer (`SavedPromptsMenu.tsx`, `ChatView.tsx`, `ProjectSidebar.tsx`, `CommandPalette.tsx`, `savedPrompts.ts`).
+
 ## [v0.12.4] - 2026-10-25 - Orbit mood correlations.
 
 ### Added

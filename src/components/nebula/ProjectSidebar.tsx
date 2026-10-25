@@ -14,6 +14,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { nebula, useHarness } from "@/hooks/useHarness";
+import { savedPrompts } from "@/lib/harness/savedPrompts";
 import { harness, selectProjectChats } from "@/lib/harness/store";
 import NewProjectDialog from "./NewProjectDialog";
 import NebulaTip from "./NebulaTip";
@@ -178,6 +179,7 @@ export default function ProjectSidebar() {
                 if (confirm?.kind === "project") {
                   nebula.closeWorkspace(confirm.path);
                   harness.removeProject(confirm.id);
+                  savedPrompts.removeProject(confirm.id);
                 }
                 setConfirm(null);
               }}
