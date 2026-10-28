@@ -1370,6 +1370,8 @@ export default function CalendarPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openEventRequest, view, focusDate, calendarId, eventsQuery.isPending, eventsQuery.isError, events]);
 
+  useShortcut("horizon.previous", () => view === "month" ? pageMonth(-1) : pageGrid(-1), connected && view !== "agenda");
+  useShortcut("horizon.next", () => view === "month" ? pageMonth(1) : pageGrid(1), connected && view !== "agenda");
   useShortcut("horizon.cycleView", () => setView(VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]), connected);
   useShortcut("horizon.newEvent", () => openCreate(toLocalDateStr()), connected);
   const disconnectCalendar = () => {
