@@ -4,7 +4,7 @@ import { act, render } from "@testing-library/react";
 const toastMock = vi.fn();
 vi.mock("sonner", () => ({ toast: (...args: unknown[]) => toastMock(...args) }));
 const notifyMock = vi.fn();
-vi.mock("@/lib/notifications", () => ({ notify: (...args: unknown[]) => notifyMock(...args) }));
+vi.mock("@/lib/notifications", () => ({ playNotificationSound: vi.fn(), notify: (...args: unknown[]) => notifyMock(...args) }));
 let now = new Date("2026-10-11T18:00:00");
 vi.mock("@/hooks/useOrbitReview", () => ({ useNow: () => now }));
 
@@ -74,7 +74,7 @@ describe("OrbitReadyNotifier", () => {
     seenOlder();
     vi.mocked(document.hasFocus).mockReturnValue(false);
     render(<OrbitReadyNotifier onOpen={() => undefined} />);
-    expect(notifyMock).toHaveBeenCalledWith({ title: "Weekly review ready", body: "Oct 5 – 11, 2026" });
+    expect(notifyMock).toHaveBeenCalledWith({ title: "Weekly review ready", body: "Oct 5 – 11, 2026", key: "review" });
   });
 
   it("waits while the switch or Do Not Disturb silences it, then announces", () => {

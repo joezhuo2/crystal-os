@@ -293,7 +293,7 @@ export function takeUnsent(alerts: PlannedAlert[], now = Date.now()): PlannedAle
   return fresh;
 }
 
-function playNotificationSound(key?: string) {
+export function playNotificationSound(key?: string) {
   const settings = notifySettings.getState();
   const prefix = key?.split(":")[0] ?? "other";
   const kind = ["task", "remind", "event", "habit", "pomodoro", "portal", "review"].includes(prefix) ? prefix : "other";

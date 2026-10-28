@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { useNow } from "@/hooks/useOrbitReview";
-import { notify } from "@/lib/notifications";
+import { notify, playNotificationSound } from "@/lib/notifications";
 import { isQuiet, useNotifySettings } from "@/lib/notifySettings";
 import { periodLabel, readyTitle, reviewsToAnnounce } from "@/lib/orbitReview";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
@@ -49,7 +49,8 @@ export default function OrbitReadyNotifier({ onOpen }: { onOpen: () => void }) {
       },
     });
     // While the window has focus the toast and the nav dot already say it.
-    if (!document.hasFocus()) void notify({ title, body });
+    if (!document.hasFocus()) void notify({ title, body, key: "review" });
+    else playNotificationSound("review");
     // `dueKey` names `due`; a fresh array with the same periods is not news.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dueKey]);
