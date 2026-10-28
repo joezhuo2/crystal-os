@@ -293,6 +293,29 @@ export function takeUnsent(alerts: PlannedAlert[], now = Date.now()): PlannedAle
   return fresh;
 }
 
+export function playNotificationSound(key?: string) {
+  const settings = notifySettings.getState();
+  const prefix = key?.split(":")[0] ?? "other";
+  const kind = ["task", "remind", "event", "habit", "pomodoro", "portal", "review"].includes(prefix) ? prefix : "other";
+  if (!settings.sounds || settings.soundKinds[kind] === false) return;
+  try {
+    const context = new AudioContext();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.frequency.value = 660;
+    gain.gain.setValueAtTime(0.12, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.25);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.onended = () => { void context.close(); };
+    void context.resume().then(() => {
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.25);
+    }).catch(() => context.close());
+  } catch {
+    // Audio support or autoplay permission may be unavailable.
+  }
+}
+
 type Permission = "granted" | "denied" | "default";
 
 let permission: Promise<boolean> | null = null;
@@ -322,7 +345,7 @@ function ensurePermission(): Promise<boolean> {
  * that check, for the test button in Settings. Resolves false when nothing
  * was shown.
  */
-export async function notify(alert: Pick<PlannedAlert, "title" | "body">, force = false): Promise<boolean> {
+export async function notify(alert: Pick<PlannedAlert, "title" | "body"> & { key?: string }, force = false): Promise<boolean> {
   if (!force && isQuiet(notifySettings.getState(), new Date())) return false;
   if (!(await ensurePermission())) return false;
   try {
@@ -332,6 +355,7 @@ export async function notify(alert: Pick<PlannedAlert, "title" | "body">, force 
     } else {
       new Notification(alert.title, { body: alert.body });
     }
+    playNotificationSound(alert.key);
     return true;
   } catch (err) {
     console.warn("[notifications] could not show:", err);
