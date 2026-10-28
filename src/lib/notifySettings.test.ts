@@ -17,6 +17,16 @@ beforeEach(() => {
 });
 
 describe("notify settings", () => {
+  it("persists independent sounds while the master switch is off", () => {
+    notifySettings.setSoundKind("portal", false);
+    notifySettings.setFlag("sounds", false);
+    notifySettings._reset();
+    expect(notifySettings.getState().sounds).toBe(false);
+    expect(notifySettings.getState().soundKinds.portal).toBe(false);
+    notifySettings.setFlag("sounds", true);
+    expect(notifySettings.getState().soundKinds.portal).toBe(false);
+    expect(parseNotifySettings('{"soundKinds":{"task":"bad","habit":false}}').soundKinds).toEqual({ habit: false });
+  });
   it("defaults to everything on, Do Not Disturb off and a 30 minute lead", () => {
     expect(notifySettings.getState()).toEqual(DEFAULT_NOTIFY_SETTINGS);
     expect(DEFAULT_EVENT_LEAD).toBe(30);

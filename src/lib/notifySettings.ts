@@ -15,9 +15,11 @@ export const MAX_EVENT_LEAD = 1440;
 /** Minutes before a task's end time that its "Due soon" reminder shows, by default. */
 export const DEFAULT_TASK_LEAD = 30;
 
-type Flag = "doNotDisturb" | "dndSchedule" | "tasks" | "calendar" | "pomodoro" | "portal" | "reviews" | "taskReminders" | "habitReminders" | "habitReminderStartup" | "pulse";
+type Flag = "sounds" | "doNotDisturb" | "dndSchedule" | "tasks" | "calendar" | "pomodoro" | "portal" | "reviews" | "taskReminders" | "habitReminders" | "habitReminderStartup" | "pulse";
 
 export interface NotifySettings {
+  sounds: boolean;
+  soundKinds: Record<string, boolean>;
   /** Silences every notification without changing the per-kind switches. */
   doNotDisturb: boolean;
   /** Also silences every notification each day from `dndFrom` to `dndTo`. */
@@ -54,6 +56,8 @@ export interface NotifySettings {
 }
 
 export const DEFAULT_NOTIFY_SETTINGS: NotifySettings = {
+  sounds: true,
+  soundKinds: {},
   doNotDisturb: false,
   dndSchedule: false,
   dndFrom: "22:00",
@@ -113,6 +117,8 @@ export function parseNotifySettings(raw: string | null): NotifySettings {
   const flag = (key: Flag) =>
     typeof stored[key] === "boolean" ? (stored[key] as boolean) : DEFAULT_NOTIFY_SETTINGS[key];
   return {
+    sounds: flag("sounds"),
+    soundKinds: stored.soundKinds && typeof stored.soundKinds === "object" ? Object.fromEntries(Object.entries(stored.soundKinds).filter(([, v]) => typeof v === "boolean")) : {},
     doNotDisturb: flag("doNotDisturb"),
     dndSchedule: flag("dndSchedule"),
     dndFrom: isClock(stored.dndFrom) ? stored.dndFrom : DEFAULT_NOTIFY_SETTINGS.dndFrom,
@@ -156,6 +162,9 @@ function set(next: NotifySettings) {
 
 export const notifySettings = {
   getState: () => state,
+  setSoundKind(kind: string, on: boolean) {
+    set({ ...state, soundKinds: { ...state.soundKinds, [kind]: on } });
+  },
 
   subscribe(listener: () => void) {
     listeners.add(listener);

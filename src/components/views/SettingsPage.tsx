@@ -811,6 +811,14 @@ export default function SettingsPage() {
         </Section>
 
         <Section id="notifications" icon={Bell} title="Notifications">
+          <Row title="Notification sounds" description="Play a chime when a notification arrives.">
+            <Switch checked={notifications.sounds} onCheckedChange={(on) => notifySettings.setFlag("sounds", on)} />
+          </Row>
+          {Object.entries({ task: "Task due", remind: "Task reminders", event: "Calendar and Pulse", habit: "Habit reminders", pomodoro: "Focus timer", portal: "Portal messages", review: "Reviews", other: "Other notifications" }).map(([kind, label]) => (
+            <Row key={kind} title={label + " sound"} description="Enable sound for this notification category.">
+              <Switch disabled={!notifications.sounds} checked={notifications.soundKinds[kind] !== false} onCheckedChange={(on) => notifySettings.setSoundKind(kind, on)} />
+            </Row>
+          ))}
           <Row
             title="Do Not Disturb"
             description="Silences every notification below while it is on, without changing their switches."
