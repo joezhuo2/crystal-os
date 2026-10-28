@@ -123,6 +123,8 @@ pub fn run() {
       harness::harness_chat_load,
       harness::harness_chat_save,
       harness::harness_chat_delete,
+      harness::git::harness_checkpoint,
+      harness::git::harness_restore_checkpoint,
       harness::git::harness_git_status,
       harness::git::harness_git_diff,
       harness::git::harness_git_revert,

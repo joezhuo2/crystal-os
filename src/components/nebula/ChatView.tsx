@@ -239,6 +239,12 @@ export default function ChatView({ chat, messages, running, stopping, loaded, ba
           submit();
         }}
       >
+        {!!chat.checkpoints?.length && (
+          <Button type="button" variant="ghost" disabled={running} onClick={() => void nebula.undoLastRun(chat.id)}
+            title="Restore tracked and non-ignored files to before the last run, including any edits made since it.">
+            Undo last run (files)
+          </Button>
+        )}
         <div className="nebula-composer flex items-end gap-2 p-2">
           <SavedPromptsMenu projectId={chat.projectId} draft={draft} onInsert={appendDraft} />
           <Textarea

@@ -250,12 +250,39 @@ export class HarnessSession {
     }
   }
 
+  async undoLastRun(chatId: string) {
+    const state = harness.getState();
+    const chat = state.chats.find((c) => c.id === chatId);
+    const project = chat && state.projects.find((p) => p.id === chat.projectId);
+    const checkpoint = chat?.checkpoints?.at(-1);
+    if (!chat || !project || !checkpoint) return;
+    if (state.chats.some((c) => c.projectId === project.id && state.runtime[c.id]?.running)) return;
+    harness.setRunning(chatId, true);
+    try {
+      await this.native.restoreCheckpoint(project.path, checkpoint);
+      const claude = this.claudeByChat.get(chatId);
+      if (claude) {
+        await this.native.kill(claude.procId);
+        this.claudeByChat.delete(chatId);
+        this.claudeByProc.delete(claude.procId);
+      }
+      this.dshSessions.delete(chatId);
+      harness.updateChat(chatId, { checkpoints: chat.checkpoints!.slice(0, -1), claudeSessionId: undefined, dshSessionId: undefined });
+      this.pushNotice(chatId, "info", "Project files restored to the checkpoint before the last run. Ignored files and Git commits are unchanged.");
+    } catch (err) {
+      this.pushNotice(chatId, "error", String(err));
+    } finally {
+      harness.setRunning(chatId, false);
+      harness.persistChat(chatId);
+    }
+  }
+
   async send(chatId: string, text: string) {
     const s = harness.getState();
     const chat = s.chats.find((c) => c.id === chatId);
     const project = chat && s.projects.find((p) => p.id === chat.projectId);
     const config = s.config;
-    if (!chat || !project || !config || !text.trim() || s.runtime[chatId]?.running) return;
+    if (!chat || !project || !config || !text.trim() || s.chats.some((c) => c.projectId === project.id && s.runtime[c.id]?.running)) return;
 
     const engine = engineFor(chat.tier);
     const previous = s.runtime[chatId]?.messages ?? [];
@@ -277,6 +304,9 @@ export class HarnessSession {
     const body = [handoff, chat.mode === "plan" && engine === "dsh" ? PLAN_MODE_PREFIX : null, text].filter(Boolean).join("\n\n");
     const prompt = previous.length === 0 || handoff ? withInstructions(projectInstructions.forProject(project.id), body) : body;
     try {
+      const checkpoint = await this.native.checkpoint(project.path);
+      if (turn.requested) throw new StoppedError();
+      harness.updateChat(chatId, { checkpoints: [...(chat.checkpoints ?? []), checkpoint] });
       const run = engine === "dsh" ? this.runDshTurn(chat, project.path, prompt, turn) : this.runClaudeTurn(chat, project.path, prompt, config.claudeModel, turn);
       run.catch(() => undefined);
       await Promise.race([run, released]);
