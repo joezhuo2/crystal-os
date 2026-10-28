@@ -80,6 +80,8 @@ export interface ExitEvent {
 }
 
 export const harnessNative = {
+  checkpoint: (cwd: string) => invoke<import("./types").Checkpoint>("harness_checkpoint", { cwd }),
+  restoreCheckpoint: (cwd: string, checkpoint: import("./types").Checkpoint) => invoke<void>("harness_restore_checkpoint", { cwd, checkpoint }),
   envStatus: () => invoke<EnvStatus>("harness_env_status"),
   installRuntime: () => invoke<void>("harness_install_runtime"),
   getConfig: () => invoke<NebulaConfig>("harness_get_config"),

@@ -23,6 +23,10 @@ pub struct ChangedFile {
 }
 
 fn git(cwd: &Path, args: &[&str]) -> Result<String, String> {
+  git_index(cwd, args, None)
+}
+
+fn git_index(cwd: &Path, args: &[&str], index: Option<&Path>) -> Result<String, String> {
   let env = crate::terminal::fresh_env();
   let bin = super::which(&env, "git").ok_or("Git was not found on PATH")?;
   let mut command = Command::new(bin);
@@ -32,6 +36,7 @@ fn git(cwd: &Path, args: &[&str]) -> Result<String, String> {
     .env_clear()
     .envs(env.iter().map(|(k, v)| (k, v)))
     .stdin(Stdio::null());
+  if let Some(index) = index { command.env("GIT_INDEX_FILE", index); }
   #[cfg(windows)]
   {
     use std::os::windows::process::CommandExt;
@@ -43,6 +48,76 @@ fn git(cwd: &Path, args: &[&str]) -> Result<String, String> {
   } else {
     Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
   }
+}
+
+/// Checkpoints use a private index, preserving the user's staging area.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Checkpoint {
+  id: String,
+  head: String,
+  tree: String,
+  index_tree: String,
+}
+
+fn snapshot(cwd: &Path) -> Result<Checkpoint, String> {
+  let root = git(cwd, &["rev-parse", "--show-toplevel"])?;
+  let root = PathBuf::from(root.trim());
+  if cwd.canonicalize().map_err(|e| e.to_string())? != root.canonicalize().map_err(|e| e.to_string())? {
+    return Err("Open the repository root to use checkpoints".into());
+  }
+  if !git(cwd, &["ls-files", "--stage"])?.lines().all(|l| !l.starts_with("160000")) {
+    return Err("Checkpoints do not support submodules".into());
+  }
+  let head = git(cwd, &["rev-parse", "HEAD"])?.trim().to_string();
+  let index_tree = git(cwd, &["write-tree"])?.trim().to_string();
+  let id = format!("{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_err(|e| e.to_string())?.as_nanos());
+  let index = std::env::temp_dir().join(format!("crystal-checkpoint-{id}"));
+  let result = (|| {
+    git_index(cwd, &["read-tree", &index_tree], Some(&index))?;
+    git_index(cwd, &["add", "-A", "--", "."], Some(&index))?;
+    let tree = git_index(cwd, &["write-tree"], Some(&index))?.trim().to_string();
+    // References protect both trees from garbage collection.
+    git(cwd, &["update-ref", &format!("refs/crystal-checkpoints/{id}/work"), &tree])?;
+    git(cwd, &["update-ref", &format!("refs/crystal-checkpoints/{id}/index"), &index_tree])?;
+    Ok(Checkpoint { id, head, tree, index_tree })
+  })();
+  let _ = std::fs::remove_file(index);
+  result
+}
+
+#[tauri::command]
+pub async fn harness_checkpoint(cwd: String) -> Result<Checkpoint, String> {
+  tauri::async_runtime::spawn_blocking(move || snapshot(&super::existing_dir(&cwd)?))
+    .await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn harness_restore_checkpoint(cwd: String, checkpoint: Checkpoint) -> Result<(), String> {
+  tauri::async_runtime::spawn_blocking(move || {
+    let dir = super::existing_dir(&cwd)?;
+    if checkpoint.id.is_empty() || !checkpoint.id.bytes().all(|b| b.is_ascii_digit() || b == b'-') {
+      return Err("Invalid checkpoint".into());
+    }
+    for (suffix, expected) in [("work", &checkpoint.tree), ("index", &checkpoint.index_tree)] {
+      let actual = git(&dir, &["rev-parse", "--verify", &format!("refs/crystal-checkpoints/{}/{suffix}", checkpoint.id)])?;
+      if actual.trim() != expected { return Err("Checkpoint does not belong to this repository".into()); }
+    }
+    if git(&dir, &["rev-parse", "HEAD"])?.trim() != checkpoint.head {
+      return Err("HEAD changed since this checkpoint; undo the commits before restoring".into());
+    }
+    // Keep a recovery checkpoint before touching files.
+    let backup = snapshot(&dir)?;
+    let index = std::env::temp_dir().join(format!("crystal-restore-{}", backup.id));
+    let result = (|| {
+      git_index(&dir, &["read-tree", &backup.tree], Some(&index))?;
+      git_index(&dir, &["read-tree", "--reset", "-u", &checkpoint.tree], Some(&index))?;
+      git(&dir, &["read-tree", &checkpoint.index_tree])?;
+      Ok(())
+    })();
+    let _ = std::fs::remove_file(index);
+    result
+  }).await.map_err(|e| e.to_string())?
 }
 
 /// A path from the webview must be one `git status` could have given: relative and inside the folder.
@@ -154,6 +229,33 @@ pub async fn harness_git_commit(cwd: String, paths: Vec<String>, message: String
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn checkpoint_preserves_dirty_files_and_staging() {
+    let dir = std::env::temp_dir().join(format!("crystal-checkpoint-test-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    std::fs::create_dir(&dir).unwrap();
+    git(&dir, &["init"]).unwrap();
+    git(&dir, &["config", "user.email", "test@example.com"]).unwrap();
+    git(&dir, &["config", "user.name", "Test"]).unwrap();
+    std::fs::write(dir.join("file"), "base").unwrap();
+    git(&dir, &["add", "."]).unwrap();
+    git(&dir, &["commit", "-m", "base"]).unwrap();
+    std::fs::write(dir.join("file"), "staged").unwrap();
+    git(&dir, &["add", "."]).unwrap();
+    std::fs::write(dir.join("file"), "dirty").unwrap();
+    std::fs::write(dir.join("existing"), "untracked").unwrap();
+    let before = snapshot(&dir).unwrap();
+    assert_eq!(git(&dir, &["show", ":file"]).unwrap(), "staged");
+    std::fs::write(dir.join("file"), "agent").unwrap();
+    std::fs::remove_file(dir.join("existing")).unwrap();
+    std::fs::write(dir.join("new"), "agent").unwrap();
+    tauri::async_runtime::block_on(harness_restore_checkpoint(dir.to_string_lossy().into_owned(), before)).unwrap();
+    assert_eq!(std::fs::read_to_string(dir.join("file")).unwrap(), "dirty");
+    assert_eq!(std::fs::read_to_string(dir.join("existing")).unwrap(), "untracked");
+    assert!(!dir.join("new").exists());
+    assert_eq!(git(&dir, &["show", ":file"]).unwrap(), "staged");
+    std::fs::remove_dir_all(dir).unwrap();
+  }
 
   #[test]
   fn parses_porcelain_with_renames() {

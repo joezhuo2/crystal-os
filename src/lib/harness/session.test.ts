@@ -30,6 +30,8 @@ function fakeNative(onPrompt: (model: string, emit: (msg: unknown) => void, id: 
   const emit = (msg: unknown) => lineHandler({ procId: 1, line: JSON.stringify(msg) });
 
   const native = {
+    checkpoint: vi.fn(async () => ({ id: "1", head: "head", tree: "tree", indexTree: "index" })),
+    restoreCheckpoint: vi.fn(async () => undefined),
     reset: vi.fn(async () => undefined),
     onLine: vi.fn(async (h: (e: LineEvent) => void) => ((lineHandler = h), () => undefined)),
     onExit: vi.fn(async (h: (e: ExitEvent) => void) => ((exitHandler = h), () => undefined)),
@@ -75,6 +77,31 @@ beforeEach(() => {
 });
 
 describe("HarnessSession (dsh)", () => {
+  it("does not start an agent if checkpoint creation fails", async () => {
+    const { native } = fakeNative(() => undefined);
+    vi.mocked(native.checkpoint).mockRejectedValue(new Error("checkpoint unavailable"));
+    const session = new HarnessSession(native);
+    const chat = setupChat();
+    await session.send(chat.id, "change files");
+    expect(native.dshStart).not.toHaveBeenCalled();
+    expect(harness.getState().runtime[chat.id].running).toBe(false);
+  });
+
+  it("captures before each run and restores the last checkpoint", async () => {
+    const { native } = fakeNative((_model, emit, id) => {
+      expect(native.checkpoint).toHaveBeenCalledTimes(1);
+      emit({ jsonrpc: "2.0", id, result: { stopReason: "end_turn" } });
+    });
+    const session = new HarnessSession(native);
+    await session.start();
+    const chat = setupChat();
+    await session.send(chat.id, "change files");
+    expect(harness.getState().chats[0].checkpoints).toHaveLength(1);
+    await session.undoLastRun(chat.id);
+    expect(native.restoreCheckpoint).toHaveBeenCalledWith("C:/p", expect.objectContaining({ tree: "tree" }));
+    expect(harness.getState().chats[0].checkpoints).toEqual([]);
+  });
+
   it("runs a turn on the first medium model and records it", async () => {
     const { native, sent } = fakeNative((model, emit, id) => {
       emit(update(`hello from ${model}`));

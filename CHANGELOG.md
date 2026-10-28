@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.12.9] - 2026-10-28 - Nebula checkpoints.
+
+### Added
+
+- Capture tracked and non-ignored project files and staging before every Nebula run; Undo last run restores that checkpoint (#80). Restore retains a recovery snapshot under refs/crystal-checkpoints. Checkpoints require a Git repository root with an initial commit, exclude ignored files and submodules, and refuse restoration when HEAD changed. A failed checkpoint prevents the run from starting. Undo also removes subsequent manual file edits; transcripts remain for reference.
+
 ## [v0.12.8] - 2026-10-28 - Notification sounds.
 
 ### Added

@@ -82,7 +82,10 @@ export interface ProjectRecord {
   createdAt: number;
 }
 
+export interface Checkpoint { id: string; head: string; tree: string; indexTree: string }
+
 export interface ChatMeta {
+  checkpoints?: Checkpoint[];
   id: string;
   projectId: string;
   title: string;
