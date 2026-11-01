@@ -94,6 +94,8 @@ const TaskItem = memo(function TaskItem({
   const { setEditingTask, setShowTaskForm } = appUi;
   const { still } = useAppActivity();
   const [expanded, setExpanded] = useState(false);
+  // A Board card starts folded to its check and name; opening it shows the full card.
+  const [open, setOpen] = useState(false);
   const [dropTarget, setDropTarget] = useState(false);
   const cat = taskCategories.find((c) => c.id === task.categoryId);
   const repeatLabel = describeRepeat(task.repeat, task.startDate);
@@ -113,6 +115,11 @@ const TaskItem = memo(function TaskItem({
     setShowTaskForm(true);
   };
   const toggleExpanded = () => setExpanded((v) => !v);
+  // Folding a card closes its details too, so it reopens as the plain card.
+  const toggleOpen = () => {
+    if (open) setExpanded(false);
+    setOpen(!open);
+  };
 
   const check = (
     <CompletionCheck done={done} still={still} label={done ? `Reopen ${task.name}` : `Complete ${task.name}`} onToggle={toggleSelf} />
@@ -179,6 +186,41 @@ const TaskItem = memo(function TaskItem({
       </button>
     </>
   );
+  const detailsPanel = (
+    <AnimatePresence initial={false}>
+      {expanded && (
+        <m.div
+          key="details"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={EXPAND_TRANSITION}
+          className="overflow-hidden"
+        >
+          {/* Checklist rows and child tasks carry their own drags, which must
+              not start a drag of the card around them. */}
+          <div className={`pt-3 ${board ? "ml-[30px]" : "ml-8"} space-y-3 cursor-auto`} onDragStart={(e) => e.stopPropagation()}>
+            {/* A Board card shows its notes in full above, in its notes line. */}
+            {task.notes && !board && <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words select-text">{task.notes}</p>}
+            <ChecklistEditor items={task.checklist ?? []} onChange={(checklist) => updateTask(task.id, { checklist })} />
+            {subtasks.length > 0 && (
+              <div className="space-y-0.5" role="group" aria-label="Subtasks">
+                {subtasks.map((child) => (
+                  <ChildTaskRow
+                    key={child.id}
+                    task={child}
+                    onToggle={() => toggle(child)}
+                    onEdit={() => edit(child)}
+                    onPromote={() => updateTask(child.id, { parentId: undefined })}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </m.div>
+      )}
+    </AnimatePresence>
+  );
 
   return (
     <m.div
@@ -227,55 +269,85 @@ const TaskItem = memo(function TaskItem({
         nesting.nest(childId, task.id);
         taskDrag.id = null;
       }}
-      className={`glass-card-hover ${board ? "p-3" : "p-4"} group overflow-hidden ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${
+      className={`glass-card-hover ${board ? "px-3 py-2.5" : "p-4"} group overflow-hidden ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${
         dropTarget ? "ring-1 ring-primary/60 bg-primary/10" : ""
       }`}
     >
       {board ? (
-        // One line each, so the narrow column stays readable: name, notes,
-        // dates, priority and category, estimate and repeat, then the
-        // details toggle. The actions sit along the foot.
+        // Folded: the check and the name. Open: below them one line each, so
+        // the narrow column stays readable: notes, dates, priority and
+        // category, estimate and repeat, then the details toggle. The actions
+        // sit along the foot.
         <>
-          <div className="flex items-start gap-2.5">
-            <div className="pt-px">{check}</div>
-            <div className="flex-1 min-w-0 space-y-1 cursor-pointer" onClick={toggleExpanded}>
+          <div className="flex items-center gap-2.5">
+            {check}
+            <div className="flex-1 min-w-0 cursor-pointer" onClick={toggleOpen}>
               {name}
-              {task.notes && (
-                <p className={`text-[11px] text-muted-foreground ${expanded ? "whitespace-pre-wrap break-words select-text" : "truncate"}`}>{task.notes}</p>
-              )}
-              <div className="flex">{dates}</div>
-              <div className="flex items-center gap-2 min-w-0">
-                {priority}
-                {category}
-              </div>
-              {task.notePath && (
-                <div className="flex">
-                  <NoteLinkButton path={task.notePath} />
-                </div>
-              )}
-              {(estimate || repeat) && (
-                <div className="flex items-center gap-2 min-w-0">
-                  {estimate}
-                  {repeat}
-                </div>
-              )}
-              {snoozed && (
-                <div className="flex">
-                  <SnoozeChip task={task} today={today} />
-                </div>
-              )}
             </div>
+            <button
+              type="button"
+              onClick={toggleOpen}
+              aria-expanded={open}
+              aria-label={open ? `Collapse ${task.name}` : `Expand ${task.name}`}
+              className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+            >
+              <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={toggleExpanded}
-            aria-expanded={expanded}
-            aria-label={expanded ? `Hide details of ${task.name}` : `Show details of ${task.name}`}
-            className="mt-1.5 ml-[30px] flex w-[calc(100%-30px)] items-center gap-2 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {progress.total ? <SubtaskChip {...progress} /> : <span>{expanded ? "Hide details" : "Details"}</span>}
-            <ChevronDown className={`ml-auto w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
-          </button>
+          <AnimatePresence initial={false}>
+            {open && (
+              <m.div
+                key="card"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={EXPAND_TRANSITION}
+                className="overflow-hidden"
+              >
+                <div className="ml-[30px] pt-1 space-y-1 cursor-pointer" onClick={toggleExpanded}>
+                  {task.notes && (
+                    <p className={`text-[11px] text-muted-foreground ${expanded ? "whitespace-pre-wrap break-words select-text" : "truncate"}`}>{task.notes}</p>
+                  )}
+                  <div className="flex">{dates}</div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {priority}
+                    {category}
+                  </div>
+                  {task.notePath && (
+                    <div className="flex">
+                      <NoteLinkButton path={task.notePath} />
+                    </div>
+                  )}
+                  {(estimate || repeat) && (
+                    <div className="flex items-center gap-2 min-w-0">
+                      {estimate}
+                      {repeat}
+                    </div>
+                  )}
+                  {snoozed && (
+                    <div className="flex">
+                      <SnoozeChip task={task} today={today} />
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleExpanded}
+                  aria-expanded={expanded}
+                  aria-label={expanded ? `Hide details of ${task.name}` : `Show details of ${task.name}`}
+                  className="mt-1.5 ml-[30px] flex w-[calc(100%-30px)] items-center gap-2 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {progress.total ? <SubtaskChip {...progress} /> : <span>{expanded ? "Hide details" : "Details"}</span>}
+                  <ChevronDown className={`ml-auto w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                </button>
+                {detailsPanel}
+                <div className="mt-2 pt-2 border-t border-border/40 flex items-center justify-end gap-3">
+                  {rescheduleButton && <div className="mr-auto -ml-2">{rescheduleButton}</div>}
+                  {actions}
+                </div>
+              </m.div>
+            )}
+          </AnimatePresence>
         </>
       ) : (
         <div className="flex items-center gap-3">
@@ -303,45 +375,7 @@ const TaskItem = memo(function TaskItem({
           {actions}
         </div>
       )}
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <m.div
-            key="details"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={EXPAND_TRANSITION}
-            className="overflow-hidden"
-          >
-            {/* Checklist rows and child tasks carry their own drags, which must
-                not start a drag of the card around them. */}
-            <div className={`pt-3 ${board ? "ml-[30px]" : "ml-8"} space-y-3 cursor-auto`} onDragStart={(e) => e.stopPropagation()}>
-              {/* A Board card shows its notes in full above, in its notes line. */}
-              {task.notes && !board && <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words select-text">{task.notes}</p>}
-              <ChecklistEditor items={task.checklist ?? []} onChange={(checklist) => updateTask(task.id, { checklist })} />
-              {subtasks.length > 0 && (
-                <div className="space-y-0.5" role="group" aria-label="Subtasks">
-                  {subtasks.map((child) => (
-                    <ChildTaskRow
-                      key={child.id}
-                      task={child}
-                      onToggle={() => toggle(child)}
-                      onEdit={() => edit(child)}
-                      onPromote={() => updateTask(child.id, { parentId: undefined })}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </m.div>
-        )}
-      </AnimatePresence>
-      {board && (
-        <div className="mt-2 pt-2 border-t border-border/40 flex items-center justify-end gap-3">
-          {rescheduleButton && <div className="mr-auto -ml-2">{rescheduleButton}</div>}
-          {actions}
-        </div>
-      )}
+      {!board && detailsPanel}
     </m.div>
   );
 });
