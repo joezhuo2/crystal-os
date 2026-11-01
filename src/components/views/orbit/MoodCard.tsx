@@ -75,7 +75,15 @@ export function MoodCard({ review }: { review: Review }) {
         </h2>
       </div>
       {raw.loading ? (
-        <p className="orbit-empty">Reading daily notes…</p>
+        <div className="space-y-4" role="status" aria-busy="true" aria-label="Reading daily notes">
+          {[0, 1].map((i) => (
+            <div key={i} aria-hidden="true">
+              <div className="orbit-skeleton-bar w-32 mb-2" />
+              <div className="orbit-skeleton-bar w-full h-8" />
+            </div>
+          ))}
+          <span className="sr-only">Reading daily notes…</span>
+        </div>
       ) : (
         <div className="space-y-4">
           <Split title="Mood vs habits done" c={result.habits} low="Fewer habits" high="More habits" />

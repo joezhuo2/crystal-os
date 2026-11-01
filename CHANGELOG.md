@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.12.11] - 2026-11-01 - Orbit skeleton loaders.
+
+### Changed
+
+- The Orbit shows its review skeleton while a review loads (#107): on opening the page, and after the old review fades out when switching Weekly, Monthly or Yearly or browsing periods, in place of a blank page. The cards appear once all of the review's data is in, so they no longer show partial data first. The Mood card shows skeleton bars while it reads daily notes. The Portal already had its loading skeleton and is unchanged.
+
 ## [v0.12.10] - 2026-11-01 - Engine Board rows.
 
 ### Added

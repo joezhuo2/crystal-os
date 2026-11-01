@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -592,14 +592,15 @@ function ReflectionCard({ review, habitNote }: { review: Review; habitNote: stri
 
 function OrbitSkeleton() {
   return (
-    <div className="grid gap-4 md:grid-cols-3" role="status" aria-label="Loading the review">
+    <div className="grid gap-4 md:grid-cols-3" role="status" aria-busy="true" aria-label="Loading the review">
       {[2, 1, 1, 1, 1, 2, 1].map((span, i) => (
-        <div key={i} className={`orbit-card orbit-skeleton ${span === 2 ? "md:col-span-2" : ""}`}>
+        <div key={i} aria-hidden="true" className={`orbit-card orbit-skeleton ${span === 2 ? "md:col-span-2" : ""}`}>
           <div className="orbit-skeleton-bar w-24 mb-4" />
           <div className="orbit-skeleton-bar w-16 h-7 mb-3" />
           <div className="orbit-skeleton-bar w-full h-16" />
         </div>
       ))}
+      <span className="sr-only">Loading the review</span>
     </div>
   );
 }
@@ -692,8 +693,8 @@ export default function OrbitPage() {
   };
   const live = views[target.kind];
 
-  // While switching, the old review stays on screen (fading out) until the
-  // new one has its data, then fades in. It never fades in empty and pops.
+  // While switching, the old review fades out, then the new one fades in: its
+  // cards if its data is in, otherwise the skeleton until it is.
   const [frozen, setFrozen] = useState<Shown | null>(null);
   const [fade, setFade] = useState<"out" | "in" | null>(null);
   const [outDone, setOutDone] = useState(true);
@@ -723,19 +724,30 @@ export default function OrbitPage() {
     go({ kind: next, offset: offsets[next] });
   });
 
-  const liveReady = !live.result.loading && (!!live.result.review || !!live.result.historyError);
-  useEffect(() => {
-    if (!frozen || !outDone || !liveReady) return;
-    setFrozen(null);
-    if (still) {
-      setFade(null);
-      return;
-    }
+  const fadeIn = useCallback(() => {
+    window.clearTimeout(timer.current);
     setFade("in");
     timer.current = window.setTimeout(() => setFade(null), VIEW_FADE_MS);
-  }, [frozen, outDone, liveReady, still]);
+  }, []);
+
+  useEffect(() => {
+    if (!frozen || !outDone) return;
+    setFrozen(null);
+    if (still) setFade(null);
+    else fadeIn();
+  }, [frozen, outDone, still, fadeIn]);
 
   const shown = frozen ?? live;
+
+  // The skeleton stands in until every source of the review is in; then the
+  // cards fade in over it.
+  const waiting = shown.result.loading;
+  const wasWaiting = useRef(waiting);
+  useEffect(() => {
+    const was = wasWaiting.current;
+    wasWaiting.current = waiting;
+    if (was && !waiting && !still) fadeIn();
+  }, [waiting, still, fadeIn]);
 
   // Habit notes, per review, kept while browsing so switching away and back keeps them.
   const [habitNotes, setHabitNotes] = useState<Record<string, string>>({});
@@ -818,7 +830,7 @@ export default function OrbitPage() {
 
       <div className="orbit-view space-y-4" data-fade={fade ?? undefined}>
         {historyError && <HistoryBanner error={historyError} />}
-        {loading && !review ? (
+        {loading ? (
           <OrbitSkeleton />
         ) : review ? (
           <>
