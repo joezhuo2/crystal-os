@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.12.12] - 2026-11-01 - Folded Overdue and Done.
+
+### Changed
+
+- The Engine Board's Overdue and Done columns start folded (#113): their cards are hidden and each cell shows an **N hidden** line. Clicking the column header, or that line, opens the column as before; clicking the header again folds it. A folded column still takes drops, so dragging a card onto Done still completes it. The open state resets when the Board remounts (switching views or changing Sort & Filter).
+
 ## [v0.12.11] - 2026-11-01 - Orbit skeleton loaders.
 
 ### Changed

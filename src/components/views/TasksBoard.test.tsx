@@ -93,6 +93,38 @@ describe("Board priority rows", () => {
     expect(container.querySelectorAll("[data-drop-target]")).toHaveLength(0);
   });
 
+  it("folds Overdue and Done by default and opens them from the header", () => {
+    const yesterday = toLocalDateStr(new Date(Date.now() - 86_400_000));
+    tasks = [
+      base({ id: "late", name: "Late one", startDate: yesterday, endDate: yesterday }),
+      base({ id: "done", name: "Filed", completed: true, priority: "low" }),
+    ];
+    const { container } = openBoard();
+    expect(cell(container, "__overdue__:medium").textContent).not.toContain("Late one");
+    expect(cell(container, "__done__:low").textContent).not.toContain("Filed");
+    expect(cell(container, "__done__:low").textContent).toContain("1 hidden");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show Done tasks" }));
+    expect(cell(container, "__done__:low").textContent).toContain("Filed");
+    expect(cell(container, "__overdue__:medium").textContent).not.toContain("Late one");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show 1 hidden Medium tasks in Overdue" }));
+    expect(cell(container, "__overdue__:medium").textContent).toContain("Late one");
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide Done tasks" }));
+    expect(cell(container, "__done__:low").textContent).not.toContain("Filed");
+  });
+
+  it("a folded Done cell still takes a drop", () => {
+    const { container } = openBoard();
+    taskDrag.id = "m1";
+    const target = cell(container, "__done__:high");
+    fireEvent.dragOver(target, { dataTransfer: dataTransfer("m1") });
+    expect(target.dataset.dropTarget).toBe("true");
+    fireEvent.drop(target, { dataTransfer: dataTransfer("m1") });
+    expect(completeTask).toHaveBeenCalledWith(expect.objectContaining({ id: "m1", priority: "high" }));
+  });
+
   it("does not outline the card's own cell", () => {
     const { container } = openBoard();
     taskDrag.id = "m1";

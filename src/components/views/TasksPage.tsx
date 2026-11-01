@@ -18,7 +18,15 @@ import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-contro
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useAppActivity } from "@/lib/appActivity";
 import { withStartTime } from "@/lib/autoEndTime";
-import { BOARD_ROWS, buildBoardColumns, CELL_PREVIEW, OVERDUE_COLUMN_ID, planBoardDrop, type BoardTarget } from "@/lib/boardColumns";
+import {
+  BOARD_ROWS,
+  buildBoardColumns,
+  CELL_PREVIEW,
+  FOLDED_COLUMNS,
+  OVERDUE_COLUMN_ID,
+  planBoardDrop,
+  type BoardTarget,
+} from "@/lib/boardColumns";
 import PomodoroTimer from "./PomodoroTimer";
 import { CategoryManagerButton } from "./CategoryManager";
 import { CapacityCard } from "./CapacityBar";
@@ -362,6 +370,16 @@ function KanbanBoard({
       if (!next.delete(key)) next.add(key);
       return next;
     });
+  // Overdue and Done start folded (FOLDED_COLUMNS); these are the ones opened.
+  // Not saved either, like openCells.
+  const [shownColumns, setShownColumns] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleColumn = (id: string) =>
+    setShownColumns((cur) => {
+      const next = new Set(cur);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  const isFolded = (id: string) => FOLDED_COLUMNS.includes(id) && !shownColumns.has(id);
 
   const columns = buildBoardColumns(tasks, taskCategories, today);
 
@@ -414,19 +432,46 @@ function KanbanBoard({
   return (
     <div className="overflow-x-auto pb-2">
       <div className="grid w-max min-w-full gap-x-4" style={{ gridTemplateColumns: `repeat(${columns.length}, 220px)` }}>
-        {columns.map((col) => (
-          <div key={col.id} data-column={col.id} data-fade-unit className="flex items-center gap-2 px-3 pt-2">
-            <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
-            <p
-              className={`text-xs uppercase tracking-widest transition-colors ${
-                dragOver?.columnId === col.id ? "text-primary" : "text-muted-foreground"
-              }`}
-            >
-              {col.label}
-            </p>
-            <span className="text-[10px] text-muted-foreground/60 ml-auto">{col.tasks.length}</span>
-          </div>
-        ))}
+        {columns.map((col) => {
+          const head = (
+            <>
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ background: col.color }} />
+              <p
+                className={`text-xs uppercase tracking-widest transition-colors ${
+                  dragOver?.columnId === col.id ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                {col.label}
+              </p>
+              <span className="text-[10px] text-muted-foreground/60 ml-auto">{col.tasks.length}</span>
+            </>
+          );
+          if (!FOLDED_COLUMNS.includes(col.id)) {
+            return (
+              <div key={col.id} data-column={col.id} data-fade-unit className="flex items-center gap-2 px-3 pt-2">
+                {head}
+              </div>
+            );
+          }
+          // Overdue and Done: the header opens and folds the column's cards.
+          const folded = isFolded(col.id);
+          return (
+            <div key={col.id} data-column={col.id} data-fade-unit className="px-1.5 pt-2">
+              <button
+                type="button"
+                onClick={() => toggleColumn(col.id)}
+                aria-expanded={!folded}
+                aria-label={folded ? `Show ${col.label} tasks` : `Hide ${col.label} tasks`}
+                className="flex w-full items-center gap-2 rounded-md px-1.5 text-left hover:bg-secondary/40 transition-colors"
+              >
+                {head}
+                <ChevronDown
+                  className={`w-3.5 h-3.5 shrink-0 text-muted-foreground transition-transform ${folded ? "-rotate-90" : ""}`}
+                />
+              </button>
+            </div>
+          );
+        })}
         {BOARD_ROWS.map((priority) => (
           <Fragment key={priority}>
             <div data-row={priority} data-fade-unit className="col-span-full justify-self-start sticky left-0 flex items-center gap-2 px-3 pt-4 pb-1">
@@ -447,7 +492,10 @@ function KanbanBoard({
               const key = `${col.id}:${priority}`;
               const cellTasks = col.rows[priority];
               const open = openCells.has(key);
-              const more = cellTasks.length - CELL_PREVIEW;
+              const folded = isFolded(col.id);
+              const more = folded ? 0 : cellTasks.length - CELL_PREVIEW;
+              // A folded column hides its cards; its cells still take drops.
+              const shown = folded ? [] : open ? cellTasks : cellTasks.slice(0, CELL_PREVIEW);
               return (
                 <div
                   key={col.id}
@@ -461,7 +509,7 @@ function KanbanBoard({
                   }`}
                 >
                   <AnimatePresence initial={false}>
-                    {(open ? cellTasks : cellTasks.slice(0, CELL_PREVIEW)).map((task) => (
+                    {shown.map((task) => (
                       <TaskItem
                         key={task.id}
                         task={task}
@@ -474,6 +522,16 @@ function KanbanBoard({
                       />
                     ))}
                   </AnimatePresence>
+                  {folded && cellTasks.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => toggleColumn(col.id)}
+                      aria-label={`Show ${cellTasks.length} hidden ${priorityName[priority]} tasks in ${col.label}`}
+                      className="w-full rounded-md px-2 py-1 text-left text-[11px] text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
+                    >
+                      {cellTasks.length} hidden
+                    </button>
+                  )}
                   {more > 0 && (
                     <button
                       type="button"
