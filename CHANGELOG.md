@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.12.13] - 2026-11-01 - Folded Board cards.
+
+### Changed
+
+- Engine Board cards start folded to their checkbox and name (#112). The chevron on the right, or clicking the name, expands a card to the full card as before (notes, dates, priority and category, note link, estimate and repeat, snooze chip, **Details** and the actions footer); collapsing it closes its details too. The checkbox, dragging and nesting work on a folded card. A card folds again when it moves to another cell or the Board remounts.
+
 ## [v0.12.12] - 2026-11-01 - Folded Overdue and Done.
 
 ### Changed
