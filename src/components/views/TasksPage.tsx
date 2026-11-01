@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { Fragment, memo, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useAppActions, useTaskCategories, useTasks, type Task, type Priority } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
 import { m, AnimatePresence } from "framer-motion";
@@ -18,7 +18,7 @@ import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-contro
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useAppActivity } from "@/lib/appActivity";
 import { withStartTime } from "@/lib/autoEndTime";
-import { buildBoardColumns, OVERDUE_COLUMN_ID, planBoardDrop, type BoardColumn } from "@/lib/boardColumns";
+import { BOARD_ROWS, buildBoardColumns, CELL_PREVIEW, OVERDUE_COLUMN_ID, planBoardDrop, type BoardTarget } from "@/lib/boardColumns";
 import PomodoroTimer from "./PomodoroTimer";
 import { CategoryManagerButton } from "./CategoryManager";
 import { CapacityCard } from "./CapacityBar";
@@ -55,6 +55,10 @@ type NestHandlers = {
 
 const priorityLabel: Record<Priority, string> = { low: "Low", medium: "Med", high: "High", urgent: "Urgent" };
 const priorityClass: Record<Priority, string> = { low: "priority-low", medium: "priority-medium", high: "priority-high", urgent: "priority-urgent" };
+/** The Board's row labels. */
+const priorityName: Record<Priority, string> = { low: "Low", medium: "Medium", high: "High", urgent: "Urgent" };
+
+const sameCell = (a: BoardTarget | null, b: BoardTarget) => a?.columnId === b.columnId && a.priority === b.priority;
 
 // Memoised: an edit replaces only that task's object (and its parent's
 // children list), so the other rows skip the re-render.
@@ -347,85 +351,148 @@ function KanbanBoard({
 }) {
   const taskCategories = useTaskCategories();
   const { updateTask, completeTask, rescheduleTasks } = useAppActions();
-  const [dragOverCat, setDragOverCat] = useState<string | null>(null);
+  // The cell (column and priority row) a dragged card would land in.
+  const [dragOver, setDragOver] = useState<BoardTarget | null>(null);
+  // Cells showing every card rather than the first CELL_PREVIEW, by "column:priority".
+  // Not saved: the Board remounts, and folds them again, on a Sort & Filter change.
+  const [openCells, setOpenCells] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleCell = (key: string) =>
+    setOpenCells((cur) => {
+      const next = new Set(cur);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
 
   const columns = buildBoardColumns(tasks, taskCategories, today);
 
-  const handleDragOver = (e: React.DragEvent, col: BoardColumn) => {
-    // Only task drags; a checklist item being reordered is not one. Overdue
-    // takes no drops, so it never lights up as a target.
-    if (!taskDrag.id || !col.droppable) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverCat(col.id);
+  // Only task drags on this Board count; a checklist item being reordered is not one.
+  const planFor = (taskId: string | null | undefined, target: BoardTarget) => {
+    const task = taskId ? tasks.find((t) => t.id === taskId) : undefined;
+    return task ? { task, plan: planBoardDrop(task, target, taskCategories, today) } : null;
   };
 
-  const handleDrop = (e: React.DragEvent, col: BoardColumn) => {
+  const handleDragOver = (e: React.DragEvent, target: BoardTarget) => {
+    // A cell takes the drop, and is outlined, only where it would change
+    // something: never the card's own cell, nor Overdue for an on-time task.
+    const drop = planFor(taskDrag.id, target);
+    if (!drop || drop.plan.kind === "none") return;
     e.preventDefault();
-    const taskId = e.dataTransfer.getData("text/plain");
-    const task = tasks.find((t) => t.id === taskId);
-    if (task) {
-      const plan = planBoardDrop(task, col.id, taskCategories);
+    e.dataTransfer.dropEffect = "move";
+    if (!sameCell(dragOver, target)) setDragOver(target);
+  };
+
+  const handleDrop = (e: React.DragEvent, target: BoardTarget) => {
+    e.preventDefault();
+    const drop = planFor(e.dataTransfer.getData("text/plain") || taskDrag.id, target);
+    if (drop) {
+      const { task, plan } = drop;
       if (plan.kind === "complete") {
-        // A subtask completed from the board also leaves its parent, as a category drop does.
-        if (task.parentId) updateTask(task.id, { parentId: undefined });
-        completeTask(task);
+        // The row's priority, and leaving a parent, are saved before the completion.
+        if (plan.updates) updateTask(task.id, plan.updates);
+        completeTask({ ...task, ...plan.updates });
       } else if (plan.kind === "update") {
-        const column = taskCategories.find((c) => c.id === col.id)?.name ?? col.id;
-        rescheduleTasks([{ id: task.id, updates: plan.updates }], `${task.name} moved to ${column}`);
+        const where: string[] = [];
+        const category = taskCategories.find((c) => c.id === target.columnId);
+        if (category && (category.id !== task.categoryId || !plan.updates.priority)) where.push(category.name);
+        if (plan.updates.priority) where.push(priorityName[plan.updates.priority]);
+        rescheduleTasks([{ id: task.id, updates: plan.updates }], `${task.name} moved to ${where.join(" · ")}`);
       }
     }
     taskDrag.id = null;
-    setDragOverCat(null);
+    setDragOver(null);
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOverCat(null);
+  const handleDragLeave = (e: React.DragEvent, target: BoardTarget) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+    setDragOver((cur) => (sameCell(cur, target) ? null : cur));
   };
 
   // The columns scroll sideways inside their own box; the Pomodoro panel sits
   // outside it (see TasksPage), so it stays put.
+  // A grid: the column headers along the top, then one row per priority, each
+  // under its own label. The row labels stick to the left edge as it scrolls.
   return (
     <div className="overflow-x-auto pb-2">
-      <div className="flex gap-4 w-max min-w-full">
+      <div className="grid w-max min-w-full gap-x-4" style={{ gridTemplateColumns: `repeat(${columns.length}, 220px)` }}>
         {columns.map((col) => (
-          <div
-            key={col.id}
-            data-column={col.id}
-            onDragOver={(e) => handleDragOver(e, col)}
-            onDrop={(e) => handleDrop(e, col)}
-            onDragLeave={handleDragLeave}
-            className={`min-h-[200px] w-[220px] shrink-0 rounded-xl p-2 transition-colors ${
-              dragOverCat === col.id ? "bg-primary/10 ring-1 ring-primary/30" : ""
-            }`}
-          >
-            <div data-fade-unit className="flex items-center gap-2 px-1 mb-3">
-              <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
-              <p className="text-xs text-muted-foreground uppercase tracking-widest">{col.label}</p>
-              <span className="text-[10px] text-muted-foreground/60 ml-auto">{col.tasks.length}</span>
-            </div>
-            <div className="space-y-2">
-              <AnimatePresence initial={false}>
-                {col.tasks.map((task) => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    subtasks={childrenOf.get(task.id)}
-                    nesting={nesting}
-                    draggable
-                    board
-                    overdue={col.id === OVERDUE_COLUMN_ID}
-                    today={today}
-                  />
-                ))}
-              </AnimatePresence>
-              {col.tasks.length === 0 && (
-                <p data-fade-unit className="text-xs text-muted-foreground/40 text-center py-6">
-                  {col.droppable ? "Drop tasks here" : "Nothing overdue"}
-                </p>
-              )}
-            </div>
+          <div key={col.id} data-column={col.id} data-fade-unit className="flex items-center gap-2 px-3 pt-2">
+            <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
+            <p
+              className={`text-xs uppercase tracking-widest transition-colors ${
+                dragOver?.columnId === col.id ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
+              {col.label}
+            </p>
+            <span className="text-[10px] text-muted-foreground/60 ml-auto">{col.tasks.length}</span>
           </div>
+        ))}
+        {BOARD_ROWS.map((priority) => (
+          <Fragment key={priority}>
+            <div data-row={priority} data-fade-unit className="col-span-full justify-self-start sticky left-0 flex items-center gap-2 px-3 pt-4 pb-1">
+              <span
+                className={`text-[10px] font-semibold uppercase tracking-widest ${priorityClass[priority]} ${
+                  dragOver?.priority === priority ? "underline underline-offset-4" : ""
+                }`}
+              >
+                {priorityName[priority]}
+              </span>
+              <span className="text-[10px] text-muted-foreground/60">
+                {columns.reduce((n, col) => n + col.rows[priority].length, 0)}
+              </span>
+            </div>
+            {columns.map((col) => {
+              const target = { columnId: col.id, priority };
+              const lit = sameCell(dragOver, target);
+              const key = `${col.id}:${priority}`;
+              const cellTasks = col.rows[priority];
+              const open = openCells.has(key);
+              const more = cellTasks.length - CELL_PREVIEW;
+              return (
+                <div
+                  key={col.id}
+                  data-cell={key}
+                  data-drop-target={lit || undefined}
+                  onDragOver={(e) => handleDragOver(e, target)}
+                  onDrop={(e) => handleDrop(e, target)}
+                  onDragLeave={(e) => handleDragLeave(e, target)}
+                  className={`min-h-[52px] rounded-xl p-1.5 space-y-2 transition-colors ${
+                    lit ? "bg-primary/10 outline-dashed outline-2 -outline-offset-2 outline-primary/60" : ""
+                  }`}
+                >
+                  <AnimatePresence initial={false}>
+                    {(open ? cellTasks : cellTasks.slice(0, CELL_PREVIEW)).map((task) => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        subtasks={childrenOf.get(task.id)}
+                        nesting={nesting}
+                        draggable
+                        board
+                        overdue={col.id === OVERDUE_COLUMN_ID}
+                        today={today}
+                      />
+                    ))}
+                  </AnimatePresence>
+                  {more > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => toggleCell(key)}
+                      aria-expanded={open}
+                      aria-label={
+                        open
+                          ? `Show fewer ${priorityName[priority]} tasks in ${col.label}`
+                          : `Show ${more} more ${priorityName[priority]} tasks in ${col.label}`
+                      }
+                      className="w-full rounded-md px-2 py-1 text-left text-[11px] text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
+                    >
+                      {open ? "Show less" : `… ${more} more`}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </Fragment>
         ))}
       </div>
     </div>

@@ -5,6 +5,16 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.12.10] - 2026-11-01 - Engine Board rows.
+
+### Added
+
+- Priority rows on the Engine Board (#108). Each column is split into Urgent, High, Medium and Low rows; dragging a card to another cell sets its category and priority (Done completes at the row's priority, Overdue takes only its own cards to change their priority). Each cell shows its first three cards with a **… N more** toggle for the rest.
+
+### Changed
+
+- While dragging on the Board, the target cell gets a dashed outline and its column header and row label light up, in place of the whole-column highlight.
+
 ## [v0.12.9] - 2026-10-28 - Nebula checkpoints.
 
 ### Added
