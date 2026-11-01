@@ -18,6 +18,9 @@ export const BOARD_ROWS: readonly Priority[] = ["urgent", "high", "medium", "low
 /** Cards a cell shows before folding the rest under "… N more". */
 export const CELL_PREVIEW = 3;
 
+/** Columns that start folded: their cards hidden until the column is opened. */
+export const FOLDED_COLUMNS: readonly string[] = [OVERDUE_COLUMN_ID, DONE_COLUMN_ID];
+
 export type BoardColumn = {
   id: string;
   label: string;
