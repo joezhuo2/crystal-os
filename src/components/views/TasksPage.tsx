@@ -18,7 +18,7 @@ import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-contro
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useAppActivity } from "@/lib/appActivity";
 import { withStartTime } from "@/lib/autoEndTime";
-import { BOARD_ROWS, buildBoardColumns, OVERDUE_COLUMN_ID, planBoardDrop, type BoardTarget } from "@/lib/boardColumns";
+import { BOARD_ROWS, buildBoardColumns, CELL_PREVIEW, OVERDUE_COLUMN_ID, planBoardDrop, type BoardTarget } from "@/lib/boardColumns";
 import PomodoroTimer from "./PomodoroTimer";
 import { CategoryManagerButton } from "./CategoryManager";
 import { CapacityCard } from "./CapacityBar";
@@ -353,6 +353,15 @@ function KanbanBoard({
   const { updateTask, completeTask, rescheduleTasks } = useAppActions();
   // The cell (column and priority row) a dragged card would land in.
   const [dragOver, setDragOver] = useState<BoardTarget | null>(null);
+  // Cells showing every card rather than the first CELL_PREVIEW, by "column:priority".
+  // Not saved: the Board remounts, and folds them again, on a Sort & Filter change.
+  const [openCells, setOpenCells] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleCell = (key: string) =>
+    setOpenCells((cur) => {
+      const next = new Set(cur);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
 
   const columns = buildBoardColumns(tasks, taskCategories, today);
 
@@ -435,10 +444,14 @@ function KanbanBoard({
             {columns.map((col) => {
               const target = { columnId: col.id, priority };
               const lit = sameCell(dragOver, target);
+              const key = `${col.id}:${priority}`;
+              const cellTasks = col.rows[priority];
+              const open = openCells.has(key);
+              const more = cellTasks.length - CELL_PREVIEW;
               return (
                 <div
                   key={col.id}
-                  data-cell={`${col.id}:${priority}`}
+                  data-cell={key}
                   data-drop-target={lit || undefined}
                   onDragOver={(e) => handleDragOver(e, target)}
                   onDrop={(e) => handleDrop(e, target)}
@@ -448,7 +461,7 @@ function KanbanBoard({
                   }`}
                 >
                   <AnimatePresence initial={false}>
-                    {col.rows[priority].map((task) => (
+                    {(open ? cellTasks : cellTasks.slice(0, CELL_PREVIEW)).map((task) => (
                       <TaskItem
                         key={task.id}
                         task={task}
@@ -461,6 +474,21 @@ function KanbanBoard({
                       />
                     ))}
                   </AnimatePresence>
+                  {more > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => toggleCell(key)}
+                      aria-expanded={open}
+                      aria-label={
+                        open
+                          ? `Show fewer ${priorityName[priority]} tasks in ${col.label}`
+                          : `Show ${more} more ${priorityName[priority]} tasks in ${col.label}`
+                      }
+                      className="w-full rounded-md px-2 py-1 text-left text-[11px] text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
+                    >
+                      {open ? "Show less" : `… ${more} more`}
+                    </button>
+                  )}
                 </div>
               );
             })}
