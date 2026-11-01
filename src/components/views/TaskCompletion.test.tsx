@@ -86,9 +86,32 @@ describe("Board cards", () => {
     tasks = [base({ id: "a", name: "Write report", notes: "Draft first", estimateMinutes: 30 })];
   });
 
-  it("show the notes line and a details toggle, with the actions along the foot", () => {
+  it("start folded to the check and the name", () => {
     render(<TasksPage />);
     fireEvent.click(screen.getByRole("button", { name: /Board/ }));
+    expect(screen.getByText("Write report")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Complete Write report" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Expand Write report" }).getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByText("Draft first")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Show details of Write report" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit Write report" })).toBeNull();
+  });
+
+  it("fold again, closing the details", () => {
+    render(<TasksPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Board/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand Write report" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show details of Write report" }));
+    fireEvent.click(screen.getByRole("button", { name: "Collapse Write report" }));
+    expect(screen.queryByText("Draft first")).toBeNull();
+    fireEvent.click(screen.getByText("Write report"));
+    expect(screen.getByRole("button", { name: "Show details of Write report" }).getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("expanded, show the notes line and a details toggle, with the actions along the foot", () => {
+    render(<TasksPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Board/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand Write report" }));
     expect(screen.getByText("Draft first")).toBeTruthy();
     const details = screen.getByRole("button", { name: "Show details of Write report" });
     const edit = screen.getByRole("button", { name: "Edit Write report" });
