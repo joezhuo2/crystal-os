@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { Task } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
+import { installedModules } from "@/lib/installedModules";
 import { recordRecent, setRecentsOwner } from "@/lib/recents";
 import { ACTIVE_KEY } from "@/lib/harness/store";
 import type { ChatMessage, ChatMeta } from "@/lib/harness/types";
@@ -63,6 +64,7 @@ beforeEach(() => {
     disconnect() {}
   };
   localStorage.clear();
+  installedModules._reset();
   setRecentsOwner("user-1");
   onNavigate.mockClear();
   onClose.mockClear();
@@ -186,14 +188,14 @@ describe("Command palette free-slot finder", () => {
   });
 });
 
+const chat = (id: string, title: string): ChatMeta => ({
+  id, projectId: "p1", title, createdAt: 0, updatedAt: 0, pinned: false, tier: "high", effort: "medium", mode: "auto",
+});
+
 describe("Command palette Nebula chats", () => {
   afterEach(() => {
     nebulaChats = [];
     nebulaMessages = {};
-  });
-
-  const chat = (id: string, title: string): ChatMeta => ({
-    id, projectId: "p1", title, createdAt: 0, updatedAt: 0, pinned: false, tier: "high", effort: "medium", mode: "auto",
   });
 
   it("finds a chat by its messages and opens it in The Nebula", () => {
@@ -213,5 +215,63 @@ describe("Command palette Nebula chats", () => {
     renderPalette();
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "login" } });
     expect(screen.getByText("crystal-os")).toBeTruthy();
+  });
+});
+
+describe("Command palette with uninstalled modules", () => {
+  afterEach(() => {
+    nebulaChats = [];
+    nebulaMessages = {};
+  });
+
+  const search = (value: string) => fireEvent.change(screen.getByRole("combobox"), { target: { value } });
+
+  it("shows task results while Tasks is installed", () => {
+    tasks = [task({ id: "t1", name: "Write report" })];
+    renderPalette();
+    search("report");
+    expect(screen.getByText("Tasks")).toBeInTheDocument();
+    expect(screen.getByText("Write report")).toBeInTheDocument();
+  });
+
+  it("leaves out task results and task actions without Tasks", () => {
+    installedModules.uninstall("tasks");
+    tasks = [task({ id: "t1", name: "Write report" })];
+    renderPalette();
+    search("report");
+    expect(screen.queryByText("Tasks")).toBeNull();
+    expect(screen.queryByText("Task actions")).toBeNull();
+    expect(screen.queryByText("Write report")).toBeNull();
+  });
+
+  it("leaves out Nebula chats without The Nebula", () => {
+    nebulaChats = [chat("c1", "Fix login")];
+    installedModules.uninstall("nebula");
+    renderPalette();
+    search("login");
+    expect(screen.queryByText("Nebula Chats")).toBeNull();
+    expect(screen.queryByText("Fix login")).toBeNull();
+  });
+
+  it("leaves out recent tasks, task quick actions and Settings sections of uninstalled modules", () => {
+    installedModules.uninstall("tasks");
+    installedModules.uninstall("nebula");
+    tasks = [task({ id: "t1", name: "Write report" })];
+    recordRecent({ kind: "task", id: "t1", title: "Write report" });
+    recordRecent({ kind: "note", id: "Plan.md", title: "Plan" });
+    renderPalette();
+    expect(screen.queryByText("Write report")).toBeNull();
+    expect(screen.getByText("Plan")).toBeInTheDocument();
+    expect(screen.queryByText("Add a new task")).toBeNull();
+    expect(screen.getByText("Add a new event")).toBeInTheDocument();
+
+    search("engine");
+    expect(screen.queryByText("Settings → The Engine")).toBeNull();
+  });
+
+  it("lists the Settings section of an installed module", () => {
+    renderPalette();
+    search("engine");
+    expect(screen.getByText("Settings → The Engine")).toBeInTheDocument();
   });
 });
