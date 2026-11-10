@@ -5,6 +5,16 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.13.2] - 2026-11-10 - Button feedback and tab snappiness.
+
+### Added
+
+- Buttons squish slightly when pressed, and their icon plays a short animation matching its meaning (bell rings, trash shakes, save bounces, refresh spins). Off under reduced motion and performance mode.
+
+### Fixed
+
+- Switching tabs no longer re-renders the open page before the sidebar highlight moves, so tab changes feel snappier. (#119)
+
 ## [v0.13.1] - 2026-11-09 - Portal icons and fixes.
 
 ### Changed

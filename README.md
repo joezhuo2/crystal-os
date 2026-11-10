@@ -6,14 +6,14 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-1040%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.13.1-6366F1)
+![Version](https://img.shields.io/badge/version-0.13.2-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 > A personal productivity dashboard built with React, TypeScript, Supabase, your Google Calendar, and your Obsidian vault. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
 <p align="center"><img src="docs/images/crystal-os-tour.gif" alt="A tour of Crystal OS: The Pulse, The Engine, The Horizon, The Orbit, The Vault, The Atmosphere, The Archive, The Nebula and Settings" width="840"></p>
 
-Current release: **v0.13.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.13.2** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 [Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
