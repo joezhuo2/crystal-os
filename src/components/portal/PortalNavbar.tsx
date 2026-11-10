@@ -135,6 +135,7 @@ export default function PortalNavbar({
   onNotifyChange,
 }: PortalNavbarProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const tabsRef = useRef<HTMLUListElement>(null);
   const openedAt = useRef(0);
   const justOpened = () => performance.now() - openedAt.current < 1000;
   const changeMenu = (id: string, open: boolean) => {
@@ -156,9 +157,20 @@ export default function PortalNavbar({
       e.stopPropagation();
       setOpenMenuId(null);
     };
+    // The open menu blocks page pointer events, so a right-press on another tab never reaches its onPointerDown.
+    const onPress = (e: PointerEvent) => {
+      const r = tabsRef.current?.getBoundingClientRect();
+      if (desktop && e.button === 2 && r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+        setArmed(true);
+      }
+    };
     window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [openMenuId]);
+    window.addEventListener("pointerdown", onPress, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("pointerdown", onPress, true);
+    };
+  }, [openMenuId, desktop]);
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (!armed) return;
@@ -183,6 +195,7 @@ export default function PortalNavbar({
   return (
     <div className="portal-navbar flex items-center gap-2">
       <Reorder.Group
+        ref={tabsRef}
         as="ul"
         axis="x"
         values={apps.map((a) => a.id)}
