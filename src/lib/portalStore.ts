@@ -27,6 +27,8 @@ export interface PortalState {
    * While above zero the page hides the active webview.
    */
   occluders: number;
+  /** The active app's webview is on screen, drawn over the page. */
+  onScreen: boolean;
 }
 
 function read(key: string): string | null {
@@ -55,6 +57,7 @@ function load(): PortalState {
     badges: {},
     reported: {},
     occluders: 0,
+    onScreen: false,
   };
 }
 
@@ -233,6 +236,10 @@ export const portal = {
       released = true;
       set({ ...state, occluders: Math.max(0, state.occluders - 1) });
     };
+  },
+
+  setOnScreen(onScreen: boolean) {
+    if (state.onScreen !== onScreen) set({ ...state, onScreen });
   },
 
   /** Test hook: reload from storage and drop session state. */

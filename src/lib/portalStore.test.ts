@@ -209,4 +209,20 @@ describe("portal store", () => {
     b();
     expect(portal.getState().occluders).toBe(0);
   });
+
+  it("tracks whether the webview is on screen and drops it on reset", () => {
+    expect(portal.getState().onScreen).toBe(false);
+    const listener = vi.fn();
+    const unsubscribe = portal.subscribe(listener);
+    portal.setOnScreen(true);
+    portal.setOnScreen(true);
+    expect(portal.getState().onScreen).toBe(true);
+    expect(listener).toHaveBeenCalledTimes(1);
+    portal.setOnScreen(false);
+    expect(portal.getState().onScreen).toBe(false);
+    portal.setOnScreen(true);
+    portal._reset();
+    expect(portal.getState().onScreen).toBe(false);
+    unsubscribe();
+  });
 });
