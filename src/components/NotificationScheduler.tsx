@@ -6,6 +6,8 @@ import { useHabitsData } from "@/hooks/useHabits";
 import { useHabitReminders } from "@/lib/habitReminders";
 import { deliver, eventAlerts, takeUnsent, habitReminderAlerts, taskDueAlerts, taskReminderAlerts } from "@/lib/notifications";
 import { isQuiet, useNotifySettings } from "@/lib/notifySettings";
+import { useInstalledModules } from "@/lib/installedModules";
+import type { TabId } from "@/modules/registry";
 import { usesSidecar } from "@/lib/platform";
 import { useTravelTimes } from "@/lib/pulse";
 
@@ -41,7 +43,19 @@ function useHour(): number {
  * Renders nothing; mounted while signed in, on every tab.
  */
 export default function NotificationScheduler() {
-  const settings = useNotifySettings();
+  const notify = useNotifySettings();
+  const { uninstalled } = useInstalledModules();
+  // An uninstalled module's notifications stop as if switched off.
+  const settings = useMemo(() => {
+    const on = (id: TabId) => !uninstalled.includes(id);
+    return {
+      ...notify,
+      tasks: notify.tasks && on("tasks"),
+      taskReminders: notify.taskReminders && on("tasks"),
+      calendar: notify.calendar && on("calendar"),
+      habitReminders: notify.habitReminders && on("orbit"),
+    };
+  }, [notify, uninstalled]);
   const tasks = useTasks();
   const hour = useHour();
   const habits = useHabitsData();
