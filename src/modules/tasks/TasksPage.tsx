@@ -1,5 +1,5 @@
 import { Fragment, memo, useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { useAppActions, useTaskCategories, useTasks, type Task, type Priority } from "@/contexts/AppContext";
+import { useAppActions, useLoadError, useTaskCategories, useTasks, type Task, type Priority } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
 import { m, AnimatePresence } from "framer-motion";
 import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock, Clock, ChevronDown, StickyNote, AlarmClock } from "lucide-react";
@@ -1000,7 +1000,8 @@ const VIEW_FADE_MS = 200;
 
 export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) => void }) {
   const tasks = useTasks();
-  const { updateTask, rescheduleTasks } = useAppActions();
+  const { updateTask, rescheduleTasks, reloadData } = useAppActions();
+  const loadFailed = useLoadError();
   const { setShowTaskForm } = appUi;
   const nesting = useNesting(tasks);
   // Live, so snoozed tasks wake at midnight (or on focus) without a reload.
@@ -1157,6 +1158,14 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
               fade-in (initial={false} on each AnimatePresence). New tasks still
               fade in. */}
           <div className="engine-view" data-fade={fade ?? undefined}>
+            {loadFailed && tasks.length === 0 && (
+              <p role="alert" className="glass-card rounded-xl px-4 py-6 mb-4 text-center text-xs text-muted-foreground">
+                Couldn't load tasks.{" "}
+                <button onClick={reloadData} className="text-primary hover:underline">
+                  Retry
+                </button>
+              </p>
+            )}
             {filtering && sortedTasks.length === 0 && (
               <p data-fade-unit className="glass-card rounded-xl px-4 py-6 mb-4 text-center text-xs text-muted-foreground">
                 No tasks match the filters.{" "}

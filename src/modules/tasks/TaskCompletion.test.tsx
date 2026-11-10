@@ -17,6 +17,7 @@ vi.mock("@/contexts/AppContext", () => ({
   useAppActions: () => ({ updateTask, completeTask, deleteTask }),
   useTaskCategories: () => taskCategories,
   useTasks: () => tasks,
+  useLoadError: () => false,
 }));
 vi.mock("@/lib/appActivity", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/appActivity")>()),

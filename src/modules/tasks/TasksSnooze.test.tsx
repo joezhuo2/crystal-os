@@ -19,6 +19,7 @@ vi.mock("@/contexts/AppContext", () => ({
   useAppActions: () => ({ updateTask, completeTask, deleteTask, rescheduleTasks }),
   useTaskCategories: () => taskCategories,
   useTasks: () => tasks,
+  useLoadError: () => false,
 }));
 // The capacity bar and the timer read the calendar and the Pomodoro store; not under test here.
 vi.mock("./CapacityBar", () => ({ CapacityCard: () => null }));

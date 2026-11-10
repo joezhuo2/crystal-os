@@ -15,6 +15,7 @@ vi.mock("@/contexts/AppContext", () => ({
   useAppActions: () => ({ updateTask: vi.fn(), completeTask: vi.fn(), deleteTask: vi.fn() }),
   useTaskCategories: () => taskCategories,
   useTasks: () => tasks,
+  useLoadError: () => false,
 }));
 vi.mock("./CapacityBar", () => ({ CapacityCard: () => null }));
 vi.mock("./PomodoroTimer", () => ({ default: () => null }));
