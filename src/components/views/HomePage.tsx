@@ -39,10 +39,10 @@ import {
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { PRIORITY_RANK, upcomingTasks } from "@/lib/homeTasks";
 import { splitByParent, subtaskProgress } from "@/lib/subtasks";
-import { SubtaskChip } from "./TaskSubtasks";
+import { SubtaskChip } from "@/modules/tasks/TaskSubtasks";
 import { NebulaSpace, PortalSpace, TerminalSpace } from "./HomeSpaces";
 import HomeGrid, { type HomeWidget } from "./HomeGrid";
-import { CapacityStrip } from "./CapacityBar";
+import { CapacityStrip } from "@/modules/tasks/CapacityBar";
 import { useOrbitReady, useOrbitTeaser } from "@/hooks/useOrbitReview";
 import { formatMinutes, kindLabel } from "@/lib/orbitReview";
 import { orbitStore } from "@/lib/orbitStore";

@@ -24,16 +24,16 @@ type ViewModule = Promise<{ default: ComponentType<ViewProps> }>;
 
 const loaders: Record<TabId, () => ViewModule> = {
   home: () => import("@/components/views/HomePage"),
-  orbit: () => import("@/components/views/OrbitPage"),
-  tasks: () => import("@/components/views/TasksPage"),
-  calendar: () => import("@/components/views/CalendarPage"),
-  financials: () => import("@/components/views/FinancialsPage"),
-  weather: () => import("@/components/views/WeatherPage"),
-  archive: () => import("@/components/views/ArchivePage"),
+  orbit: () => import("@/modules/orbit/OrbitPage"),
+  tasks: () => import("@/modules/tasks/TasksPage"),
+  calendar: () => import("@/modules/calendar/CalendarPage"),
+  financials: () => import("@/modules/financials/FinancialsPage"),
+  weather: () => import("@/modules/weather/WeatherPage"),
+  archive: () => import("@/modules/archive/ArchivePage"),
   settings: () => import("@/components/views/SettingsPage"),
-  portal: () => import("@/components/views/PortalPage"),
-  nebula: () => import("@/components/views/NebulaPage"),
-  terminal: () => import("@/components/views/TerminalPage"),
+  portal: () => import("@/modules/portal/PortalPage"),
+  nebula: () => import("@/modules/nebula/NebulaPage"),
+  terminal: () => import("@/modules/terminal/TerminalPage"),
 };
 
 export const lazyViews = Object.fromEntries(
@@ -41,9 +41,9 @@ export const lazyViews = Object.fromEntries(
 ) as unknown as Record<TabId, ComponentType<ViewProps>>;
 
 /** The task editor and transaction drawer, which live in their views' chunks. */
-export const LazyTaskForm = lazy(() => import("@/components/views/TasksPage").then((m) => ({ default: m.TaskForm })));
+export const LazyTaskForm = lazy(() => import("@/modules/tasks/TasksPage").then((m) => ({ default: m.TaskForm })));
 export const LazyTransactionDrawer = lazy(() =>
-  import("@/components/views/FinancialsPage").then((m) => ({ default: m.TransactionDrawer })),
+  import("@/modules/financials/FinancialsPage").then((m) => ({ default: m.TransactionDrawer })),
 );
 
 /* ── Visit counts ── */

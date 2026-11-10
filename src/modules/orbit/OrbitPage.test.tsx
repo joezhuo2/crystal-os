@@ -33,8 +33,8 @@ vi.mock("@/lib/appActivity", async (importOriginal) => ({
   useAppActivity: () => ({ visible: true, still }),
 }));
 // The Today and Mood cards read the vault; not under test here.
-vi.mock("@/components/views/orbit/TodayCard", () => ({ TodayCard: () => null }));
-vi.mock("@/components/views/orbit/MoodCard", () => ({ MoodCard: () => null }));
+vi.mock("@/modules/orbit/TodayCard", () => ({ TodayCard: () => null }));
+vi.mock("@/modules/orbit/MoodCard", () => ({ MoodCard: () => null }));
 vi.mock("@/hooks/useVault", () => ({ useCreateNote: () => ({ mutate: vi.fn(), isPending: false }), vaultErrorCode: () => null }));
 vi.mock("@/hooks/useShortcut", () => ({ useShortcut: () => {} }));
 

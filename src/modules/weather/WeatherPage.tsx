@@ -36,8 +36,8 @@ import {
 import { ThemedCombobox, type ComboboxOption } from "@/components/ui/field-controls";
 import { atmosphere, useAtmosphere } from "@/lib/atmosphereStore";
 import { GlassTip } from "@/components/ui/glass-tooltip";
-import { LocationDialog } from "@/components/views/weather/LocationDialog";
-import { AirQualityCard, DaylightBar, UvCard } from "@/components/views/weather/AirSunCards";
+import { LocationDialog } from "@/modules/weather/LocationDialog";
+import { AirQualityCard, DaylightBar, UvCard } from "@/modules/weather/AirSunCards";
 
 // ── Weather icon mapping ──
 
