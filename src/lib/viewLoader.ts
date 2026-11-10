@@ -13,8 +13,9 @@
  */
 
 import { lazy, type ComponentType } from "react";
-import type { TabId } from "@/components/layout/Navigation";
 import { perfSettings } from "@/lib/perfSettings";
+import { isInstalled } from "@/lib/installedModules";
+import { MODULE_IDS, moduleById, type TabId } from "@/modules/registry";
 
 export interface ViewProps {
   onNavigate?: (tab: TabId) => void;
@@ -22,19 +23,7 @@ export interface ViewProps {
 
 type ViewModule = Promise<{ default: ComponentType<ViewProps> }>;
 
-const loaders: Record<TabId, () => ViewModule> = {
-  home: () => import("@/components/views/HomePage"),
-  orbit: () => import("@/modules/orbit/OrbitPage"),
-  tasks: () => import("@/modules/tasks/TasksPage"),
-  calendar: () => import("@/modules/calendar/CalendarPage"),
-  financials: () => import("@/modules/financials/FinancialsPage"),
-  weather: () => import("@/modules/weather/WeatherPage"),
-  archive: () => import("@/modules/archive/ArchivePage"),
-  settings: () => import("@/components/views/SettingsPage"),
-  portal: () => import("@/modules/portal/PortalPage"),
-  nebula: () => import("@/modules/nebula/NebulaPage"),
-  terminal: () => import("@/modules/terminal/TerminalPage"),
-};
+const loaders = Object.fromEntries(MODULE_IDS.map((id) => [id, moduleById[id].load])) as unknown as Record<TabId, () => ViewModule>;
 
 export const lazyViews = Object.fromEntries(
   Object.entries(loaders).map(([id, load]) => [id, lazy(load)]),
@@ -102,7 +91,7 @@ export function preloadViews(current: TabId) {
   preloaded = true;
   const order = preloadOrder(current);
   const run = async () => {
-    for (const tab of [...order, ...(Object.keys(loaders) as TabId[])]) await loaders[tab]().catch(() => undefined);
+    for (const tab of [...order, ...MODULE_IDS]) if (isInstalled(tab)) await loaders[tab]().catch(() => undefined);
   };
   const idle = () => {
     if ("requestIdleCallback" in window) window.requestIdleCallback(() => void run(), { timeout: 5000 });
