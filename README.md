@@ -5,13 +5,15 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-863%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.12.13-6366F1)
+![Tests](https://img.shields.io/badge/tests-1040%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.13.0-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 > A personal productivity dashboard built with React, TypeScript, Supabase, your Google Calendar, and your Obsidian vault. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
-Current release: **v0.12.13** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+<p align="center"><img src="docs/images/crystal-os-tour.gif" alt="A tour of Crystal OS: The Pulse, The Engine, The Horizon, The Orbit, The Vault, The Atmosphere, The Archive, The Nebula and Settings" width="840"></p>
+
+Current release: **v0.13.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 [Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
@@ -36,10 +38,37 @@ Current release: **v0.12.13** — see [CHANGELOG.md](CHANGELOG.md) for release h
 | **🔔 Notifications** | Desktop toasts before a task is due (from the start of its day or a set number of minutes ahead, once or on every launch), when a task reaches its end time, before each timed calendar event (30 minutes by default, set in Settings; with **Pulse**, 10 minutes before it is time to leave for an event with a location), when a Pomodoro focus or break runs out, when a Portal app's unread count goes up while Crystal OS is not focused or you are in another Portal app (per app, from its right-click menu), when an Orbit review is ready, and when a habit is not ticked by its reminder time. A switch per kind, a Do Not Disturb switch and a daily Do Not Disturb schedule in **Settings → Notifications**. See [Notifications](#-notifications) |
 | **🖥️ Desktop shell** | Native Tauri window with PowerShell terminal, tray (Pomodoro + Quick Add), always-on global hotkeys, and launch-at-login — the web build is unaffected |
 | **⚙️ Settings** | Dedicated sidebar page for every preference: hotkeys, launch at login, notifications, vault folder, Nebula keys, models and look, and downloading or building an installer. A search box (Ctrl+F) hides sections that don't match and unfolds the ones that do. **In-app shortcuts** lists every single-key shortcut by page; click one to record a new key (Esc cancels), with a warning if another action on that page or a general one already uses it, a Reset per row and a **Reset all**. Shortcuts are single keys and are ignored while you type or a dialog is open; rebinds are saved in localStorage (`crystal-os-keymap`). Click a section's header to fold it away (remembered on this device); switches and sliders glide instead of snapping. **Diagnostics** copies recent errors (unhandled rejections, uncaught errors, failed Supabase saves) with the app version for a bug report; on desktop they are also logged to `diagnostics.log`. The page sits on a rose-and-indigo black hole tearing a star apart, with dark rose glass panels, pink highlights in place of the green accent (menus and switches too), a rose sidebar and Crystal logo, and a matching search bar |
+| **📦 Packages** | **Settings → Packages** installs or uninstalls each section (The Orbit, The Engine, The Horizon, The Vault, The Atmosphere, The Archive, The Nebula, The Portal, Terminal). An uninstalled section leaves the sidebar, the phone bar, Home, the search bar and Settings, and its background work (notifications, auto-export, vault live updates, Quick Add) stops; its data is kept, so installing it again brings everything back. The Pulse and Settings are built in; the choice is saved per device. Each section lives in `src/modules/<id>/` with a `manifest.ts` |
 | **⌨️ Command Palette** | Global search over tasks, transactions, vault note bodies, Nebula chats (by title or message text, with the matching line; picking one opens it in The Nebula, desktop), the active Nebula project's saved prompts (picking one opens The Nebula with it in the composer) and Settings sections (picking one scrolls to it and unfolds it), plus natural-language `add` / `log` commands and quick actions for a new capture or a new calendar event. With nothing typed it lists your 8 most recently opened tasks, notes and events to reopen in one step |
 | **🎨 Theming** | Glassmorphism UI with light/dark mode, smooth Framer Motion animations, and themed select/date/time controls in place of native OS chrome |
 | **🙈 Privacy mode** | On by default: money amounts (The Vault, The Orbit, the Home page, search results) the names and previews of Archive notes you have not opened, and the note, event, task and chat names on the Home cards are blurred, so the screen is safe to share. Switch it off in Settings → Privacy |
-| **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar. **Settings → Navigation** reorders the sidebar's pages, hides the ones you do not use, and picks which sit at the top or pinned to the bottom (Settings is always shown); the phone bar and **J**/**K** follow the same order |
+| **📱 Responsive** | Mobile-first design with bottom navigation and collapsible sidebar. **Settings → Navigation** reorders the sidebar's installed pages, hides the ones you do not use, and picks which sit at the top or pinned to the bottom (Settings is always shown); the phone bar and **J**/**K** follow the same order |
+
+### 📸 Screenshots
+
+<sub>Captured from the desktop app with made-up data.</sub>
+
+<table>
+  <tr>
+    <td align="center" width="50%"><img src="docs/images/screenshots/home.webp" alt="The Pulse"><br><sub><b>The Pulse</b></sub></td>
+    <td align="center" width="50%"><img src="docs/images/screenshots/engine.webp" alt="The Engine"><br><sub><b>The Engine</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><img src="docs/images/screenshots/horizon.webp" alt="The Horizon"><br><sub><b>The Horizon</b></sub></td>
+    <td align="center" width="50%"><img src="docs/images/screenshots/orbit.webp" alt="The Orbit"><br><sub><b>The Orbit</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><img src="docs/images/screenshots/vault.webp" alt="The Vault"><br><sub><b>The Vault</b></sub></td>
+    <td align="center" width="50%"><img src="docs/images/screenshots/atmosphere.webp" alt="The Atmosphere"><br><sub><b>The Atmosphere</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><img src="docs/images/screenshots/archive.webp" alt="The Archive"><br><sub><b>The Archive</b></sub></td>
+    <td align="center" width="50%"><img src="docs/images/screenshots/nebula.webp" alt="The Nebula"><br><sub><b>The Nebula</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><img src="docs/images/screenshots/settings.webp" alt="Settings → Packages"><br><sub><b>Settings → Packages</b></sub></td>
+  </tr>
+</table>
 
 ---
 
@@ -199,42 +228,56 @@ src/
 │   │   ├── field-controls.tsx  # ThemedSelect, ThemedCombobox, DateField, TimeField (portalled popups)
 │   │   ├── glass-tooltip.tsx   # GlassTip: gradient-bordered tooltip used in place of `title`, drawn above the page
 │   │   └── dashboard-skeletons.tsx # Per-widget loading skeletons for the home page
-│   ├── views/                  # Page-level components
+│   ├── views/                  # Core pages and shared view components
 │   │   ├── HomePage.tsx        # Clock, weather, Vault, Engine, today's events, themed weather, Horizon and Archive widgets (the Engine box themed too)
 │   │   ├── HomeGrid.tsx        # Home's rearrangeable grid: drag to move, edit mode to resize, hide and reset
-│   │   ├── OrbitPage.tsx       # The Orbit: weekly/monthly/yearly review cards, reflection and vault export
-│   │   ├── orbit/OrbitCharts.tsx # The Orbit's SVG focus bars, money bars and task rings
-│   │   ├── orbit/FocusPie.tsx  # The Orbit's focus-by-task donut chart and legend
-│   │   ├── orbit/OrbitAutoExport.tsx # Writes each ready review to the vault when auto-export is on
-│   │   ├── orbit/OrbitReadyNotifier.tsx # Toast (and native notification) when a review becomes ready
-│   │   ├── orbit/MoodCard.tsx  # The Orbit's mood against habits-done and focus-time correlation card
-│   │   ├── orbit/HabitsToday.tsx # The Today card's habit chips and week/month grid
-│   │   ├── orbit/HabitManager.tsx # Add, rename, recolour, reorder and remove habits
 │   │   ├── HomeSpaces.tsx      # Home's themed Nebula, Portal and Terminal boxes
-│   │   ├── TasksPage.tsx       # Task list, form (with estimates), filtering, Pomodoro
-│   │   ├── TaskViewMenu.tsx    # The Engine's Sort & Filter button and popover
-│   │   ├── TaskCompletion.tsx  # Check and strikethrough animations for ticking a task card
-│   │   ├── CapacityBar.tsx     # Fits today? card for The Engine and the slim strip on Home's Engine card
-│   │   ├── CalendarPage.tsx    # Google Calendar: month, week, day + agenda, event CRUD
-│   │   ├── TimeGrid.tsx        # Hour-by-hour columns for the week and day views
-│   │   ├── FinancialsPage.tsx  # Transactions, summaries, charts
-│   │   ├── financials/FinanceCharts.tsx # Cash flow, spending donut and savings trend as plain SVG
-│   │   ├── WeatherPage.tsx     # Detailed weather view
-│   │   ├── weather/AirSunCards.tsx # Atmosphere cards: air quality (AQHI), UV index, daylight bar
-│   │   ├── ArchivePage.tsx     # Vault browser: search, tags, markdown reader, virtualised note list
-│   │   ├── NoteEditor.tsx      # CodeMirror note editor with mtime-checked saves (lazy-loaded)
-│   │   ├── TerminalPage.tsx    # Up to 5 PowerShell terminals in tabs, up to 4 split on screen (xterm.js, desktop only)
-│   │   ├── PortalPage.tsx      # The Portal: places the active app's webview over its frame
 │   │   ├── SettingsPage.tsx    # Hotkeys, launch at login, notifications, vault folder, Atmosphere effects and image, page Backgrounds, Install & update
-│   │   ├── InstallerSection.tsx # Check for updates, release picker, installer download, build-from-source log
-│   │   ├── PomodoroTimer.tsx   # Focus timer component
-│   │   ├── PomodoroTask.tsx    # "Focusing on" task picker and drop target under Start/Reset
+│   │   ├── InstallerSection.tsx# Check for updates, release picker, installer download, build-from-source log
 │   │   └── CategoryManager.tsx # Category CRUD for tasks/finances
 │   ├── ChangelogDialog.tsx     # Fixed-size, scrollable "What's new" popup
 │   ├── ChangelogNotice.tsx     # Opens ChangelogDialog on the first launch after an update
 │   ├── CommandPalette.tsx      # Search, NL commands, vault note results
 │   ├── NotificationScheduler.tsx # Checks task due times and calendar reminders every 30 s while signed in
 │   └── QuickAddDialog.tsx      # Append a capture to a vault note
+├── modules/                    # One folder per installable section (Settings → Packages)
+│   ├── registry.ts             # Every module in default sidebar order; the source of TabId
+│   ├── types.ts                # ModuleManifest: label, icon, description, page loader, flags
+│   ├── home/, settings/        # Manifests for the two built-in pages (their views stay in components/views)
+│   ├── orbit/                  # manifest.ts + the page and its components
+│   │   ├── OrbitPage.tsx       # The Orbit: weekly/monthly/yearly review cards, reflection and vault export
+│   │   ├── OrbitCharts.tsx     # The Orbit's SVG focus bars, money bars and task rings
+│   │   ├── FocusPie.tsx        # The Orbit's focus-by-task donut chart and legend
+│   │   ├── OrbitAutoExport.tsx # Writes each ready review to the vault when auto-export is on
+│   │   ├── OrbitReadyNotifier.tsx # Toast (and native notification) when a review becomes ready
+│   │   ├── MoodCard.tsx        # The Orbit's mood against habits-done and focus-time correlation card
+│   │   ├── HabitsToday.tsx     # The Today card's habit chips and week/month grid
+│   │   └── HabitManager.tsx    # Add, rename, recolour, reorder and remove habits
+│   ├── tasks/                  # manifest.ts + the page and its components
+│   │   ├── TasksPage.tsx       # Task list, form (with estimates), filtering, Pomodoro
+│   │   ├── TaskViewMenu.tsx    # The Engine's Sort & Filter button and popover
+│   │   ├── TaskCompletion.tsx  # Check and strikethrough animations for ticking a task card
+│   │   ├── CapacityBar.tsx     # Fits today? card for The Engine and the slim strip on Home's Engine card
+│   │   ├── PomodoroTimer.tsx   # Focus timer component
+│   │   └── PomodoroTask.tsx    # "Focusing on" task picker and drop target under Start/Reset
+│   ├── calendar/               # manifest.ts + the page and its components
+│   │   ├── CalendarPage.tsx    # Google Calendar: month, week, day + agenda, event CRUD
+│   │   └── TimeGrid.tsx        # Hour-by-hour columns for the week and day views
+│   ├── financials/             # manifest.ts + the page and its components
+│   │   ├── FinancialsPage.tsx  # Transactions, summaries, charts
+│   │   └── FinanceCharts.tsx   # Cash flow, spending donut and savings trend as plain SVG
+│   ├── weather/                # manifest.ts + the page and its components
+│   │   ├── WeatherPage.tsx     # Detailed weather view
+│   │   └── AirSunCards.tsx     # Atmosphere cards: air quality (AQHI), UV index, daylight bar
+│   ├── archive/                # manifest.ts + the page and its components
+│   │   ├── ArchivePage.tsx     # Vault browser: search, tags, markdown reader, virtualised note list
+│   │   └── NoteEditor.tsx      # CodeMirror note editor with mtime-checked saves (lazy-loaded)
+│   ├── nebula/                 # manifest.ts + the page and its components
+│   │   └── NebulaPage.tsx      # The Nebula: projects, chats, agent runs and diff review (desktop only)
+│   ├── portal/                 # manifest.ts + the page and its components
+│   │   └── PortalPage.tsx      # The Portal: places the active app's webview over its frame
+│   └── terminal/               # manifest.ts + the page and its components
+│       └── TerminalPage.tsx    # Up to 5 PowerShell terminals in tabs, up to 4 split on screen (xterm.js, desktop only)
 ├── contexts/
 │   └── AppContext.tsx          # Tasks, transactions, categories: loaded into the React Query cache, read with useTasks/useTransactions(select), written via useAppActions
 ├── hooks/
@@ -364,7 +407,7 @@ The middleware is mounted on both the dev server and `vite preview`. It is **not
 - **Frontmatter** — `title`, `tags`, `date`, and `status` are modelled explicitly; every other key is surfaced as-is in the reader.
 - **Wikilinks** — `[[Note]]`, `[[Note|alias]]` and `[[Note#Heading]]` resolve to in-app navigation (a heading link opens the note); unresolved links stay plain text rather than becoming dead anchors. Under each note, **Connections** lists **Links to** (its outgoing wikilinks) and **Linked from** (backlinks), both clickable, plus **Shares a category**: other notes with any of the note's tags or `categories`/`category` frontmatter values (wikilink values like `[[Books]]` included), most overlap first; the listing carries each note's lowercased link targets (`links`), extracted in `vaultCore.ts`.
 - **Quick Add** — appends a `- **HH:MM** text` bullet under a `## YYYY-MM-DD` heading, creating the note (and any parent directories) when missing. Supplied tags are merged into the note's frontmatter; the existing YAML list style (inline or block) is preserved and no other key is reformatted.
-- **Editing** — **Edit** in the reader opens the whole file, frontmatter included, in CodeMirror (`src/components/views/NoteEditor.tsx`, loaded only when first used). **Save** or Ctrl+S writes it back with the `mtime` it was opened at; if Obsidian saved the note in between, the save is refused and you choose **Discard mine, load theirs** or **Overwrite with mine**. Unsaved edits survive switching notes or tabs as a draft until the window closes.
+- **Editing** — **Edit** in the reader opens the whole file, frontmatter included, in CodeMirror (`src/modules/archive/NoteEditor.tsx`, loaded only when first used). **Save** or Ctrl+S writes it back with the `mtime` it was opened at; if Obsidian saved the note in between, the save is refused and you choose **Discard mine, load theirs** or **Overwrite with mine**. Unsaved edits survive switching notes or tabs as a draft until the window closes.
 - **Caching** — parsed notes are cached per path and invalidated on `mtime` change.
 - **Keyboard shortcuts** — **N** opens Quick Add to write a new note and **/** jumps to **Search the vault**. Both are ignored while you type in a field or a dialog is open, and can be rebound in Settings.
 
