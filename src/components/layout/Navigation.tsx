@@ -1,5 +1,4 @@
 import { memo, useEffect, useRef } from "react";
-import { Home, ListTodo, Calendar, Wallet, CloudSun, BookOpen, Settings, SquareTerminal, Orbit, Sparkles, AppWindow } from "lucide-react";
 import { m } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
 import { usePortal } from "@/hooks/usePortal";
@@ -9,8 +8,10 @@ import { portal, selectBadgeTotal } from "@/lib/portalStore";
 import { useNow, useOrbitReady } from "@/hooks/useOrbitReview";
 import { readyTitle } from "@/lib/orbitReview";
 import { navLayout, navSettings, useNavSettings } from "@/lib/navSettings";
+import { isInstalled, useInstalledModules } from "@/lib/installedModules";
+import { MODULE_IDS, moduleById, type TabId } from "@/modules/registry";
 
-export type TabId = "home" | "orbit" | "tasks" | "calendar" | "financials" | "weather" | "archive" | "portal" | "nebula" | "terminal" | "settings";
+export type { TabId };
 
 interface Tab {
   id: TabId;
@@ -18,26 +19,11 @@ interface Tab {
   icon: React.ElementType;
 }
 
-/** Every page's label and icon. Their order and grouping come from Settings → Navigation (src/lib/navSettings.ts). */
-export const TAB_INFO: Record<TabId, Tab> = {
-  home: { id: "home", label: "The Pulse", icon: Home },
-  orbit: { id: "orbit", label: "The Orbit", icon: Orbit },
-  tasks: { id: "tasks", label: "The Engine", icon: ListTodo },
-  calendar: { id: "calendar", label: "The Horizon", icon: Calendar },
-  financials: { id: "financials", label: "The Vault", icon: Wallet },
-  weather: { id: "weather", label: "The Atmosphere", icon: CloudSun },
-  archive: { id: "archive", label: "The Archive", icon: BookOpen },
-  // Agents run in Rust (src-tauri/src/harness/).
-  nebula: { id: "nebula", label: "The Nebula", icon: Sparkles },
-  // On the web the page explains that embedding needs the desktop app (src-tauri/src/portal.rs).
-  portal: { id: "portal", label: "The Portal", icon: AppWindow },
-  // The shell runs in Rust (src-tauri/src/terminal.rs).
-  terminal: { id: "terminal", label: "Terminal", icon: SquareTerminal },
-  settings: { id: "settings", label: "Settings", icon: Settings },
-};
+/** Every page's label and icon, from its module manifest (src/modules/). Order and grouping come from Settings → Navigation (src/lib/navSettings.ts). */
+export const TAB_INFO = Object.fromEntries(MODULE_IDS.map((id) => [id, { id, label: moduleById[id].label, icon: moduleById[id].icon }])) as Record<TabId, Tab>;
 
-/** The Nebula and the Terminal need the desktop app. */
-export const tabAvailable = (id: TabId) => isDesktop() || (id !== "nebula" && id !== "terminal");
+/** Installed, and not a desktop-only module on the web. */
+export const tabAvailable = (id: TabId) => isInstalled(id) && (isDesktop() || !moduleById[id].desktopOnly);
 
 export const visibleTabIds = (): TabId[] => {
   const { top, bottom } = navLayout(navSettings.getState(), tabAvailable);
@@ -45,7 +31,7 @@ export const visibleTabIds = (): TabId[] => {
 };
 
 /** The phone bar has room for the views, not the tools. */
-const PHONE_TABS = new Set<TabId>(["home", "orbit", "tasks", "calendar", "financials", "weather", "archive"]);
+const PHONE_TABS = new Set<TabId>(MODULE_IDS.filter((id) => moduleById[id].phone));
 
 /** The Terminal, Portal, Nebula, Atmosphere, Archive, Horizon, Engine, and Orbit tabs restyle the sidebar to match their pages. */
 type SidebarMode = "default" | "terminal" | "portal" | "nebula" | "atmosphere" | "obsidian" | "horizon" | "engine" | "orbit" | "settings" | "home";
@@ -203,6 +189,7 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const portalTotal = selectBadgeTotal(usePortal());
   const portalBadge = useFocusMuted() ? null : portalTotal;
   const orbitReady = useOrbitReady(useNow());
+  useInstalledModules();
   const layout = navLayout(useNavSettings(), tabAvailable);
   const mode: SidebarMode =
     activeTab === "terminal"
@@ -340,6 +327,7 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
 
 export function BottomNav({ activeTab, onTabChange }: SidebarNavProps) {
   const orbitReady = useOrbitReady(useNow());
+  useInstalledModules();
   const { top, bottom } = navLayout(useNavSettings(), tabAvailable);
   const phoneTabs = [...top, ...bottom].filter((id) => PHONE_TABS.has(id)).map((id) => TAB_INFO[id]);
   return (

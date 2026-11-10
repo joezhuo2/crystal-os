@@ -9,12 +9,12 @@ import { appUi } from "@/lib/appUi";
 import { m } from "framer-motion";
 import { toLocalDateStr } from "@/lib/utils";
 import { Plus, Trash2, X, Pencil } from "lucide-react";
-import { CategoryManagerButton } from "./CategoryManager";
+import { CategoryManagerButton } from "@/components/views/CategoryManager";
 import { DateField, ThemedSelect } from "@/components/ui/field-controls";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAppActivity } from "@/lib/appActivity";
-import { DonutChart, LineAreaChart, type Series } from "./financials/FinanceCharts";
+import { DonutChart, LineAreaChart, type Series } from "./FinanceCharts";
 
 /** How long a chart's box must hold one width before the chart draws into it. */
 const SETTLE_MS = 120;

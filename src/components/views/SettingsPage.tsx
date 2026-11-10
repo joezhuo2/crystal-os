@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Images, Keyboard, ListTodo, Orbit, PanelLeft, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Images, Keyboard, ListTodo, Orbit, Package, PanelLeft, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 import NebulaSettingsSection from "@/components/nebula/NebulaSettingsSection";
 import InstallerSection from "@/components/views/InstallerSection";
@@ -30,6 +30,8 @@ import { TimeField } from "@/components/ui/field-controls";
 import { appUi, useAppUi } from "@/lib/appUi";
 import { TAB_INFO, tabAvailable } from "@/components/layout/Navigation";
 import { ALWAYS_SHOWN, navSettings, useNavSettings } from "@/lib/navSettings";
+import { installedModules, useInstalledModules } from "@/lib/installedModules";
+import { MODULE_IDS, moduleById, type TabId } from "@/modules/registry";
 
 const COLLAPSED_KEY = "crystal-os-settings-collapsed";
 
@@ -218,6 +220,7 @@ function Row({ title, description, children }: { title: string; description: str
 /** Settings → Navigation: each page's place, group and visibility in the sidebar. */
 function NavigationSettings() {
   const nav = useNavSettings();
+  useInstalledModules();
   const groups = [
     { bottom: false, label: "Top of the sidebar" },
     { bottom: true, label: "Pinned to the bottom" },
@@ -271,6 +274,39 @@ function NavigationSettings() {
           Reset
         </Button>
       </Row>
+    </>
+  );
+}
+
+/** Settings → Packages: install or uninstall each section. Uninstalling keeps its data. */
+function ModuleSettings() {
+  const { uninstalled } = useInstalledModules();
+  const desktop = isDesktop();
+  return (
+    <>
+      {MODULE_IDS.map((id) => {
+        const { label, description, icon: Icon, core, desktopOnly } = moduleById[id];
+        const installed = !uninstalled.includes(id);
+        const note = desktopOnly && !desktop ? " Needs the desktop app." : "";
+        return (
+          <Row
+            key={id}
+            title={label}
+            description={`${description}${note}${core ? " Built in." : installed ? "" : " Not installed. Your data is kept."}`}
+          >
+            <Icon className="w-4 h-4 text-muted-foreground" aria-hidden />
+            {core ? null : installed ? (
+              <Button variant="outline" size="sm" onClick={() => installedModules.uninstall(id)} aria-label={`Uninstall ${label}`}>
+                Uninstall
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => installedModules.install(id)} aria-label={`Install ${label}`}>
+                Install
+              </Button>
+            )}
+          </Row>
+        );
+      })}
     </>
   );
 }
@@ -615,6 +651,8 @@ export default function SettingsPage() {
   const orbit = useOrbitStore();
   const notifications = useNotifySettings();
   const capacity = useCapacitySettings();
+  const { uninstalled } = useInstalledModules();
+  const has = (id: TabId) => !uninstalled.includes(id);
 
   const vaultStatus = useVaultStatus();
   const pickVault = usePickVault();
@@ -745,6 +783,10 @@ export default function SettingsPage() {
           <KeymapSettings />
         </Section>
 
+        <Section id="modules" icon={Package} title="Packages">
+          <ModuleSettings />
+        </Section>
+
         <Section id="navbar" icon={PanelLeft} title="Navigation">
           <NavigationSettings />
         </Section>
@@ -760,7 +802,7 @@ export default function SettingsPage() {
           </Section>
         )}
 
-        {desktop && (
+        {desktop && has("archive") && (
           <Section id="vault" icon={FolderOpen} title="Vault">
             <Row
               title="Obsidian vault folder"
@@ -773,7 +815,7 @@ export default function SettingsPage() {
           </Section>
         )}
 
-        {desktop && (
+        {desktop && has("nebula") && (
           <Section id="nebula" icon={Sparkles} title="The Nebula">
             <div className="py-3 first:pt-0 last:pb-0">
               <NebulaSettingsSection />
@@ -781,34 +823,36 @@ export default function SettingsPage() {
           </Section>
         )}
 
-        <Section id="engine" icon={ListTodo} title="The Engine">
-          <Row
-            title="Work day starts"
-            description="Free time for the Fits today? bar counts from here, or from now once the day has started."
-          >
-            <TimeField
-              value={capacity.dayStart}
-              aria-label="Work day starts"
-              onChange={(v) => {
-                if (!capacitySettings.setTime("dayStart", v)) toast.error("The work day has to start before it ends.");
-              }}
-              className="w-32 px-2"
-            />
-          </Row>
-          <Row
-            title="Work day ends"
-            description="Free time stops here. Timed events in the Google calendar picked in The Horizon are taken out of it."
-          >
-            <TimeField
-              value={capacity.dayEnd}
-              aria-label="Work day ends"
-              onChange={(v) => {
-                if (!capacitySettings.setTime("dayEnd", v)) toast.error("The work day has to end after it starts.");
-              }}
-              className="w-32 px-2"
-            />
-          </Row>
-        </Section>
+        {has("tasks") && (
+          <Section id="engine" icon={ListTodo} title="The Engine">
+            <Row
+              title="Work day starts"
+              description="Free time for the Fits today? bar counts from here, or from now once the day has started."
+            >
+              <TimeField
+                value={capacity.dayStart}
+                aria-label="Work day starts"
+                onChange={(v) => {
+                  if (!capacitySettings.setTime("dayStart", v)) toast.error("The work day has to start before it ends.");
+                }}
+                className="w-32 px-2"
+              />
+            </Row>
+            <Row
+              title="Work day ends"
+              description="Free time stops here. Timed events in the Google calendar picked in The Horizon are taken out of it."
+            >
+              <TimeField
+                value={capacity.dayEnd}
+                aria-label="Work day ends"
+                onChange={(v) => {
+                  if (!capacitySettings.setTime("dayEnd", v)) toast.error("The work day has to end after it starts.");
+                }}
+                className="w-32 px-2"
+              />
+            </Row>
+          </Section>
+        )}
 
         <Section id="notifications" icon={Bell} title="Notifications">
           <Row title="Notification sounds" description="Play a chime when a notification arrives.">
@@ -957,49 +1001,53 @@ export default function SettingsPage() {
           </Row>
         </Section>
 
-        <Section id="orbit" icon={Orbit} title="The Orbit">
-          <Row
-            title="Auto-export reviews"
-            description="Writes each weekly, monthly and yearly review to Reviews/Weekly, Reviews/Monthly and Reviews/Yearly in your vault once it is ready (Sunday, the month's last day and December 31, from 6 PM), or the next time the app opens. Never overwrites a note that is already there, and leaves out the reflection, which you can add by exporting again from The Orbit."
-          >
-            <Switch checked={orbit.autoExport} onCheckedChange={orbitStore.setAutoExport} />
-          </Row>
-        </Section>
-
-        <Section id="atmosphere" icon={CloudSun} title="The Atmosphere">
-          <Row
-            title="Weather effects"
-            description="Clouds, rain, snow, fog and lightning over the Living Sky, following the current conditions."
-          >
-            <Switch checked={sky.weatherEffects} onCheckedChange={atmosphere.setWeatherEffects} />
-          </Row>
-          <Row
-            title="Aurora"
-            description="Northern lights over a pine treeline, bending toward your cursor. Brightest at night, faint by day. Works with weather effects: clouds and rain pass in front of it."
-          >
-            <Switch checked={sky.aurora} onCheckedChange={atmosphere.setAurora} />
-          </Row>
-          <Row
-            title="Update location on launch"
-            description="Once at the start of every launch, picks the nearest Environment Canada location to where you are. Your position is read once, not stored or sent anywhere. Needs Windows location services; if it cannot be found, your chosen location stays."
-          >
-            <Switch checked={sky.autoLocate} onCheckedChange={atmosphere.setAutoLocate} />
-          </Row>
-          <Row
-            title="Background image"
-            description="Shown behind the page and the Home box, under frosted glass, with the sky's tint and effects drawn over it. A misty forest lake by default; choose a PNG or JPEG of your own (stored on this device only), or remove yours to go back to the default."
-          >
-            <ImagePicker imageUrl={sky.imageUrl} custom={sky.customImage} onChoose={atmosphere.setImage} onClear={atmosphere.clearImage} />
-          </Row>
-          {sky.imageUrl && (
+        {has("orbit") && (
+          <Section id="orbit" icon={Orbit} title="The Orbit">
             <Row
-              title="Image blur"
-              description="How much the glass blurs the background image, from sharp (0%) to heavily frosted (100%)."
+              title="Auto-export reviews"
+              description="Writes each weekly, monthly and yearly review to Reviews/Weekly, Reviews/Monthly and Reviews/Yearly in your vault once it is ready (Sunday, the month's last day and December 31, from 6 PM), or the next time the app opens. Never overwrites a note that is already there, and leaves out the reflection, which you can add by exporting again from The Orbit."
             >
-              <PercentSlider value={sky.imageBlur} label="Image blur" onCommit={atmosphere.setImageBlur} />
+              <Switch checked={orbit.autoExport} onCheckedChange={orbitStore.setAutoExport} />
             </Row>
-          )}
-        </Section>
+          </Section>
+        )}
+
+        {has("weather") && (
+          <Section id="atmosphere" icon={CloudSun} title="The Atmosphere">
+            <Row
+              title="Weather effects"
+              description="Clouds, rain, snow, fog and lightning over the Living Sky, following the current conditions."
+            >
+              <Switch checked={sky.weatherEffects} onCheckedChange={atmosphere.setWeatherEffects} />
+            </Row>
+            <Row
+              title="Aurora"
+              description="Northern lights over a pine treeline, bending toward your cursor. Brightest at night, faint by day. Works with weather effects: clouds and rain pass in front of it."
+            >
+              <Switch checked={sky.aurora} onCheckedChange={atmosphere.setAurora} />
+            </Row>
+            <Row
+              title="Update location on launch"
+              description="Once at the start of every launch, picks the nearest Environment Canada location to where you are. Your position is read once, not stored or sent anywhere. Needs Windows location services; if it cannot be found, your chosen location stays."
+            >
+              <Switch checked={sky.autoLocate} onCheckedChange={atmosphere.setAutoLocate} />
+            </Row>
+            <Row
+              title="Background image"
+              description="Shown behind the page and the Home box, under frosted glass, with the sky's tint and effects drawn over it. A misty forest lake by default; choose a PNG or JPEG of your own (stored on this device only), or remove yours to go back to the default."
+            >
+              <ImagePicker imageUrl={sky.imageUrl} custom={sky.customImage} onChoose={atmosphere.setImage} onClear={atmosphere.clearImage} />
+            </Row>
+            {sky.imageUrl && (
+              <Row
+                title="Image blur"
+                description="How much the glass blurs the background image, from sharp (0%) to heavily frosted (100%)."
+              >
+                <PercentSlider value={sky.imageBlur} label="Image blur" onCommit={atmosphere.setImageBlur} />
+              </Row>
+            )}
+          </Section>
+        )}
 
         <Section id="backgrounds" icon={Images} title="Backgrounds">
           <BackgroundsSettings />

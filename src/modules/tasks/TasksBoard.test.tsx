@@ -26,7 +26,7 @@ vi.mock("@/lib/appActivity", async (importOriginal) => ({
 }));
 vi.mock("./CapacityBar", () => ({ CapacityCard: () => null }));
 vi.mock("./PomodoroTimer", () => ({ default: () => null }));
-vi.mock("./CategoryManager", () => ({ CategoryManagerButton: () => null }));
+vi.mock("@/components/views/CategoryManager", () => ({ CategoryManagerButton: () => null }));
 
 const { default: TasksPage } = await import("./TasksPage");
 

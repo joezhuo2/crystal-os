@@ -24,11 +24,12 @@ import { inTerminal, isPaletteShortcut } from "@/lib/hotkey";
 import { useVaultLiveUpdates } from "@/hooks/useVault";
 import { useAppActivity } from "@/lib/appActivity";
 import { useOrbitStore } from "@/lib/orbitStore";
-import OrbitAutoExport from "@/components/views/orbit/OrbitAutoExport";
-import OrbitReadyNotifier from "@/components/views/orbit/OrbitReadyNotifier";
+import OrbitAutoExport from "@/modules/orbit/OrbitAutoExport";
+import OrbitReadyNotifier from "@/modules/orbit/OrbitReadyNotifier";
 import NotificationScheduler from "@/components/NotificationScheduler";
 import { useShortcut } from "@/hooks/useShortcut";
 import { stepTab } from "@/lib/stepTab";
+import { installedModules, useInstalledModules } from "@/lib/installedModules";
 import { LazyTaskForm, LazyTransactionDrawer, lazyViews as views, preloadViews, recordVisit } from "@/lib/viewLoader";
 
 /** Tabs with a page backdrop of their own. */
@@ -99,16 +100,24 @@ function TransactionFormOverlay() {
   );
 }
 
+function VaultLiveUpdates() {
+  useVaultLiveUpdates();
+  return null;
+}
+
 function GlobalOverlays() {
   useTrayQuickAdd(() => {
+    if (!installedModules.isInstalled("archive")) return;
     appUi.setQuickAddDraft("");
     appUi.setShowQuickAdd(true);
   });
-  useVaultLiveUpdates();
+  const { uninstalled } = useInstalledModules();
+  const has = (id: TabId) => !uninstalled.includes(id);
   const { autoExport } = useOrbitStore();
   return (
     <>
-      {autoExport && <OrbitAutoExport />}
+      {has("archive") && <VaultLiveUpdates />}
+      {autoExport && has("orbit") && <OrbitAutoExport />}
       <NotificationScheduler />
       <Suspense fallback={null}>
         <TaskFormOverlay />
@@ -121,7 +130,16 @@ function GlobalOverlays() {
 
 const Index = () => {
   const { session, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>("home");
+  const [activeTab, setActiveTabRaw] = useState<TabId>("home");
+  const { uninstalled } = useInstalledModules();
+  // Pages of uninstalled modules can't be opened; one uninstalled while open falls back to Home.
+  const setActiveTab = useCallback((next: TabId | ((t: TabId) => TabId)) => {
+    setActiveTabRaw((t) => {
+      const tab = typeof next === "function" ? next(t) : next;
+      return installedModules.isInstalled(tab) ? tab : t;
+    });
+  }, []);
+  if (uninstalled.includes(activeTab)) setActiveTabRaw("home");
   const { theme: nebulaTheme } = useHarness();
   const { still } = useAppActivity();
   const viewTab = useDeferredValue(activeTab);
@@ -141,7 +159,7 @@ const Index = () => {
   // The search bar is an overlay over whichever tab is open.
   const [paletteOpen, setPaletteOpen] = useState(false);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
-  const openOrbit = useCallback(() => setActiveTab("orbit"), []);
+  const openOrbit = useCallback(() => setActiveTab("orbit"), [setActiveTab]);
 
   // Desktop global hotkey (Rust shows and focuses the window first). Opens
   // rather than toggles, so it never closes a bar left open while hidden.
@@ -274,7 +292,7 @@ const Index = () => {
         </main>
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
         <GlobalOverlays />
-        <OrbitReadyNotifier onOpen={openOrbit} />
+        {!uninstalled.includes("orbit") && <OrbitReadyNotifier onOpen={openOrbit} />}
         {/* Inside the page root, so the page's theme reaches it. */}
         <CommandPalette open={paletteOpen} onClose={closePalette} onNavigate={setActiveTab} />
       </div>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, PenLine } from "lucide-react";
 import { GlassTip } from "@/components/ui/glass-tooltip";
-import { HabitsToday } from "@/components/views/orbit/HabitsToday";
+import { HabitsToday } from "@/modules/orbit/HabitsToday";
 import { useNow } from "@/hooks/useOrbitReview";
 import { useCreateNote, useRawNote, useSaveNote, useVaultNotes, vaultErrorCode } from "@/hooks/useVault";
 import { EMPTY_ENTRY, MOODS, dailyNotePath, mergeToday, parseToday, pickDailyFolder, type TodayEntry } from "@/lib/dailyNote";

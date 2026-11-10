@@ -13,8 +13,9 @@
  */
 
 import { lazy, type ComponentType } from "react";
-import type { TabId } from "@/components/layout/Navigation";
 import { perfSettings } from "@/lib/perfSettings";
+import { isInstalled } from "@/lib/installedModules";
+import { MODULE_IDS, moduleById, type TabId } from "@/modules/registry";
 
 export interface ViewProps {
   onNavigate?: (tab: TabId) => void;
@@ -22,28 +23,16 @@ export interface ViewProps {
 
 type ViewModule = Promise<{ default: ComponentType<ViewProps> }>;
 
-const loaders: Record<TabId, () => ViewModule> = {
-  home: () => import("@/components/views/HomePage"),
-  orbit: () => import("@/components/views/OrbitPage"),
-  tasks: () => import("@/components/views/TasksPage"),
-  calendar: () => import("@/components/views/CalendarPage"),
-  financials: () => import("@/components/views/FinancialsPage"),
-  weather: () => import("@/components/views/WeatherPage"),
-  archive: () => import("@/components/views/ArchivePage"),
-  settings: () => import("@/components/views/SettingsPage"),
-  portal: () => import("@/components/views/PortalPage"),
-  nebula: () => import("@/components/views/NebulaPage"),
-  terminal: () => import("@/components/views/TerminalPage"),
-};
+const loaders = Object.fromEntries(MODULE_IDS.map((id) => [id, moduleById[id].load])) as unknown as Record<TabId, () => ViewModule>;
 
 export const lazyViews = Object.fromEntries(
   Object.entries(loaders).map(([id, load]) => [id, lazy(load)]),
 ) as unknown as Record<TabId, ComponentType<ViewProps>>;
 
 /** The task editor and transaction drawer, which live in their views' chunks. */
-export const LazyTaskForm = lazy(() => import("@/components/views/TasksPage").then((m) => ({ default: m.TaskForm })));
+export const LazyTaskForm = lazy(() => import("@/modules/tasks/TasksPage").then((m) => ({ default: m.TaskForm })));
 export const LazyTransactionDrawer = lazy(() =>
-  import("@/components/views/FinancialsPage").then((m) => ({ default: m.TransactionDrawer })),
+  import("@/modules/financials/FinancialsPage").then((m) => ({ default: m.TransactionDrawer })),
 );
 
 /* ── Visit counts ── */
@@ -102,7 +91,7 @@ export function preloadViews(current: TabId) {
   preloaded = true;
   const order = preloadOrder(current);
   const run = async () => {
-    for (const tab of [...order, ...(Object.keys(loaders) as TabId[])]) await loaders[tab]().catch(() => undefined);
+    for (const tab of [...order, ...MODULE_IDS]) if (isInstalled(tab)) await loaders[tab]().catch(() => undefined);
   };
   const idle = () => {
     if ("requestIdleCallback" in window) window.requestIdleCallback(() => void run(), { timeout: 5000 });

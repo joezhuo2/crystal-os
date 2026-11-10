@@ -49,6 +49,7 @@ import {
   Download,
   Bug,
   CalendarSearch,
+  Package,
   PanelLeft,
 } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
@@ -67,6 +68,13 @@ import { useNebulaSearchIndex } from "@/hooks/useHarness";
 import { savedPrompts, useSavedPrompts } from "@/lib/harness/savedPrompts";
 import { harness, selectActiveChat } from "@/lib/harness/store";
 import { searchChats } from "@/lib/harness/chatSearch";
+import { useInstalledModules } from "@/lib/installedModules";
+
+const RECENT_MODULE: Record<RecentItem["kind"], TabId> = {
+  task: "tasks",
+  note: "archive",
+  event: "calendar",
+};
 
 const ITEM = "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer";
 
@@ -74,6 +82,7 @@ const ITEM = "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer";
 const SECTION_ICONS: Record<string, React.ElementType> = {
   shortcuts: Keyboard,
   keymap: Keyboard,
+  modules: Package,
   navbar: PanelLeft,
   startup: Power,
   vault: FolderOpen,
@@ -117,12 +126,21 @@ export default function CommandPalette({ open, onClose, onNavigate }: CommandPal
 function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open">) {
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const { uninstalled } = useInstalledModules();
+  const on = (id: TabId) => !uninstalled.includes(id);
+  const tasksOn = on("tasks");
+  const calendarOn = on("calendar");
+  const financialsOn = on("financials");
+  const archiveOn = on("archive");
+  const nebulaOn = on("nebula");
   const tasks = useTasks();
   const { updateTask, rescheduleTasks } = useAppActions();
   // "Make subtask of…": the task being nested while the bar lists parents for it.
-  const [nestChild, setNestChild] = useState<Task | null>(null);
+  const [nestPick, setNestChild] = useState<Task | null>(null);
+  const nestChild = tasksOn ? nestPick : null;
   // "Snooze…": the task being snoozed while the bar lists the snooze picks.
-  const [snoozeTask, setSnoozeTask] = useState<Task | null>(null);
+  const [snoozePick, setSnoozeTask] = useState<Task | null>(null);
+  const snoozeTask = tasksOn ? snoozePick : null;
   const transactions = useTransactions();
   const taskCategories = useTaskCategories();
   const financialCategories = useFinancialCategories();
@@ -154,7 +172,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
 
   // ---------- Search existing data ----------
   const matchedTasks =
-    search.length >= 2 && !addPrefix && !logPrefix
+    tasksOn && search.length >= 2 && !addPrefix && !logPrefix
       ? tasks.filter(
           (t) =>
             t.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -166,7 +184,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
       : [];
 
   const matchedTransactions =
-    search.length >= 2 && !addPrefix && !logPrefix
+    financialsOn && search.length >= 2 && !addPrefix && !logPrefix
       ? transactions.filter(
           (t) =>
             t.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -180,7 +198,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   // ---------- "next 5h": the next free block in The Horizon ----------
   const slotMinutes = parseFreeSlotQuery(search);
   const capacity = useCapacitySettings();
-  const calendarStatus = useCalendarStatus(slotMinutes !== null && (!usesSidecar() || calendarWasConnected()));
+  const calendarStatus = useCalendarStatus(calendarOn && slotMinutes !== null && (!usesSidecar() || calendarWasConnected()));
   const calendarConnected = calendarStatus.data?.connected === true;
   const slotRange = useMemo(() => {
     const now = new Date();
@@ -190,7 +208,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
       timeMax: new Date(now.getFullYear(), now.getMonth(), now.getDate() + FREE_SLOT_DAYS).toISOString(),
     };
   }, []);
-  const slotEvents = useCalendarEvents(slotRange, slotMinutes !== null && calendarConnected);
+  const slotEvents = useCalendarEvents(slotRange, calendarOn && slotMinutes !== null && calendarConnected);
   const slotLoading = calendarStatus.isLoading || (calendarConnected && slotEvents.isLoading);
   const freeSlot =
     slotMinutes === null || slotLoading
@@ -207,19 +225,19 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const debouncedVaultQuery = useDebouncedValue(vaultQuery, 250);
   const { data: vaultData } = useVaultNotes(
     { q: debouncedVaultQuery, limit: 5 },
-    debouncedVaultQuery.length >= 2,
+    archiveOn && debouncedVaultQuery.length >= 2,
   );
-  const matchedNotes = debouncedVaultQuery.length >= 2 ? (vaultData?.notes ?? []) : [];
+  const matchedNotes = archiveOn && debouncedVaultQuery.length >= 2 ? (vaultData?.notes ?? []) : [];
 
   // ---------- Search Nebula chats (desktop) ----------
-  const chatQuery = vaultQuery.length >= 2 ? vaultQuery : "";
+  const chatQuery = nebulaOn && vaultQuery.length >= 2 ? vaultQuery : "";
   const nebulaIndex = useNebulaSearchIndex(chatQuery !== "");
-  const matchedChats = searchChats(nebulaIndex.chats, nebulaIndex.messagesOf, chatQuery);
+  const matchedChats = nebulaOn ? searchChats(nebulaIndex.chats, nebulaIndex.messagesOf, chatQuery) : [];
   const projectName = (id: string) => nebulaIndex.projects.find((p) => p.id === id)?.name ?? "Project";
 
   const activeProjectId = selectActiveChat(harness.getState())?.projectId;
   useSavedPrompts();
-  const projectPrompts = activeProjectId && isDesktop() ? savedPrompts.forProject(activeProjectId) : [];
+  const projectPrompts = nebulaOn && activeProjectId && isDesktop() ? savedPrompts.forProject(activeProjectId) : [];
 
   // ---------- Handlers ----------
   const handleNavigate = (tab: TabId) => {
@@ -298,6 +316,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   // Tasks come from the live list, so a deleted one drops out and a renamed
   // one shows its new name.
   const recentRows = recents.flatMap((item): { item: RecentItem; title: string; task?: Task }[] => {
+    if (!on(RECENT_MODULE[item.kind])) return [];
     if (item.kind !== "task") return [{ item, title: item.title }];
     const task = tasks.find((t) => t.id === item.id);
     return task ? [{ item, title: task.name, task }] : [];
@@ -503,7 +522,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                 <>
 
                 {/* ── "next 5h": the next free block ── */}
-                {slotMinutes !== null && (
+                {calendarOn && slotMinutes !== null && (
                   <CommandGroup heading="The Horizon">
                     <CommandItem value="free-slot" onSelect={handleFreeSlot} className={ITEM}>
                       <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
@@ -531,6 +550,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                 )}
 
                 {/* ── Quick Add to the vault — the first row, after a free-slot answer ── */}
+                {archiveOn && (
                 <CommandGroup heading="Vault">
                   <CommandItem
                     value="quick-add-vault"
@@ -551,9 +571,10 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                     <ArrowRight className="w-4 h-4 text-muted-foreground/40" />
                   </CommandItem>
                 </CommandGroup>
+                )}
 
                 {/* ── Natural Language: Add Task ── */}
-                {addPrefix && (
+                {tasksOn && addPrefix && (
                   <CommandGroup heading="Actions">
                     <CommandItem
                       onSelect={handleAddTask}
@@ -572,7 +593,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                 )}
 
                 {/* ── Natural Language: Log Expense ── */}
-                {logPrefix && (
+                {financialsOn && logPrefix && (
                   <CommandGroup heading="Actions">
                     <CommandItem
                       onSelect={handleLogExpense}
@@ -820,10 +841,11 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                 )}
 
                 {/* ── Quick Actions (when empty search, focused) ── */}
-                {!search && (
+                {!search && (tasksOn || financialsOn || calendarOn) && (
                   <>
                     <CommandSeparator className="my-1" />
                     <CommandGroup heading="Quick Actions">
+                      {tasksOn && (
                       <CommandItem
                         value="add-new-task"
                         onSelect={handleAddTask}
@@ -835,6 +857,8 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                         <span className="text-sm font-medium">Add a new task</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">or type "add"</span>
                       </CommandItem>
+                      )}
+                      {financialsOn && (
                       <CommandItem
                         value="log-expense"
                         onSelect={handleLogExpense}
@@ -846,6 +870,8 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                         <span className="text-sm font-medium">Log an expense</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">or type "log"</span>
                       </CommandItem>
+                      )}
+                      {calendarOn && (
                       <CommandItem
                         value="add-new-event"
                         onSelect={handleAddEvent}
@@ -857,6 +883,8 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                         <span className="text-sm font-medium">Add a new event</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">The Horizon</span>
                       </CommandItem>
+                      )}
+                      {(tasksOn || financialsOn) && (
                       <CommandItem
                         value="search-tasks-transactions"
                         onSelect={() => {}}
@@ -868,6 +896,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                         <span className="text-sm font-medium">Search tasks & transactions</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">just start typing</span>
                       </CommandItem>
+                      )}
                     </CommandGroup>
                   </>
                 )}
@@ -890,7 +919,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                       </CommandItem>
                       {/* Individual sections only once something is typed, or the list would crowd the empty bar. */}
                       {search &&
-                        SETTINGS_SECTIONS.filter((section) => !section.desktopOnly || isDesktop()).map((section) => {
+                        SETTINGS_SECTIONS.filter((section) => (!section.desktopOnly || isDesktop()) && (!section.module || on(section.module))).map((section) => {
                           const Icon = SECTION_ICONS[section.id] ?? Settings;
                           return (
                             <CommandItem
@@ -910,6 +939,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                             </CommandItem>
                           );
                         })}
+                      {on("portal") && (
                       <CommandItem
                         value="portal-web-apps-discord-instagram-linkedin-spotify-gmail-outlook-x-reddit"
                         onSelect={() => handleNavigate("portal")}
@@ -921,7 +951,8 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                         <span className="text-sm font-medium">Open The Portal</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">Discord, Instagram, web apps</span>
                       </CommandItem>
-                      {isDesktop() && (
+                      )}
+                      {nebulaOn && isDesktop() && (
                         <CommandItem
                           value="nebula-coding-agent-ai-chat-deepseek-claude-code-kimi-model"
                           onSelect={() => handleNavigate("nebula")}
@@ -934,7 +965,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                           <span className="ml-auto text-xs text-muted-foreground/50">coding agent</span>
                         </CommandItem>
                       )}
-                      {isDesktop() && (
+                      {isDesktop() && on("terminal") && (
                         <CommandItem
                           value="terminal-powershell-shell-command-line-console"
                           onSelect={() => handleNavigate("terminal")}

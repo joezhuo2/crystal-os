@@ -28,7 +28,7 @@ import {
   type BoardTarget,
 } from "@/lib/boardColumns";
 import PomodoroTimer from "./PomodoroTimer";
-import { CategoryManagerButton } from "./CategoryManager";
+import { CategoryManagerButton } from "@/components/views/CategoryManager";
 import { CapacityCard } from "./CapacityBar";
 import { clampEstimate, ESTIMATE_PRESETS, formatEstimate, MAX_ESTIMATE } from "@/lib/capacity";
 import { canNest, MAX_NOTES, nestTargets, splitByParent, subtaskProgress, taskDrag, type ChecklistItem } from "@/lib/subtasks";

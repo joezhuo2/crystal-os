@@ -25,7 +25,7 @@ vi.mock("@/lib/appActivity", async (importOriginal) => ({
 // The capacity bar and the timer read the calendar and the Pomodoro store; not under test here.
 vi.mock("./CapacityBar", () => ({ CapacityCard: () => null }));
 vi.mock("./PomodoroTimer", () => ({ default: () => null }));
-vi.mock("./CategoryManager", () => ({ CategoryManagerButton: () => null }));
+vi.mock("@/components/views/CategoryManager", () => ({ CategoryManagerButton: () => null }));
 
 const { default: TasksPage } = await import("./TasksPage");
 

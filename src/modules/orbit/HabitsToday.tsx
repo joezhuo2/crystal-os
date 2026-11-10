@@ -1,7 +1,7 @@
 import { memo, useState } from "react";
 import { Check, Plus, Settings2 } from "lucide-react";
 import { GlassTip } from "@/components/ui/glass-tooltip";
-import { HabitManager } from "@/components/views/orbit/HabitManager";
+import { HabitManager } from "@/modules/orbit/HabitManager";
 import { HabitsError, useHabitActions, useHabitsData } from "@/hooks/useHabits";
 import {
   TIP_NAMES_SHOWN,
