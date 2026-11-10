@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
+import { memo, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { AppProvider } from "@/contexts/AppContext";
 import { appUi, useAppUi } from "@/lib/appUi";
 import { recordRecent } from "@/lib/recents";
@@ -67,6 +67,33 @@ function ViewEnter({ fade, children }: { fade: boolean; children: React.ReactNod
   );
 }
 
+function backdrop(tab: TabId, nebulaTheme: ReturnType<typeof useHarness>["theme"]) {
+  switch (tab) {
+    case "terminal":
+      return <TerminalStatic />;
+    case "portal":
+      return <ImageBackdrop image="portal" />;
+    case "nebula":
+      return <NebulaBackdrop theme={nebulaTheme} />;
+    case "weather":
+      return <AtmosphereBackdrop />;
+    case "archive":
+      return <ObsidianBackdrop />;
+    case "calendar":
+      return <ImageBackdrop image="horizon" />;
+    case "tasks":
+      return <ImageBackdrop image="engine" />;
+    case "orbit":
+      return <ImageBackdrop image="orbit" />;
+    case "home":
+      return <ImageBackdrop image="home" />;
+    case "settings":
+      return <ImageBackdrop image="settings" />;
+    default:
+      return null;
+  }
+}
+
 const closeTaskForm = () => {
   appUi.setShowTaskForm(false);
   appUi.setEditingTask(null);
@@ -105,7 +132,7 @@ function VaultLiveUpdates() {
   return null;
 }
 
-function GlobalOverlays() {
+const GlobalOverlays = memo(function GlobalOverlays() {
   useTrayQuickAdd(() => {
     if (!installedModules.isInstalled("archive")) return;
     appUi.setQuickAddDraft("");
@@ -126,7 +153,7 @@ function GlobalOverlays() {
       <QuickAddDialog />
     </>
   );
-}
+});
 
 const Index = () => {
   const { session, loading } = useAuth();
@@ -178,6 +205,26 @@ const Index = () => {
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, []);
+
+  const page = useMemo(
+    () => (
+      <ViewEnter key={viewTab} fade={!still}>
+        <Suspense fallback={null}>
+          <View onNavigate={setActiveTab} />
+        </Suspense>
+      </ViewEnter>
+    ),
+    [View, viewTab, still, setActiveTab],
+  );
+  const backdrops = useMemo(
+    () =>
+      [...keptBackdrops].sort().map((tab) => (
+        <BackdropSlot key={tab} active={tab === viewTab}>
+          {backdrop(tab, nebulaTheme)}
+        </BackdropSlot>
+      )),
+    [keptBackdrops, viewTab, nebulaTheme],
+  );
 
   // Runs once: fetches the most used views' chunks after Home has settled.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -236,33 +283,6 @@ const Index = () => {
                       : viewTab === "settings"
                         ? "settings-root"
                       : "mesh-gradient-bg";
-  const backdrop = (tab: TabId) => {
-    switch (tab) {
-      case "terminal":
-        return <TerminalStatic />;
-      case "portal":
-        return <ImageBackdrop image="portal" />;
-      case "nebula":
-        return <NebulaBackdrop theme={nebulaTheme} />;
-      case "weather":
-        return <AtmosphereBackdrop />;
-      case "archive":
-        return <ObsidianBackdrop />;
-      case "calendar":
-        return <ImageBackdrop image="horizon" />;
-      case "tasks":
-        return <ImageBackdrop image="engine" />;
-      case "orbit":
-        return <ImageBackdrop image="orbit" />;
-      case "home":
-        return <ImageBackdrop image="home" />;
-      case "settings":
-        return <ImageBackdrop image="settings" />;
-      default:
-        return null;
-    }
-  };
-
   // The Nebula page, sidebar, and backdrop read their colours from these.
   const rootStyle =
     viewTab === "nebula"
@@ -275,20 +295,12 @@ const Index = () => {
         {/* Leaving a tab hides its backdrop instead of unmounting it, so
             coming back skips the WebGL setup, canvas restart or image decode.
             Sorted, so switching never moves a backdrop's DOM node. */}
-        {[...keptBackdrops].sort().map((tab) => (
-          <BackdropSlot key={tab} active={tab === viewTab}>
-            {backdrop(tab)}
-          </BackdropSlot>
-        ))}
+        {backdrops}
         <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
         <main className="flex-1 min-h-0 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
           {/* The last view leaves at once and the next fades in. Keyed, so
               each switch mounts a fresh ViewEnter. */}
-          <ViewEnter key={viewTab} fade={!still}>
-            <Suspense fallback={null}>
-              <View onNavigate={setActiveTab} />
-            </Suspense>
-          </ViewEnter>
+          {page}
         </main>
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
         <GlobalOverlays />
