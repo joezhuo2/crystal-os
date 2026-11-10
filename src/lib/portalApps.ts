@@ -32,6 +32,8 @@ export interface PortalApp {
    * notification. Left out (meaning on) unless it is off.
    */
   notify?: false;
+  /** Icon the app's own page declared. Always https; the favicon is the fallback. */
+  icon?: string;
 }
 
 export interface PortalPreset extends PortalApp {
@@ -132,7 +134,7 @@ export function parseStoredApps(raw: string | null): PortalApp[] {
   const apps: PortalApp[] = [];
   for (const item of data) {
     if (!item || typeof item !== "object") continue;
-    const { id, name, url, keepLive, keepLoaded, notify } = item as Record<string, unknown>;
+    const { id, name, url, keepLive, keepLoaded, notify, icon } = item as Record<string, unknown>;
     if (typeof id !== "string" || typeof name !== "string" || typeof url !== "string") continue;
     const href = normalizeUrl(url);
     if (!isValidId(id) || seen.has(id) || !name.trim() || !href) continue;
@@ -143,6 +145,7 @@ export function parseStoredApps(raw: string | null): PortalApp[] {
     if (keepLive === true) app.keepLive = true;
     if (keepLoaded === false) app.keepLoaded = false;
     if (notify === false) app.notify = false;
+    if (typeof icon === "string" && icon.startsWith("https://")) app.icon = icon;
     apps.push(app);
   }
   return apps;

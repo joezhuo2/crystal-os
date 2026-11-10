@@ -25,6 +25,14 @@ export interface PortalTitleEvent {
 
 export const PORTAL_TITLE_EVENT = "portal://title";
 
+/** A page declared its icon: an absolute https URL. */
+export interface PortalIconEvent {
+  id: string;
+  icon: string;
+}
+
+export const PORTAL_ICON_EVENT = "portal://icon";
+
 /** A tab shortcut pressed while an app page had keyboard focus. */
 export type PortalShortcut = "next" | "previous" | "close" | "reload";
 
@@ -177,6 +185,11 @@ export function prunePortal(keep: string[]) {
 /** Subscribes to title changes from every app webview. */
 export function onPortalEvent(cb: (event: PortalTitleEvent) => void): () => void {
   return listenTo(PORTAL_TITLE_EVENT, cb);
+}
+
+/** Subscribes to icons found on each app's page. */
+export function onPortalIcon(cb: (event: PortalIconEvent) => void): () => void {
+  return listenTo(PORTAL_ICON_EVENT, cb);
 }
 
 /** Subscribes to tab shortcuts pressed inside app pages (Windows). */

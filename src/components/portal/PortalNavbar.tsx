@@ -24,12 +24,12 @@ import { usePortalOcclusion } from "@/hooks/usePortal";
 import { badgeLabel, faviconUrl, presetFor, type PortalApp, type PortalBadge } from "@/lib/portalApps";
 import type { PortalNavAction } from "@/lib/portalNative";
 
-/** Site favicon, or a coloured letter when it fails to load. */
+/** The page's own icon, else the site favicon, or a coloured letter when it fails to load. */
 export function AppIcon({ app, size = 18 }: { app: PortalApp; size?: number }) {
-  const [failed, setFailed] = useState(false);
-  const src = faviconUrl(app.url);
+  const [failed, setFailed] = useState<string[]>([]);
+  const src = [app.icon, faviconUrl(app.url)].find((s) => s && !failed.includes(s));
   const style = { width: size, height: size };
-  if (!src || failed) {
+  if (!src) {
     const color = presetFor(app.id)?.color ?? "var(--portal-a, hsl(239 84% 67%))";
     return (
       <span
@@ -47,7 +47,7 @@ export function AppIcon({ app, size = 18 }: { app: PortalApp; size?: number }) {
       alt=""
       draggable={false}
       referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
+      onError={() => setFailed((f) => [...f, src])}
       className="shrink-0 rounded-sm object-contain"
       style={style}
     />

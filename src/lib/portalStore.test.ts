@@ -163,6 +163,30 @@ describe("portal store", () => {
     expect(saved()).toEqual([discord]);
   });
 
+  it("stores a reported icon and survives a reload", () => {
+    portal.add(discord);
+    portal.setIcon("discord", "https://discord.com/i.png");
+    expect(saved()).toEqual([{ ...discord, icon: "https://discord.com/i.png" }]);
+    portal._reset();
+    expect(portal.getState().apps[0].icon).toBe("https://discord.com/i.png");
+  });
+
+  it("ignores an icon for an unknown app or an unchanged icon", () => {
+    portal.add(discord);
+    portal.setIcon("discord", "https://discord.com/i.png");
+    const listener = vi.fn();
+    const unsubscribe = portal.subscribe(listener);
+    portal.setIcon("nope", "https://discord.com/i.png");
+    portal.setIcon("discord", "https://discord.com/i.png");
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it("stores apps without an icon unchanged", () => {
+    portal.add(discord);
+    expect(saved()).toEqual([discord]);
+  });
+
   it("marks an app reported on its first title, even with no badge, until it is cleared", () => {
     portal.add(discord);
     const listener = vi.fn();
