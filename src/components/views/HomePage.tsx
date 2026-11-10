@@ -46,6 +46,8 @@ import { CapacityStrip } from "@/modules/tasks/CapacityBar";
 import { useOrbitReady, useOrbitTeaser } from "@/hooks/useOrbitReview";
 import { formatMinutes, kindLabel } from "@/lib/orbitReview";
 import { orbitStore } from "@/lib/orbitStore";
+import { useInstalledModules } from "@/lib/installedModules";
+import type { TabId } from "@/modules/registry";
 
 /** The greeting and clock, on the Orbit's black hole, with this week so far. */
 function Clock({ onClick }: { onClick?: () => void }) {
@@ -678,22 +680,23 @@ function VaultSticker({ onClick }: { onClick?: () => void }) {
 }
 
 export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) => void }) {
+  const { uninstalled } = useInstalledModules();
   const go = (tab: string) => () => onNavigate?.(tab);
-  const widgets: HomeWidget[] = [
-    { id: "clock", label: "The Orbit", render: () => <Clock onClick={go("orbit")} /> },
-    { id: "weather", label: "Atmosphere", render: () => <WeatherWidget onClick={go("weather")} /> },
-    { id: "vault", label: "The Vault", render: () => <VaultSticker onClick={go("financials")} /> },
-    { id: "engine", label: "The Engine", render: () => <EngineWidget onClick={go("tasks")} /> },
-    { id: "horizon", label: "The Horizon", render: () => <TodayHorizon onClick={go("calendar")} /> },
-    { id: "archive", label: "The Archive", render: () => <ArchiveWidget onClick={go("archive")} /> },
-    { id: "nebula", label: "The Nebula", render: () => <NebulaSpace onClick={go("nebula")} /> },
-    { id: "portal", label: "The Portal", render: () => <PortalSpace onClick={go("portal")} /> },
-    { id: "terminal", label: "Terminal", render: () => <TerminalSpace onClick={go("terminal")} /> },
+  const widgets: (HomeWidget & { module: TabId })[] = [
+    { id: "clock", module: "orbit", label: "The Orbit", render: () => <Clock onClick={go("orbit")} /> },
+    { id: "weather", module: "weather", label: "Atmosphere", render: () => <WeatherWidget onClick={go("weather")} /> },
+    { id: "vault", module: "financials", label: "The Vault", render: () => <VaultSticker onClick={go("financials")} /> },
+    { id: "engine", module: "tasks", label: "The Engine", render: () => <EngineWidget onClick={go("tasks")} /> },
+    { id: "horizon", module: "calendar", label: "The Horizon", render: () => <TodayHorizon onClick={go("calendar")} /> },
+    { id: "archive", module: "archive", label: "The Archive", render: () => <ArchiveWidget onClick={go("archive")} /> },
+    { id: "nebula", module: "nebula", label: "The Nebula", render: () => <NebulaSpace onClick={go("nebula")} /> },
+    { id: "portal", module: "portal", label: "The Portal", render: () => <PortalSpace onClick={go("portal")} /> },
+    { id: "terminal", module: "terminal", label: "Terminal", render: () => <TerminalSpace onClick={go("terminal")} /> },
   ];
 
   return (
     <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <HomeGrid widgets={widgets} />
+      <HomeGrid widgets={widgets.filter((widget) => !uninstalled.includes(widget.module))} />
     </m.div>
   );
 }
