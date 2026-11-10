@@ -5,6 +5,17 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.13.0] - 2026-11-09 - Installable sections.
+
+### Added
+
+- **Settings → Packages** installs and uninstalls each section: The Orbit, The Engine, The Horizon, The Vault, The Atmosphere, The Archive, The Nebula, The Portal and Terminal. An uninstalled section leaves the sidebar, the phone bar, Settings → Navigation, its Home card, the search bar (its results, actions and Settings entry) and its Settings section, and its background work stops: its notifications, the Orbit auto-export and review notice, Archive live vault updates and the tray Quick Add, and page preloading. If its page is open, the app goes back to Home. Its data is kept, so installing it again brings everything back. The Pulse and Settings are built in. The choice is saved per device in localStorage (`crystal-os-modules`).
+- The README opens with a tour GIF and has a screenshot gallery, captured with made-up data.
+
+### Changed
+
+- Each section now lives in its own folder under `src/modules/<id>/`, with a `manifest.ts` holding its label, icon, description, page loader, desktop-only and phone flags and default sidebar group. `src/modules/registry.ts` lists them and is now where `TabId` comes from; the sidebar, the page loader and Settings → Navigation read from it.
+
 ## [v0.12.13] - 2026-11-01 - Folded Board cards.
 
 ### Changed
