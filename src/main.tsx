@@ -18,6 +18,7 @@ import { initTrayBridge } from "./lib/tray";
 import { initNotificationBridges } from "./lib/notifications";
 import { startAppActivity } from "./lib/appActivity";
 import { installGlobalErrorHandlers } from "./lib/diagnostics";
+import { installButtonFx } from "./lib/buttonFx";
 
 // First, so errors thrown while the rest starts up are logged too.
 installGlobalErrorHandlers();
@@ -27,5 +28,6 @@ initTrayBridge();
 initNotificationBridges();
 // Pauses animation and polling while the window is hidden.
 startAppActivity();
+installButtonFx();
 
 createRoot(document.getElementById("root")!).render(<App />);
