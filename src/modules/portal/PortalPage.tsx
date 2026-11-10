@@ -139,7 +139,9 @@ export default function PortalPage() {
     if (!desktop) return;
     const host = hostRef.current;
     if (!host || !active) {
-      hidePortal().catch(() => undefined);
+      hidePortal()
+        .catch(() => undefined)
+        .then(() => portal.setOnScreen(false));
       return;
     }
 
@@ -156,7 +158,10 @@ export default function PortalPage() {
         .then(() => {
           if (taken && cancelled && snapshotRef.current?.url !== taken) URL.revokeObjectURL(taken);
         })
-        .catch(() => undefined);
+        .catch(() => undefined)
+        .then(() => {
+          if (!cancelled) portal.setOnScreen(false);
+        });
       return () => {
         cancelled = true;
       };
@@ -183,6 +188,7 @@ export default function PortalPage() {
       showPortalApp(active, bounds, !resuming)
         .then(() => {
           portalUnloader.markLoaded(active.id);
+          portal.setOnScreen(true);
           if (cancelled) return;
           setError((prev) => (prev ? null : prev));
           // The webview takes a frame to draw once moved back, so the snapshot
@@ -195,6 +201,7 @@ export default function PortalPage() {
           }
         })
         .catch((err) => {
+          portal.setOnScreen(false);
           if (!cancelled) setError({ id: active.id, message: errorText(err) });
         })
         .finally(() => {
@@ -228,7 +235,9 @@ export default function PortalPage() {
   useEffect(() => {
     if (!desktop) return;
     return () => {
-      hidePortal().catch(() => undefined);
+      hidePortal()
+        .catch(() => undefined)
+        .then(() => portal.setOnScreen(false));
     };
   }, [desktop]);
 

@@ -223,6 +223,7 @@ describe("portalAlerts", () => {
     badges: {},
     reported: { discord: true },
     occluders: 0,
+    onScreen: false,
     ...over,
   });
 

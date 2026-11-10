@@ -45,6 +45,8 @@ use tauri_plugin_opener::OpenerExt;
 /// Page titles carry unread counts, e.g. `(3) Discord`; the view turns them
 /// into badges.
 const TITLE_EVENT: &str = "portal://title";
+/// The icon an app's page declares. Payload: `IconPayload`.
+const ICON_EVENT: &str = "portal://icon";
 /// A tab shortcut pressed inside an app page. Payload: `next`, `previous`,
 /// `close` or `reload` (`PortalShortcut` in src/lib/portalNative.ts).
 const SHORTCUT_EVENT: &str = "portal://shortcut";
@@ -143,6 +145,24 @@ struct TitlePayload {
   title: String,
 }
 
+#[derive(Serialize, Clone)]
+struct IconPayload {
+  id: String,
+  icon: String,
+}
+
+const MAX_ICON_URL: usize = 2048;
+
+/// Returns the largest icon the page declares as an absolute URL, or null.
+const ICON_JS: &str = "(() => { const size = (l) => { const s = (l.getAttribute('sizes') || '').toLowerCase(); \
+  if (s.split(/\\s+/).includes('any')) return 512; \
+  const n = s.split(/\\s+/).map((v) => parseInt(v, 10)).filter((v) => v > 0); \
+  if (n.length) return Math.max(...n); \
+  return /apple-touch-icon/i.test(l.getAttribute('rel') || '') ? 180 : 16; }; \
+  const links = [...document.querySelectorAll('link[rel~=icon], link[rel=apple-touch-icon], link[rel=apple-touch-icon-precomposed]')] \
+  .filter((l) => l.href).sort((a, b) => size(b) - size(a)); \
+  return links.length ? links[0].href : null; })()";
+
 /* ------------------------------------------------------------------ *
  * Validation
  * ------------------------------------------------------------------ */
@@ -168,6 +188,17 @@ fn parse_home(url: &str) -> Result<Url, String> {
     return Err("Portal apps must use an https:// address".into());
   }
   Ok(parsed)
+}
+
+/// The page controls what its icon script returns, so only a short https URL
+/// gets through.
+fn icon_url(json: &str) -> Option<String> {
+  let url: String = serde_json::from_str::<Option<String>>(json).ok()??;
+  if url.len() > MAX_ICON_URL {
+    return None;
+  }
+  let parsed = Url::parse(&url).ok()?;
+  (parsed.scheme() == "https" && parsed.host_str().is_some()).then_some(url)
 }
 
 /// The last two labels of a host: `mail.google.com` gives `google.com`.
@@ -393,6 +424,14 @@ fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds, k
     .on_page_load(|webview, payload| {
       if payload.event() == PageLoadEvent::Finished {
         finish_loading(webview.app_handle(), webview.label(), None);
+        if let Some(id) = webview.label().strip_prefix(LABEL_PREFIX) {
+          let (app, id) = (webview.app_handle().clone(), id.to_string());
+          let _ = webview.eval_with_callback(ICON_JS, move |json| {
+            if let Some(icon) = icon_url(&json) {
+              let _ = app.emit_to(EventTarget::webview(MAIN), ICON_EVENT, IconPayload { id: id.clone(), icon });
+            }
+          });
+        }
       }
     })
     .on_document_title_changed(move |_, title| {
@@ -763,6 +802,17 @@ mod tests {
     assert!(!valid_id("a/b"));
     assert!(!valid_id("a\\b"));
     assert!(!valid_id(&"a".repeat(41)));
+  }
+
+  #[test]
+  fn icon_must_be_a_short_https_url() {
+    assert_eq!(icon_url("\"https://a.com/i.png\""), Some("https://a.com/i.png".into()));
+    assert_eq!(icon_url("null"), None);
+    assert_eq!(icon_url("\"data:image/png;base64,AAAA\""), None);
+    assert_eq!(icon_url("\"http://a.com/i.png\""), None);
+    assert_eq!(icon_url("\"javascript:alert(1)\""), None);
+    assert_eq!(icon_url("not json"), None);
+    assert_eq!(icon_url(&format!("\"https://a.com/{}\"", "a".repeat(2048))), None);
   }
 
   #[test]

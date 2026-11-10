@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { isDesktop } from "@/lib/platform";
 import { createPortalUnloader } from "@/lib/portalLifecycle";
-import { onPortalEvent, prunePortal, unloadPortalApp } from "@/lib/portalNative";
+import { onPortalEvent, onPortalIcon, prunePortal, unloadPortalApp } from "@/lib/portalNative";
 import { portal } from "@/lib/portalStore";
 import { perfSettings } from "@/lib/perfSettings";
 
@@ -24,6 +24,7 @@ export function startPortalSession() {
   if (sessionStarted || !isDesktop()) return;
   sessionStarted = true;
   onPortalEvent((event) => portal.setTitle(event.id, event.title));
+  onPortalIcon((event) => portal.setIcon(event.id, event.icon));
   // Toggling "Keep loaded" (even for an app already in the background) or
   // removing an app takes effect at once; a new delay restarts the countdowns.
   portal.subscribe(portalUnloader.sync);

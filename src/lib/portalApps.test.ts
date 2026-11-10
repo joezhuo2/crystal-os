@@ -85,6 +85,21 @@ describe("parseStoredApps", () => {
     expect(apps[3].keepLive).toBeUndefined();
   });
 
+  it("keeps icon only when it is an https string", () => {
+    const apps = parseStoredApps(
+      JSON.stringify([
+        { id: "discord", name: "Discord", url: "https://discord.com/app", icon: "https://discord.com/i.png" },
+        { id: "insta", name: "Instagram", url: "https://www.instagram.com/", icon: "http://x.com/i.png" },
+        { id: "slack", name: "Slack", url: "https://app.slack.com/client", icon: 5 },
+        { id: "x", name: "X", url: "https://x.com/" },
+      ]),
+    );
+    expect(apps[0].icon).toBe("https://discord.com/i.png");
+    expect(apps[1].icon).toBeUndefined();
+    expect(apps[2].icon).toBeUndefined();
+    expect(apps[3].icon).toBeUndefined();
+  });
+
   it("reads keepLoaded only when it is stored as false", () => {
     const raw = JSON.stringify([
       { id: "discord", name: "Discord", url: "https://discord.com/app", keepLoaded: false },

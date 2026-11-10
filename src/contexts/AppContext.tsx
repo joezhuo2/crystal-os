@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback, useMemo, useEffect } from "react";
+import React, { createContext, useContext, useCallback, useMemo, useEffect, useRef, useState } from "react";
 import { hashKey, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { pomodoro } from "@/lib/pomodoro";
@@ -14,6 +14,7 @@ import {
 } from "@/lib/seedCategories";
 import { ascNullsLast, loadInPages, mergePage } from "@/lib/pagedLoad";
 import { appUi } from "@/lib/appUi";
+import { appActivity } from "@/lib/appActivity";
 import { setRecentsOwner } from "@/lib/recents";
 import { clampEstimate } from "@/lib/capacity";
 import { cleanChecklist, cleanNotePath, cleanNotes, tickAll, untickAll, type ChecklistItem } from "@/lib/subtasks";
@@ -107,6 +108,8 @@ export type AppActions = {
   deleteTaskCategory: (id: string) => void;
   addFinancialCategory: (cat: Omit<FinancialCategory, "id">) => void;
   deleteFinancialCategory: (id: string) => void;
+  /** Loads tasks, transactions and categories again, keeping what is already on screen. */
+  reloadData: () => void;
 };
 
 const defaultTaskCategories: TaskCategory[] = [
@@ -141,6 +144,7 @@ export const APP_DATA_KEYS = {
   taskCategories: ["app", "taskCategories"],
   financialCategories: ["app", "financialCategories"],
   loading: ["app", "loading"],
+  loadError: ["app", "loadError"],
 } as const;
 
 const TASKS_HASH = hashKey(APP_DATA_KEYS.tasks);
@@ -191,6 +195,11 @@ export function useAppLoading(): boolean {
   return useAppData(APP_DATA_KEYS.loading, true);
 }
 
+/** True when the last load of tasks or categories failed; cleared by a successful reload. */
+export function useLoadError(): boolean {
+  return useAppData(APP_DATA_KEYS.loadError, false);
+}
+
 export function useAppActions(): AppActions {
   const ctx = useContext(AppActionsContext);
   if (!ctx) throw new Error("useAppActions must be used within AppProvider");
@@ -210,6 +219,7 @@ function useKeepAppData() {
   useQuery({ queryKey: APP_DATA_KEYS.taskCategories, initialData: defaultTaskCategories, ...keep });
   useQuery({ queryKey: APP_DATA_KEYS.financialCategories, initialData: defaultFinancialCategories, ...keep });
   useQuery({ queryKey: APP_DATA_KEYS.loading, initialData: true, ...keep });
+  useQuery({ queryKey: APP_DATA_KEYS.loadError, initialData: false, ...keep });
 }
 
 /** setState-style writers over the cache keys. */
@@ -229,6 +239,7 @@ function cacheSetters(client: QueryClient) {
       defaultFinancialCategories,
     ),
     setLoading: setter<boolean>(APP_DATA_KEYS.loading, true),
+    setLoadError: setter<boolean>(APP_DATA_KEYS.loadError, false),
   };
 }
 
@@ -422,8 +433,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const { user } = useAuth();
   const queryClient = useQueryClient();
   useKeepAppData();
-  const { setTasks, setTransactions, setTaskCategories, setFinancialCategories, setLoading } =
+  const { setTasks, setTransactions, setTaskCategories, setFinancialCategories, setLoading, setLoadError } =
     useMemo(() => cacheSetters(queryClient), [queryClient]);
+  const [reloadToken, setReloadToken] = useState(0);
+  const reloadData = useCallback(() => setReloadToken((n) => n + 1), []);
+  const loadedFor = useRef<string | null>(null);
 
   // Signing out must not hand the next session this one's data while it
   // loads, or reopen the forms and dialogs it left open.
@@ -519,6 +533,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     offlineQueue.use(user?.id ?? null);
     if (!user) {
+      loadedFor.current = null;
+      setLoadError(false);
       // Signing out must not leave the previous session's tasks on screen
       // while the login form animates in.
       setTasks([]);
@@ -530,11 +546,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     let active = true;
+    const isReload = loadedFor.current === user.id;
+    loadedFor.current = user.id;
 
     async function load() {
-      setLoading(true);
-      setTasks([]);
-      setTransactions([]);
+      if (!isReload) {
+        setLoading(true);
+        setTasks([]);
+        setTransactions([]);
+      }
       // Writes left over from an offline session go first, so the load below
       // already contains them.
       await flushQueue();
@@ -606,6 +626,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!active) return;
       reportError("load all of your tasks", tasksError);
       reportError("load all of your transactions", txError);
+      setLoadError(!!(tasksError || taskCatRes.error));
     }
 
     void load();
@@ -616,7 +637,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // every hourly token refresh, so depending on the object itself would
     // refetch the whole dashboard once an hour for no reason.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, reloadToken]);
+
+  // A load at login can fail before the network is up, with the window hidden in
+  // the tray; try again when the network or the window comes back.
+  const loadError = useLoadError();
+  useEffect(() => {
+    if (!loadError) return;
+    const retry = () => {
+      if (appActivity.getState().visible) reloadData();
+    };
+    window.addEventListener("online", reloadData);
+    const unsubscribe = appActivity.subscribe(retry);
+    return () => {
+      window.removeEventListener("online", reloadData);
+      unsubscribe();
+    };
+  }, [loadError, reloadData]);
 
   // ── Focus history for The Orbit ──
   // The Pomodoro store lives outside React; while someone is signed in, each
@@ -944,10 +981,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const actions = useMemo<AppActions>(
     () => ({
       addTask, updateTask, deleteTask, completeTask, rescheduleTasks, addTransaction, updateTransaction, deleteTransaction,
-      addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory,
+      addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory, reloadData,
     }),
     [addTask, updateTask, deleteTask, completeTask, rescheduleTasks, addTransaction, updateTransaction, deleteTransaction,
-     addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory]
+     addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory, reloadData]
   );
 
   return <AppActionsContext.Provider value={actions}>{children}</AppActionsContext.Provider>;

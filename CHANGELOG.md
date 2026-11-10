@@ -5,6 +5,18 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.13.1] - 2026-11-09 - Portal icons and fixes.
+
+### Changed
+
+- The Portal shows each app's own icon, the one the site declares (largest `<link rel="icon">` or apple-touch-icon), read after each page load and saved with the app so it shows on the next launch. It falls back to the site's favicon.ico, then to the coloured letter. Only https icon URLs are kept. (#104)
+
+### Fixed
+
+- Hovering the sidebar on the Portal tab no longer slides it under the web page and then flickers; it now expands once the page has been hidden. (#105)
+- Right-clicking a Portal tab while another tab's menu is open no longer makes the web page flicker. (#106)
+- The Engine task list no longer stays empty when the app starts at login before the network is up. A failed load now shows "Couldn't load tasks" with a **Retry** button, and the app tries again when the network comes back or the window is opened. (#117)
+
 ## [v0.13.0] - 2026-11-09 - Installable sections.
 
 ### Added

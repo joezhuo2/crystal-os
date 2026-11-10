@@ -27,6 +27,8 @@ export interface PortalState {
    * While above zero the page hides the active webview.
    */
   occluders: number;
+  /** The active app's webview is on screen, drawn over the page. */
+  onScreen: boolean;
 }
 
 function read(key: string): string | null {
@@ -55,6 +57,7 @@ function load(): PortalState {
     badges: {},
     reported: {},
     occluders: 0,
+    onScreen: false,
   };
 }
 
@@ -72,13 +75,14 @@ function saveApps(apps: PortalApp[]) {
   write(
     APPS_KEY,
     JSON.stringify(
-      apps.map(({ id, name, url, keepLive, keepLoaded, notify }) => ({
+      apps.map(({ id, name, url, keepLive, keepLoaded, notify, icon }) => ({
         id,
         name,
         url,
         ...(keepLive ? { keepLive } : {}),
         ...(keepLoaded === false ? { keepLoaded } : {}),
         ...(notify === false ? { notify } : {}),
+        ...(icon ? { icon } : {}),
       })),
     ),
   );
@@ -191,6 +195,15 @@ export const portal = {
     set({ ...state, apps });
   },
 
+  /** Records the icon an app's page declared. */
+  setIcon(id: string, icon: string) {
+    const app = state.apps.find((a) => a.id === id);
+    if (!app || app.icon === icon) return;
+    const apps = state.apps.map((a) => (a.id === id ? { ...a, icon } : a));
+    saveApps(apps);
+    set({ ...state, apps });
+  },
+
   /** Drops an app's badge, for when its webview is unloaded and stops reporting titles. */
   clearBadge(id: string) {
     if (!(id in state.badges) && !(id in state.reported)) return;
@@ -223,6 +236,10 @@ export const portal = {
       released = true;
       set({ ...state, occluders: Math.max(0, state.occluders - 1) });
     };
+  },
+
+  setOnScreen(onScreen: boolean) {
+    if (state.onScreen !== onScreen) set({ ...state, onScreen });
   },
 
   /** Test hook: reload from storage and drop session state. */

@@ -24,12 +24,12 @@ import { usePortalOcclusion } from "@/hooks/usePortal";
 import { badgeLabel, faviconUrl, presetFor, type PortalApp, type PortalBadge } from "@/lib/portalApps";
 import type { PortalNavAction } from "@/lib/portalNative";
 
-/** Site favicon, or a coloured letter when it fails to load. */
+/** The page's own icon, else the site favicon, or a coloured letter when it fails to load. */
 export function AppIcon({ app, size = 18 }: { app: PortalApp; size?: number }) {
-  const [failed, setFailed] = useState(false);
-  const src = faviconUrl(app.url);
+  const [failed, setFailed] = useState<string[]>([]);
+  const src = [app.icon, faviconUrl(app.url)].find((s) => s && !failed.includes(s));
   const style = { width: size, height: size };
-  if (!src || failed) {
+  if (!src) {
     const color = presetFor(app.id)?.color ?? "var(--portal-a, hsl(239 84% 67%))";
     return (
       <span
@@ -47,7 +47,7 @@ export function AppIcon({ app, size = 18 }: { app: PortalApp; size?: number }) {
       alt=""
       draggable={false}
       referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
+      onError={() => setFailed((f) => [...f, src])}
       className="shrink-0 rounded-sm object-contain"
       style={style}
     />
@@ -135,6 +135,7 @@ export default function PortalNavbar({
   onNotifyChange,
 }: PortalNavbarProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const tabsRef = useRef<HTMLUListElement>(null);
   const openedAt = useRef(0);
   const justOpened = () => performance.now() - openedAt.current < 1000;
   const changeMenu = (id: string, open: boolean) => {
@@ -156,9 +157,20 @@ export default function PortalNavbar({
       e.stopPropagation();
       setOpenMenuId(null);
     };
+    // The open menu blocks page pointer events, so a right-press on another tab never reaches its onPointerDown.
+    const onPress = (e: PointerEvent) => {
+      const r = tabsRef.current?.getBoundingClientRect();
+      if (desktop && e.button === 2 && r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+        setArmed(true);
+      }
+    };
     window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [openMenuId]);
+    window.addEventListener("pointerdown", onPress, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("pointerdown", onPress, true);
+    };
+  }, [openMenuId, desktop]);
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (!armed) return;
@@ -183,6 +195,7 @@ export default function PortalNavbar({
   return (
     <div className="portal-navbar flex items-center gap-2">
       <Reorder.Group
+        ref={tabsRef}
         as="ul"
         axis="x"
         values={apps.map((a) => a.id)}

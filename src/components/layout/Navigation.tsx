@@ -168,25 +168,33 @@ const SidebarButton = memo(function SidebarButton({
  * on the spacer: no React state, so hovering re-renders nothing, and the
  * width, labels and headers follow it in CSS (`.sidebar-shell` in index.css).
  * The Portal is the exception: its apps are native webviews drawn above the
- * page, which would hide the expanded panel, so there the spacer grows with
- * the panel (`data-push`) and the app moves aside as before.
+ * page, which would hide the expanded panel, so there it expands only once
+ * the webview has been swapped for a snapshot.
  */
 export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const shellRef = useRef<HTMLDivElement>(null);
   const releaseHover = useRef<(() => void) | null>(null);
+  const hovering = useRef(false);
+  const portalState = usePortal();
+  const { onScreen } = portalState;
+  const overPortal = activeTab === "portal" && isDesktop();
   // Over the Portal the app's native webview would cover the expanded panel,
   // so it is swapped for a snapshot while the pointer is on the sidebar.
   const setExpanded = (on: boolean) => {
-    shellRef.current?.toggleAttribute("data-expanded", on);
-    if (on && activeTab === "portal" && isDesktop() && !releaseHover.current) releaseHover.current = portal.occlude();
+    hovering.current = on;
+    shellRef.current?.toggleAttribute("data-expanded", on && !(overPortal && onScreen));
+    if (on && overPortal && !releaseHover.current) releaseHover.current = portal.occlude();
     else if (!on) {
       releaseHover.current?.();
       releaseHover.current = null;
     }
   };
+  useEffect(() => {
+    if (hovering.current && !onScreen) shellRef.current?.toggleAttribute("data-expanded", true);
+  }, [onScreen]);
   useEffect(() => () => releaseHover.current?.(), []);
   // A running focus session mutes the Portal's badges (v0.9.5).
-  const portalTotal = selectBadgeTotal(usePortal());
+  const portalTotal = selectBadgeTotal(portalState);
   const portalBadge = useFocusMuted() ? null : portalTotal;
   const orbitReady = useOrbitReady(useNow());
   useInstalledModules();
