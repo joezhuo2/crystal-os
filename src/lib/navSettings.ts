@@ -5,17 +5,14 @@
  */
 
 import { useSyncExternalStore } from "react";
-import type { TabId } from "@/components/layout/Navigation";
+import { MODULE_IDS, moduleById, type TabId } from "@/modules/registry";
 
 export const NAV_SETTINGS_KEY = "crystal-os-nav";
 
 /** Every page, in the default order. */
-export const NAV_TABS: readonly TabId[] = [
-  "home", "orbit", "tasks", "calendar", "financials", "weather",
-  "archive", "nebula", "portal", "terminal", "settings",
-];
+export const NAV_TABS: readonly TabId[] = MODULE_IDS;
 
-const DEFAULT_BOTTOM: readonly TabId[] = ["archive", "nebula", "portal", "terminal", "settings"];
+const DEFAULT_BOTTOM: readonly TabId[] = MODULE_IDS.filter((id) => moduleById[id].bottom);
 
 /** Settings can move but never hide, or there would be no way back to this switch. */
 export const ALWAYS_SHOWN: TabId = "settings";
