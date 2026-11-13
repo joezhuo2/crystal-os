@@ -38,7 +38,7 @@ describe("microsoft", () => {
         .mockResolvedValueOnce(json({ value: [{ id: "m2", receivedDateTime: "2026-11-09T10:00:00Z" }] }));
       vi.stubGlobal("fetch", fetchMock);
 
-      const messages = await listOutlook(config, account, 30, (t) => store.setToken(account.id, t));
+      const messages = await listOutlook(config, account, 0, (t) => store.setToken(account.id, t));
 
       expect(messages.map((m) => m.messageId)).toEqual(["m1", "m2"]);
       expect(messages[0]).toMatchObject({ from: "A", fromAddress: "a@x.com", url: "https://outlook/1" });
@@ -55,7 +55,7 @@ describe("microsoft", () => {
   it("surfaces a sign-in failure without the token", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(json({ error: "invalid_grant", error_description: "AADSTS70000: expired\r\nTrace" }, 400)));
     const account = { id: "1", provider: "microsoft" as const, email: "me@outlook.com", refreshToken: "secret-rt" };
-    await expect(listOutlook({ ...config, microsoftClientSecret: "s" }, account, 30, async () => {})).rejects.toThrow(
+    await expect(listOutlook({ ...config, microsoftClientSecret: "s" }, account, 0, async () => {})).rejects.toThrow(
       "Microsoft sign-in failed: AADSTS70000: expired",
     );
   });

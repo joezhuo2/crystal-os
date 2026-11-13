@@ -41,8 +41,19 @@ describe("mail middleware", () => {
     expect(await res.json()).toEqual({
       providers: { google: { configured: true }, microsoft: { configured: false } },
       ai: { configured: false, model: "claude-haiku-5-5" },
+      cache: { fetchDays: 30, retainDays: 90 },
       accounts: [],
     });
+  });
+
+  it("saves cache settings, keeping retention at least as long as the fetch window", async () => {
+    const post = (body: unknown) =>
+      fetch(`${base}/cache`, { method: "POST", headers: { ...authed.headers, "content-type": "application/json" }, body: JSON.stringify(body) });
+
+    expect((await post({ fetchDays: "7" })).status).toBe(400);
+    expect(await (await post({ fetchDays: 60, retainDays: 14 })).json()).toEqual({ fetchDays: 60, retainDays: 60 });
+    expect(JSON.parse(await readFile(path.join(dir, "mail-cache.json"), "utf-8")).settings).toEqual({ fetchDays: 60, retainDays: 60 });
+    expect(await (await post({ fetchDays: 30, retainDays: 90 })).json()).toEqual({ fetchDays: 30, retainDays: 90 });
   });
 
   it("names the missing env vars for an unconfigured provider", async () => {

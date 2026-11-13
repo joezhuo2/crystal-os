@@ -6,6 +6,7 @@ import { CalendarError as MailError } from "../calendar/errors";
 import { removeEnvValue, upsertEnvValue } from "../calendar/envFile";
 import { readJsonBody, sendCallbackPage, sendJson } from "../calendar/plugin";
 import { createMailAi } from "./ai";
+import { createMailCache } from "./cache";
 import { createDigest } from "./digest";
 import { googleAuthUrl, googleClient, googleExchange, listGmail, revokeGoogle } from "./google";
 import { createPkce, listOutlook, microsoftAuthUrl, microsoftExchange } from "./microsoft";
@@ -54,13 +55,15 @@ export function createMailMiddleware(
     microsoft: Boolean(config.microsoftClientId),
   };
 
+  const cache = createMailCache(rootDir);
   const digest = createDigest({
     store,
     ai,
-    fetchAccount: (account, days) =>
+    cache,
+    fetchAccount: (account, since) =>
       account.provider === "google"
-        ? listGmail(googleClient(config, account.refreshToken), account.email, days)
-        : listOutlook(config, account, days, (token) => store.setToken(account.id, token)),
+        ? listGmail(googleClient(config, account.refreshToken), account.email, since)
+        : listOutlook(config, account, since, (token) => store.setToken(account.id, token)),
   });
 
   function startAuth(provider: MailProvider): string {
@@ -141,6 +144,7 @@ export function createMailMiddleware(
               microsoft: { configured: configured.microsoft },
             },
             ai: { configured: ai.configured, model: ai.model },
+            cache: await cache.settings(),
             accounts: (await store.list()).map(({ id, provider, email }) => ({ id, provider, email })),
           };
           sendJson(res, 200, status);
@@ -192,15 +196,19 @@ export function createMailMiddleware(
 
         if (route === "/digest") {
           if (method !== "GET") throw new MailError("Use GET", 405);
-          const days = Number.parseInt(url.searchParams.get("days") ?? "", 10);
-          sendJson(
-            res,
-            200,
-            await digest.get(
-              Number.isNaN(days) ? 30 : Math.min(90, Math.max(1, days)),
-              url.searchParams.get("refresh") === "1",
-            ),
-          );
+          sendJson(res, 200, await digest.get(url.searchParams.get("refresh") === "1"));
+          return;
+        }
+
+        if (route === "/cache") {
+          if (method !== "POST") throw new MailError("Use POST", 405);
+          const body = ((await readJsonBody(req)) ?? {}) as Record<string, unknown>;
+          for (const key of ["fetchDays", "retainDays"]) {
+            if (body[key] !== undefined && !Number.isInteger(body[key])) throw new MailError(`${key} must be a whole number of days`);
+          }
+          const settings = await cache.setSettings({ fetchDays: body.fetchDays, retainDays: body.retainDays });
+          digest.clear();
+          sendJson(res, 200, settings);
           return;
         }
 
