@@ -18,6 +18,9 @@ const port = Number.parseInt(process.env.CRYSTAL_API_PORT ?? "", 10) || 8787;
 const fileEnv =
   dotenv.config({ path: path.join(rootDir, ".env.local"), processEnv: {}, quiet: true }).parsed ?? {};
 const env = { ...fileEnv, ...process.env } as Record<string, string | undefined>;
+// The dev defaults point at Vite on 8080, which the packaged app does not run.
+env.GOOGLE_REDIRECT_URI ||= `http://127.0.0.1:${port}/api/calendar/auth/callback`;
+env.MAIL_REDIRECT_URI ||= `http://127.0.0.1:${port}/api/mail/auth/callback`;
 
 const requireUser =
   env.VITE_SUPABASE_URL && env.VITE_SUPABASE_ANON_KEY
