@@ -15,6 +15,7 @@ import { useSyncExternalStore } from "react";
 import { focusManager } from "@tanstack/react-query";
 import { perfSettings } from "@/lib/perfSettings";
 import { privacySettings } from "@/lib/privacySettings";
+import { themeSettings } from "@/lib/themeSettings";
 import { isDesktop } from "@/lib/platform";
 
 export const VISIBILITY_EVENT = "app://visibility";
@@ -86,9 +87,11 @@ export function startAppActivity() {
     root.classList.toggle("perf-still", perfSettings.getState().reduceTransitions);
     root.classList.toggle("perf-backdrop-still", perfSettings.getState().stillBackdrops);
     root.classList.toggle("privacy-mode", privacySettings.getState());
+    root.dataset.theme = themeSettings.getState().theme;
   };
   appActivity.subscribe(apply);
   privacySettings.subscribe(apply);
+  themeSettings.subscribe(apply);
   perfSettings.subscribe(() => {
     update();
     apply();

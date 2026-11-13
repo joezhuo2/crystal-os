@@ -12,6 +12,7 @@ vi.mock("@/hooks/useVault", () => ({
 vi.mock("@/hooks/useMail", () => ({
   useMailStatus: () => ({ data: null }),
   useSaveMailAi: () => ({ mutate: () => {}, isPending: false }),
+  useSaveMailCache: () => ({ mutate: () => {}, isPending: false }),
 }));
 
 const { default: SettingsPage } = await import("./SettingsPage");

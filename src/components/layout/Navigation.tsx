@@ -1,3 +1,4 @@
+import { useThemeSettings } from "@/lib/themeSettings";
 import { memo, useEffect, useRef } from "react";
 import { m } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
@@ -199,7 +200,8 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const orbitReady = useOrbitReady(useNow());
   useInstalledModules();
   const layout = navLayout(useNavSettings(), tabAvailable);
-  const mode: SidebarMode =
+  const monochrome = useThemeSettings().theme === "default";
+  const pageMode: SidebarMode =
     activeTab === "terminal"
       ? "terminal"
       : activeTab === "portal"
@@ -221,6 +223,7 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
                       : activeTab === "home"
                         ? "home"
                         : "default";
+  const mode: SidebarMode = monochrome ? "default" : pageMode;
   const terminal = mode === "terminal";
   const sidebarClass = terminal
     ? "sidebar-terminal"

@@ -1,11 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Images, Keyboard, ListTodo, Mail, Orbit, Package, PanelLeft, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Images, Keyboard, ListTodo, Mail, Orbit, Package, Palette, PanelLeft, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 import NebulaSettingsSection from "@/components/nebula/NebulaSettingsSection";
 import InstallerSection from "@/components/views/InstallerSection";
 import { Button } from "@/components/ui/button";
-import { useMailStatus, useSaveMailAi } from "@/hooks/useMail";
+import { useMailStatus, useSaveMailAi, useSaveMailCache } from "@/hooks/useMail";
 import { MAIL_AI_MODELS } from "@/lib/mail";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,6 +18,7 @@ import { HOTKEY_COPY, formatAccelerator, paletteShortcutLabel, type HotkeyAction
 import { KEYMAP, KEYMAP_CATEGORY_LABELS, bindingFor, bindingFromEvent, formatBinding, setBinding, useKeymapOverrides, type KeymapCategory } from "@/lib/keymap";
 import { findConflict } from "@/lib/keymapConflicts";
 import { isDesktop } from "@/lib/platform";
+import { themeSettings, useThemeSettings, type Theme } from "@/lib/themeSettings";
 import { MAX_CACHE_MINUTES, MAX_UNLOAD_DELAY, perfSettings, usePerfSettings } from "@/lib/perfSettings";
 import { privacySettings, usePrivacyMode } from "@/lib/privacySettings";
 import { changelogSettings, useShowChangelog } from "@/lib/changelogSettings";
@@ -424,6 +425,30 @@ const BACKDROP_LABELS: Record<BackdropImage, string> = {
   archive: "The Archive (Home box)",
 };
 
+function ThemeSettings() {
+  const { theme, fluxLines } = useThemeSettings();
+  return (
+    <>
+      <Row title="Theme" description="Default is black and white with glass cards and an animated Flux Lines background. Orbit keeps the original colours and the per-page backgrounds.">
+        <Select value={theme} onValueChange={(v) => themeSettings.setTheme(v as Theme)}>
+          <SelectTrigger className="h-8 w-52" aria-label="Theme">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="default">Default</SelectItem>
+            <SelectItem value="orbit">Orbit</SelectItem>
+          </SelectContent>
+        </Select>
+      </Row>
+      {theme === "default" && (
+        <Row title="Flux Lines background" description="The animated lines behind every page in the Default theme. Turn off for a plain black background. Still backdrops freezes it to one frame.">
+          <Switch checked={fluxLines} onCheckedChange={themeSettings.setFluxLines} aria-label="Flux Lines background" />
+        </Row>
+      )}
+    </>
+  );
+}
+
 /** Picks a page, then its background image, blurs and opacity. */
 function BackgroundsSettings() {
   const all = useBackdropSettings();
@@ -646,6 +671,13 @@ function CourierAiSettings() {
   const save = useSaveMailAi();
   const [key, setKey] = useState("");
   const ai = status.data?.ai;
+  const cache = status.data?.cache;
+  const saveCache = useSaveMailCache();
+  const saveDays = (key: "fetchDays" | "retainDays", draft: string) => {
+    const days = Number.parseInt(draft, 10);
+    if (Number.isNaN(days)) return;
+    saveCache.mutate({ [key]: days }, { onError: (err) => toast.error("Could not save The Courier settings", { description: (err as Error).message }) });
+  };
   const disabled = !ai || save.isPending;
   const models = ai && !MAIL_AI_MODELS.some((m) => m.id === ai.model) ? [...MAIL_AI_MODELS, { id: ai.model, label: ai.model }] : MAIL_AI_MODELS;
   const submit = (body: { apiKey?: string | null; model?: string }, done: string) =>
@@ -695,6 +727,16 @@ function CourierAiSettings() {
           </SelectContent>
         </Select>
       </Row>
+      {cache && (
+        <>
+          <Row title="Fetch window" description="How far back The Courier looks for mail. A refresh only downloads mail that arrived since the last one.">
+            <NumberInput value={cache.fetchDays} min={1} max={90} unit="days" label="Days of mail to fetch" onCommit={(v) => saveDays("fetchDays", v)} />
+          </Row>
+          <Row title="Keep cached mail for" description="Mail already downloaded stays on the dashboard this long, then is removed from this computer. Never shorter than the fetch window.">
+            <NumberInput value={cache.retainDays} min={cache.fetchDays} max={365} unit="days" label="Days to keep cached mail" onCommit={(v) => saveDays("retainDays", v)} />
+          </Row>
+        </>
+      )}
     </>
   );
 }
@@ -1114,6 +1156,10 @@ export default function SettingsPage() {
             )}
           </Section>
         )}
+
+        <Section id="theme" icon={Palette} title="Theme">
+          <ThemeSettings />
+        </Section>
 
         <Section id="backgrounds" icon={Images} title="Backgrounds">
           <BackgroundsSettings />

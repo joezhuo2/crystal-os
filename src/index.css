@@ -4525,3 +4525,130 @@ html.perf-still .horizon-dot-cascade {
     color: transparent;
   }
 }
+
+@property --star-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@layer base {
+  html[data-theme="default"] {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 6%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 0 0% 16%;
+    --accent-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 80%;
+    --glow-indigo: 0 0% 100%;
+    --glow-emerald: 0 0% 80%;
+    --sidebar-background: 0 0% 3%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 6%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 16%;
+    --sidebar-ring: 0 0% 80%;
+    --so-accent: #fafafa;
+  }
+}
+
+@layer components {
+  .default-root {
+    background: #000;
+  }
+
+  html[data-theme="default"] .search-overlay {
+    --so-accent: #fafafa;
+    --so-accent-2: #a3a3a3;
+  }
+
+  html[data-theme="default"] :is(.glass-card, .glass-card-hover):hover {
+    background-image: radial-gradient(320px circle at var(--x, 50%) var(--y, 50%), rgb(255 255 255 / 0.08), transparent 70%);
+  }
+
+  html[data-theme="default"] :is(.glass-card, .glass-card-hover)::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s;
+    background: radial-gradient(200px circle at var(--x, 50%) var(--y, 50%), rgb(255 255 255 / 0.65), transparent 70%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  }
+
+  html[data-theme="default"] :is(.glass-card, .glass-card-hover):hover::after {
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  html[data-theme="default"] .text-gradient-indigo {
+    background-image: linear-gradient(135deg, #ffffff, #a3a3a3);
+  }
+
+  html[data-theme="default"] .star-border {
+    position: relative;
+    isolation: isolate;
+  }
+
+  html[data-theme="default"] .star-border-fill {
+    background-color: hsl(0 0% 7%);
+    color: hsl(0 0% 98%);
+  }
+
+  html[data-theme="default"] .star-border-fill:hover:not(:disabled) {
+    background-color: hsl(0 0% 13%);
+  }
+
+  html[data-theme="default"] .star-border::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: conic-gradient(from var(--star-angle), transparent 0 72%, rgb(255 255 255 / 0.9) 92%, transparent 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    animation: star-border-spin 4s linear infinite;
+  }
+
+  html[data-theme="default"] .star-border:disabled::after {
+    display: none;
+  }
+
+  html[data-theme="default"].perf-backdrop-still .star-border::after {
+    animation: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html[data-theme="default"] .star-border::after {
+      animation: none;
+    }
+  }
+}
+
+@keyframes star-border-spin {
+  to {
+    --star-angle: 360deg;
+  }
+}
