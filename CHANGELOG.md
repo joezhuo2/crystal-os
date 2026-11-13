@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.14.2] - 2026-11-13 - Desktop mail sign-in.
+
+### Fixed
+
+- Connecting Gmail in The Courier from the desktop app no longer ends on a "localhost refused to connect" page. The app now sends Google back to its own address, `http://127.0.0.1:8787/api/mail/auth/callback`, unless `MAIL_REDIRECT_URI` says otherwise; add that address as an authorized redirect URI on your Google OAuth client. The Horizon's Google Calendar sign-in gets the same default.
+
 ## [v0.14.1] - 2026-11-13 - Default theme and mail cache.
 
 ### Added
