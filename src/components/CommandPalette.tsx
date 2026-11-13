@@ -51,6 +51,7 @@ import {
   CalendarSearch,
   Package,
   PanelLeft,
+  Mail,
 } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
@@ -92,6 +93,7 @@ const SECTION_ICONS: Record<string, React.ElementType> = {
   orbit: Orbit,
   portal: AppWindow,
   atmosphere: CloudSun,
+  mail: Mail,
   performance: Gauge,
   install: Download,
   diagnostics: Bug,
@@ -963,6 +965,19 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                           </div>
                           <span className="text-sm font-medium">Open The Nebula</span>
                           <span className="ml-auto text-xs text-muted-foreground/50">coding agent</span>
+                        </CommandItem>
+                      )}
+                      {on("mail") && (
+                        <CommandItem
+                          value="mail-courier-email-gmail-inbox-bills-payments-job-applications-orders-deliveries-security-alerts"
+                          onSelect={() => handleNavigate("mail")}
+                          className={ITEM}
+                        >
+                          <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                            <Mail className="w-4 h-4" />
+                          </div>
+                          <span className="text-sm font-medium">Open The Courier</span>
+                          <span className="ml-auto text-xs text-muted-foreground/50">bills, jobs, orders</span>
                         </CommandItem>
                       )}
                       {isDesktop() && on("terminal") && (

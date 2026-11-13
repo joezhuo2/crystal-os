@@ -10,7 +10,7 @@ describe("parseNavSettings", () => {
   it("defaults to today's sidebar", () => {
     expect(parseNavSettings(null)).toEqual(DEFAULT_NAV_SETTINGS);
     expect(navLayout(DEFAULT_NAV_SETTINGS)).toEqual({
-      top: ["home", "orbit", "tasks", "calendar", "financials", "weather"],
+      top: ["home", "orbit", "tasks", "calendar", "mail", "financials", "weather"],
       bottom: ["archive", "nebula", "portal", "terminal", "settings"],
     });
   });
@@ -19,7 +19,7 @@ describe("parseNavSettings", () => {
     const s = parseNavSettings(JSON.stringify({ order: ["weather", "home", "bogus", "home"], hidden: ["orbit", "settings"], bottom: ["home"] }));
     expect(s.order.slice(0, 4)).toEqual(["weather", "archive", "nebula", "portal"]);
     expect(s.order).toContain("orbit");
-    expect(s.order).toHaveLength(11);
+    expect(s.order).toHaveLength(12);
     expect(s.hidden).toEqual(["orbit"]);
     expect(s.bottom).toEqual(["home"]);
     expect(parseNavSettings("not json")).toEqual(DEFAULT_NAV_SETTINGS);
