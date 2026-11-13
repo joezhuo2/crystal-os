@@ -14,7 +14,13 @@ export interface MailAccount {
 export interface MailStatus {
   providers: Record<MailProvider, { configured: boolean }>;
   ai: { configured: boolean; model: string };
+  cache: MailCacheSettings;
   accounts: MailAccount[];
+}
+
+export interface MailCacheSettings {
+  fetchDays: number;
+  retainDays: number;
 }
 
 export interface MailItem {
@@ -35,6 +41,7 @@ export interface MailItem {
   dueDate?: string;
   company?: string;
   jobStatus?: JobStatus;
+  details?: { label: string; value: string }[];
 }
 
 export interface MailDigest {
@@ -88,7 +95,10 @@ export const MAIL_AI_MODELS = [
 export const saveMailAi = (body: { apiKey?: string | null; model?: string }) =>
   request<MailStatus["ai"]>("/api/mail/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
-export const fetchMailDigest =(refresh = false) => request<MailDigest>(`/api/mail/digest?days=30${refresh ? "&refresh=1" : ""}`);
+export const saveMailCache = (body: Partial<MailCacheSettings>) =>
+  request<MailCacheSettings>("/api/mail/cache", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+export const fetchMailDigest = (refresh = false) => request<MailDigest>(`/api/mail/digest${refresh ? "?refresh=1" : ""}`);
 
 export const startMailAuth = (provider: MailProvider) => request<{ url: string }>(`/api/mail/auth/start?provider=${provider}`);
 
