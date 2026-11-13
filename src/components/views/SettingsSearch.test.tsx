@@ -9,6 +9,10 @@ vi.mock("@/hooks/useVault", () => ({
   useVaultStatus: () => ({ data: null }),
   usePickVault: () => ({ mutate: () => {}, isPending: false }),
 }));
+vi.mock("@/hooks/useMail", () => ({
+  useMailStatus: () => ({ data: null }),
+  useSaveMailAi: () => ({ mutate: () => {}, isPending: false }),
+}));
 
 const { default: SettingsPage } = await import("./SettingsPage");
 

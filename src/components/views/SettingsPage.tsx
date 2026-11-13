@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Images, Keyboard, ListTodo, Orbit, Package, PanelLeft, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Images, Keyboard, ListTodo, Mail, Orbit, Package, PanelLeft, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 import NebulaSettingsSection from "@/components/nebula/NebulaSettingsSection";
 import InstallerSection from "@/components/views/InstallerSection";
 import { Button } from "@/components/ui/button";
+import { useMailStatus, useSaveMailAi } from "@/hooks/useMail";
+import { MAIL_AI_MODELS } from "@/lib/mail";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
@@ -639,6 +641,64 @@ function KeymapSettings() {
   );
 }
 
+function CourierAiSettings() {
+  const status = useMailStatus();
+  const save = useSaveMailAi();
+  const [key, setKey] = useState("");
+  const ai = status.data?.ai;
+  const disabled = !ai || save.isPending;
+  const models = ai && !MAIL_AI_MODELS.some((m) => m.id === ai.model) ? [...MAIL_AI_MODELS, { id: ai.model, label: ai.model }] : MAIL_AI_MODELS;
+  const submit = (body: { apiKey?: string | null; model?: string }, done: string) =>
+    save.mutate(body, {
+      onSuccess: () => {
+        setKey("");
+        toast.success(done);
+      },
+      onError: (err) => toast.error("Could not save The Courier settings", { description: (err as Error).message }),
+    });
+
+  return (
+    <>
+      <Row
+        title="Claude API key"
+        description={status.isError ? `Could not load settings: ${(status.error as Error).message}` : "Optional. With a key, the sender, subject and preview of emails the keyword rules are unsure about are sent to Anthropic to sort them. Saved to .env.local on this computer and never shown again."}
+      >
+        <form
+          className="flex items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit({ apiKey: key.trim() }, "Claude API key saved");
+          }}
+        >
+          <Input type="password" autoComplete="off" className="h-8 w-44" aria-label="Claude API key" placeholder={ai?.configured ? "Key saved" : "sk-ant-..."} value={key} onChange={(e) => setKey(e.target.value)} disabled={disabled} />
+          <Button type="submit" size="sm" disabled={disabled || !key.trim()}>
+            Save
+          </Button>
+          {ai?.configured && (
+            <Button type="button" size="sm" variant="outline" onClick={() => submit({ apiKey: null }, "Claude API key removed")} disabled={disabled}>
+              Remove
+            </Button>
+          )}
+        </form>
+      </Row>
+      <Row title="Claude model" description="Which model sorts the unsure emails. Haiku is the cheapest and is enough for this.">
+        <Select value={ai?.model} onValueChange={(model) => submit({ model }, "Claude model saved")} disabled={disabled}>
+          <SelectTrigger className="h-8 w-36" aria-label="Claude model">
+            <SelectValue placeholder="Loading..." />
+          </SelectTrigger>
+          <SelectContent>
+            {models.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Row>
+    </>
+  );
+}
+
 export default function SettingsPage() {
   const desktop = isDesktop();
   const hotkeys = useGlobalHotkeys();
@@ -1009,6 +1069,12 @@ export default function SettingsPage() {
             >
               <Switch checked={orbit.autoExport} onCheckedChange={orbitStore.setAutoExport} />
             </Row>
+          </Section>
+        )}
+
+        {has("mail") && (
+          <Section id="mail" icon={Mail} title="The Courier">
+            <CourierAiSettings />
           </Section>
         )}
 

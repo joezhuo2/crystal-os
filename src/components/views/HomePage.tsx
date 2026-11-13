@@ -48,6 +48,7 @@ import { formatMinutes, kindLabel } from "@/lib/orbitReview";
 import { orbitStore } from "@/lib/orbitStore";
 import { useInstalledModules } from "@/lib/installedModules";
 import type { TabId } from "@/modules/registry";
+import { MailWidget } from "@/modules/mail/MailWidget";
 
 /** The greeting and clock, on the Orbit's black hole, with this week so far. */
 function Clock({ onClick }: { onClick?: () => void }) {
@@ -688,6 +689,7 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
     { id: "vault", module: "financials", label: "The Vault", render: () => <VaultSticker onClick={go("financials")} /> },
     { id: "engine", module: "tasks", label: "The Engine", render: () => <EngineWidget onClick={go("tasks")} /> },
     { id: "horizon", module: "calendar", label: "The Horizon", render: () => <TodayHorizon onClick={go("calendar")} /> },
+    { id: "mail", module: "mail", label: "The Courier", render: () => <MailWidget onClick={go("mail")} /> },
     { id: "archive", module: "archive", label: "The Archive", render: () => <ArchiveWidget onClick={go("archive")} /> },
     { id: "nebula", module: "nebula", label: "The Nebula", render: () => <NebulaSpace onClick={go("nebula")} /> },
     { id: "portal", module: "portal", label: "The Portal", render: () => <PortalSpace onClick={go("portal")} /> },

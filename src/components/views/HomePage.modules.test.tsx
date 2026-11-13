@@ -23,6 +23,7 @@ const mappings: [string, TabId][] = [
   ["vault", "financials"],
   ["engine", "tasks"],
   ["horizon", "calendar"],
+  ["mail", "mail"],
   ["archive", "archive"],
   ["nebula", "nebula"],
   ["portal", "portal"],
