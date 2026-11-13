@@ -5,6 +5,22 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.14.1] - 2026-11-13 - Default theme and mail cache.
+
+### Added
+
+- **Default theme**: every page shares one black and white look with an animated Flux Lines background, glass cards that glow under the cursor, and an animated border on filled and outline buttons. The previous look is kept as the **Orbit** theme. Switch between them, or turn the Flux Lines off, in **Settings → Theme**. Existing installs start on Default.
+- Rows in The Courier expand when clicked, with an animation, to show the sender address, when the email arrived, a preview and a link to open it. Orders also show what could be read from the email: status, order number, total, arrival date, carrier, tracking number and items.
+- The Courier keeps downloaded mail on this computer. A refresh only downloads mail that arrived since the last one, and mail stays on the dashboard for 90 days. Both the fetch window (30 days by default) and how long mail is kept are set in **Settings → The Courier**.
+
+### Changed
+
+- The Courier reads the body of each Gmail message, not only the preview, to find order details. Message text is stored only on this computer and is not sent to Anthropic.
+
+### Fixed
+
+- Refreshing The Courier no longer fails with a Gmail quota error on a large mailbox: messages are fetched more slowly, and a partly failed fetch keeps what arrived.
+
 ## [v0.14.0] - 2026-11-13 - The Courier.
 
 ### Added
