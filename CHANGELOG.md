@@ -5,6 +5,14 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.14.0] - 2026-11-13 - The Courier.
+
+### Added
+
+- **The Courier**, a new section that reads your Gmail accounts and picks out what matters: bills and payments (with amount and due date when stated), job applications grouped by company with their latest status, orders and deliveries, and security alerts. It only reads mail, and each row opens the email in Gmail. Connect one or more accounts on the page itself.
+- The Courier sorts mail with keyword rules on your computer. With a Claude API key set in **Settings → The Courier**, the sender, subject and preview of emails the rules are unsure about are sent to Anthropic to sort them; the model is configurable and defaults to Haiku.
+- A Courier widget on Home with the next bills due and the latest job application updates.
+
 ## [v0.13.2] - 2026-11-10 - Button feedback and tab snappiness.
 
 ### Added
