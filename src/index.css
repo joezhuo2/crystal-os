@@ -4550,8 +4550,8 @@ html.perf-still .horizon-dot-cascade {
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 10%;
     --muted-foreground: 0 0% 64%;
-    --accent: 0 0% 16%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 0 0% 82%;
+    --accent-foreground: 0 0% 6%;
     --border: 0 0% 20%;
     --input: 0 0% 20%;
     --ring: 0 0% 80%;
@@ -4720,5 +4720,38 @@ html.perf-still .horizon-dot-cascade {
   html[data-theme="default"] :is(.home-archive-gem, .home-nebula-icon) {
     color: inherit;
     filter: none;
+  }
+}
+
+@layer utilities {
+  html[data-theme="default"],
+  html[data-theme="default"] .home-space {
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 6%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 0 0% 82%;
+    --orbit-ice: 0 0% 92%;
+    --orbit-cyan: 0 0% 85%;
+    --orbit-slate: 0 0% 55%;
+    --orbit-mauve: 0 0% 75%;
+    --orbit-rust: 0 0% 65%;
+    --portal-bg: #000;
+    --portal-surface: rgb(255 255 255 / 0.05);
+    --portal-a: #e5e5e5;
+    --portal-b: #a3a3a3;
+    --portal-cream: #fafafa;
+    --portal-hover-text: #fff;
+  }
+
+  html[data-theme="default"] .orbit-card,
+  html[data-theme="default"] .orbit-card:hover {
+    background: hsl(0 0% 100% / 0.05);
+    border-color: hsl(0 0% 100% / 0.1);
+    box-shadow: 0 8px 32px hsl(0 0% 0% / 0.4), inset 0 1px 0 hsl(0 0% 100% / 0.06);
+    backdrop-filter: blur(12px);
+  }
+
+  html[data-theme="default"] .orbit-card:hover {
+    border-color: hsl(0 0% 100% / 0.3);
   }
 }
