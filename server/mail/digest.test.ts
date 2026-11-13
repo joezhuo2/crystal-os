@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMailAi } from "./ai";
 import { createMailCache } from "./cache";
-import { createDigest } from "./digest";
+import { createDigest, type FetchRange } from "./digest";
 import type { MailStore } from "./store";
 import type { FetchedMessage, StoredAccount } from "./types";
 
@@ -95,15 +95,17 @@ describe("digest", () => {
     const old = daysAgo(40);
     const recent = daysAgo(2);
     const fetchAccount = vi
-      .fn<(account: StoredAccount, since: number) => Promise<FetchedMessage[]>>()
+      .fn<(account: StoredAccount, range: FetchRange) => Promise<FetchedMessage[]>>()
       .mockResolvedValueOnce([msg("1", "Your order has shipped", "", old), msg("2", "Security alert", "New sign-in", recent)])
       .mockResolvedValue([]);
     const digest = createDigest({ store: one, ai: createMailAi(undefined), cache, fetchAccount });
 
     await digest.get();
-    expect(fetchAccount.mock.calls[0][1]).toBeLessThan(Date.parse(daysAgo(29)));
+    expect(fetchAccount.mock.calls[0][1].since).toBeLessThan(Date.parse(daysAgo(29)));
+    expect(fetchAccount.mock.calls[0][1].known.size).toBe(0);
     const second = await digest.get(true);
-    expect(fetchAccount.mock.calls[1][1]).toBeGreaterThan(Date.parse(recent) - 2 * 3_600_000);
+    expect([...fetchAccount.mock.calls[1][1].known].sort()).toEqual(["1", "2"]);
+    expect(fetchAccount.mock.calls[1][1].newest).toBe(Date.parse(recent));
     expect(second.items.map((i) => i.id)).toEqual(["g:2", "g:1"]);
 
     await cache.setSettings({ fetchDays: 7, retainDays: 30 });
@@ -112,7 +114,7 @@ describe("digest", () => {
 
   it("serves cached mail when a refresh fails and adds order details from the body", async () => {
     const fetchAccount = vi
-      .fn<(account: StoredAccount, since: number) => Promise<FetchedMessage[]>>()
+      .fn<(account: StoredAccount, range: FetchRange) => Promise<FetchedMessage[]>>()
       .mockResolvedValueOnce([
         {
           ...msg("1", "Your order has shipped", "Track your package", daysAgo(1)),

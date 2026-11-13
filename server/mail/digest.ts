@@ -7,13 +7,18 @@ import type { FetchedMessage, MailDigest, MailItem, StoredAccount } from "./type
 
 const CACHE_MS = 5 * 60 * 1000;
 const DAY_MS = 86_400_000;
-const OVERLAP_MS = 60 * 60 * 1000;
+
+export interface FetchRange {
+  since: number;
+  newest: number;
+  known: ReadonlySet<string>;
+}
 
 export interface DigestDeps {
   store: MailStore;
   ai: MailAi;
   cache: MailCache;
-  fetchAccount: (account: StoredAccount, since: number) => Promise<FetchedMessage[]>;
+  fetchAccount: (account: StoredAccount, range: FetchRange) => Promise<FetchedMessage[]>;
 }
 
 export function createDigest({ store, ai, cache, fetchAccount }: DigestDeps) {
@@ -28,8 +33,13 @@ export function createDigest({ store, ai, cache, fetchAccount }: DigestDeps) {
     await Promise.all(
       accounts.map(async (account) => {
         try {
-          const newest = Math.max(0, ...(await cache.messages(account.id)).map((m) => Date.parse(m.receivedAt)));
-          await cache.merge(account.id, await fetchAccount(account, Math.max(now - fetchDays * DAY_MS, newest - OVERLAP_MS)));
+          const cached = await cache.messages(account.id);
+          const range = {
+            since: now - fetchDays * DAY_MS,
+            newest: Math.max(0, ...cached.map((m) => Date.parse(m.receivedAt))),
+            known: new Set(cached.map((m) => m.messageId)),
+          };
+          await cache.merge(account.id, await fetchAccount(account, range));
         } catch (err) {
           errors.push({
             accountId: account.id,

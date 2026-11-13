@@ -4,7 +4,7 @@ import type { FetchedMessage, MailConfig } from "./types";
 
 const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
-const CONCURRENCY = 10;
+const CONCURRENCY = 4;
 
 interface GmailMessage {
   id: string;
@@ -119,10 +119,10 @@ function toMessage(m: GmailMessage, email: string): FetchedMessage {
   };
 }
 
-export async function listGmail(client: OAuth2Client, email: string, since: number): Promise<FetchedMessage[]> {
+export async function listGmail(client: OAuth2Client, email: string, since: number, known: ReadonlySet<string> = new Set()): Promise<FetchedMessage[]> {
   const q = encodeURIComponent(`after:${Math.floor(since / 1000)} -category:promotions -category:social`);
   const list = await get<{ messages?: { id: string }[] }>(client, `/messages?q=${q}&maxResults=150`);
-  const ids = (list.messages ?? []).map((m) => m.id);
+  const ids = (list.messages ?? []).map((m) => m.id).filter((id) => !known.has(id));
   const out: FetchedMessage[] = new Array(ids.length);
   let next = 0;
   const worker = async () => {
@@ -135,6 +135,10 @@ export async function listGmail(client: OAuth2Client, email: string, since: numb
       out[i] = toMessage(m, email);
     }
   };
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, ids.length) }, worker));
-  return out;
+  const runs = await Promise.allSettled(Array.from({ length: Math.min(CONCURRENCY, ids.length) }, worker));
+  const fetched = out.filter(Boolean);
+  const failed = runs.find((r) => r.status === "rejected");
+  // shortcut: a partly failed fetch (Gmail rate limit) keeps what arrived and the next refresh gets the rest
+  if (failed && fetched.length === 0) throw failed.reason;
+  return fetched;
 }

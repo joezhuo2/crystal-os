@@ -18,6 +18,7 @@ const ACCOUNTS_ROUTE = "/accounts/";
 const DEFAULT_REDIRECT_URI = "http://localhost:8080/api/mail/auth/callback";
 const STATE_TTL_MS = 10 * 60 * 1000;
 const PAGE_TITLE = "Mail";
+const OUTLOOK_OVERLAP_MS = 60 * 60 * 1000;
 
 const MISSING_ENV: Record<MailProvider, string> = {
   google: "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not set in .env.local",
@@ -60,10 +61,10 @@ export function createMailMiddleware(
     store,
     ai,
     cache,
-    fetchAccount: (account, since) =>
+    fetchAccount: (account, { since, newest, known }) =>
       account.provider === "google"
-        ? listGmail(googleClient(config, account.refreshToken), account.email, since)
-        : listOutlook(config, account, since, (token) => store.setToken(account.id, token)),
+        ? listGmail(googleClient(config, account.refreshToken), account.email, since, known)
+        : listOutlook(config, account, Math.max(since, newest - OUTLOOK_OVERLAP_MS), (token) => store.setToken(account.id, token)),
   });
 
   function startAuth(provider: MailProvider): string {
