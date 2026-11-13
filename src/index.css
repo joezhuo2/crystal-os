@@ -4770,3 +4770,13 @@ html.perf-still .horizon-dot-cascade {
     text-shadow: none;
   }
 }
+
+@layer utilities {
+  html[data-theme="default"] .home-card-archive [class*="text-purple-"] {
+    color: hsl(0 0% 82%);
+  }
+
+  html[data-theme="default"] .home-card-archive [class*="hover:bg-purple-"]:hover {
+    background-color: rgb(255 255 255 / 0.1);
+  }
+}
