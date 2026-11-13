@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 import { type RequireUser } from "./auth/requireUser";
 import { createCalendarMiddleware } from "./calendar/plugin";
+import { createMailMiddleware } from "./mail/plugin";
 import { createObsidianMiddleware } from "./obsidian/plugin";
 
 /**
@@ -22,6 +23,11 @@ export interface ApiEnv {
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_REDIRECT_URI?: string;
   GOOGLE_REFRESH_TOKEN?: string;
+  MAIL_REDIRECT_URI?: string;
+  MICROSOFT_CLIENT_ID?: string;
+  MICROSOFT_CLIENT_SECRET?: string;
+  ANTHROPIC_API_KEY?: string;
+  MAIL_AI_MODEL?: string;
 }
 
 export interface ApiHandlerOptions {
@@ -59,6 +65,20 @@ export function createApiHandler({ env, requireUser, rootDir }: ApiHandlerOption
       },
       requireUser,
       // Consent runs in the system browser, which has no app to bounce back to.
+      { returnUrl: null },
+    ),
+    createMailMiddleware(
+      {
+        googleClientId: env.GOOGLE_CLIENT_ID,
+        googleClientSecret: env.GOOGLE_CLIENT_SECRET,
+        microsoftClientId: env.MICROSOFT_CLIENT_ID,
+        microsoftClientSecret: env.MICROSOFT_CLIENT_SECRET,
+        redirectUri: env.MAIL_REDIRECT_URI,
+        anthropicApiKey: env.ANTHROPIC_API_KEY,
+        aiModel: env.MAIL_AI_MODEL,
+        rootDir,
+      },
+      requireUser,
       { returnUrl: null },
     ),
   ];

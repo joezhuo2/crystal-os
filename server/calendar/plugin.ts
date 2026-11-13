@@ -20,7 +20,7 @@ const ROUTE_PREFIX = "/api/calendar";
 const EVENTS_ROUTE = "/events/";
 const MAX_BODY_BYTES = 64 * 1024;
 
-function sendJson(res: ServerResponse, status: number, payload: unknown) {
+export function sendJson(res: ServerResponse, status: number, payload: unknown) {
   const body = JSON.stringify(payload);
   res.statusCode = status;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -39,7 +39,7 @@ function sendError(res: ServerResponse, err: unknown) {
 }
 
 /** Read a JSON request body, aborting rather than buffering unbounded input. */
-function readJsonBody(req: IncomingMessage): Promise<unknown> {
+export function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
@@ -77,12 +77,13 @@ function escapeHtml(value: string): string {
 }
 
 /** The tiny page the OAuth callback lands on before bouncing back to the app. */
-function sendCallbackPage(
+export function sendCallbackPage(
   res: ServerResponse,
   status: number,
   heading: string,
   detail: string,
   returnUrl: string | null = "/",
+  title = "Google Calendar",
 ) {
   const ok = status === 200;
   const refresh = ok && returnUrl !== null;
@@ -93,7 +94,7 @@ function sendCallbackPage(
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Google Calendar</title>
+    <title>${escapeHtml(title)}</title>
     ${refresh ? `<meta http-equiv="refresh" content="1;url=${escapeHtml(returnUrl)}" />` : ""}
     <style>
       body { margin: 0; min-height: 100vh; display: flex; align-items: center;

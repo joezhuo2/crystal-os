@@ -5,6 +5,7 @@ import { readFileSync } from "fs";
 import { componentTagger } from "lovable-tagger";
 import { obsidianApi } from "./server/obsidian/plugin";
 import { calendarApi } from "./server/calendar/plugin";
+import { mailApi } from "./server/mail/plugin";
 import {
   createRequireUser,
   createSupabaseVerifier,
@@ -66,6 +67,18 @@ export default defineConfig(({ mode }) => {
           // Written back into .env.local by the OAuth callback, so a restart
           // picks the connection straight back up.
           refreshToken: env.GOOGLE_REFRESH_TOKEN,
+        },
+        requireUser,
+      ),
+      mailApi(
+        {
+          googleClientId: env.GOOGLE_CLIENT_ID,
+          googleClientSecret: env.GOOGLE_CLIENT_SECRET,
+          microsoftClientId: env.MICROSOFT_CLIENT_ID,
+          microsoftClientSecret: env.MICROSOFT_CLIENT_SECRET,
+          redirectUri: env.MAIL_REDIRECT_URI,
+          anthropicApiKey: env.ANTHROPIC_API_KEY,
+          aiModel: env.MAIL_AI_MODEL,
         },
         requireUser,
       ),

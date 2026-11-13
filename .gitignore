@@ -39,6 +39,8 @@ service-account*.json
 # Token / password stores
 token.json
 tokens.json
+mail-accounts.json
+mail-accounts.json.tmp
 *.token
 .token
 *.kdbx
