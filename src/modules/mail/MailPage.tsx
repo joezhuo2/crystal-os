@@ -1,7 +1,7 @@
 import { useEffect, useState, type ElementType, type ReactNode } from "react";
-import { m } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { toast } from "sonner";
-import { AlertTriangle, Briefcase, Mail, Package, RefreshCw, Receipt, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Briefcase, ChevronDown, ExternalLink, Mail, Package, RefreshCw, Receipt, ShieldAlert } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkeletonLines } from "@/components/ui/dashboard-skeletons";
@@ -137,14 +137,21 @@ function Accounts({ status }: { status: MailStatus }) {
 }
 
 function ItemRow({ item, now, showAccount, children }: { item: MailItem; now: Date; showAccount: boolean; children?: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const panelId = `mail-details-${item.id}`;
+  const details = [
+    ...(item.details ?? []),
+    { label: "From", value: item.fromAddress },
+    { label: "Received", value: new Date(item.receivedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) },
+  ];
   return (
     <li>
-      <a
-        href={item.url}
-        target="_blank"
-        rel="noreferrer"
-        onClick={(e) => openMailLink(e, item.url)}
-        className={`flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 transition-colors ${item.confident ? "" : "opacity-60"}`}
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((v) => !v)}
+        className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 transition-colors ${item.confident ? "" : "opacity-60"}`}
       >
         <div className="flex-1 min-w-0">
           <p data-private className="text-sm font-medium truncate">
@@ -157,19 +164,53 @@ function ItemRow({ item, now, showAccount, children }: { item: MailItem; now: Da
           </p>
         </div>
         {children}
-      </a>
+        <ChevronDown className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`} aria-hidden />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <m.div
+            id={panelId}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="mx-2 mb-2 rounded-lg border border-border/60 bg-background/30 p-3 space-y-2 text-xs">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                {details.map((d) => (
+                  <div key={d.label} className="contents">
+                    <dt className="text-muted-foreground">{d.label}</dt>
+                    <dd data-private className="min-w-0 break-words">
+                      {d.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              {item.snippet && (
+                <p data-private className="text-muted-foreground">
+                  {item.snippet}
+                </p>
+              )}
+              <a href={item.url} target="_blank" rel="noreferrer" onClick={(e) => openMailLink(e, item.url)} className="inline-flex items-center gap-1 text-primary hover:underline">
+                Open email <ExternalLink className="w-3 h-3" aria-hidden />
+              </a>
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>
     </li>
   );
 }
 
-function Card({ title, icon: Icon, empty, children }: { title: string; icon: ElementType; empty: boolean; children: ReactNode }) {
+function Card({ title, icon: Icon, empty, days, children }: { title: string; icon: ElementType; empty: boolean; days: number; children: ReactNode }) {
   return (
     <section className="glass-card-hover p-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs text-muted-foreground uppercase tracking-widest">{title}</h2>
         <Icon className="w-4 h-4 text-primary" aria-hidden />
       </div>
-      {empty ? <p className="text-sm text-muted-foreground">Nothing in the last 30 days.</p> : <ul className="space-y-0.5 max-h-96 overflow-y-auto scrollbar-thin">{children}</ul>}
+      {empty ? <p className="text-sm text-muted-foreground">Nothing in the last {days} days.</p> : <ul className="space-y-0.5 max-h-96 overflow-y-auto scrollbar-thin">{children}</ul>}
     </section>
   );
 }
@@ -180,6 +221,7 @@ function Dashboard({ status }: { status: MailStatus }) {
   const now = new Date();
   const today = toLocalDateStr(now);
   const showAccount = status.accounts.length > 1;
+  const days = status.cache.retainDays;
   const data = digest.data;
 
   const header = (
@@ -272,10 +314,10 @@ function Dashboard({ status }: { status: MailStatus }) {
         ))}
       </div>
       {data.items.length === 0 ? (
-        <div className="glass-card p-8 text-center text-sm text-muted-foreground">No bills, job applications, orders or security alerts in the last 30 days.</div>
+        <div className="glass-card p-8 text-center text-sm text-muted-foreground">No bills, job applications, orders or security alerts in the last {days} days.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card title="Bills & payments" icon={Receipt} empty={bills.length === 0}>
+          <Card title="Bills & payments" icon={Receipt} days={days} empty={bills.length === 0}>
             {bills.map((b) =>
               row(
                 b,
@@ -290,7 +332,7 @@ function Dashboard({ status }: { status: MailStatus }) {
               ),
             )}
           </Card>
-          <Card title="Job applications" icon={Briefcase} empty={jobs.length === 0}>
+          <Card title="Job applications" icon={Briefcase} days={days} empty={jobs.length === 0}>
             {jobs.map((j) =>
               row(
                 { ...j, from: jobCompany(j) },
@@ -300,10 +342,10 @@ function Dashboard({ status }: { status: MailStatus }) {
               ),
             )}
           </Card>
-          <Card title="Orders & deliveries" icon={Package} empty={orders.length === 0}>
+          <Card title="Orders & deliveries" icon={Package} days={days} empty={orders.length === 0}>
             {orders.map((o) => row(o))}
           </Card>
-          <Card title="Security alerts" icon={ShieldAlert} empty={security.length === 0}>
+          <Card title="Security alerts" icon={ShieldAlert} days={days} empty={security.length === 0}>
             {security.map((s) => row(s))}
           </Card>
         </div>

@@ -19,6 +19,7 @@ import { initNotificationBridges } from "./lib/notifications";
 import { startAppActivity } from "./lib/appActivity";
 import { installGlobalErrorHandlers } from "./lib/diagnostics";
 import { installButtonFx } from "./lib/buttonFx";
+import { installCardGlow } from "./lib/cardGlow";
 
 // First, so errors thrown while the rest starts up are logged too.
 installGlobalErrorHandlers();
@@ -29,5 +30,6 @@ initNotificationBridges();
 // Pauses animation and polling while the window is hidden.
 startAppActivity();
 installButtonFx();
+installCardGlow();
 
 createRoot(document.getElementById("root")!).render(<App />);

@@ -92,7 +92,7 @@ export async function microsoftExchange(
 export async function listOutlook(
   config: MailConfig,
   account: StoredAccount,
-  days: number,
+  since: number,
   saveToken: (refreshToken: string) => Promise<void>,
 ): Promise<FetchedMessage[]> {
   const tokens = await requestToken(config, {
@@ -103,10 +103,9 @@ export async function listOutlook(
     await saveToken(tokens.refresh_token);
   }
 
-  const since = new Date(Date.now() - days * 86_400_000).toISOString();
   let url: string | undefined =
     `${GRAPH}/me/messages?$select=id,subject,from,receivedDateTime,bodyPreview,webLink` +
-    `&$filter=${encodeURIComponent(`receivedDateTime ge ${since}`)}` +
+    `&$filter=${encodeURIComponent(`receivedDateTime ge ${new Date(since).toISOString()}`)}` +
     `&$orderby=${encodeURIComponent("receivedDateTime desc")}&$top=100`;
   const messages: GraphMessage[] = [];
   while (url && messages.length < MAX_MESSAGES) {

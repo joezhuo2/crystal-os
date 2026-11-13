@@ -14,6 +14,8 @@ import ObsidianBackdrop from "@/components/layout/ObsidianBackdrop";
 import AtmosphereBackdrop from "@/components/layout/AtmosphereBackdrop";
 import ImageBackdrop from "@/components/layout/ImageBackdrop";
 import BackdropSlot from "@/components/layout/BackdropSlot";
+import FluxLines from "@/components/layout/FluxLines";
+import { useThemeSettings } from "@/lib/themeSettings";
 import { useHarness } from "@/hooks/useHarness";
 import { isDesktop } from "@/lib/platform";
 import { hidePortal } from "@/lib/portalNative";
@@ -169,6 +171,8 @@ const Index = () => {
   if (uninstalled.includes(activeTab)) setActiveTabRaw("home");
   const { theme: nebulaTheme } = useHarness();
   const { still } = useAppActivity();
+  const { theme, fluxLines } = useThemeSettings();
+  const monochrome = theme === "default";
   const viewTab = useDeferredValue(activeTab);
   const View = views[viewTab];
   useHomeHotkey(() => setActiveTab("home"));
@@ -218,12 +222,12 @@ const Index = () => {
   );
   const backdrops = useMemo(
     () =>
-      [...keptBackdrops].sort().map((tab) => (
+      monochrome ? [] : [...keptBackdrops].sort().map((tab) => (
         <BackdropSlot key={tab} active={tab === viewTab}>
           {backdrop(tab, nebulaTheme)}
         </BackdropSlot>
       )),
-    [keptBackdrops, viewTab, nebulaTheme],
+    [keptBackdrops, viewTab, nebulaTheme, monochrome],
   );
 
   // Runs once: fetches the most used views' chunks after Home has settled.
@@ -238,13 +242,14 @@ const Index = () => {
   // the Portal's, the Horizon's, the Engine's and the Orbit's palettes go on
   // <body> too for them to pick up.
   useEffect(() => {
-    document.body.classList.toggle("portal-theme", viewTab === "portal");
-    document.body.classList.toggle("horizon-theme", viewTab === "calendar");
-    document.body.classList.toggle("engine-theme", viewTab === "tasks");
-    document.body.classList.toggle("orbit-theme", viewTab === "orbit");
-    document.body.classList.toggle("obsidian-theme", viewTab === "archive");
-    document.body.classList.toggle("settings-theme", viewTab === "settings");
-  }, [viewTab]);
+    const orbit = !monochrome;
+    document.body.classList.toggle("portal-theme", orbit && viewTab === "portal");
+    document.body.classList.toggle("horizon-theme", orbit && viewTab === "calendar");
+    document.body.classList.toggle("engine-theme", orbit && viewTab === "tasks");
+    document.body.classList.toggle("orbit-theme", orbit && viewTab === "orbit");
+    document.body.classList.toggle("obsidian-theme", orbit && viewTab === "archive");
+    document.body.classList.toggle("settings-theme", orbit && viewTab === "settings");
+  }, [viewTab, monochrome]);
 
   // Hide the Portal's native webview as soon as another tab is picked. The
   // page only unmounts after its exit animation, and the webview would sit
@@ -261,8 +266,9 @@ const Index = () => {
   // therefore never issues an unauthenticated query.
   if (!session) return <LoginPage />;
 
-  const rootClass =
-    viewTab === "terminal"
+  const rootClass = monochrome
+    ? "default-root"
+    : viewTab === "terminal"
       ? "terminal-root bg-black"
       : viewTab === "portal"
         ? "portal-root"
@@ -296,6 +302,7 @@ const Index = () => {
             coming back skips the WebGL setup, canvas restart or image decode.
             Sorted, so switching never moves a backdrop's DOM node. */}
         {backdrops}
+        {monochrome && fluxLines && <FluxLines />}
         <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
         <main className="flex-1 min-h-0 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto scrollbar-thin">
           {/* The last view leaves at once and the next fades in. Keyed, so

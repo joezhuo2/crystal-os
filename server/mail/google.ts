@@ -4,13 +4,49 @@ import type { FetchedMessage, MailConfig } from "./types";
 
 const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
-const CONCURRENCY = 10;
+const CONCURRENCY = 4;
 
 interface GmailMessage {
   id: string;
   snippet?: string;
   internalDate?: string;
-  payload?: { headers?: { name: string; value: string }[] };
+  payload?: GmailPart & { headers?: { name: string; value: string }[] };
+}
+
+interface GmailPart {
+  mimeType?: string;
+  body?: { data?: string };
+  parts?: GmailPart[];
+}
+
+const MAX_TEXT = 4000;
+const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', nbsp: " ", "#39": "'" };
+
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, "")
+    .replace(/<(br|\/p|\/div|\/tr|\/li|\/h\d|\/table)[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&(amp|lt|gt|quot|nbsp|#39);/g, (_, e: string) => ENTITIES[e]);
+}
+
+export function bodyText(payload: GmailPart | undefined): string {
+  const find = (part: GmailPart | undefined, type: string): string | undefined => {
+    if (!part) return undefined;
+    if (part.mimeType === type && part.body?.data) return Buffer.from(part.body.data, "base64url").toString("utf-8");
+    for (const child of part.parts ?? []) {
+      const hit = find(child, type);
+      if (hit) return hit;
+    }
+    return undefined;
+  };
+  const text = find(payload, "text/plain") ?? htmlToText(find(payload, "text/html") ?? "");
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/[ \t\u00a0\u200b-\u200d]+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, MAX_TEXT);
 }
 
 export function googleClient(config: MailConfig, refreshToken?: string): OAuth2Client {
@@ -77,15 +113,16 @@ function toMessage(m: GmailMessage, email: string): FetchedMessage {
     ...parseFrom(header("From")),
     subject: header("Subject"),
     snippet: m.snippet ?? "",
+    text: bodyText(m.payload) || undefined,
     receivedAt: Number.isNaN(date.getTime()) ? new Date(0).toISOString() : date.toISOString(),
     url: `https://mail.google.com/mail/?authuser=${encodeURIComponent(email)}#all/${m.id}`,
   };
 }
 
-export async function listGmail(client: OAuth2Client, email: string, days: number): Promise<FetchedMessage[]> {
-  const q = encodeURIComponent(`newer_than:${days}d -category:promotions -category:social`);
+export async function listGmail(client: OAuth2Client, email: string, since: number, known: ReadonlySet<string> = new Set()): Promise<FetchedMessage[]> {
+  const q = encodeURIComponent(`after:${Math.floor(since / 1000)} -category:promotions -category:social`);
   const list = await get<{ messages?: { id: string }[] }>(client, `/messages?q=${q}&maxResults=150`);
-  const ids = (list.messages ?? []).map((m) => m.id);
+  const ids = (list.messages ?? []).map((m) => m.id).filter((id) => !known.has(id));
   const out: FetchedMessage[] = new Array(ids.length);
   let next = 0;
   const worker = async () => {
@@ -93,11 +130,15 @@ export async function listGmail(client: OAuth2Client, email: string, days: numbe
       const i = next++;
       const m = await get<GmailMessage>(
         client,
-        `/messages/${encodeURIComponent(ids[i])}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
+        `/messages/${encodeURIComponent(ids[i])}?format=full`,
       );
       out[i] = toMessage(m, email);
     }
   };
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, ids.length) }, worker));
-  return out;
+  const runs = await Promise.allSettled(Array.from({ length: Math.min(CONCURRENCY, ids.length) }, worker));
+  const fetched = out.filter(Boolean);
+  const failed = runs.find((r) => r.status === "rejected");
+  // shortcut: a partly failed fetch (Gmail rate limit) keeps what arrived and the next refresh gets the rest
+  if (failed && fetched.length === 0) throw failed.reason;
+  return fetched;
 }

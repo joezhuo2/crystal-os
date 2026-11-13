@@ -1,3 +1,4 @@
+import { useThemeSettings } from "@/lib/themeSettings";
 import { memo, useEffect, useRef } from "react";
 import { m } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
@@ -42,7 +43,7 @@ interface SidebarNavProps {
 }
 
 const activePillStyle: Record<SidebarMode, React.CSSProperties> = {
-  default: { background: "hsl(239 84% 67% / 0.15)", border: "1px solid hsl(239 84% 67% / 0.25)" },
+  default: { background: "var(--nav-active-bg, hsl(239 84% 67% / 0.15))", border: "1px solid var(--nav-active-border, hsl(239 84% 67% / 0.25))" },
   terminal: { background: "#000", border: "1px solid rgb(255 255 255 / 0.25)" },
   // Colours come from the Portal palette on the page root (index.css).
   portal: {
@@ -124,7 +125,7 @@ const SidebarButton = memo(function SidebarButton({
           ? "text-white"
           : "text-white/45 hover:text-white hover:bg-white/5"
         : active
-          ? "text-primary-foreground"
+          ? "text-[color:var(--nav-active-fg,hsl(var(--primary-foreground)))]"
           : "text-muted-foreground hover:text-foreground";
   const radius = mode === "terminal" ? "rounded-sm" : "rounded-lg";
   return (
@@ -199,7 +200,8 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const orbitReady = useOrbitReady(useNow());
   useInstalledModules();
   const layout = navLayout(useNavSettings(), tabAvailable);
-  const mode: SidebarMode =
+  const monochrome = useThemeSettings().theme === "default";
+  const pageMode: SidebarMode =
     activeTab === "terminal"
       ? "terminal"
       : activeTab === "portal"
@@ -221,6 +223,7 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
                       : activeTab === "home"
                         ? "home"
                         : "default";
+  const mode: SidebarMode = monochrome ? "default" : pageMode;
   const terminal = mode === "terminal";
   const sidebarClass = terminal
     ? "sidebar-terminal"

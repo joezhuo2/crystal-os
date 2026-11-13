@@ -103,7 +103,7 @@ const JOB_STATUS: [JobStatus, RegExp][] = [
   ["applied", /\b(thank you for (applying|your application|your interest)|application (received|submitted)|received your application|you applied)\b/],
 ];
 
-const AMOUNT =
+export const AMOUNT =
   /(?:(?:US|CA|C|A)?\$|[€£¥]|\b(?:USD|CAD|EUR|GBP)\s?)\s?\d[\d,]*(?:\.\d{1,2})?|\b\d[\d,]*(?:\.\d{2})?\s?(?:USD|CAD|EUR|GBP)\b/;
 
 const MONTH = String.raw`(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?`;

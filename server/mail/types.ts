@@ -15,7 +15,18 @@ export interface StoredAccount extends MailAccount {
 export interface MailStatus {
   providers: Record<MailProvider, { configured: boolean }>;
   ai: { configured: boolean; model: string };
+  cache: MailCacheSettings;
   accounts: MailAccount[];
+}
+
+export interface MailCacheSettings {
+  fetchDays: number;
+  retainDays: number;
+}
+
+export interface MailDetail {
+  label: string;
+  value: string;
 }
 
 export interface MailExtras {
@@ -39,6 +50,7 @@ export interface MailItem extends MailExtras {
   snippet: string;
   receivedAt: string;
   url: string;
+  details?: MailDetail[];
 }
 
 export interface MailDigest {
@@ -55,6 +67,7 @@ export interface FetchedMessage {
   snippet: string;
   receivedAt: string;
   url: string;
+  text?: string;
 }
 
 export interface MailConfig {

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { disconnectMailAccount, fetchMailDigest, fetchMailStatus, saveMailAi, type MailAccount, type MailDigest } from "@/lib/mail";
+import { disconnectMailAccount, fetchMailDigest, fetchMailStatus, saveMailAi, saveMailCache, type MailAccount, type MailDigest } from "@/lib/mail";
 
 export function useMailStatus(enabled = true) {
   return useQuery({ queryKey: ["mail", "status"], queryFn: fetchMailStatus, enabled });
@@ -29,6 +29,14 @@ export function useSaveMailAi() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: saveMailAi,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mail"] }),
+  });
+}
+
+export function useSaveMailCache() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: saveMailCache,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mail"] }),
   });
 }
