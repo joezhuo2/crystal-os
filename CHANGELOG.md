@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.14.5] - 2026-11-13 - Rebindable search shortcut.
+
+### Added
+
+- The shortcut that opens the search bar can be changed: **Settings → In-app shortcuts → General → Open search bar** (Ctrl+K by default, Cmd+K on macOS). A combo with Ctrl or Alt works everywhere, including while you type; a single key is ignored while you type or a dialog is open.
+
 ## [v0.14.4] - 2026-11-13 - Mail and events in search.
 
 ### Added
