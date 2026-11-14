@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "command",
+  "description": "The command box window (src-tauri/src/command_box.rs). It can only pass the typed text to the main webview as an event, hear the result, and hide itself; it has no access to any app command.",
+  "windows": ["command"],
+  "permissions": ["core:event:default", "core:window:allow-hide"]
+}

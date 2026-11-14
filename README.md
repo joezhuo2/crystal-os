@@ -363,7 +363,7 @@ src-tauri/
 │   ├── lib.rs                  # App setup: plugins, tray, hotkeys, command registration
 │   ├── window.rs               # Show/hide-to-tray close behaviour
 │   ├── tray.rs                 # System tray menu + Pomodoro status updates
-│   ├── hotkey.rs               # RegisterHotKey bindings (Alt+Space, Alt+Shift+Space, Alt+Shift+H, Alt+Shift+D)
+│   ├── hotkey.rs               # RegisterHotKey bindings (Alt+Space, Alt+Shift+Space, Alt+Shift+H, Alt+Shift+D, Alt+Shift+C)
 │   ├── autostart.rs            # Launch-at-login (--hidden) registration
 │   ├── settings.rs             # settings.json read/write (hotkeys, vaultPath, launchAtLogin, installerSourceDir)
 │   ├── vault.rs                # Native vault I/O: list/read/write/status/watch
@@ -818,6 +818,7 @@ Whatever the switches say, hiding the window to the tray or minimising it now st
 - `Alt+Shift+Space` shows Crystal OS and opens the search bar over the current page. Saved as `paletteShortcut`.
 - `Alt+Shift+H` shows Crystal OS if it is hidden and opens the Home page; if the window is already open it just switches to Home, from any tab. Saved as `homeShortcut`.
 - `Alt+Shift+D` turns Do Not Disturb on or off without showing Crystal OS. A toast confirms it while the window is focused; from another app a desktop notification does, even as DND turns on. Saved as `dndShortcut`.
+- `Alt+Shift+C` opens the **command box**: a one-line box over whichever app is in front, without showing Crystal OS. `task buy milk` adds a task for today, `focus 25` starts a 25-minute focus (`focus` alone uses the current length), and anything else (or `note …`) is appended to `Inbox.md` in the vault. Enter runs it and the box says what happened; Esc, or clicking away, closes it. Crystal OS has to be running and signed in. Saved as `commandShortcut`.
 
 Change any of them with **Change** in Settings. All are saved in `%APPDATA%\com.crystalos.desktop\settings.json`, and no two can share a combo. If another app already owns one, Crystal OS still starts and shows a toast.
 

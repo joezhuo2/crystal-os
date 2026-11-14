@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import CommandBox from "./components/CommandBox";
 // Self-hosted: the desktop CSP blocks Google Fonts, so a CDN link would
 // silently fall back to the system font in built apps.
 import "@fontsource-variable/inter";
@@ -23,13 +24,21 @@ import { installCardGlow } from "./lib/cardGlow";
 
 // First, so errors thrown while the rest starts up are logged too.
 installGlobalErrorHandlers();
-// Outside React: the Pomodoro store and tray outlive every view and sign-in.
-initTrayBridge();
-// Pomodoro phase and Portal unread toasts, for the same reason.
-initNotificationBridges();
-// Pauses animation and polling while the window is hidden.
-startAppActivity();
-installButtonFx();
-installCardGlow();
 
-createRoot(document.getElementById("root")!).render(<App />);
+// The desktop command box is a second window on this same page (set by
+// src-tauri/src/command_box.rs). It renders only the box and starts none of
+// the bridges, which belong to the main window.
+if ((window as { __CRYSTAL_COMMAND_BOX__?: boolean }).__CRYSTAL_COMMAND_BOX__) {
+  createRoot(document.getElementById("root")!).render(<CommandBox />);
+} else {
+  // Outside React: the Pomodoro store and tray outlive every view and sign-in.
+  initTrayBridge();
+  // Pomodoro phase and Portal unread toasts, for the same reason.
+  initNotificationBridges();
+  // Pauses animation and polling while the window is hidden.
+  startAppActivity();
+  installButtonFx();
+  installCardGlow();
+
+  createRoot(document.getElementById("root")!).render(<App />);
+}

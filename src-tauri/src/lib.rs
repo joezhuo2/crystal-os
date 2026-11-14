@@ -1,6 +1,7 @@
 use tauri::{Manager, RunEvent, WindowEvent};
 
 mod autostart;
+mod command_box;
 mod diagnostics;
 mod harness;
 mod hotkey;

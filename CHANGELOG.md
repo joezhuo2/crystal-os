@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Command box** (desktop): `Alt+Shift+C` opens a one-line box over any app without showing Crystal OS. `task buy milk` adds a task for today, `focus 25` starts the focus timer, and anything else is saved to `Inbox.md` in your vault. Change the combo under **Settings → Keyboard shortcuts → Command box**.
 - **Claude CLI** view in The Nebula (desktop): a **Chat / Claude CLI** switch beside the title. Claude CLI has **Pick folder** and a button for each Nebula project, and starts `claude` in that folder in a real terminal. The session keeps running while you visit other pages, also shows as a tab on the Terminal page, and counts toward its limit of five. **Refresh** starts a new one in the same folder.
 
 ### Changed

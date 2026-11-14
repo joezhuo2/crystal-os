@@ -22,6 +22,7 @@ import { hidePortal } from "@/lib/portalNative";
 import QuickAddDialog from "@/components/QuickAddDialog";
 import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
 import { useDndHotkey, useHomeHotkey, usePaletteHotkey } from "@/hooks/useGlobalHotkey";
+import { useQuickCommands } from "@/hooks/useQuickCommands";
 import { inTerminal } from "@/lib/hotkey";
 import { isSearchShortcut } from "@/lib/keymap";
 import { useVaultLiveUpdates } from "@/hooks/useVault";
@@ -135,6 +136,11 @@ function VaultLiveUpdates() {
   return null;
 }
 
+function QuickCommands() {
+  useQuickCommands();
+  return null;
+}
+
 const GlobalOverlays = memo(function GlobalOverlays() {
   useTrayQuickAdd(() => {
     if (!installedModules.isInstalled("archive")) return;
@@ -147,6 +153,7 @@ const GlobalOverlays = memo(function GlobalOverlays() {
   return (
     <>
       {has("archive") && <VaultLiveUpdates />}
+      <QuickCommands />
       {autoExport && has("orbit") && <OrbitAutoExport />}
       <NotificationScheduler />
       <Suspense fallback={null}>
