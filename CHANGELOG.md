@@ -5,6 +5,16 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.14.4] - 2026-11-13 - Mail and events in search.
+
+### Added
+
+- The search bar (Ctrl+K) now finds mail from The Courier (by subject, sender, company or preview; picking one opens the email) and events from The Horizon (by title, location or description, from 30 days back to 90 days ahead; picking one opens it in The Horizon).
+
+### Changed
+
+- With nothing typed, the search bar opens on a line saying what you can search for, then **Recent**, then **Vault** (Quick Add), instead of leading with Vault.
+
 ## [v0.14.3] - 2026-11-13 - Missing mail in The Courier.
 
 ### Fixed
