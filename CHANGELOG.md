@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.14.7] - 2026-11-13 - Ask my data.
+
+### Added
+
+- **Ask my data** in The Nebula: the database button beside the composer attaches a read-only snapshot to each question, so a chat can answer things like "when am I free Thursday?" or "what did I spend on food this month?". The snapshot holds your open tasks, the next 14 days of your Horizon calendar, the last 60 days of transactions and up to five vault notes matching the question. It is off by default, is sent to the model of the chat's tier only while the button is on, and cannot add or change anything.
+
 ## [v0.14.6] - 2026-11-13 - Onboarding checklist.
 
 ### Added
