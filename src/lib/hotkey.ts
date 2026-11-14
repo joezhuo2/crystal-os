@@ -21,7 +21,7 @@ export const HOTKEY_COPY: Record<HotkeyAction, { title: string; description: str
   },
   palette: {
     title: "Open search bar",
-    description: "Shows Crystal OS from any app and opens the search bar over the current page.",
+    description: "Shows Crystal OS from any app and opens the search bar over the current page. Press it again while Crystal OS is focused to close the bar.",
   },
   home: {
     title: "Go to Home",

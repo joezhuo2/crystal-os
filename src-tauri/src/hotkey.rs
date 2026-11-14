@@ -4,7 +4,8 @@
 //! - [`HotkeyAction::Toggle`] shows and focuses the window, or hides it when
 //!   it already has focus.
 //! - [`HotkeyAction::Palette`] shows the window and focuses the command
-//!   palette's search bar.
+//!   palette's search bar, or toggles the bar when the window already has
+//!   focus. It is the only search shortcut on desktop.
 //! - [`HotkeyAction::Home`] shows the window and switches to the Home tab.
 //! - [`HotkeyAction::Dnd`] turns Do Not Disturb on or off, without showing
 //!   the window.
@@ -175,9 +176,15 @@ fn toggle_main_window<R: Runtime>(app: &AppHandle<R>) {
   }
 }
 
+/// The payload tells the webview whether the window was already in front: then
+/// the key closes an open search bar, otherwise it only ever opens it.
 fn open_palette<R: Runtime>(app: &AppHandle<R>) {
-  crate::window::show(app);
-  let _ = app.emit(OPEN_PALETTE_EVENT, ());
+  let in_front = crate::window::main_window(app)
+    .is_some_and(|w| crate::window::is_shown(&w) && crate::window::is_foreground(&w));
+  if !in_front {
+    crate::window::show(app);
+  }
+  let _ = app.emit(OPEN_PALETTE_EVENT, in_front);
 }
 
 /// Show the window (if hidden) and switch to the Home tab either way.

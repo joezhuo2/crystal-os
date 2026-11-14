@@ -5,6 +5,12 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Desktop has one search bar shortcut instead of two: **Settings → Keyboard shortcuts → Open search bar** (Alt+Shift+Space by default). From another app it shows Crystal OS and opens the bar; while Crystal OS is focused it opens or closes the bar. The separate in-app Ctrl+K shortcut is gone on desktop and stays on the web.
+
 ## [v0.14.7] - 2026-11-13 - Ask my data.
 
 ### Added

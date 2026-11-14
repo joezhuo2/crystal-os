@@ -193,15 +193,17 @@ const Index = () => {
   const closePalette = useCallback(() => setPaletteOpen(false), []);
   const openOrbit = useCallback(() => setActiveTab("orbit"), [setActiveTab]);
 
-  // Desktop global hotkey (Rust shows and focuses the window first). Opens
-  // rather than toggles, so it never closes a bar left open while hidden.
+  // Desktop global hotkey, the only search shortcut there. Toggles the bar when
+  // the window was already in front; otherwise Rust shows the window and it
+  // opens, so it never closes a bar left open while hidden.
   // Also toasts hotkeys that failed to register, so it stays mounted.
-  usePaletteHotkey(useCallback(() => setPaletteOpen(true), []));
+  usePaletteHotkey(useCallback((toggle: boolean) => setPaletteOpen((open) => (toggle ? !open : true)), []));
 
-  // In-app Ctrl/Cmd+K toggles the bar. Skipped when something else already
-  // handled the key, such as the hotkey recorder, and inside the Terminal,
-  // whose keys belong to the shell.
+  // Web only: in-app Ctrl/Cmd+K toggles the bar. Skipped when something else
+  // already handled the key, and inside the Terminal, whose keys belong to
+  // the shell.
   useEffect(() => {
+    if (isDesktop()) return;
     const handler = (e: KeyboardEvent) => {
       if (e.defaultPrevented || !isSearchShortcut(e) || inTerminal(e)) return;
       e.preventDefault();
