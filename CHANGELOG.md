@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.14.3] - 2026-11-13 - Missing mail in The Courier.
+
+### Fixed
+
+- The Courier no longer stops at the 150 newest Gmail messages. It now reads every message in the fetch window, so busy inboxes show older bills, applications, orders and alerts too. The next refresh downloads the mail that was missed, which can take a little longer once.
+- Job applications sent through job boards such as LinkedIn or Indeed each get their own row. Before, they were merged into a single row per job board, hiding all but the newest.
+
 ## [v0.14.2] - 2026-11-13 - Desktop mail sign-in.
 
 ### Fixed
