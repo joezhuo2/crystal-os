@@ -277,7 +277,7 @@ export class HarnessSession {
     }
   }
 
-  async send(chatId: string, text: string) {
+  async send(chatId: string, text: string, context?: string) {
     const s = harness.getState();
     const chat = s.chats.find((c) => c.id === chatId);
     const project = chat && s.projects.find((p) => p.id === chat.projectId);
@@ -301,7 +301,7 @@ export class HarnessSession {
     const turn: TurnControl = { requested: false, engaged: false, released, release, timers: [] };
     this.turns.set(chatId, turn);
 
-    const body = [handoff, chat.mode === "plan" && engine === "dsh" ? PLAN_MODE_PREFIX : null, text].filter(Boolean).join("\n\n");
+    const body = [handoff, chat.mode === "plan" && engine === "dsh" ? PLAN_MODE_PREFIX : null, context, text].filter(Boolean).join("\n\n");
     const prompt = previous.length === 0 || handoff ? withInstructions(projectInstructions.forProject(project.id), body) : body;
     try {
       const checkpoint = await this.native.checkpoint(project.path);
