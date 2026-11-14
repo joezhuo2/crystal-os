@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { AlertTriangle, ArrowRightLeft, Brain, Check, ChevronRight, CircleAlert, Info, Loader2, Send, ShieldQuestion, Square, Wrench, X } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, Brain, Check, ChevronRight, CircleAlert, Database, Info, Loader2, Send, ShieldQuestion, Square, Wrench, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
@@ -11,6 +11,13 @@ import { harness } from "@/lib/harness/store";
 import type { Block, ChatMessage, ChatMeta } from "@/lib/harness/types";
 import { savedPrompts, usePendingInsert } from "@/lib/harness/savedPrompts";
 import NebulaTip from "./NebulaTip";
+import { useFinancialCategories, useTaskCategories, useTasks, useTransactions } from "@/contexts/AppContext";
+import { calendarWasConnected, useCalendarEvents } from "@/hooks/useGoogleCalendar";
+import { pickedCalendarId } from "@/hooks/useTodayCapacity";
+import { useVaultNotes } from "@/hooks/useVault";
+import { useCapacitySettings } from "@/lib/capacitySettings";
+import { buildDataSnapshot, SNAPSHOT_EVENT_DAYS } from "@/lib/harness/dataSnapshot";
+import { toLocalDateStr, useDebouncedValue } from "@/lib/utils";
 import SavedPromptsMenu from "./SavedPromptsMenu";
 
 const ENGINE_LABEL = { dsh: "DeepSeek Harness", claude: "Claude Code" } as const;
@@ -190,12 +197,15 @@ export default function ChatView({ chat, messages, running, stopping, loaded, ba
   // Esc stops from anywhere on the page; open dialogs and menus consume it first.
   useEscapeKey(() => void nebula.stop(chat.id), running);
 
+  const [withData, setWithData] = useState(false);
+  const snapshot = useDataSnapshot(withData, draft);
+
   const submit = () => {
     const text = draft.trim();
     if (!text || running) return;
     setDraft("");
     stickToBottom.current = true;
-    void nebula.send(chat.id, text);
+    void nebula.send(chat.id, text, withData ? snapshot() : undefined);
   };
 
   return (
@@ -247,6 +257,19 @@ export default function ChatView({ chat, messages, running, stopping, loaded, ba
         )}
         <div className="nebula-composer flex items-end gap-2 p-2">
           <SavedPromptsMenu projectId={chat.projectId} draft={draft} onInsert={appendDraft} />
+          <NebulaTip label="Ask my data" hint={withData ? "On: your tasks, calendar, money and matching notes are sent with each question" : "Off"}>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label="Ask my data"
+              aria-pressed={withData}
+              onClick={() => setWithData((on) => !on)}
+              className={withData ? "bg-white/15 text-white" : "text-white/50"}
+            >
+              <Database className="h-4 w-4" />
+            </Button>
+          </NebulaTip>
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -256,7 +279,7 @@ export default function ChatView({ chat, messages, running, stopping, loaded, ba
                 submit();
               }
             }}
-            placeholder={stopping ? "Stopping…" : running ? "Working… (Esc to stop)" : chat.tier === "high" ? "Ask Claude Code…" : "Ask the Nebula…"}
+            placeholder={stopping ? "Stopping…" : running ? "Working… (Esc to stop)" : withData ? "Ask about your tasks, calendar, money or notes…" : chat.tier === "high" ? "Ask Claude Code…" : "Ask the Nebula…"}
             rows={1}
             className="max-h-48 min-h-[2.5rem] resize-none border-0 bg-transparent text-sm shadow-none focus-visible:ring-0"
           />
@@ -284,4 +307,37 @@ export default function ChatView({ chat, messages, running, stopping, loaded, ba
       </form>
     </div>
   );
+}
+
+function useDataSnapshot(enabled: boolean, question: string) {
+  const tasks = useTasks();
+  const transactions = useTransactions();
+  const taskCategories = useTaskCategories();
+  const financialCategories = useFinancialCategories();
+  const workDay = useCapacitySettings();
+  const calendarOn = enabled && calendarWasConnected();
+  const [range] = useState(() => {
+    const now = new Date();
+    return {
+      calendarId: pickedCalendarId(),
+      timeMin: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString(),
+      timeMax: new Date(now.getFullYear(), now.getMonth(), now.getDate() + SNAPSHOT_EVENT_DAYS + 1).toISOString(),
+    };
+  });
+  const events = useCalendarEvents(range, calendarOn);
+  const q = useDebouncedValue(question.trim(), 250);
+  const notes = useVaultNotes({ q, limit: 5 }, enabled && q.length >= 2);
+
+  return () =>
+    buildDataSnapshot({
+      now: new Date(),
+      today: toLocalDateStr(),
+      tasks,
+      taskCategories,
+      events: calendarOn ? (events.data?.events ?? []) : null,
+      transactions,
+      financialCategories,
+      notes: enabled && q.length >= 2 ? (notes.data?.notes ?? []) : [],
+      workDay,
+    });
 }
