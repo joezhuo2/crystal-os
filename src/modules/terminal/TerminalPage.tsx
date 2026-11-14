@@ -109,7 +109,7 @@ interface PaneProps {
 let nextKey = 0;
 const tabFor = (id: number, shell: string, exited: boolean): Tab => ({ key: `t${++nextKey}`, id, shell, exited });
 
-function TerminalPane({ tab, focused, hub, onChange, onShortcut, register }: PaneProps) {
+export function TerminalPane({ tab, focused, hub, onChange, onShortcut, register }: PaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const streamRef = useRef<TerminalStream | null>(null);

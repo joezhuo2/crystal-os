@@ -51,8 +51,8 @@ export function listTerminals() {
 }
 
 /** Starts a new shell. Fails when `MAX_TERMINALS` are already running. */
-export function openTerminal(cols: number, rows: number) {
-  return invoke<TerminalInfo>("terminal_open", { cols, rows });
+export function openTerminal(cols: number, rows: number, cwd?: string) {
+  return invoke<TerminalInfo>("terminal_open", { cols, rows, cwd: cwd ?? null });
 }
 
 /** Resizes shell `id` to the view and returns it with its scrollback. */

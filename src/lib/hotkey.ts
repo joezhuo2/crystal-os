@@ -5,13 +5,14 @@
  */
 
 /** Mirrors `HotkeyAction` in src-tauri/src/hotkey.rs. */
-export type HotkeyAction = "toggle" | "palette" | "home" | "dnd";
+export type HotkeyAction = "toggle" | "palette" | "home" | "dnd" | "command";
 
 export const DEFAULT_ACCELERATORS: Record<HotkeyAction, string> = {
   toggle: "Alt+Space",
   palette: "Alt+Shift+Space",
   home: "Alt+Shift+KeyH",
   dnd: "Alt+Shift+KeyD",
+  command: "Alt+Shift+KeyC",
 };
 
 export const HOTKEY_COPY: Record<HotkeyAction, { title: string; description: string }> = {
@@ -21,7 +22,7 @@ export const HOTKEY_COPY: Record<HotkeyAction, { title: string; description: str
   },
   palette: {
     title: "Open search bar",
-    description: "Shows Crystal OS from any app and opens the search bar over the current page.",
+    description: "Shows Crystal OS from any app and opens the search bar over the current page. Press it again while Crystal OS is focused to close the bar.",
   },
   home: {
     title: "Go to Home",
@@ -30,6 +31,10 @@ export const HOTKEY_COPY: Record<HotkeyAction, { title: string; description: str
   dnd: {
     title: "Do Not Disturb",
     description: "Turns Do Not Disturb on or off from any app, without showing Crystal OS.",
+  },
+  command: {
+    title: "Command box",
+    description: "Opens a one-line box over any app, without showing Crystal OS. Type \"task buy milk\", \"focus 25\" or just an idea, then Enter.",
   },
 };
 

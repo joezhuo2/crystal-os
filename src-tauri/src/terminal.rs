@@ -321,7 +321,11 @@ impl Scrollback {
   }
 }
 
-fn spawn_session(app: &AppHandle, state: &TerminalState, cols: u16, rows: u16) -> Result<Session, String> {
+/// Starts in `cwd` when given, otherwise in the home folder.
+fn spawn_session(app: &AppHandle, state: &TerminalState, cols: u16, rows: u16, cwd: Option<&str>) -> Result<Session, String> {
+  if let Some(dir) = cwd.filter(|dir| !std::path::Path::new(dir).is_dir()) {
+    return Err(format!("{dir} is not a folder."));
+  }
   let pair = native_pty_system().openpty(pty_size(cols, rows)).map_err(|e| e.to_string())?;
 
   let env = fresh_env();
@@ -332,7 +336,9 @@ fn spawn_session(app: &AppHandle, state: &TerminalState, cols: u16, rows: u16) -
   for (key, value) in &env {
     cmd.env(key, value);
   }
-  if let Ok(home) = app.path().home_dir() {
+  if let Some(dir) = cwd {
+    cmd.cwd(dir);
+  } else if let Ok(home) = app.path().home_dir() {
     cmd.cwd(home);
   }
 
@@ -419,13 +425,13 @@ pub fn terminal_list(state: State<'_, TerminalState>) -> Vec<TerminalSummary> {
   state.sessions.lock().unwrap().iter().map(Session::summary).collect()
 }
 
-/// Starts a new shell as the last tab.
+/// Starts a new shell as the last tab, in `cwd` when given.
 #[tauri::command]
-pub fn terminal_open(app: AppHandle, state: State<'_, TerminalState>, cols: u16, rows: u16) -> Result<TerminalInfo, String> {
+pub fn terminal_open(app: AppHandle, state: State<'_, TerminalState>, cols: u16, rows: u16, cwd: Option<String>) -> Result<TerminalInfo, String> {
   if let Some(err) = limit_error(state.sessions.lock().unwrap().len()) {
     return Err(err);
   }
-  let next = spawn_session(&app, &state, cols, rows)?;
+  let next = spawn_session(&app, &state, cols, rows, cwd.as_deref())?;
   let info = next.info();
   let mut sessions = state.sessions.lock().unwrap();
   // Checked again: another open may have finished while this shell started.
@@ -453,7 +459,7 @@ pub fn terminal_attach(state: State<'_, TerminalState>, id: u64, cols: u16, rows
 /// other variables read again from the registry. The new session has a new id.
 #[tauri::command]
 pub fn terminal_restart(app: AppHandle, state: State<'_, TerminalState>, id: u64, cols: u16, rows: u16) -> Result<TerminalInfo, String> {
-  let next = spawn_session(&app, &state, cols, rows)?;
+  let next = spawn_session(&app, &state, cols, rows, None)?;
   let info = next.info();
   let mut sessions = state.sessions.lock().unwrap();
   let Some(slot) = sessions.iter_mut().find(|s| s.id == id) else {

@@ -31,11 +31,11 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
 
 /**
  * Desktop palette hotkey. Calls `onOpen` whenever the global palette hotkey
- * summons the window, and toasts once for each combo that failed to register
- * at startup. Mount once. A no-op on the web: nothing from `@tauri-apps/*` is
- * loaded.
+ * fires, with `toggle` true when the window was already in front, and toasts
+ * once for each combo that failed to register at startup. Mount once. A no-op
+ * on the web: nothing from `@tauri-apps/*` is loaded.
  */
-export function usePaletteHotkey(onOpen: () => void) {
+export function usePaletteHotkey(onOpen: (toggle: boolean) => void) {
   const onOpenRef = useRef(onOpen);
   onOpenRef.current = onOpen;
 
@@ -45,7 +45,7 @@ export function usePaletteHotkey(onOpen: () => void) {
     let unlisten: (() => void) | undefined;
 
     import("@tauri-apps/api/event").then(({ listen }) =>
-      listen(OPEN_PALETTE_EVENT, () => onOpenRef.current()).then((fn) => {
+      listen<boolean>(OPEN_PALETTE_EVENT, (e) => onOpenRef.current(e.payload === true)).then((fn) => {
         if (cancelled) fn();
         else unlisten = fn;
       }),

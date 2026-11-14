@@ -19,6 +19,7 @@ import { usePickVault, useVaultStatus } from "@/hooks/useVault";
 import { HOTKEY_COPY, formatAccelerator, type HotkeyAction } from "@/lib/hotkey";
 import { KEYMAP, KEYMAP_CATEGORY_LABELS, bindingFor, bindingFromEvent, formatBinding, searchShortcutLabel, setBinding, useKeymapOverrides, type KeymapCategory } from "@/lib/keymap";
 import { findConflict } from "@/lib/keymapConflicts";
+import { SEARCH_ACTION_ID } from "@/lib/keymaps/general";
 import { isDesktop } from "@/lib/platform";
 import { themeSettings, useThemeSettings, type Theme } from "@/lib/themeSettings";
 import { MAX_CACHE_MINUTES, MAX_UNLOAD_DELAY, perfSettings, usePerfSettings } from "@/lib/perfSettings";
@@ -658,8 +659,9 @@ function KeymapSettings() {
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [recording]);
 
+  const keymap = isDesktop() ? KEYMAP.filter((a) => a.id !== SEARCH_ACTION_ID) : KEYMAP;
   const groups = (Object.keys(KEYMAP_CATEGORY_LABELS) as KeymapCategory[])
-    .map((category) => ({ category, actions: KEYMAP.filter((a) => a.category === category) }))
+    .map((category) => ({ category, actions: keymap.filter((a) => a.category === category) }))
     .filter((g) => g.actions.length > 0);
 
   if (groups.length === 0) return <p className="text-sm text-muted-foreground">No in-app shortcuts yet.</p>;
@@ -671,7 +673,7 @@ function KeymapSettings() {
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{KEYMAP_CATEGORY_LABELS[category]}</p>
           {actions.map((action) => {
             const binding = bindingFor(action.id) ?? action.defaultKey;
-            const clash = findConflict(KEYMAP, action, binding, bindingFor);
+            const clash = findConflict(keymap, action, binding, bindingFor);
             const overridden = action.id in overrides;
             return (
               <Row key={action.id} title={action.title} description={clash ? `Also used by “${clash.title}”.` : ""}>
@@ -895,7 +897,7 @@ export default function SettingsPage() {
         )}
 
         <Section id="shortcuts" icon={Keyboard} title="Keyboard shortcuts">
-          {(["toggle", "palette", "home", "dnd"] as const).map((action) => {
+          {(["toggle", "palette", "home", "dnd", "command"] as const).map((action) => {
             const status = hotkeys.statuses?.[action];
             if (!status) return null;
             return (
@@ -909,9 +911,11 @@ export default function SettingsPage() {
               </Row>
             );
           })}
-          <Row title="Open search bar" description="Opens or closes the search bar over any page while Crystal OS is focused. Change it under In-app shortcuts → General.">
-            <SearchCombo />
-          </Row>
+          {!desktop && (
+            <Row title="Open search bar" description="Opens or closes the search bar over any page while Crystal OS is focused. Change it under In-app shortcuts → General.">
+              <SearchCombo />
+            </Row>
+          )}
         </Section>
 
         <Section id="keymap" icon={Keyboard} title="In-app shortcuts">

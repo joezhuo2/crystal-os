@@ -22,6 +22,7 @@ import { hidePortal } from "@/lib/portalNative";
 import QuickAddDialog from "@/components/QuickAddDialog";
 import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
 import { useDndHotkey, useHomeHotkey, usePaletteHotkey } from "@/hooks/useGlobalHotkey";
+import { useQuickCommands } from "@/hooks/useQuickCommands";
 import { inTerminal } from "@/lib/hotkey";
 import { isSearchShortcut } from "@/lib/keymap";
 import { useVaultLiveUpdates } from "@/hooks/useVault";
@@ -135,6 +136,11 @@ function VaultLiveUpdates() {
   return null;
 }
 
+function QuickCommands() {
+  useQuickCommands();
+  return null;
+}
+
 const GlobalOverlays = memo(function GlobalOverlays() {
   useTrayQuickAdd(() => {
     if (!installedModules.isInstalled("archive")) return;
@@ -147,6 +153,7 @@ const GlobalOverlays = memo(function GlobalOverlays() {
   return (
     <>
       {has("archive") && <VaultLiveUpdates />}
+      <QuickCommands />
       {autoExport && has("orbit") && <OrbitAutoExport />}
       <NotificationScheduler />
       <Suspense fallback={null}>
@@ -193,15 +200,17 @@ const Index = () => {
   const closePalette = useCallback(() => setPaletteOpen(false), []);
   const openOrbit = useCallback(() => setActiveTab("orbit"), [setActiveTab]);
 
-  // Desktop global hotkey (Rust shows and focuses the window first). Opens
-  // rather than toggles, so it never closes a bar left open while hidden.
+  // Desktop global hotkey, the only search shortcut there. Toggles the bar when
+  // the window was already in front; otherwise Rust shows the window and it
+  // opens, so it never closes a bar left open while hidden.
   // Also toasts hotkeys that failed to register, so it stays mounted.
-  usePaletteHotkey(useCallback(() => setPaletteOpen(true), []));
+  usePaletteHotkey(useCallback((toggle: boolean) => setPaletteOpen((open) => (toggle ? !open : true)), []));
 
-  // In-app Ctrl/Cmd+K toggles the bar. Skipped when something else already
-  // handled the key, such as the hotkey recorder, and inside the Terminal,
-  // whose keys belong to the shell.
+  // Web only: in-app Ctrl/Cmd+K toggles the bar. Skipped when something else
+  // already handled the key, and inside the Terminal, whose keys belong to
+  // the shell.
   useEffect(() => {
+    if (isDesktop()) return;
     const handler = (e: KeyboardEvent) => {
       if (e.defaultPrevented || !isSearchShortcut(e) || inTerminal(e)) return;
       e.preventDefault();
