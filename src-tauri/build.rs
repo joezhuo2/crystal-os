@@ -64,6 +64,8 @@ fn main() {
     "update_check",
     "update_install",
     "sidecar_ensure",
+    "setup_env_status",
+    "setup_write_env",
   ]);
   tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))
     .expect("failed to run tauri-build");

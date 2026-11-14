@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-setup-env-status"
+description = "Enables the setup_env_status command without any pre-configured scope."
+commands.allow = ["setup_env_status"]
+
+[[permission]]
+identifier = "deny-setup-env-status"
+description = "Denies the setup_env_status command without any pre-configured scope."
+commands.deny = ["setup_env_status"]

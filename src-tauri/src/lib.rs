@@ -7,6 +7,7 @@ mod hotkey;
 mod installer;
 mod portal;
 mod settings;
+mod setup;
 mod sidecar;
 mod terminal;
 mod tray;
@@ -139,6 +140,8 @@ pub fn run() {
       updater::update_check,
       updater::update_install,
       sidecar::sidecar_ensure,
+      setup::setup_env_status,
+      setup::setup_write_env,
     ])
     .setup(|_app| {
       hotkey::init(_app.handle());

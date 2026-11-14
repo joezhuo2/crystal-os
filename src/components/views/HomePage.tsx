@@ -42,6 +42,7 @@ import { splitByParent, subtaskProgress } from "@/lib/subtasks";
 import { SubtaskChip } from "@/modules/tasks/TaskSubtasks";
 import { NebulaSpace, PortalSpace, TerminalSpace } from "./HomeSpaces";
 import HomeGrid, { type HomeWidget } from "./HomeGrid";
+import OnboardingCard from "@/components/OnboardingCard";
 import { CapacityStrip } from "@/modules/tasks/CapacityBar";
 import { useOrbitReady, useOrbitTeaser } from "@/hooks/useOrbitReview";
 import { formatMinutes, kindLabel } from "@/lib/orbitReview";
@@ -698,6 +699,7 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
 
   return (
     <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+      <OnboardingCard onNavigate={onNavigate} />
       <HomeGrid widgets={widgets.filter((widget) => !uninstalled.includes(widget.module))} />
     </m.div>
   );

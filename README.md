@@ -110,7 +110,7 @@ You need a [Supabase](https://supabase.com) project of your own (the free tier w
 
 1. In the Supabase SQL Editor, run the files in [`supabase/migrations/`](supabase/migrations) in order. See [Database Schema](#-database-schema-supabase).
 2. Under **Authentication → Users**, create your account, then turn off new signups under **Authentication → Providers**.
-3. Create `%APPDATA%\com.crystalos.desktop\.env.local` from [`.env.example`](.env.example) with at least `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. For Google Calendar, add the `GOOGLE_*` keys with `GOOGLE_REDIRECT_URI=http://127.0.0.1:8787/api/calendar/auth/callback` (see [The Horizon](#-the-horizon-google-calendar-integration)).
+3. Open Crystal OS and use the **Finish setting up** card on Home (or **Settings → Startup → Local API keys**) to enter `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and, for Google Calendar, the Google client ID and secret; it writes `%APPDATA%\com.crystalos.desktop\.env.local` for you. You can still create that file by hand from [`.env.example`](.env.example). For Google Calendar, add the `GOOGLE_*` keys with `GOOGLE_REDIRECT_URI=http://127.0.0.1:8787/api/calendar/auth/callback` (see [The Horizon](#-the-horizon-google-calendar-integration)).
 4. Restart Crystal OS (tray → **Quit Crystal OS**, then open it again) and sign in.
 5. Optional: in **The Archive**, **Choose vault folder** to pick your Obsidian vault; in **Settings → The Nebula**, add a NIM key.
 
