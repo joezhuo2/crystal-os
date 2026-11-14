@@ -6,14 +6,14 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-1147%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.14.5-6366F1)
+![Version](https://img.shields.io/badge/version-0.14.6-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 > A personal productivity dashboard built with React, TypeScript, Supabase, your Google Calendar, and your Obsidian vault. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
 <p align="center"><img src="docs/images/crystal-os-tour.gif" alt="A tour of Crystal OS: The Pulse, The Engine, The Horizon, The Orbit, The Vault, The Atmosphere, The Archive, The Nebula and Settings" width="840"></p>
 
-Current release: **v0.14.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.14.6** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 [Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
@@ -110,7 +110,7 @@ You need a [Supabase](https://supabase.com) project of your own (the free tier w
 
 1. In the Supabase SQL Editor, run the files in [`supabase/migrations/`](supabase/migrations) in order. See [Database Schema](#-database-schema-supabase).
 2. Under **Authentication → Users**, create your account, then turn off new signups under **Authentication → Providers**.
-3. Create `%APPDATA%\com.crystalos.desktop\.env.local` from [`.env.example`](.env.example) with at least `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. For Google Calendar, add the `GOOGLE_*` keys with `GOOGLE_REDIRECT_URI=http://127.0.0.1:8787/api/calendar/auth/callback` (see [The Horizon](#-the-horizon-google-calendar-integration)).
+3. Open Crystal OS and use the **Finish setting up** card on Home (or **Settings → Startup → Local API keys**) to enter `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and, for Google Calendar, the Google client ID and secret; it writes `%APPDATA%\com.crystalos.desktop\.env.local` for you. You can still create that file by hand from [`.env.example`](.env.example). For Google Calendar, add the `GOOGLE_*` keys with `GOOGLE_REDIRECT_URI=http://127.0.0.1:8787/api/calendar/auth/callback` (see [The Horizon](#-the-horizon-google-calendar-integration)).
 4. Restart Crystal OS (tray → **Quit Crystal OS**, then open it again) and sign in.
 5. Optional: in **The Archive**, **Choose vault folder** to pick your Obsidian vault; in **Settings → The Nebula**, add a NIM key.
 

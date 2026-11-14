@@ -23,7 +23,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionEntry[] = [
   { id: "modules", title: "Packages", hint: "Install or uninstall sections", keywords: ["packages", "modules", "install", "uninstall", "add-ons", "addons", "sections", "pages"] },
   { id: "navbar", title: "Navigation", hint: "Sidebar order, hidden pages, top or bottom", keywords: ["navbar", "sidebar", "navigation", "reorder", "hide pages", "pin to bottom", "menu"] },
   { id: "keymap", title: "In-app shortcuts", hint: "Single-key shortcuts, rebind keys", keywords: ["keyboard shortcuts", "keybinding", "rebind", "hotkey", "keymap", "reset shortcuts"] },
-  { id: "startup", title: "Startup", hint: "Launch at login", keywords: ["launch at login", "autostart", "boot"], desktopOnly: true },
+  { id: "startup", title: "Startup", hint: "Launch at login, local API keys", keywords: ["launch at login", "autostart", "boot", "api keys", "supabase", "google client", "env.local", "setup"], desktopOnly: true },
   { id: "vault", title: "Vault", hint: "Obsidian vault folder", keywords: ["obsidian", "vault folder", "notes", "archive"], desktopOnly: true, module: "archive" },
   { id: "nebula", title: "The Nebula", hint: "API keys, models, projects folder", keywords: ["nvidia", "nim", "omniroute", "api key", "model", "claude", "projects folder", "coding agent", "mcp"], desktopOnly: true, module: "nebula" },
   { id: "engine", title: "The Engine", hint: "Work day hours", keywords: ["tasks", "work day starts", "work day ends", "capacity", "fits today"], module: "tasks" },

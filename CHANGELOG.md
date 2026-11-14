@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.14.6] - 2026-11-13 - Onboarding checklist.
+
+### Added
+
+- **Finish setting up** card on Home (desktop): lists what is not set up yet (local API keys, Obsidian vault folder, Google Calendar, NIM key, launch at login) with a button for each. It goes away once everything is done, or with the X.
+- **Local API keys** screen (from the card, or **Settings → Startup → Local API keys**): enter the Supabase URL and anon key and the Google client ID and secret in the app instead of editing `.env.local` by hand. It adds the Google redirect URI when there is none, keeps every other line of the file, never shows a saved value, and says which keys are still missing.
+
 ## [v0.14.5] - 2026-11-13 - Rebindable search shortcut.
 
 ### Added

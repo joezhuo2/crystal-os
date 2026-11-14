@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import HotkeySettingsDialog from "@/components/HotkeySettingsDialog";
+import SetupKeysDialog from "@/components/SetupKeysDialog";
+import { SETUP_KEYS, getEnvStatus, type EnvStatus } from "@/lib/setup";
 import { useGlobalHotkeys } from "@/hooks/useGlobalHotkey";
 import { usePickVault, useVaultStatus } from "@/hooks/useVault";
 import { HOTKEY_COPY, formatAccelerator, type HotkeyAction } from "@/lib/hotkey";
@@ -605,6 +607,32 @@ function TestNotificationButton() {
   );
 }
 
+function SetupKeysRow() {
+  const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState<EnvStatus | null>(null);
+  useEffect(() => {
+    getEnvStatus().then(setStatus, () => {});
+  }, []);
+  const missing = status ? SETUP_KEYS.filter(({ key }) => !status[key]).map(({ label }) => label) : [];
+  return (
+    <Row
+      title="Local API keys"
+      description={
+        !status
+          ? "Supabase and Google keys for the calendar and mail."
+          : missing.length
+            ? `Missing: ${missing.join(", ")}. The calendar and mail need them.`
+            : "Supabase and Google keys are saved on this device."
+      }
+    >
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        Enter keys
+      </Button>
+      <SetupKeysDialog open={open} status={status} onOpenChange={setOpen} onSaved={setStatus} />
+    </Row>
+  );
+}
+
 function SearchCombo() {
   useKeymapOverrides();
   return <Combo>{searchShortcutLabel()}</Combo>;
@@ -906,6 +934,7 @@ export default function SettingsPage() {
             >
               <Switch checked={hotkeys.launchAtLogin} onCheckedChange={hotkeys.setLaunchAtLogin} />
             </Row>
+            <SetupKeysRow />
           </Section>
         )}
 
