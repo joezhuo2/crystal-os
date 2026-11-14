@@ -54,7 +54,7 @@ import {
   Mail,
 } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
-import { isDesktop } from "@/lib/platform";
+import { isDesktop, openExternal } from "@/lib/platform";
 import { usePortalOcclusion } from "@/hooks/usePortal";
 import { readRecents, type RecentItem } from "@/lib/recents";
 import { SETTINGS_SECTIONS, settingsSectionValue } from "@/lib/settingsSections";
@@ -70,6 +70,9 @@ import { savedPrompts, useSavedPrompts } from "@/lib/harness/savedPrompts";
 import { harness, selectActiveChat } from "@/lib/harness/store";
 import { searchChats } from "@/lib/harness/chatSearch";
 import { useInstalledModules } from "@/lib/installedModules";
+import { useMailDigest, useMailStatus } from "@/hooks/useMail";
+import { mailWasConnected } from "@/lib/mail";
+import { PALETTE_EVENT_DAYS_AHEAD, PALETTE_EVENT_DAYS_BACK, searchEvents, searchMail } from "@/lib/paletteSearch";
 
 const RECENT_MODULE: Record<RecentItem["kind"], TabId> = {
   task: "tasks",
@@ -135,6 +138,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const financialsOn = on("financials");
   const archiveOn = on("archive");
   const nebulaOn = on("nebula");
+  const mailOn = on("mail");
   const tasks = useTasks();
   const { updateTask, rescheduleTasks } = useAppActions();
   // "Make subtask of…": the task being nested while the bar lists parents for it.
@@ -200,7 +204,10 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   // ---------- "next 5h": the next free block in The Horizon ----------
   const slotMinutes = parseFreeSlotQuery(search);
   const capacity = useCapacitySettings();
-  const calendarStatus = useCalendarStatus(calendarOn && slotMinutes !== null && (!usesSidecar() || calendarWasConnected()));
+  const eventQuery = calendarOn && !addPrefix && !logPrefix && slotMinutes === null ? search.trim() : "";
+  const debouncedEventQuery = useDebouncedValue(eventQuery, 250);
+  const eventSearchOn = debouncedEventQuery.length >= 2;
+  const calendarStatus = useCalendarStatus(calendarOn && (slotMinutes !== null || eventSearchOn) && (!usesSidecar() || calendarWasConnected()));
   const calendarConnected = calendarStatus.data?.connected === true;
   const slotRange = useMemo(() => {
     const now = new Date();
@@ -221,6 +228,22 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
           minutes: slotMinutes,
           window: capacityWindow(capacity),
         });
+
+  const eventRange = useMemo(() => {
+    const now = new Date();
+    return {
+      calendarId: pickedCalendarId(),
+      timeMin: new Date(now.getFullYear(), now.getMonth(), now.getDate() - PALETTE_EVENT_DAYS_BACK).toISOString(),
+      timeMax: new Date(now.getFullYear(), now.getMonth(), now.getDate() + PALETTE_EVENT_DAYS_AHEAD).toISOString(),
+    };
+  }, []);
+  const rangeEvents = useCalendarEvents(eventRange, eventSearchOn && calendarConnected);
+  const matchedEvents = eventSearchOn ? searchEvents(rangeEvents.data?.events ?? [], debouncedEventQuery, toLocalDateStr()) : [];
+
+  const mailQuery = mailOn && !addPrefix && !logPrefix ? search.trim() : "";
+  const mailStatus = useMailStatus(mailQuery.length >= 2 && (!usesSidecar() || mailWasConnected()));
+  const mailDigest = useMailDigest(mailQuery.length >= 2 ? mailStatus.data?.accounts : []);
+  const matchedMail = searchMail(mailDigest.data?.items ?? [], mailQuery);
 
   // ---------- Search the Obsidian vault ----------
   const vaultQuery = !addPrefix && !logPrefix ? search.trim() : "";
@@ -267,6 +290,16 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const handleOpenNote = (notePath: string) => {
     setSelectedNotePath(notePath);
     handleNavigate("archive");
+  };
+
+  const handleOpenEvent = (event: { id: string; calendarId: string; startDate: string }) => {
+    appUi.setOpenEvent({ id: event.id, calendarId: event.calendarId, date: event.startDate });
+    handleNavigate("calendar");
+  };
+
+  const handleOpenMail = (url: string) => {
+    openExternal(url).catch(() => toast.error("Could not open the email"));
+    close();
   };
 
   const startNesting = (task: Task) => {
@@ -375,6 +408,29 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
     handleNavigate("calendar");
   };
 
+  const vaultGroup = archiveOn && (
+                <CommandGroup heading="Vault">
+                  <CommandItem
+                    value="quick-add-vault"
+                    onSelect={handleQuickAdd}
+                    className={ITEM}
+                  >
+                    <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                      <NotebookPen className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {vaultQuery ? `Quick add "${vaultQuery}"` : "Quick Add to Vault"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Append to Inbox.md in your Obsidian vault
+                      </p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground/40" />
+                  </CommandItem>
+                </CommandGroup>
+  );
+
   // ---------- Render ----------
   // Opacity sits on the panel itself, never on an ancestor of it: that would
   // cut off the panel's backdrop blur until the fade ended.
@@ -415,7 +471,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
           // chats on their messages, and
           // Quick Add is always offered — neither can pass a local substring
           // test against the raw query, so they opt out of cmdk's filter.
-          if (value === "quick-add-vault" || value === "free-slot" || value.startsWith("note-") || value.startsWith("nebula-chat-")) return 1;
+          if (value === "quick-add-vault" || value === "free-slot" || value.startsWith("note-") || value.startsWith("nebula-chat-") || value.startsWith("mail-") || value.startsWith("event-")) return 1;
           if (value.toLowerCase().includes(search.toLowerCase())) return 1;
           return 0;
         }}
@@ -432,7 +488,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                 ? `Make "${nestChild.name}" a subtask of…`
                 : snoozeTask
                   ? `Snooze "${snoozeTask.name}" until…`
-                  : "Search, 'add …' or 'log …'"
+                  : "Search anything, 'add …' or 'log …'"
             }
             wrapperClassName="border-0 px-0 flex-1 min-w-0"
             className="h-8 text-base bg-transparent border-0 outline-none placeholder:text-muted-foreground/40 focus:ring-0"
@@ -551,29 +607,13 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                   </CommandGroup>
                 )}
 
-                {/* ── Quick Add to the vault — the first row, after a free-slot answer ── */}
-                {archiveOn && (
-                <CommandGroup heading="Vault">
-                  <CommandItem
-                    value="quick-add-vault"
-                    onSelect={handleQuickAdd}
-                    className={ITEM}
-                  >
-                    <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
-                      <NotebookPen className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {vaultQuery ? `Quick add "${vaultQuery}"` : "Quick Add to Vault"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Append to Inbox.md in your Obsidian vault
-                      </p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground/40" />
-                  </CommandItem>
-                </CommandGroup>
+                {!search && (
+                  <p className="px-3 py-3 text-sm text-muted-foreground/70">
+                    Search for anything: tasks, events, mail, notes, transactions, chats and settings.
+                  </p>
                 )}
+
+                {search && vaultGroup}
 
                 {/* ── Natural Language: Add Task ── */}
                 {tasksOn && addPrefix && (
@@ -741,6 +781,60 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                   </>
                 )}
 
+                {/* ── Matching calendar events ── */}
+                {matchedEvents.length > 0 && (
+                  <>
+                    <CommandSeparator className="my-1" />
+                    <CommandGroup heading="The Horizon">
+                      {matchedEvents.map((event) => (
+                        <CommandItem
+                          key={event.id}
+                          value={`event-${event.id}`}
+                          onSelect={() => handleOpenEvent(event)}
+                          className={ITEM}
+                        >
+                          <div className="search-overlay-icon-alt flex items-center justify-center w-8 h-8 rounded-lg shrink-0">
+                            <CalendarDays className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0" data-private>
+                            <p className="text-sm font-medium truncate">{event.summary || "(No title)"}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {[formatRecentDate(event.startDate), event.startTime, event.location].filter(Boolean).join(" · ")}
+                            </p>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </>
+                )}
+
+                {/* ── Matching mail ── */}
+                {matchedMail.length > 0 && (
+                  <>
+                    <CommandSeparator className="my-1" />
+                    <CommandGroup heading="The Courier">
+                      {matchedMail.map((item) => (
+                        <CommandItem
+                          key={item.id}
+                          value={`mail-${item.id}`}
+                          onSelect={() => handleOpenMail(item.url)}
+                          className={ITEM}
+                        >
+                          <div className="search-overlay-icon-alt flex items-center justify-center w-8 h-8 rounded-lg shrink-0">
+                            <Mail className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0" data-private>
+                            <p className="text-sm font-medium truncate">{item.subject || "(No subject)"}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {[item.company ?? item.from, new Date(item.receivedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })].join(" · ")}
+                            </p>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </>
+                )}
+
                 {/* ── Matching Vault Notes ── */}
                 {matchedNotes.length > 0 && (
                   <>
@@ -839,6 +933,13 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                         );
                       })}
                     </CommandGroup>
+                  </>
+                )}
+
+                {!search && vaultGroup && (
+                  <>
+                    <CommandSeparator className="my-1" />
+                    {vaultGroup}
                   </>
                 )}
 
