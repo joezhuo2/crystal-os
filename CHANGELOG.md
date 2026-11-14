@@ -5,6 +5,17 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.14.9] - 2026-11-14 - Glass tabs, smooth scroll, tray update status.
+
+### Added
+
+- **Smooth scroll**: the mouse wheel now glides with inertia in every scrollable area. The Terminal and Portal apps keep their own scrolling, and it is off when your system asks for reduced motion.
+- **Update status in the tray** (desktop): right-click the tray icon to see **Up to date (vX.Y.Z)** or **Update found (vX.Y.Z)**, with **Check for updates** underneath. Checking shows Crystal OS and offers the update there.
+
+### Changed
+
+- **Glass tabs**: the Orbit review length, Nebula **Chat / Claude CLI**, Engine **List / Board** and Horizon **Month / Week / Day / Agenda** switches are now liquid glass tabs with a sliding thumb and arrow-key navigation. The Nebula switch no longer follows the Nebula colour theme.
+
 ## [v0.14.8] - 2026-11-14 - Command box, Claude CLI view, one search shortcut.
 
 ### Added

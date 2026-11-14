@@ -18,11 +18,13 @@ use crate::window;
 
 const POMODORO_EVENT: &str = "tray://pomodoro";
 const QUICK_ADD_EVENT: &str = "tray://quick-add";
+const CHECK_UPDATE_EVENT: &str = "tray://check-update";
 
 const ID_SHOW_HIDE: &str = "show-hide";
 const ID_POMODORO_TOGGLE: &str = "pomodoro-toggle";
 const ID_POMODORO_RESET: &str = "pomodoro-reset";
 const ID_QUICK_ADD: &str = "quick-add";
+const ID_CHECK_UPDATE: &str = "check-update";
 const ID_QUIT: &str = "quit";
 
 /// macOS menu-bar icons are monochrome templates the system tints for light
@@ -48,6 +50,7 @@ pub struct TrayState<R: Runtime> {
   tray: TrayIcon<R>,
   status: MenuItem<R>,
   toggle: MenuItem<R>,
+  update: MenuItem<R>,
   /// Last reported state, so Start/Pause is only relabelled when it flips.
   running: AtomicBool,
 }
@@ -58,6 +61,9 @@ pub fn init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
   let toggle = MenuItem::with_id(app, ID_POMODORO_TOGGLE, "Start", true, None::<&str>)?;
   let reset = MenuItem::with_id(app, ID_POMODORO_RESET, "Reset", true, None::<&str>)?;
   let quick_add = MenuItem::with_id(app, ID_QUICK_ADD, "Quick Add…", true, None::<&str>)?;
+  let version = app.package_info().version.to_string();
+  let update = MenuItem::with_id(app, "update-status", update_label(None, &version), false, None::<&str>)?;
+  let check_update = MenuItem::with_id(app, ID_CHECK_UPDATE, "Check for updates", true, None::<&str>)?;
   let quit = MenuItem::with_id(app, ID_QUIT, "Quit Crystal OS", true, None::<&str>)?;
 
   let menu = Menu::with_items(
@@ -70,6 +76,9 @@ pub fn init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
       &reset,
       &PredefinedMenuItem::separator(app)?,
       &quick_add,
+      &PredefinedMenuItem::separator(app)?,
+      &update,
+      &check_update,
       &PredefinedMenuItem::separator(app)?,
       &quit,
     ],
@@ -96,7 +105,7 @@ pub fn init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     })
     .build(app)?;
 
-  app.manage(TrayState { tray, status, toggle, running: AtomicBool::new(false) });
+  app.manage(TrayState { tray, status, toggle, update, running: AtomicBool::new(false) });
   Ok(())
 }
 
@@ -122,9 +131,37 @@ fn handle_menu<R: Runtime>(app: &AppHandle<R>, id: &str) {
       window::show(app);
       let _ = app.emit(QUICK_ADD_EVENT, ());
     }
+    ID_CHECK_UPDATE => {
+      window::show(app);
+      let _ = app.emit(CHECK_UPDATE_EVENT, ());
+    }
     // RunEvent::Exit in lib.rs still kills the sidecar.
     ID_QUIT => app.exit(0),
     _ => {}
+  }
+}
+
+fn update_label(found: Option<&str>, current: &str) -> String {
+  match found {
+    Some(version) => format!("Update found (v{version})"),
+    None => format!("Up to date (v{current})"),
+  }
+}
+
+pub fn set_update(app: &AppHandle, found: Option<&str>) {
+  if let Some(state) = app.try_state::<TrayState<tauri::Wry>>() {
+    let _ = state.update.set_text(update_label(found, &app.package_info().version.to_string()));
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::update_label;
+
+  #[test]
+  fn update_label_follows_state() {
+    assert_eq!(update_label(None, "1.2.3"), "Up to date (v1.2.3)");
+    assert_eq!(update_label(Some("1.3.0"), "1.2.3"), "Update found (v1.3.0)");
   }
 }
 

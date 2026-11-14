@@ -69,6 +69,7 @@ pub async fn update_check(app: AppHandle, state: State<'_, UpdaterState>) -> Res
     current_version: update.current_version.clone(),
     notes: update.body.clone().filter(|body| !body.trim().is_empty()),
   });
+  crate::tray::set_update(&app, info.as_ref().map(|info| info.version.as_str()));
   *state.pending.lock().unwrap_or_else(|e| e.into_inner()) = update;
   Ok(info)
 }

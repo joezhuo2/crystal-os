@@ -14,6 +14,7 @@ import { formatClock, pomodoro, type PomodoroState } from "@/lib/pomodoro";
 export const TRAY_POMODORO_EVENT = "tray://pomodoro";
 /** Emitted by Rust after showing the window from "Quick Add…". */
 export const TRAY_QUICK_ADD_EVENT = "tray://quick-add";
+export const TRAY_CHECK_UPDATE_EVENT = "tray://check-update";
 
 /** Mirrors `PomodoroView` in src-tauri/src/tray.rs. */
 export interface TrayPomodoroView {
