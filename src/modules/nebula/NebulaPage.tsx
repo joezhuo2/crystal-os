@@ -3,6 +3,7 @@ import { FolderPlus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatView from "@/components/nebula/ChatView";
 import DiffReview from "@/components/nebula/DiffReview";
+import NebulaCli from "@/components/nebula/NebulaCli";
 import NebulaSetupCard from "@/components/nebula/NebulaSetupCard";
 import NebulaToolbar from "@/components/nebula/NebulaToolbar";
 import NewProjectDialog from "@/components/nebula/NewProjectDialog";
@@ -13,10 +14,30 @@ import { isDesktop } from "@/lib/platform";
 import { candidates } from "@/lib/harness/modelRouter";
 import { harness, selectActiveChat, selectProjectTokens } from "@/lib/harness/store";
 
+const VIEW_KEY = "crystal-os-nebula-view";
+type NebulaView = "chat" | "cli";
+
+function readView(): NebulaView {
+  try {
+    return localStorage.getItem(VIEW_KEY) === "cli" ? "cli" : "chat";
+  } catch {
+    return "chat";
+  }
+}
+
 export default function NebulaPage() {
   const desktop = isDesktop();
   const state = useHarness();
   const [newProject, setNewProject] = useState(false);
+  const [view, setView] = useState(readView);
+  const pickView = (next: NebulaView) => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      // Storage blocked: the view still applies for this visit.
+    }
+  };
   const chat = selectActiveChat(state);
   useActiveChatLoader(chat?.id ?? null);
   useShortcut("nebula.newChat", () => {
@@ -55,9 +76,19 @@ export default function NebulaPage() {
           <h2 className="nebula-title text-2xl font-bold tracking-tight">The Nebula</h2>
           <p className="text-sm text-white/55">A coding agent for your project folders</p>
         </div>
+        <div className="nebula-segmented ml-auto" role="group" aria-label="Nebula view">
+          <button type="button" data-active={view === "chat" || undefined} aria-pressed={view === "chat"} onClick={() => pickView("chat")}>
+            Chat
+          </button>
+          <button type="button" data-active={view === "cli" || undefined} aria-pressed={view === "cli"} onClick={() => pickView("cli")}>
+            Claude CLI
+          </button>
+        </div>
       </header>
 
-      {!ready ? (
+      {view === "cli" ? (
+        <NebulaCli projects={state.projects} />
+      ) : !ready ? (
         <NebulaSetupCard />
       ) : (
         <div className="flex min-h-0 flex-1 gap-3">
