@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FolderPlus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GlassTabs } from "@/components/crystal/GlassTabs";
 import ChatView from "@/components/nebula/ChatView";
 import DiffReview from "@/components/nebula/DiffReview";
 import NebulaCli from "@/components/nebula/NebulaCli";
@@ -76,14 +77,16 @@ export default function NebulaPage() {
           <h2 className="nebula-title text-2xl font-bold tracking-tight">The Nebula</h2>
           <p className="text-sm text-white/55">A coding agent for your project folders</p>
         </div>
-        <div className="nebula-segmented ml-auto" role="group" aria-label="Nebula view">
-          <button type="button" data-active={view === "chat" || undefined} aria-pressed={view === "chat"} onClick={() => pickView("chat")}>
-            Chat
-          </button>
-          <button type="button" data-active={view === "cli" || undefined} aria-pressed={view === "cli"} onClick={() => pickView("cli")}>
-            Claude CLI
-          </button>
-        </div>
+        <GlassTabs
+          aria-label="Nebula view"
+          className="ml-auto text-xs"
+          items={[
+            { value: "chat", label: "Chat" },
+            { value: "cli", label: "Claude CLI" },
+          ]}
+          value={view}
+          onChange={(next) => pickView(next as NebulaView)}
+        />
       </header>
 
       {view === "cli" ? (

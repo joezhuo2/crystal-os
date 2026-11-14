@@ -89,7 +89,7 @@ describe("Board cards", () => {
 
   it("start folded to the check and the name", () => {
     render(<TasksPage />);
-    fireEvent.click(screen.getByRole("button", { name: /Board/ }));
+    fireEvent.click(screen.getByRole("tab", { name: /Board/ }));
     expect(screen.getByText("Write report")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Complete Write report" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Expand Write report" }).getAttribute("aria-expanded")).toBe("false");
@@ -100,7 +100,7 @@ describe("Board cards", () => {
 
   it("fold again, closing the details", () => {
     render(<TasksPage />);
-    fireEvent.click(screen.getByRole("button", { name: /Board/ }));
+    fireEvent.click(screen.getByRole("tab", { name: /Board/ }));
     fireEvent.click(screen.getByRole("button", { name: "Expand Write report" }));
     fireEvent.click(screen.getByRole("button", { name: "Show details of Write report" }));
     fireEvent.click(screen.getByRole("button", { name: "Collapse Write report" }));
@@ -111,7 +111,7 @@ describe("Board cards", () => {
 
   it("expanded, show the notes line and a details toggle, with the actions along the foot", () => {
     render(<TasksPage />);
-    fireEvent.click(screen.getByRole("button", { name: /Board/ }));
+    fireEvent.click(screen.getByRole("tab", { name: /Board/ }));
     fireEvent.click(screen.getByRole("button", { name: "Expand Write report" }));
     expect(screen.getByText("Draft first")).toBeTruthy();
     const details = screen.getByRole("button", { name: "Show details of Write report" });
