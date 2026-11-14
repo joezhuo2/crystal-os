@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from "react";
-import { formatAccelerator } from "@/lib/hotkey";
+import { formatAccelerator, isPaletteShortcut, paletteShortcutLabel } from "@/lib/hotkey";
 import { ARCHIVE_KEYS } from "@/lib/keymaps/archive";
 import { ENGINE_KEYS } from "@/lib/keymaps/engine";
-import { GENERAL_KEYS } from "@/lib/keymaps/general";
+import { GENERAL_KEYS, SEARCH_ACTION_ID } from "@/lib/keymaps/general";
 import { HORIZON_KEYS } from "@/lib/keymaps/horizon";
 import { NEBULA_KEYS } from "@/lib/keymaps/nebula";
 import { ORBIT_KEYS } from "@/lib/keymaps/orbit";
@@ -96,6 +96,20 @@ export function setBinding(id: string, binding: string | null) {
     // Storage blocked: the rebind still applies for this session.
   }
   listeners.forEach((l) => l());
+}
+
+const SEARCH_DEFAULT = "Ctrl+KeyK";
+
+export function isSearchShortcut(e: KeyLike & Pick<KeyboardEvent, "target" | "defaultPrevented" | "isComposing">): boolean {
+  const binding = bindingFor(SEARCH_ACTION_ID) ?? SEARCH_DEFAULT;
+  if (binding === SEARCH_DEFAULT) return isPaletteShortcut(e);
+  if (bindingFromEvent(e) !== binding) return false;
+  return /(Ctrl|Alt|Super)\+/.test(binding) || !shortcutBlocked(e);
+}
+
+export function searchShortcutLabel(): string {
+  const binding = bindingFor(SEARCH_ACTION_ID) ?? SEARCH_DEFAULT;
+  return binding === SEARCH_DEFAULT ? paletteShortcutLabel() : formatBinding(binding);
 }
 
 export function useKeymapOverrides(): Record<string, string> {
