@@ -18,6 +18,11 @@ vi.mock("@/contexts/AppContext", () => ({
 }));
 vi.mock("@/hooks/useVault", () => ({ useVaultNotes: () => ({ data: undefined }) }));
 vi.mock("@/hooks/usePortal", () => ({ usePortalOcclusion: () => {} }));
+let mailItems: unknown[] = [];
+vi.mock("@/hooks/useMail", () => ({
+  useMailStatus: () => ({ data: { accounts: [] } }),
+  useMailDigest: () => ({ data: { items: mailItems } }),
+}));
 vi.mock("@/lib/platform", async (orig) => ({ ...(await orig<object>()), isDesktop: () => false }));
 let calendarEvents: unknown[] = [];
 vi.mock("@/hooks/useGoogleCalendar", () => ({
@@ -273,5 +278,28 @@ describe("Command palette with uninstalled modules", () => {
     renderPalette();
     search("engine");
     expect(screen.getByText("Settings → The Engine")).toBeInTheDocument();
+  });
+});
+
+describe("Command palette empty state and mail", () => {
+  it("shows the search hint, then Recent, then Vault", () => {
+    recordRecent({ kind: "note", id: "Plan.md", title: "Plan" });
+    renderPalette();
+    const text = document.body.textContent ?? "";
+    const hint = text.indexOf("Search for anything");
+    expect(hint).toBeGreaterThanOrEqual(0);
+    expect(hint).toBeLessThan(text.indexOf("Recent"));
+    expect(text.indexOf("Recent")).toBeLessThan(text.indexOf("Quick Add to Vault"));
+  });
+
+  it("finds mail by company and hides the hint while typing", () => {
+    mailItems = [
+      { id: "m1", subject: "Thanks for applying", from: "Careers", fromAddress: "jobs@acme.test", company: "Acme", snippet: "", receivedAt: "2026-11-01T00:00:00Z", url: "https://mail.test/m1" },
+    ];
+    renderPalette();
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "acme" } });
+    expect(screen.getByText("Thanks for applying")).toBeInTheDocument();
+    expect(screen.queryByText(/Search for anything/)).toBeNull();
+    mailItems = [];
   });
 });
