@@ -5,6 +5,8 @@ import type { FetchedMessage, MailConfig } from "./types";
 const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 const CONCURRENCY = 4;
+// shortcut: stops listing after this many messages in the fetch window, raise it if a busier inbox still loses mail
+const MAX_MESSAGES = 3000;
 
 interface GmailMessage {
   id: string;
@@ -121,8 +123,17 @@ function toMessage(m: GmailMessage, email: string): FetchedMessage {
 
 export async function listGmail(client: OAuth2Client, email: string, since: number, known: ReadonlySet<string> = new Set()): Promise<FetchedMessage[]> {
   const q = encodeURIComponent(`after:${Math.floor(since / 1000)} -category:promotions -category:social`);
-  const list = await get<{ messages?: { id: string }[] }>(client, `/messages?q=${q}&maxResults=150`);
-  const ids = (list.messages ?? []).map((m) => m.id).filter((id) => !known.has(id));
+  const listed: string[] = [];
+  let pageToken: string | undefined;
+  do {
+    const page = await get<{ messages?: { id: string }[]; nextPageToken?: string }>(
+      client,
+      `/messages?q=${q}&maxResults=500${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ""}`,
+    );
+    for (const m of page.messages ?? []) listed.push(m.id);
+    pageToken = page.nextPageToken;
+  } while (pageToken && listed.length < MAX_MESSAGES);
+  const ids = listed.filter((id) => !known.has(id));
   const out: FetchedMessage[] = new Array(ids.length);
   let next = 0;
   const worker = async () => {

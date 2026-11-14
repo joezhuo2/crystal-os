@@ -121,7 +121,7 @@ export const jobCompany = (item: MailItem) => item.company || item.from;
 export function latestJobs(items: MailItem[]): MailItem[] {
   const latest = new Map<string, MailItem>();
   for (const item of newestFirst(items, "job")) {
-    const key = jobCompany(item).toLowerCase();
+    const key = item.company ? item.company.toLowerCase() : item.id;
     if (!latest.has(key)) latest.set(key, item);
   }
   return [...latest.values()];

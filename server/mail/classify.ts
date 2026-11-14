@@ -26,6 +26,7 @@ const ATS_LABELS = new Set([
   "smartrecruiters",
   "icims",
 ]);
+const JOB_BOARD_LABELS = new Set(["linkedin", "indeed", "glassdoor", "ziprecruiter", "joinhandshake", "wellfound", "dice", "monster"]);
 const PERSONAL_DOMAINS = new Set(["gmail", "googlemail", "outlook", "hotmail", "live", "yahoo", "icloud", "proton", "protonmail"]);
 
 const MARKETING = [
@@ -155,6 +156,7 @@ export function extractDueDate(text: string, reference: Date): string | undefine
 }
 
 export function extractCompany(from: string, fromAddress: string): string | undefined {
+  if (domainLabels(fromAddress).some((l) => JOB_BOARD_LABELS.has(l))) return undefined;
   let name = from.includes("@") ? "" : from.trim();
   const at = /\bat\s+(.+)$/i.exec(name);
   if (at) name = at[1];

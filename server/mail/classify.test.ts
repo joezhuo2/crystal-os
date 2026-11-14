@@ -95,6 +95,7 @@ describe("extractCompany", () => {
     ["no-reply", "careers@acme.com", "Acme"],
     ["", "no-reply@myworkdayjobs.com", undefined],
     ["", "someone@gmail.com", undefined],
+    ["LinkedIn", "jobs-noreply@linkedin.com", undefined],
   ])("%s <%s> -> %s", (from, address, expected) => {
     expect(extractCompany(from, address)).toBe(expected);
   });

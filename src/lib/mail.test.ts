@@ -35,13 +35,14 @@ describe("sortBills", () => {
 });
 
 describe("latestJobs", () => {
-  it("keeps the newest email per company, falling back to the sender", () => {
+  it("keeps the newest email per company and every email without a company", () => {
     const items = [
       item({ id: "acme-1", category: "job", company: "Acme", jobStatus: "applied", receivedAt: "2026-11-01T00:00:00Z" }),
       item({ id: "acme-2", category: "job", company: "ACME", jobStatus: "interview", receivedAt: "2026-11-05T00:00:00Z" }),
-      item({ id: "globex", category: "job", from: "Globex Talent", jobStatus: "rejected", receivedAt: "2026-11-03T00:00:00Z" }),
+      item({ id: "board-1", category: "job", from: "LinkedIn", jobStatus: "rejected", receivedAt: "2026-11-03T00:00:00Z" }),
+      item({ id: "board-2", category: "job", from: "LinkedIn", jobStatus: "applied", receivedAt: "2026-11-02T00:00:00Z" }),
     ];
-    expect(latestJobs(items).map((i) => i.id)).toEqual(["acme-2", "globex"]);
+    expect(latestJobs(items).map((i) => i.id)).toEqual(["acme-2", "board-1", "board-2"]);
   });
 });
 
