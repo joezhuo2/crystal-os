@@ -22,7 +22,8 @@ import { hidePortal } from "@/lib/portalNative";
 import QuickAddDialog from "@/components/QuickAddDialog";
 import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
 import { useDndHotkey, useHomeHotkey, usePaletteHotkey } from "@/hooks/useGlobalHotkey";
-import { inTerminal, isPaletteShortcut } from "@/lib/hotkey";
+import { inTerminal } from "@/lib/hotkey";
+import { isSearchShortcut } from "@/lib/keymap";
 import { useVaultLiveUpdates } from "@/hooks/useVault";
 import { useAppActivity } from "@/lib/appActivity";
 import { useOrbitStore } from "@/lib/orbitStore";
@@ -202,7 +203,7 @@ const Index = () => {
   // whose keys belong to the shell.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || !isPaletteShortcut(e) || inTerminal(e)) return;
+      if (e.defaultPrevented || !isSearchShortcut(e) || inTerminal(e)) return;
       e.preventDefault();
       setPaletteOpen((open) => !open);
     };

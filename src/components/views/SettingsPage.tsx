@@ -14,8 +14,8 @@ import { Switch } from "@/components/ui/switch";
 import HotkeySettingsDialog from "@/components/HotkeySettingsDialog";
 import { useGlobalHotkeys } from "@/hooks/useGlobalHotkey";
 import { usePickVault, useVaultStatus } from "@/hooks/useVault";
-import { HOTKEY_COPY, formatAccelerator, paletteShortcutLabel, type HotkeyAction } from "@/lib/hotkey";
-import { KEYMAP, KEYMAP_CATEGORY_LABELS, bindingFor, bindingFromEvent, formatBinding, setBinding, useKeymapOverrides, type KeymapCategory } from "@/lib/keymap";
+import { HOTKEY_COPY, formatAccelerator, type HotkeyAction } from "@/lib/hotkey";
+import { KEYMAP, KEYMAP_CATEGORY_LABELS, bindingFor, bindingFromEvent, formatBinding, searchShortcutLabel, setBinding, useKeymapOverrides, type KeymapCategory } from "@/lib/keymap";
 import { findConflict } from "@/lib/keymapConflicts";
 import { isDesktop } from "@/lib/platform";
 import { themeSettings, useThemeSettings, type Theme } from "@/lib/themeSettings";
@@ -605,6 +605,11 @@ function TestNotificationButton() {
   );
 }
 
+function SearchCombo() {
+  useKeymapOverrides();
+  return <Combo>{searchShortcutLabel()}</Combo>;
+}
+
 function KeymapSettings() {
   const overrides = useKeymapOverrides();
   const [recording, setRecording] = useState<string | null>(null);
@@ -876,8 +881,8 @@ export default function SettingsPage() {
               </Row>
             );
           })}
-          <Row title="Open search bar" description="Opens or closes the search bar over any page while Crystal OS is focused.">
-            <Combo>{paletteShortcutLabel()}</Combo>
+          <Row title="Open search bar" description="Opens or closes the search bar over any page while Crystal OS is focused. Change it under In-app shortcuts → General.">
+            <SearchCombo />
           </Row>
         </Section>
 
