@@ -5,6 +5,26 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.15.0] - 2026-11-15 - The Ledger.
+
+### Added
+
+- **The Ledger**, a trade journal built from your Wealthsimple order emails. Opening The Ledger or The Courier reads new fill, partial-fill, cancel, expiry and rejection emails (and CAD/USD conversions) from your connected Gmail and rebuilds your stock and option trades with average-cost profit and loss in $ and %.
+- Stats for realized P/L, win rate, profit factor, average win and loss, best and worst trade and average hold, plus a cumulative P/L chart, P/L by ticker and a daily P/L calendar, with **Closed**, **Open**, **Orders**, **Tags** and **FX** lists below.
+- An **All / USD / CAD** switch: All shows everything in US$, converting CAD at the average rate of your conversion emails. Filters for account, stocks or options, period and tag.
+- A journal on every trade: a plan (thesis, target, stop), a review (reflection, followed my rules, grade A–F) and tags, also available when you add a trade by hand. The Tags list shows which habits make or lose money.
+- Add, edit, hide or import trades from a Wealthsimple CSV. A sale with no matching buy in your email history is flagged with **Add the missing buy**; options left open past expiry close as expired at 0; possible superficial losses and the estimated 1.5% FX fee are marked as estimates.
+- **The Ledger home card** with this month's realized P/L, win rate, open positions and your last trade.
+
+### Changed
+
+- The Vault's cumulative chart hover now glides between points, with a pulsing dot and a sliding tooltip.
+- README screenshots and the tour GIF are recaptured from sample data, and can be regenerated with `SCREENSHOTS=1 npx playwright test e2e/screenshots.spec.ts`.
+
+### Fixed
+
+- Emails whose plain-text part is empty now fall back to their HTML body in The Courier.
+
 ## [v0.14.10] - 2026-11-14 - Gliding tabs.
 
 ### Changed
