@@ -43,6 +43,8 @@ mail-accounts.json
 mail-accounts.json.tmp
 mail-cache.json
 mail-cache.json.tmp
+trades.json
+trades.json.tmp
 *.token
 .token
 *.kdbx
