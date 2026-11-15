@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useTradesSync } from "@/hooks/useTrades";
 import { useDisconnectMail, useMailDigest, useMailStatus, useRefreshMailDigest } from "@/hooks/useMail";
 import { isDesktop, openExternal } from "@/lib/platform";
 import { toLocalDateStr } from "@/lib/utils";
@@ -357,6 +358,7 @@ function Dashboard({ status }: { status: MailStatus }) {
 export default function MailPage() {
   const status = useMailStatus();
   const { refetch } = status;
+  useTradesSync();
 
   useEffect(() => {
     const onFocus = () => void refetch();

@@ -17,6 +17,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import {
+  CandlestickChart,
   Wallet,
   Plus,
   Search,
@@ -1079,6 +1080,19 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                           </div>
                           <span className="text-sm font-medium">Open The Courier</span>
                           <span className="ml-auto text-xs text-muted-foreground/50">bills, jobs, orders</span>
+                        </CommandItem>
+                      )}
+                      {on("trades") && (
+                        <CommandItem
+                          value="trades-ledger-wealthsimple-stocks-options-profit-loss-pnl-journal"
+                          onSelect={() => handleNavigate("trades")}
+                          className={ITEM}
+                        >
+                          <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                            <CandlestickChart className="w-4 h-4" />
+                          </div>
+                          <span className="text-sm font-medium">Open The Ledger</span>
+                          <span className="ml-auto text-xs text-muted-foreground/50">trades, profit/loss</span>
                         </CommandItem>
                       )}
                       {isDesktop() && on("terminal") && (
