@@ -646,7 +646,7 @@ function Ledger({ data, sync, onNavigate }: { data: TradesData; sync: ReturnType
   const counts: Record<Section, number> = { closed: closedRows.length, open: openRows.length, orders: orders.length, tags: 0, fx: data.fx.length };
   const shownSection = useDeferredValue(section);
   const { still } = useAppActivity();
-  const statsTitle = view === "ALL" && currencies.length > 1 ? `All in USD (C$1 = US${rate.toFixed(3)})` : undefined;
+  const statsTitle = view === "ALL" && currencies.length > 1 ? `All in USD (C$1 = US$${rate.toFixed(3)})` : undefined;
 
   // Built once per data change, so opening a dialog or syncing does not re-render the charts and lists; keyed by view so switching currency replays the entrances.
   const statsView = useMemo(
@@ -762,7 +762,7 @@ function Ledger({ data, sync, onNavigate }: { data: TradesData; sync: ReturnType
                 value={filter.kind}
                 onChange={(v) => setFilter((f) => ({ ...f, kind: v }))}
                 options={[
-                  { value: "", label: "Stocks and options" },
+                  { value: "", label: "All types" },
                   { value: "stock", label: "Stocks" },
                   { value: "option", label: "Options" },
                 ]}
