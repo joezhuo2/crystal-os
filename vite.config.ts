@@ -6,6 +6,7 @@ import { componentTagger } from "lovable-tagger";
 import { obsidianApi } from "./server/obsidian/plugin";
 import { calendarApi } from "./server/calendar/plugin";
 import { mailApi } from "./server/mail/plugin";
+import { tradesApi } from "./server/trades/plugin";
 import {
   createRequireUser,
   createSupabaseVerifier,
@@ -25,6 +26,16 @@ export default defineConfig(({ mode }) => {
           createSupabaseVerifier(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY),
         )
       : undefined;
+
+  const mailConfig = {
+    googleClientId: env.GOOGLE_CLIENT_ID,
+    googleClientSecret: env.GOOGLE_CLIENT_SECRET,
+    microsoftClientId: env.MICROSOFT_CLIENT_ID,
+    microsoftClientSecret: env.MICROSOFT_CLIENT_SECRET,
+    redirectUri: env.MAIL_REDIRECT_URI,
+    anthropicApiKey: env.ANTHROPIC_API_KEY,
+    aiModel: env.MAIL_AI_MODEL,
+  };
 
   const { version } = JSON.parse(readFileSync(path.resolve(__dirname, "package.json"), "utf8"));
 
@@ -70,18 +81,8 @@ export default defineConfig(({ mode }) => {
         },
         requireUser,
       ),
-      mailApi(
-        {
-          googleClientId: env.GOOGLE_CLIENT_ID,
-          googleClientSecret: env.GOOGLE_CLIENT_SECRET,
-          microsoftClientId: env.MICROSOFT_CLIENT_ID,
-          microsoftClientSecret: env.MICROSOFT_CLIENT_SECRET,
-          redirectUri: env.MAIL_REDIRECT_URI,
-          anthropicApiKey: env.ANTHROPIC_API_KEY,
-          aiModel: env.MAIL_AI_MODEL,
-        },
-        requireUser,
-      ),
+      mailApi(mailConfig, requireUser),
+      tradesApi(mailConfig, requireUser),
       mode === "development" && componentTagger(),
     ].filter(Boolean),
     resolve: {

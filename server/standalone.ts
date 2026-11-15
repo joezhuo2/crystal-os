@@ -4,6 +4,7 @@ import { type RequireUser } from "./auth/requireUser";
 import { createCalendarMiddleware } from "./calendar/plugin";
 import { createMailMiddleware } from "./mail/plugin";
 import { createObsidianMiddleware } from "./obsidian/plugin";
+import { createTradesMiddleware } from "./trades/plugin";
 
 /**
  * Webview origins the packaged desktop app loads from. Tauri serves the bundle
@@ -53,6 +54,16 @@ function sendJson(res: ServerResponse, status: number, payload: unknown) {
  * no backend.
  */
 export function createApiHandler({ env, requireUser, rootDir }: ApiHandlerOptions): Handler {
+  const mailConfig = {
+    googleClientId: env.GOOGLE_CLIENT_ID,
+    googleClientSecret: env.GOOGLE_CLIENT_SECRET,
+    microsoftClientId: env.MICROSOFT_CLIENT_ID,
+    microsoftClientSecret: env.MICROSOFT_CLIENT_SECRET,
+    redirectUri: env.MAIL_REDIRECT_URI,
+    anthropicApiKey: env.ANTHROPIC_API_KEY,
+    aiModel: env.MAIL_AI_MODEL,
+    rootDir,
+  };
   const chain: Connect.NextHandleFunction[] = [
     createObsidianMiddleware(env.OBSIDIAN_VAULT_PATH, requireUser),
     createCalendarMiddleware(
@@ -67,20 +78,8 @@ export function createApiHandler({ env, requireUser, rootDir }: ApiHandlerOption
       // Consent runs in the system browser, which has no app to bounce back to.
       { returnUrl: null },
     ),
-    createMailMiddleware(
-      {
-        googleClientId: env.GOOGLE_CLIENT_ID,
-        googleClientSecret: env.GOOGLE_CLIENT_SECRET,
-        microsoftClientId: env.MICROSOFT_CLIENT_ID,
-        microsoftClientSecret: env.MICROSOFT_CLIENT_SECRET,
-        redirectUri: env.MAIL_REDIRECT_URI,
-        anthropicApiKey: env.ANTHROPIC_API_KEY,
-        aiModel: env.MAIL_AI_MODEL,
-        rootDir,
-      },
-      requireUser,
-      { returnUrl: null },
-    ),
+    createMailMiddleware(mailConfig, requireUser, { returnUrl: null }),
+    createTradesMiddleware(mailConfig, requireUser),
   ];
 
   return (req, res) => {

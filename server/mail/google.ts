@@ -42,10 +42,13 @@ export function bodyText(payload: GmailPart | undefined): string {
     }
     return undefined;
   };
-  const text = find(payload, "text/plain") ?? htmlToText(find(payload, "text/html") ?? "");
+  const plain = find(payload, "text/plain");
+  // some senders ship a "<body></body>" plus invisible padding as text/plain and keep the content in the HTML part
+  const usable = plain !== undefined && plain.replace(/<[^>]*>|[\s\u034f\u200b-\u200d\ufeff]/g, "") !== "";
+  const text = usable ? (plain as string) : htmlToText(find(payload, "text/html") ?? "");
   return text
     .split(/\r?\n/)
-    .map((line) => line.replace(/[ \t\u00a0\u200b-\u200d]+/g, " ").trim())
+    .map((line) => line.replace(/(?:[ \t\u00a0\u200b-\u200d]|\u034f)+/g, " ").trim())
     .filter(Boolean)
     .join("\n")
     .slice(0, MAX_TEXT);
@@ -121,8 +124,18 @@ function toMessage(m: GmailMessage, email: string): FetchedMessage {
   };
 }
 
-export async function listGmail(client: OAuth2Client, email: string, since: number, known: ReadonlySet<string> = new Set()): Promise<FetchedMessage[]> {
-  const q = encodeURIComponent(`after:${Math.floor(since / 1000)} -category:promotions -category:social`);
+export function listGmail(client: OAuth2Client, email: string, since: number, known: ReadonlySet<string> = new Set()): Promise<FetchedMessage[]> {
+  return searchGmail(client, email, `after:${Math.floor(since / 1000)} -category:promotions -category:social`, known);
+}
+
+export async function searchGmail(
+  client: OAuth2Client,
+  email: string,
+  query: string,
+  known: ReadonlySet<string> = new Set(),
+  concurrency = CONCURRENCY,
+): Promise<FetchedMessage[]> {
+  const q = encodeURIComponent(query);
   const listed: string[] = [];
   let pageToken: string | undefined;
   do {
@@ -146,7 +159,7 @@ export async function listGmail(client: OAuth2Client, email: string, since: numb
       out[i] = toMessage(m, email);
     }
   };
-  const runs = await Promise.allSettled(Array.from({ length: Math.min(CONCURRENCY, ids.length) }, worker));
+  const runs = await Promise.allSettled(Array.from({ length: Math.min(concurrency, ids.length) }, worker));
   const fetched = out.filter(Boolean);
   const failed = runs.find((r) => r.status === "rejected");
   // shortcut: a partly failed fetch (Gmail rate limit) keeps what arrived and the next refresh gets the rest

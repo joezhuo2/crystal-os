@@ -39,14 +39,14 @@ function sendError(res: ServerResponse, err: unknown) {
 }
 
 /** Read a JSON request body, aborting rather than buffering unbounded input. */
-export function readJsonBody(req: IncomingMessage): Promise<unknown> {
+export function readJsonBody(req: IncomingMessage, maxBytes = MAX_BODY_BYTES): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
 
     req.on("data", (chunk: Buffer) => {
       size += chunk.length;
-      if (size > MAX_BODY_BYTES) {
+      if (size > maxBytes) {
         reject(new CalendarError("Request body too large", 413));
         req.destroy();
         return;
