@@ -48,7 +48,7 @@ export function bodyText(payload: GmailPart | undefined): string {
   const text = usable ? (plain as string) : htmlToText(find(payload, "text/html") ?? "");
   return text
     .split(/\r?\n/)
-    .map((line) => line.replace(/[ \t\u00a0\u034f\u200b-\u200d]+/g, " ").trim())
+    .map((line) => line.replace(/(?:[ \t\u00a0\u200b-\u200d]|\u034f)+/g, " ").trim())
     .filter(Boolean)
     .join("\n")
     .slice(0, MAX_TEXT);
