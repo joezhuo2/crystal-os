@@ -5,6 +5,14 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.15.1] - 2026-11-15 - Lighter backdrops.
+
+### Changed
+
+- The Flux Lines background now draws at 30 fps instead of your monitor's refresh rate (up to 144 fps), like the other backdrops.
+- The star, rain and snow, and Terminal static backdrops render at no more than 1.5x resolution on high-DPI screens, using far fewer pixels per frame.
+- Only the backdrop of the open tab stays loaded, which frees canvas and WebGL memory. Returning to a tab redraws its backdrop.
+
 ## [v0.15.0] - 2026-11-15 - The Ledger.
 
 ### Added
