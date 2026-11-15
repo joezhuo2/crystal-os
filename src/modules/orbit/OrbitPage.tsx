@@ -29,7 +29,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { GlassTip } from "@/components/ui/glass-tooltip";
-import { GlassTabs } from "@/components/crystal/GlassTabs";
 import { FocusBars, FocusMonthBars, MoneyBars, TaskOrbit } from "@/modules/orbit/OrbitCharts";
 import { FocusPie } from "@/modules/orbit/FocusPie";
 import { MoodCard } from "@/modules/orbit/MoodCard";
@@ -810,16 +809,20 @@ export default function OrbitPage() {
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-          <GlassTabs
-            aria-label="Review length"
-            className="text-xs"
-            items={REVIEW_KINDS.map((k) => ({ value: k, label: kindLabel(k) }))}
-            value={target.kind}
-            onChange={(next) => {
-              const kind = next as (typeof REVIEW_KINDS)[number];
-              go({ kind, offset: offsets[kind] });
-            }}
-          />
+          <div className="orbit-switch" role="tablist" aria-label="Review length">
+            {REVIEW_KINDS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                role="tab"
+                aria-selected={target.kind === k}
+                onClick={() => go({ kind: k, offset: offsets[k] })}
+                className={`orbit-switch-option ${target.kind === k ? "orbit-switch-on" : ""}`}
+              >
+                {kindLabel(k)}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
