@@ -5,6 +5,7 @@ import { startFrameLoop } from "@/lib/frameLoop";
 
 const FPS = 20;
 const PIXEL = 4;
+const MAX_DPR = 1.5;
 
 /**
  * Full-screen black backdrop for the Terminal tab: white pixels flash in at
@@ -22,7 +23,7 @@ export default function TerminalStatic() {
     if (still) return;
 
     const resize = () => {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       canvas.width = Math.floor(window.innerWidth * dpr);
       canvas.height = Math.floor(window.innerHeight * dpr);
       ctx.fillStyle = "#000";
@@ -36,7 +37,7 @@ export default function TerminalStatic() {
       ctx.fillStyle = "rgb(0 0 0 / 0.35)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const size = PIXEL * (window.devicePixelRatio || 1);
+      const size = PIXEL * Math.min(window.devicePixelRatio || 1, MAX_DPR);
       const burst = Math.random() < 0.06;
       const count = burst ? 120 + Math.random() * 120 : 10 + Math.floor(Math.random() * 20);
       for (let i = 0; i < count; i++) {

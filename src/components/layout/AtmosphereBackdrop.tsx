@@ -8,6 +8,7 @@ import { startFrameLoop } from "@/lib/frameLoop";
 import { auroraStrength, moonPath, pineRidge, starVisibility, type SkyWeather } from "@/lib/atmosphereScene";
 
 const PRECIP_FPS = 30;
+const MAX_DPR = 1.5;
 /** Horizontal drift of a raindrop per pixel it falls. */
 const RAIN_SLANT = 0.18;
 
@@ -83,7 +84,7 @@ function PrecipCanvas({ weather, rootRef }: { weather: SkyWeather; rootRef: Reac
           };
 
     const resize = () => {
-      dpr = window.devicePixelRatio || 1;
+      dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       w = canvas.width = Math.floor(window.innerWidth * dpr);
       h = canvas.height = Math.floor(window.innerHeight * dpr);
       const area = window.innerWidth * window.innerHeight;
