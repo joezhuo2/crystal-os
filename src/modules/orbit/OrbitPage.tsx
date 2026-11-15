@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { GlassTip } from "@/components/ui/glass-tooltip";
+import { GlideEffect } from "@/components/crystal/GlideEffect";
 import { FocusBars, FocusMonthBars, MoneyBars, TaskOrbit } from "@/modules/orbit/OrbitCharts";
 import { FocusPie } from "@/modules/orbit/FocusPie";
 import { MoodCard } from "@/modules/orbit/MoodCard";
@@ -809,7 +810,7 @@ export default function OrbitPage() {
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-          <div className="orbit-switch" role="tablist" aria-label="Review length">
+          <GlideEffect className="orbit-switch" role="tablist" aria-label="Review length">
             {REVIEW_KINDS.map((k) => (
               <button
                 key={k}
@@ -822,7 +823,7 @@ export default function OrbitPage() {
                 {kindLabel(k)}
               </button>
             ))}
-          </div>
+          </GlideEffect>
         </div>
       </header>
 

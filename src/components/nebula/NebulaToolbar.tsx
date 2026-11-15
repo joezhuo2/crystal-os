@@ -1,3 +1,4 @@
+import { GlideEffect } from "@/components/crystal/GlideEffect";
 import { Coins, Download, Folder, Gauge, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -87,7 +88,7 @@ export default function NebulaToolbar({ chat, messages, projectPath, projectName
       </NebulaTip>
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
-        <div className="nebula-segmented" role="radiogroup" aria-label="Model tier">
+        <GlideEffect className="nebula-segmented" role="radiogroup" aria-label="Model tier" itemSelector="button">
           {TIERS.map((tier) => (
             <NebulaTip
               key={tier.id}
@@ -107,7 +108,7 @@ export default function NebulaToolbar({ chat, messages, projectPath, projectName
               </button>
             </NebulaTip>
           ))}
-        </div>
+        </GlideEffect>
 
         <Select value={chat.effort} onValueChange={(v) => setEffort(v as Effort)} disabled={running}>
           <SelectTrigger className="h-8 w-[8.5rem] text-xs" aria-label="Thinking effort">

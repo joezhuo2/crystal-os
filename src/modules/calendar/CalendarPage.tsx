@@ -29,6 +29,7 @@ import { withStartTime } from "@/lib/autoEndTime";
 import TimeGrid from "./TimeGrid";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
 import { GlassTip } from "@/components/ui/glass-tooltip";
+import { GlideEffect } from "@/components/crystal/GlideEffect";
 import { appUi, useAppUi } from "@/lib/appUi";
 import { forgetRecent, recordRecent } from "@/lib/recents";
 import {
@@ -865,7 +866,7 @@ function EventForm({
                   onClick={() => setScope(value)}
                   className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                     scope === value
-                      ? "bg-primary text-primary-foreground"
+                      ? "text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -1406,7 +1407,7 @@ export default function CalendarPage() {
       className="space-y-4"
     >
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex glass-card p-0.5 rounded-lg">
+        <GlideEffect className="flex glass-card p-0.5 rounded-lg [--cd-glide-bg:hsl(var(--primary))] [--cd-glide-shadow:none] [--cd-glide-radius:0.375rem]">
           {(
             [
               ["month", "Month", CalendarDays],
@@ -1419,6 +1420,7 @@ export default function CalendarPage() {
               key={value}
               onClick={() => setView(value)}
               aria-pressed={view === value}
+              data-active={view === value || undefined}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 view === value
                   ? "bg-primary text-primary-foreground"
@@ -1429,7 +1431,7 @@ export default function CalendarPage() {
               {label}
             </button>
           ))}
-        </div>
+        </GlideEffect>
 
         {(calendars.data?.calendars.length ?? 0) > 1 && (
           <ThemedSelect

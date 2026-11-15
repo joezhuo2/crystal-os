@@ -953,6 +953,9 @@
     border-radius: 0.6rem;
     background: rgb(255 255 255 / 0.04);
     border: 1px solid rgb(255 255 255 / 0.08);
+    --cd-glide-bg: rgb(255 255 255 / 0.14);
+    --cd-glide-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.2);
+    --cd-glide-radius: 0.45rem;
   }
 
   .nebula-segmented button {
@@ -975,8 +978,6 @@
 
   .nebula-segmented button[data-active] {
     color: #fff;
-    background: linear-gradient(120deg, color-mix(in srgb, var(--nebula-a) 55%, transparent), color-mix(in srgb, var(--nebula-b) 45%, transparent));
-    box-shadow: 0 0 14px color-mix(in srgb, var(--nebula-b) 35%, transparent);
   }
 
   .nebula-chip {
@@ -2439,11 +2440,15 @@
     color: hsl(var(--orbit-ice));
   }
 
+  .orbit-switch {
+    --cd-glide-bg: linear-gradient(120deg, hsl(var(--orbit-ice)), hsl(var(--orbit-cyan)) 60%, hsl(var(--orbit-mauve)));
+    --cd-glide-shadow: 0 0 16px hsl(var(--orbit-cyan) / 0.35);
+    --cd-glide-radius: 0.55rem;
+  }
+
   .orbit-switch-on,
   .orbit-switch-on:hover {
     color: hsl(226 60% 8%);
-    background: linear-gradient(120deg, hsl(var(--orbit-ice)), hsl(var(--orbit-cyan)) 60%, hsl(var(--orbit-mauve)));
-    box-shadow: 0 0 16px hsl(var(--orbit-cyan) / 0.35);
   }
 
   .orbit-icon-button {
