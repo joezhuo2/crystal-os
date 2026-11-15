@@ -7,7 +7,9 @@
  * sweep for the donut (`.fin-chart-wipe`, `.fin-chart-sweep` in index.css),
  * played once on mount and skipped when `animate` is false.
  */
-import { useId, useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAppActivity } from "@/lib/appActivity";
 import {
   arcPath,
   areaPath,
@@ -18,6 +20,47 @@ import {
   niceTicks,
   pieAngles,
 } from "@/lib/chartGeometry";
+
+/** How long a chart's box must hold one width before the chart draws into it. */
+const SETTLE_MS = 120;
+
+/**
+ * Holds a chart back, behind a skeleton, until its box has kept one width for
+ * SETTLE_MS, then draws it at that width.
+ *
+ * The charts play their entrance once, on mount, so drawing them only after
+ * the page has finished laying out keeps the wipe from running at one width
+ * and landing at another. Later resizes pass straight through. Performance
+ * mode and reduced motion skip the entrance.
+ */
+export function ChartFrame({ height, children }: { height: number; children: (width: number, animate: boolean) => ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  const [settled, setSettled] = useState(false);
+  const { still } = useAppActivity();
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new ResizeObserver(([entry]) => {
+      setWidth(Math.round(entry.contentRect.width));
+      clearTimeout(timer);
+      timer = setTimeout(() => setSettled(true), SETTLE_MS);
+    });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} style={{ height }}>
+      {settled && width > 0 ? children(width, !still) : <Skeleton className="h-full w-full rounded-lg" />}
+    </div>
+  );
+}
 
 const AXIS_TEXT = "hsl(215 20% 55%)";
 const TIP_STYLE = {
@@ -47,13 +90,22 @@ export interface Series<K extends string> {
   dashed?: boolean;
 }
 
-function Tip({ x, y, width, title, rows }: { x: number; y: number; width: number; title: string; rows: { name: string; value: string; color: string }[] }) {
+const GLIDE = "180ms cubic-bezier(0.22, 1, 0.36, 1)";
+
+export function Tip({ x, y, width, title, rows, visible = true, glide = false }: { x: number; y: number; width: number; title: string; rows: { name: string; value: string; color: string }[]; visible?: boolean; glide?: boolean }) {
   // Flip to the left of the pointer near the right edge.
   const left = x > width - 150;
   return (
     <div
       className="pointer-events-none absolute z-10 whitespace-nowrap px-2.5 py-1.5"
-      style={{ ...TIP_STYLE, top: y, left: x, transform: `translate(${left ? "calc(-100% - 12px)" : "12px"}, -50%)` }}
+      style={{
+        ...TIP_STYLE,
+        top: y,
+        left: x,
+        opacity: visible ? 1 : 0,
+        transform: `translate(${left ? "calc(-100% - 12px)" : "12px"}, -50%)`,
+        transition: glide ? `left ${GLIDE}, top ${GLIDE}, transform ${GLIDE}, opacity 160ms ease-out` : undefined,
+      }}
     >
       <p className="font-semibold">{title}</p>
       {rows.map((r) => (
@@ -79,6 +131,7 @@ export function LineAreaChart<K extends string, R extends { [key in K]: number }
   series,
   animate,
   label,
+  labelGap = LABEL_GAP,
 }: {
   width: number;
   height: number;
@@ -88,9 +141,10 @@ export function LineAreaChart<K extends string, R extends { [key in K]: number }
   animate: boolean;
   /** Read by screen readers in place of the picture. */
   label: string;
+  labelGap?: number;
 }) {
   const id = useId();
-  const [hover, setHover] = useState<number | null>(null);
+  const [hover, setHover] = useState<{ i: number; on: boolean } | null>(null);
 
   const plotW = Math.max(1, width - Y_AXIS_WIDTH - PAD_RIGHT);
   const plotH = Math.max(1, height - X_AXIS_HEIGHT - PAD_TOP);
@@ -116,14 +170,15 @@ export function LineAreaChart<K extends string, R extends { [key in K]: number }
     [data, series, x, y, ticks],
   );
 
-  const shown = useMemo(() => new Set(labelIndexes(data.length, plotW, LABEL_GAP)), [data.length, plotW]);
+  const shown = useMemo(() => new Set(labelIndexes(data.length, plotW, labelGap)), [data.length, plotW, labelGap]);
 
   const onMove = (e: ReactPointerEvent<SVGRectElement>) => {
     const box = e.currentTarget.getBoundingClientRect();
-    setHover(data.length ? nearestIndex(e.clientX - box.left, box.width, data.length) : null);
+    setHover(data.length ? { i: nearestIndex(e.clientX - box.left, box.width, data.length), on: true } : null);
   };
 
-  const row = hover !== null ? data[hover] : undefined;
+  const row = hover ? data[hover.i] : undefined;
+  const glide = animate ? `transform ${GLIDE}` : undefined;
 
   return (
     <div className="relative" style={{ width, height }}>
@@ -172,11 +227,22 @@ export function LineAreaChart<K extends string, R extends { [key in K]: number }
             />
           ))}
         </g>
-        {hover !== null && row && (
-          <g pointerEvents="none">
-            <line x1={x(hover)} x2={x(hover)} y1={PAD_TOP} y2={PAD_TOP + plotH} stroke="hsl(215 20% 55%)" strokeOpacity={0.4} />
+        {hover && row && (
+          <g pointerEvents="none" style={{ opacity: hover.on ? 1 : 0, transition: animate ? "opacity 160ms ease-out" : undefined }}>
+            <line
+              x1={0}
+              x2={0}
+              y1={PAD_TOP}
+              y2={PAD_TOP + plotH}
+              stroke="hsl(215 20% 55%)"
+              strokeOpacity={0.4}
+              style={{ transform: `translateX(${x(hover.i)}px)`, transition: glide }}
+            />
             {series.map((s) => (
-              <circle key={s.key} cx={x(hover)} cy={y(row[s.key] as number)} r={3.5} fill={s.color} stroke="hsl(222 47% 11%)" strokeWidth={1.5} />
+              <g key={s.key} style={{ transform: `translate(${x(hover.i)}px, ${y(row[s.key] as number)}px)`, transition: glide }}>
+                <circle r={9} fill={s.color} opacity={0.18} className={animate ? "chart-hover-halo" : undefined} />
+                <circle r={3.5} fill={s.color} stroke="hsl(222 47% 11%)" strokeWidth={1.5} />
+              </g>
             ))}
           </g>
         )}
@@ -187,12 +253,14 @@ export function LineAreaChart<K extends string, R extends { [key in K]: number }
           height={plotH}
           fill="transparent"
           onPointerMove={onMove}
-          onPointerLeave={() => setHover(null)}
+          onPointerLeave={() => setHover((h) => (h ? { ...h, on: false } : h))}
         />
       </svg>
-      {hover !== null && row && (
+      {hover && row && (
         <Tip
-          x={x(hover)}
+          visible={hover.on}
+          glide={animate}
+          x={x(hover.i)}
           y={PAD_TOP + plotH / 2}
           width={width}
           title={String(row[labelKey])}

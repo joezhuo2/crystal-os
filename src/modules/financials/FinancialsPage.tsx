@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, type ReactNode } from "react";
+import { useState, useMemo } from "react";
 import {
   useAppActions,
   useFinancialCategories,
@@ -12,50 +12,7 @@ import { Plus, Trash2, X, Pencil } from "lucide-react";
 import { CategoryManagerButton } from "@/components/views/CategoryManager";
 import { DateField, ThemedSelect } from "@/components/ui/field-controls";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useAppActivity } from "@/lib/appActivity";
-import { DonutChart, LineAreaChart, type Series } from "./FinanceCharts";
-
-/** How long a chart's box must hold one width before the chart draws into it. */
-const SETTLE_MS = 120;
-
-/**
- * Holds a chart back, behind a skeleton, until its box has kept one width for
- * SETTLE_MS, then draws it at that width.
- *
- * The charts play their entrance once, on mount, so drawing them only after
- * the page has finished laying out keeps the wipe from running at one width
- * and landing at another. Later resizes pass straight through. Performance
- * mode and reduced motion skip the entrance.
- */
-function ChartFrame({ height, children }: { height: number; children: (width: number, animate: boolean) => ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(0);
-  const [settled, setSettled] = useState(false);
-  const { still } = useAppActivity();
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const observer = new ResizeObserver(([entry]) => {
-      setWidth(Math.round(entry.contentRect.width));
-      clearTimeout(timer);
-      timer = setTimeout(() => setSettled(true), SETTLE_MS);
-    });
-    observer.observe(el);
-    return () => {
-      observer.disconnect();
-      clearTimeout(timer);
-    };
-  }, []);
-
-  return (
-    <div ref={ref} style={{ height }}>
-      {settled && width > 0 ? children(width, !still) : <Skeleton className="h-full w-full rounded-lg" />}
-    </div>
-  );
-}
+import { ChartFrame, DonutChart, LineAreaChart, type Series } from "./FinanceCharts";
 
 // The charts select their series straight from the cache. Structural sharing
 // keeps a series' reference when an edit does not change it (a rename, say),
