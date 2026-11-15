@@ -29,7 +29,7 @@ import { withStartTime } from "@/lib/autoEndTime";
 import TimeGrid from "./TimeGrid";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
 import { GlassTip } from "@/components/ui/glass-tooltip";
-import { GlassTabs } from "@/components/crystal/GlassTabs";
+import { GlideEffect } from "@/components/crystal/GlideEffect";
 import { appUi, useAppUi } from "@/lib/appUi";
 import { forgetRecent, recordRecent } from "@/lib/recents";
 import {
@@ -866,7 +866,7 @@ function EventForm({
                   onClick={() => setScope(value)}
                   className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                     scope === value
-                      ? "bg-primary text-primary-foreground"
+                      ? "text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -1407,28 +1407,31 @@ export default function CalendarPage() {
       className="space-y-4"
     >
       <div className="flex items-center gap-3 flex-wrap">
-        <GlassTabs
-          aria-label="Calendar view"
-          className="text-xs"
-          items={(
+        <GlideEffect className="flex glass-card p-0.5 rounded-lg [--cd-glide-bg:hsl(var(--primary))] [--cd-glide-shadow:none] [--cd-glide-radius:0.375rem]">
+          {(
             [
               ["month", "Month", CalendarDays],
               ["week", "Week", CalendarRange],
               ["day", "Day", Clock],
               ["agenda", "Agenda", List],
             ] as const
-          ).map(([value, label, Icon]) => ({
-            value,
-            label: (
-              <>
-                <Icon className="w-3.5 h-3.5 inline mr-1" />
-                {label}
-              </>
-            ),
-          }))}
-          value={view}
-          onChange={(next) => setView(next as HorizonView)}
-        />
+          ).map(([value, label, Icon]) => (
+            <button
+              key={value}
+              onClick={() => setView(value)}
+              aria-pressed={view === value}
+              data-active={view === value || undefined}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                view === value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5 inline mr-1" />
+              {label}
+            </button>
+          ))}
+        </GlideEffect>
 
         {(calendars.data?.calendars.length ?? 0) > 1 && (
           <ThemedSelect

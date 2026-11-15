@@ -5,6 +5,13 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.14.10] - 2026-11-14 - Gliding tabs.
+
+### Changed
+
+- The glass tabs from v0.14.9 are gone. The Orbit review length, Nebula **Chat / Claude CLI**, Engine **List / Board** and Horizon **Month / Week / Day / Agenda** switches look as they did before, and the active pill now glides to the tab you pick.
+- The Nebula **Chat / Claude CLI** and **Low / Medium / High** model switches use a neutral white pill and no longer follow the Nebula colour theme.
+
 ## [v0.14.9] - 2026-11-14 - Glass tabs, smooth scroll, tray update status.
 
 ### Added

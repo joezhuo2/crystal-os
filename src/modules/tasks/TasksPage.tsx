@@ -15,7 +15,7 @@ import {
   type RepeatRule,
 } from "@/lib/utils";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
-import { GlassTabs } from "@/components/crystal/GlassTabs";
+import { GlideEffect } from "@/components/crystal/GlideEffect";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useAppActivity } from "@/lib/appActivity";
 import { withStartTime } from "@/lib/autoEndTime";
@@ -1129,16 +1129,14 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
     <NoteNavigateContext.Provider value={onNavigate}>
     <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
-        <GlassTabs
-          aria-label="Task view"
-          className="text-xs"
-          items={[
-            { value: "list", label: <><LayoutList className="w-3.5 h-3.5 inline mr-1" />List</> },
-            { value: "kanban", label: <><Columns className="w-3.5 h-3.5 inline mr-1" />Board</> },
-          ]}
-          value={selected}
-          onChange={(next) => switchView(next as View)}
-        />
+        <GlideEffect className="flex glass-card p-0.5 rounded-lg [--cd-glide-bg:hsl(var(--primary))] [--cd-glide-shadow:none] [--cd-glide-radius:0.375rem]">
+          <button data-active={selected === "list" || undefined} onClick={() => switchView("list")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${selected === "list" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <LayoutList className="w-3.5 h-3.5 inline mr-1" />List
+          </button>
+          <button data-active={selected === "kanban" || undefined} onClick={() => switchView("kanban")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${selected === "kanban" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <Columns className="w-3.5 h-3.5 inline mr-1" />Board
+          </button>
+        </GlideEffect>
         <CategoryManagerButton mode="task" />
         <TaskViewMenu />
         <button onClick={() => setShowTaskForm(true)} className="ml-auto glass-card-hover px-3 py-1.5 rounded-lg text-xs font-medium text-primary hover:text-primary-foreground hover:bg-primary transition-colors flex items-center gap-1">

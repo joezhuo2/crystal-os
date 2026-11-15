@@ -47,7 +47,7 @@ const base = (over: Partial<Task>): Task => ({
 
 const openBoard = () => {
   const view = render(<TasksPage />);
-  fireEvent.click(screen.getByRole("tab", { name: /Board/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Board/ }));
   return view;
 };
 const cell = (container: HTMLElement, key: string) => container.querySelector(`[data-cell="${key}"]`) as HTMLElement;
