@@ -40,10 +40,10 @@ import { LazyTaskForm, LazyTransactionDrawer, lazyViews as views, preloadViews, 
 const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["home", "settings", "terminal", "portal", "nebula", "weather", "archive", "calendar", "tasks", "orbit"]);
 
 /**
- * How many page backdrops stay mounted: the current one and the last one
- * left, so flipping between two themed tabs never rebuilds either.
+ * How many page backdrops stay mounted. Only the current one, so a hidden
+ * backdrop holds no canvas or WebGL memory; switching back rebuilds it.
  */
-const KEPT_BACKDROPS = 2;
+const KEPT_BACKDROPS = 1;
 
 /** Long enough for the view's first content (and a preloaded chunk) to fade in. */
 const VIEW_ENTER_MS = 500;

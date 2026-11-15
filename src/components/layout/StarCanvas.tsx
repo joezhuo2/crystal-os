@@ -4,6 +4,7 @@ import { useBackdropStill } from "@/lib/backdropSlot";
 import { startFrameLoop } from "@/lib/frameLoop";
 
 const STAR_FPS = 12;
+const MAX_DPR = 1.5;
 const STARS_PER_PIXEL = 1 / 4500;
 
 /**
@@ -23,7 +24,7 @@ export default function StarCanvas({ rgb, opacity = 0.95, className = "" }: { rg
 
     let stars: { x: number; y: number; r: number; phase: number; speed: number }[] = [];
     const resize = () => {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       canvas.width = Math.floor(window.innerWidth * dpr);
       canvas.height = Math.floor(window.innerHeight * dpr);
       const count = Math.round(window.innerWidth * window.innerHeight * STARS_PER_PIXEL);

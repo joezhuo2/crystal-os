@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useAppActivity } from "@/lib/appActivity";
+import { startFrameLoop } from "@/lib/frameLoop";
 
+const MAX_FPS = 30;
 const MAX_DPR = 1.5;
 const STILL_TIME = 6;
 
@@ -133,7 +135,7 @@ export default function FluxLines() {
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
     let time = STILL_TIME;
-    let raf = 0;
+    let stopLoop: (() => void) | undefined;
     let last = 0;
 
     const render = () => {
@@ -149,20 +151,16 @@ export default function FluxLines() {
     };
 
     const frame = (now: number) => {
-      raf = 0;
-      const { visible: shown, backdropStill: still } = activity.current;
-      if (!shown || still) return;
-      const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60;
+      const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / MAX_FPS;
       last = now;
       time += dt;
       render();
-      raf = requestAnimationFrame(frame);
     };
 
     const wake = () => {
       const { visible: shown, backdropStill: still } = activity.current;
-      if (raf) cancelAnimationFrame(raf);
-      raf = 0;
+      stopLoop?.();
+      stopLoop = undefined;
       last = 0;
       if (!shown) return;
       if (still) {
@@ -170,7 +168,7 @@ export default function FluxLines() {
         render();
         return;
       }
-      raf = requestAnimationFrame(frame);
+      stopLoop = startFrameLoop(MAX_FPS, frame);
     };
     wakeRef.current = wake;
 
@@ -187,7 +185,7 @@ export default function FluxLines() {
 
     return () => {
       wakeRef.current = () => undefined;
-      if (raf) cancelAnimationFrame(raf);
+      stopLoop?.();
       observer.disconnect();
       gl.deleteProgram(program);
       gl.deleteBuffer(buffer);
