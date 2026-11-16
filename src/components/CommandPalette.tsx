@@ -86,7 +86,7 @@ import { searchChats } from "@/lib/harness/chatSearch";
 import { useInstalledModules } from "@/lib/installedModules";
 import { useMailDigest, useMailStatus } from "@/hooks/useMail";
 import { mailWasConnected } from "@/lib/mail";
-import { PALETTE_EVENT_DAYS_AHEAD, PALETTE_EVENT_DAYS_BACK, searchEvents, searchMail } from "@/lib/paletteSearch";
+import { PALETTE_EVENT_DAYS_AHEAD, PALETTE_EVENT_DAYS_BACK, parseSearchFilters, searchEvents, searchMail, taskPasses, upcomingEvents, wantsType } from "@/lib/paletteSearch";
 
 const RECENT_MODULE: Record<RecentItem["kind"], TabId> = {
   task: "tasks",
@@ -198,22 +198,34 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
     !c || (c.kind === "log" ? financialsOn : tasksOn && (c.kind !== "snooze" || canSnooze(c.task))) ? c : null;
   const command = usable(parsePaletteCommand(search, tasks, toLocalDateStr()));
 
-  const matchedTasks =
-    tasksOn && search.length >= 2 && !addPrefix && !logPrefix && !command
-      ? fuzzyRank(search, tasks, (t) => `${t.name} ${taskCategories.find((c) => c.id === t.categoryId)?.name ?? ""}`)
-      : [];
+  const filters = parseSearchFilters(search, toLocalDateStr());
+  const text = filters.text;
+  const searching = (text.length >= 2 || filters.active) && !addPrefix && !logPrefix && !command;
+  const taskCategory = (t: Task) => taskCategories.find((c) => c.id === t.categoryId)?.name;
+  const txCategory = (t: { categoryId: string }) => financialCategories.find((c) => c.id === t.categoryId)?.name;
 
-  const matchedTransactions =
-    financialsOn && search.length >= 2 && !addPrefix && !logPrefix && !command
-      ? fuzzyRank(search, transactions, (t) => `${t.name} ${financialCategories.find((c) => c.id === t.categoryId)?.name ?? ""}`)
+  const filteredTasks =
+    tasksOn && searching && wantsType(filters, "task")
+      ? tasks.filter((t) => taskPasses(t, taskCategory(t), filters, toLocalDateStr()))
       : [];
+  const matchedTasks = text
+    ? fuzzyRank(text, filteredTasks, (t) => `${t.name} ${taskCategory(t) ?? ""} ${t.notes ?? ""} ${(t.checklist ?? []).map((i) => i.text).join(" ")}`)
+    : [...filteredTasks].sort((a, b) => Number(a.completed) - Number(b.completed) || a.endDate.localeCompare(b.endDate));
+
+  const filteredTransactions =
+    financialsOn && searching && wantsType(filters, "transaction")
+      ? transactions.filter((t) => !filters.tag || txCategory(t)?.toLowerCase().includes(filters.tag))
+      : [];
+  const matchedTransactions = text ? fuzzyRank(text, filteredTransactions, (t) => `${t.name} ${txCategory(t) ?? ""}`) : filteredTransactions;
 
   // ---------- "next 5h": the next free block in The Horizon ----------
   const slotMinutes = parseFreeSlotQuery(search);
   const capacity = useCapacitySettings();
-  const eventQuery = calendarOn && !addPrefix && !logPrefix && slotMinutes === null ? search.trim() : "";
+  const eventsWanted = calendarOn && !addPrefix && !logPrefix && slotMinutes === null && wantsType(filters, "event") && !filters.overdue;
+  const eventQuery = eventsWanted ? text : "";
   const debouncedEventQuery = useDebouncedValue(eventQuery, 250);
-  const eventSearchOn = debouncedEventQuery.length >= 2;
+  const eventsByFilter = eventsWanted && !text && (filters.type === "event" || filters.dueBy !== null);
+  const eventSearchOn = debouncedEventQuery.length >= 2 || eventsByFilter;
   const calendarStatus = useCalendarStatus(calendarOn && (slotMinutes !== null || eventSearchOn) && (!usesSidecar() || calendarWasConnected()));
   const calendarConnected = calendarStatus.data?.connected === true;
   const slotRange = useMemo(() => {
@@ -245,24 +257,28 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
     };
   }, []);
   const rangeEvents = useCalendarEvents(eventRange, eventSearchOn && calendarConnected);
-  const matchedEvents = eventSearchOn ? searchEvents(rangeEvents.data?.events ?? [], debouncedEventQuery, toLocalDateStr()) : [];
+  const inDueRange = (e: { startDate: string; endDate: string }) => !filters.dueBy || (e.endDate >= toLocalDateStr() && e.startDate <= filters.dueBy);
+  const matchedEvents = !eventSearchOn
+    ? []
+    : eventsByFilter
+      ? upcomingEvents(rangeEvents.data?.events ?? [], toLocalDateStr(), filters.dueBy)
+      : searchEvents((rangeEvents.data?.events ?? []).filter(inDueRange), debouncedEventQuery, toLocalDateStr());
 
-  const mailQuery = mailOn && !addPrefix && !logPrefix ? search.trim() : "";
+  const mailQuery = mailOn && !addPrefix && !logPrefix && wantsType(filters, "mail") ? text : "";
   const mailStatus = useMailStatus(mailQuery.length >= 2 && (!usesSidecar() || mailWasConnected()));
   const mailDigest = useMailDigest(mailQuery.length >= 2 ? mailStatus.data?.accounts : []);
   const matchedMail = searchMail(mailDigest.data?.items ?? [], mailQuery);
 
   // ---------- Search the Obsidian vault ----------
-  const vaultQuery = !addPrefix && !logPrefix ? search.trim() : "";
+  const vaultQuery = !addPrefix && !logPrefix ? text : "";
   const debouncedVaultQuery = useDebouncedValue(vaultQuery, 250);
-  const { data: vaultData } = useVaultNotes(
-    { q: debouncedVaultQuery, limit: 5 },
-    archiveOn && debouncedVaultQuery.length >= 2,
-  );
-  const matchedNotes = archiveOn && debouncedVaultQuery.length >= 2 ? (vaultData?.notes ?? []) : [];
+  const noteTag = filters.tag ?? undefined;
+  const notesOn = archiveOn && wantsType(filters, "note") && (debouncedVaultQuery.length >= 2 || (!!noteTag && !addPrefix && !logPrefix));
+  const { data: vaultData } = useVaultNotes({ q: debouncedVaultQuery, tag: noteTag, limit: 5 }, notesOn);
+  const matchedNotes = notesOn ? (vaultData?.notes ?? []) : [];
 
   // ---------- Search Nebula chats (desktop) ----------
-  const chatQuery = nebulaOn && vaultQuery.length >= 2 ? vaultQuery : "";
+  const chatQuery = nebulaOn && vaultQuery.length >= 2 && wantsType(filters, "chat") ? vaultQuery : "";
   const nebulaIndex = useNebulaSearchIndex(chatQuery !== "");
   const matchedChats = nebulaOn ? searchChats(nebulaIndex.chats, nebulaIndex.messagesOf, chatQuery) : [];
   const projectName = (id: string) => nebulaIndex.projects.find((p) => p.id === id)?.name ?? "Project";
@@ -549,13 +565,13 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
       >
       <Command
         className="bg-transparent"
-        filter={(value, search) => {
+        filter={(value) => {
           // Vault notes are matched server-side (including on body text), Nebula
           // chats on their messages, and
           // Quick Add is always offered — neither can pass a local substring
           // test against the raw query, so they opt out of cmdk's filter.
-          if (value === "quick-add-vault" || value === "free-slot" || value === "run-command" || value.startsWith("note-") || value.startsWith("nebula-chat-") || value.startsWith("mail-") || value.startsWith("event-") || value.startsWith("obs-")) return 1;
-          return fuzzyScore(search, value);
+          if (value === "quick-add-vault" || value === "free-slot" || value === "run-command" || value.startsWith("task-") || value.startsWith("tx-") || value.startsWith("note-") || value.startsWith("nebula-chat-") || value.startsWith("mail-") || value.startsWith("event-") || value.startsWith("obs-")) return 1;
+          return text ? fuzzyScore(text, value) : filters.active ? 1 : 0;
         }}
       >
         {/* Search Input */}
@@ -691,7 +707,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
 
                 {!search && (
                   <p className="px-3 py-3 text-sm text-muted-foreground/70">
-                    Search for anything, or run a command: "complete …", "snooze … to friday", "focus on …", "toggle privacy".
+                    Search for anything, or run a command: "complete …", "snooze … to friday", "focus on …", "toggle privacy". Narrow a search with filters: type:task due:&lt;7d #school.
                   </p>
                 )}
 
@@ -724,7 +740,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                   </CommandGroup>
                 )}
 
-                {search && vaultGroup}
+                {search && !filters.active && vaultGroup}
 
                 {/* ── Natural Language: Add Task ── */}
                 {tasksOn && addPrefix && (
@@ -1122,7 +1138,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                 )}
 
                 {/* ── Settings shortcut (matched by cmdk's filter on `value`) ── */}
-                {!addPrefix && !logPrefix && (
+                {!addPrefix && !logPrefix && !filters.active && (
                   <>
                     <CommandSeparator className="my-1" />
                     <CommandGroup heading="Settings">
