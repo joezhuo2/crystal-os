@@ -2,9 +2,9 @@ import { AlarmClock, Check, Trash2, X } from "lucide-react";
 import { useAppActions, useTaskCategories, useTasks, type Priority, type Task } from "@/contexts/AppContext";
 import { ThemedSelect } from "@/components/ui/field-controls";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { PRIORITY_OPTIONS } from "@/lib/homeTasks";
 import { canSnooze } from "@/lib/snooze";
 import { taskSelection, useSelectedTaskIds } from "@/lib/taskSelection";
-import { PRIORITY_OPTIONS } from "./TaskQuickEdit";
 import { SnoozePopover } from "./TaskSnooze";
 
 const BUTTON =

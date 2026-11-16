@@ -1,18 +1,12 @@
 import { useState, type ReactNode } from "react";
 import { Clock } from "lucide-react";
-import { useAppActions, type Priority, type Task } from "@/contexts/AppContext";
+import { useAppActions, type Task } from "@/contexts/AppContext";
 import { Calendar } from "@/components/ui/calendar";
 import { NumberInput } from "@/components/ui/number-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { clampEstimate, ESTIMATE_PRESETS, formatEstimate, MAX_ESTIMATE } from "@/lib/capacity";
+import { PRIORITY_OPTIONS } from "@/lib/homeTasks";
 import { rescheduleToToday, toLocalDateStr } from "@/lib/utils";
-
-export const PRIORITY_OPTIONS: { value: Priority; label: string; short: string; className: string }[] = [
-  { value: "low", label: "Low", short: "Low", className: "priority-low" },
-  { value: "medium", label: "Medium", short: "Med", className: "priority-medium" },
-  { value: "high", label: "High", short: "High", className: "priority-high" },
-  { value: "urgent", label: "Urgent", short: "Urgent", className: "priority-urgent" },
-];
 
 /** Quick picks for how long a task takes, plus a minutes box for anything else. Tapping the lit chip clears it. */
 export function EstimatePicker({ value, onChange }: { value: number | undefined; onChange: (v: number | undefined) => void }) {
