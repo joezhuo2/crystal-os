@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createAiConfig } from "./config";
+import { createAiConfig, envSaved } from "./config";
 
 let dir: string;
 
@@ -10,7 +10,10 @@ beforeAll(async () => {
   dir = await mkdtemp(path.join(tmpdir(), "ai-config-"));
 });
 
-afterAll(() => rm(dir, { recursive: true, force: true }));
+afterAll(async () => {
+  await envSaved();
+  await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+});
 
 describe("ai config", () => {
   it("falls back to the defaults with an empty env", () => {

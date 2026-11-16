@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { Connect } from "vite";
-import { createAiConfig } from "./config";
+import { createAiConfig, envSaved } from "./config";
 import { createAiMiddleware } from "./plugin";
 
 let server: Server;
@@ -26,7 +26,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
-  await rm(dir, { recursive: true, force: true });
+  await envSaved();
+  await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 });
 
 afterEach(() => vi.unstubAllGlobals());

@@ -83,6 +83,8 @@ export function saveEnv(rootDir: string, changes: [string, string | null][]): Pr
   return run;
 }
 
+export const envSaved = (): Promise<void> => envQueue;
+
 const asObject = (v: unknown, field: string) => {
   if (v === null || typeof v !== "object" || Array.isArray(v)) throw new AiError(`${field} must be an object`);
   return v as Record<string, unknown>;
