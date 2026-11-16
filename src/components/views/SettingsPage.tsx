@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput as ThemedNumberInput } from "@/components/ui/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { AmbientSoundManager } from "@/modules/tasks/AmbientSound";
 import { Switch } from "@/components/ui/switch";
 import HotkeySettingsDialog from "@/components/HotkeySettingsDialog";
 import SetupKeysDialog from "@/components/SetupKeysDialog";
@@ -1101,6 +1102,12 @@ export default function SettingsPage() {
               description="Adds a button to the Fits today? bar that blocks time in your Google calendar for today's estimated tasks, in the free slots of the work day. Nothing is added until you press it."
             >
               <Switch checked={capacity.autoSchedule} onCheckedChange={capacitySettings.setAutoSchedule} />
+            </Row>
+            <Row
+              title="Focus sounds"
+              description="Pick a sound under the Pomodoro timer and it plays while a focus phase runs. Brown, pink and white noise and rain are built in; add your own loops here (a café recording, music), up to 20 MB each, kept on this device."
+            >
+              <AmbientSoundManager />
             </Row>
           </Section>
         )}

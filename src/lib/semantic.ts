@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { idbRequest, idbStore } from "@/lib/idb";
 import { isDesktop } from "@/lib/platform";
 import { stripMarkdown } from "@/lib/vaultCore";
 import { listNotesNative } from "@/lib/vaultNative";
@@ -66,24 +67,10 @@ function embed(texts: string[]): Promise<number[][]> {
 }
 
 const DB = "crystal-os-semantic";
-const STORE = "index";
-
-function store(mode: IDBTransactionMode): Promise<IDBObjectStore> {
-  return new Promise((resolve, reject) => {
-    const open = indexedDB.open(DB, 1);
-    open.onupgradeneeded = () => open.result.createObjectStore(STORE);
-    open.onsuccess = () => resolve(open.result.transaction(STORE, mode).objectStore(STORE));
-    open.onerror = () => reject(open.error);
-  });
-}
 
 async function loadIndex(): Promise<SemanticIndex> {
   try {
-    const request = (await store("readonly")).get("notes");
-    return await new Promise((resolve) => {
-      request.onsuccess = () => resolve((request.result as SemanticIndex | undefined) ?? {});
-      request.onerror = () => resolve({});
-    });
+    return ((await idbRequest((await idbStore(DB, "readonly")).get("notes"))) as SemanticIndex | undefined) ?? {};
   } catch {
     return {};
   }
@@ -91,7 +78,7 @@ async function loadIndex(): Promise<SemanticIndex> {
 
 async function saveIndex(index: SemanticIndex) {
   try {
-    (await store("readwrite")).put(index, "notes");
+    (await idbStore(DB, "readwrite")).put(index, "notes");
   } catch {
     /* rebuilt next launch */
   }

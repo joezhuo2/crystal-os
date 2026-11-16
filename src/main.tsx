@@ -17,6 +17,7 @@ import "@fontsource/cascadia-mono/symbols2-700.css";
 import "./index.css";
 import { initTrayBridge } from "./lib/tray";
 import { initNotificationBridges } from "./lib/notifications";
+import { ambient } from "./lib/ambient";
 import { startAppActivity } from "./lib/appActivity";
 import { installGlobalErrorHandlers } from "./lib/diagnostics";
 import { installButtonFx } from "./lib/buttonFx";
@@ -36,6 +37,7 @@ if ((window as { __CRYSTAL_COMMAND_BOX__?: boolean }).__CRYSTAL_COMMAND_BOX__) {
   initTrayBridge();
   // Pomodoro phase and Portal unread toasts, for the same reason.
   initNotificationBridges();
+  ambient.init();
   // Pauses animation and polling while the window is hidden.
   startAppActivity();
   installButtonFx();

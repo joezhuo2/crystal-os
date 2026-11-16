@@ -9,6 +9,7 @@ import { topicPath } from "@/modules/observatory/model";
 import { useObservatorySettings } from "@/modules/observatory/settings";
 import { TopicNavigateContext, useObservatoryLinksEnabled, useTopicLinkIndex } from "@/modules/observatory/topicLinkIndex";
 import PomodoroTask from "./PomodoroTask";
+import { AmbientSoundSelect } from "./AmbientSound";
 
 export default function PomodoroTimer() {
   // Timer state lives in a shared store so it survives leaving this page and
@@ -120,6 +121,7 @@ export default function PomodoroTimer() {
           <RotateCcw className="w-4 h-4" />
         </button>
       </div>
+      <AmbientSoundSelect />
       <PomodoroTask />
     </div>
   );
