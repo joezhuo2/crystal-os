@@ -113,6 +113,19 @@ export function draggedStart(startMin: number, durationMin: number, deltaMin: nu
   return Math.max(0, Math.min(latest, snapped));
 }
 
+export function resizedSpan(
+  startMin: number,
+  endMin: number,
+  edge: "start" | "end",
+  deltaMin: number,
+): { startMin: number; endMin: number } {
+  const snap = (m: number) => Math.round(m / DRAG_STEP_MINUTES) * DRAG_STEP_MINUTES;
+  if (edge === "end") {
+    return { startMin, endMin: Math.max(startMin + DRAG_STEP_MINUTES, Math.min(MINUTES_PER_DAY - 1, snap(endMin + deltaMin))) };
+  }
+  return { startMin: Math.max(0, Math.min(endMin - DRAG_STEP_MINUTES, snap(startMin + deltaMin))), endMin };
+}
+
 export const DEFAULT_TASK_BLOCK_MINUTES = 30;
 
 export function taskBlockMinutes(estimateMinutes?: number | null): number {

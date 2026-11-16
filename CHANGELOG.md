@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Resize events by dragging.** In the week and day views, drag the top or bottom edge of a timed single-day event to change when it starts or ends, snapped to 10 minutes, with the same dashed outline and **Undo** toast as a move.
 - **Duplicate an event.** **Duplicate** in the event form turns it into a copy: change the day or time, then **Add Copy**. The original is left as it was; a copy of one occurrence of a series is a single event.
 - **Keyboard navigation in The Horizon.** **T** goes to today in the month, week and day views, the left and right arrows page, and **1** to **4** pick the month, week, day and agenda views. All can be rebound in Settings.
 - **Free/busy finder.** The palette's free-slot search also takes `free:1h<7d` (a free hour in the next 7 days), `free:30m` and `find 2h free this week`, next to `next 2h`.

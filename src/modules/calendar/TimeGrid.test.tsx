@@ -121,6 +121,25 @@ describe("TimeGrid", () => {
     expect(onMoveEvent).toHaveBeenCalledWith(base, "2026-09-30", "10:10", "10:40");
   });
 
+  it("resizes an event by its bottom and top edges, leaving the other end alone", () => {
+    const onMoveEvent = vi.fn();
+    const { container } = render(
+      <TimeGrid dates={["2026-09-30"]} events={[base]} color="#60a5fa" onEdit={() => {}} onCreateAt={() => {}} onMoveEvent={onMoveEvent} />,
+    );
+    const block = screen.getByRole("button", { name: /Standup/ });
+    const drag = (edge: string, dy: number) => {
+      const handle = container.querySelector(`[data-resize="${edge}"]`) as HTMLElement;
+      fireEvent.pointerDown(handle, { clientX: 10, clientY: 100, button: 0, pointerId: 1 });
+      fireEvent.pointerMove(handle, { clientX: 10, clientY: 100 + dy, pointerId: 1 });
+      fireEvent.pointerUp(handle, { clientX: 10, clientY: 100 + dy, pointerId: 1 });
+    };
+    drag("end", 24);
+    expect(onMoveEvent).toHaveBeenLastCalledWith(base, "2026-09-30", "09:00", "10:00");
+    expect(block.style.transform).toBe("");
+    drag("start", -24);
+    expect(onMoveEvent).toHaveBeenLastCalledWith(base, "2026-09-30", "08:30", "09:30");
+  });
+
   it("treats a press without travel as a click", () => {
     const onMoveEvent = vi.fn();
     const onEdit = vi.fn();
