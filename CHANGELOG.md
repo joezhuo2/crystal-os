@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Mood tags, a mood note and a mood heatmap.** The Today card takes tags (tired, calm, social and so on) and a one-line note with the mood, saved in the daily note. The Mood card in weekly and monthly reviews shows a calendar lit by each day's mood, with the tags and note on hover, and the most used tags.
 - **Quantified habits.** Give a habit a daily amount and a unit (8 glasses, 30 min) in **Manage habits**. Its chip on the Today card shows the amount so far with **-** and **+** next to it and fills as you go; the day counts as done once the amount is reached, and a partial day does not.
 - **Habit schedules.** In **Manage habits**, a habit can be for every day, for chosen weekdays, or for a number of times a week. Days off do not break the streak, are left out of the day counts and review rates, and get no reminder.
 - **Multi-day and all-day drag.** In the week and day views, drag an all-day event along the all-day strip to another day, and drag a timed event that runs past midnight from its first day to another day or time. Both keep their length and offer **Undo**.

@@ -5,7 +5,7 @@ import { GlassTip } from "@/components/ui/glass-tooltip";
 import { HabitsToday } from "@/modules/orbit/HabitsToday";
 import { useNow } from "@/hooks/useOrbitReview";
 import { useCreateNote, useRawNote, useSaveNote, useVaultNotes, vaultErrorCode } from "@/hooks/useVault";
-import { EMPTY_ENTRY, MOODS, dailyNotePath, mergeToday, parseToday, pickDailyFolder, type TodayEntry } from "@/lib/dailyNote";
+import { EMPTY_ENTRY, MOODS, MOOD_TAGS, dailyNotePath, mergeToday, parseToday, pickDailyFolder, type TodayEntry } from "@/lib/dailyNote";
 import { toLocalDateStr } from "@/lib/utils";
 
 const MOOD_LABELS: Record<(typeof MOODS)[number], string> = {
@@ -155,6 +155,37 @@ export function TodayCard({ focusOnMount, kind }: { focusOnMount: boolean; kind:
                 </button>
               ))}
             </div>
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Mood tags">
+              <span className="text-xs text-muted-foreground mr-1">Tags</span>
+              {[...new Set([...MOOD_TAGS, ...(entry.moodTags ?? [])])].map((tag) => {
+                const on = !!entry.moodTags?.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() =>
+                      edit({ moodTags: on ? (entry.moodTags ?? []).filter((t) => t !== tag) : [...(entry.moodTags ?? []), tag] })
+                    }
+                    className={`orbit-chip text-[11px] ${on ? "orbit-chip-on" : ""}`}
+                    disabled={!ready}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+            <label className="grid gap-1">
+              <span className="text-xs text-muted-foreground">Mood note (optional)</span>
+              <input
+                value={entry.moodNote ?? ""}
+                onChange={(e) => edit({ moodNote: e.target.value })}
+                maxLength={200}
+                placeholder="What is behind the mood"
+                className="orbit-textarea"
+                disabled={!ready}
+              />
+            </label>
             <label className="grid gap-1">
               <span className="text-xs text-muted-foreground">Reflection (optional)</span>
               <input

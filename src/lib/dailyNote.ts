@@ -11,10 +11,14 @@ import { upsertFrontmatterTags } from "@/lib/vaultCore";
 export const MOODS = ["rough", "low", "okay", "good", "great"] as const;
 export type Mood = (typeof MOODS)[number];
 
+export const MOOD_TAGS = ["tired", "stressed", "anxious", "calm", "social", "active", "productive", "sick"] as const;
+
 export interface TodayEntry {
   focus: string;
   mood: Mood | null;
   reflection: string;
+  moodTags?: string[];
+  moodNote?: string;
 }
 
 export const DAILY_TAG = "daily";
@@ -46,10 +50,12 @@ export function dailyNotePath(folder: string, day: string): string {
 /** One line per field, so the block stays readable and parseable. */
 const oneLine = (text: string) => text.replace(/\s*\r?\n\s*/g, " ").trim();
 
-function renderBlock({ focus, mood, reflection }: TodayEntry): string {
+function renderBlock({ focus, mood, reflection, moodTags, moodNote }: TodayEntry): string {
   const lines = [OPEN];
   if (oneLine(focus)) lines.push(`**Focus:** ${oneLine(focus)}`);
   if (mood) lines.push(`**Mood:** ${mood}`);
+  if (moodTags?.length) lines.push(`**Mood tags:** ${moodTags.join(", ")}`);
+  if (oneLine(moodNote ?? "")) lines.push(`**Mood note:** ${oneLine(moodNote ?? "")}`);
   if (oneLine(reflection)) lines.push(`**Reflection:** ${oneLine(reflection)}`);
   lines.push(CLOSE);
   return lines.join("\n");
@@ -70,9 +76,13 @@ export function parseToday(raw: string): TodayEntry {
   if (!block) return { ...EMPTY_ENTRY };
   const field = (name: string) => block.match(new RegExp(`^\\*\\*${name}:\\*\\*[ \\t]*(.*)$`, "m"))?.[1].trim() ?? "";
   const mood = field("Mood") as Mood;
+  const moodTags = field("Mood tags").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+  const moodNote = field("Mood note");
   return {
     focus: field("Focus"),
     mood: MOODS.includes(mood) ? mood : null,
     reflection: field("Reflection"),
+    ...(moodTags.length ? { moodTags } : {}),
+    ...(moodNote ? { moodNote } : {}),
   };
 }

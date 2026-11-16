@@ -78,3 +78,19 @@ describe("parseToday", () => {
     expect(parseToday(raw).mood).toBeNull();
   });
 });
+
+describe("mood tags and note", () => {
+  it("round-trips tags and a note, and leaves them out of the note when empty", () => {
+    const full = { ...entry, moodTags: ["tired", "social"], moodNote: "Late night\nout" };
+    const out = mergeToday(null, full);
+    expect(out).toContain("**Mood:** good\n**Mood tags:** tired, social\n**Mood note:** Late night out");
+    expect(parseToday(out)).toEqual({ ...full, moodNote: "Late night out" });
+    expect(mergeToday(null, { ...entry, moodTags: [], moodNote: " " })).not.toContain("Mood tags");
+  });
+
+  it("reads hand-written tags in any case, and does not take them for the mood", () => {
+    const parsed = parseToday("<!-- crystal-os:today -->\n**Mood tags:** Tired , ,Gym\n<!-- /crystal-os:today -->");
+    expect(parsed.moodTags).toEqual(["tired", "gym"]);
+    expect(parsed.mood).toBeNull();
+  });
+});
