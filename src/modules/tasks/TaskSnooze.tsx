@@ -69,13 +69,15 @@ function SnoozeMenu({
  * A trigger and the snooze menu under it. `trigger` gets the ref and props for
  * the button that opens it.
  */
-function SnoozePopover({
-  task,
+export function SnoozePopover({
+  tasks,
   today,
+  onDone,
   children,
 }: {
-  task: Task;
+  tasks: Task[];
   today: string;
+  onDone?: () => void;
   children: (props: {
     ref: React.RefObject<HTMLButtonElement>;
     open: boolean;
@@ -101,8 +103,10 @@ function SnoozePopover({
   useDismiss(open, close, dismissRefs);
 
   const pick = (until: string | "someday") => {
-    rescheduleTasks([{ id: task.id, updates: snoozeUpdates(until) }], snoozeTitle(task.name, until, today));
+    const name = tasks.length === 1 ? tasks[0].name : `${tasks.length} tasks`;
+    rescheduleTasks(tasks.map((t) => ({ id: t.id, updates: snoozeUpdates(until) })), snoozeTitle(name, until, today));
     close();
+    onDone?.();
   };
 
   return (
@@ -127,7 +131,7 @@ function SnoozePopover({
 /** The snooze button on an open, top-level card: left of edit and delete. */
 export function SnoozeButton({ task, today }: { task: Task; today: string }) {
   return (
-    <SnoozePopover task={task} today={today}>
+    <SnoozePopover tasks={[task]} today={today}>
       {({ ref, open, toggle }) => (
         <button
           ref={ref}
@@ -152,7 +156,7 @@ export function SnoozeButton({ task, today }: { task: Task; today: string }) {
 /** A snoozed card's "Until …" chip, which re-opens the menu to move the snooze. */
 export function SnoozeChip({ task, today }: { task: Task; today: string }) {
   return (
-    <SnoozePopover task={task} today={today}>
+    <SnoozePopover tasks={[task]} today={today}>
       {({ ref, open, toggle }) => (
         <button
           ref={ref}

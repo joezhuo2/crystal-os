@@ -93,9 +93,9 @@ export type TaskChange = { id: string; updates: Partial<Task> };
 export type AppActions = {
   addTask: (task: Omit<Task, "id">) => Promise<string | null>;
   updateTask: (id: string, updates: Partial<Task>) => void;
-  deleteTask: (id: string) => void;
+  deleteTask: (id: string | string[]) => void;
   /** Marks a task done today, or moves an "after completion" repeat to its next date. */
-  completeTask: (task: Task) => void;
+  completeTask: (task: Task | Task[]) => void;
   /**
    * Applies date, snooze or column changes to one or more tasks with a single
    * Undo toast that puts every changed field back.
@@ -827,12 +827,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [forgetCompletion, queryClient, saveWrite, setTasks]);
 
   const completeTask = useCallback(
-    (task: Task) => {
+    (input: Task | Task[]) => {
+      const list = Array.isArray(input) ? input : [input];
       // Every task this completion touches (the task and its open children)
       // and the fields it changed, for Undo.
       const done: TaskChange[] = [];
       const before = new Map<string, Task>();
       const complete = (task: Task) => {
+        if (before.has(task.id)) return;
         const timing = completionUpdates(task, toLocalDateStr());
         const rolled = "startDate" in timing;
         // Completing a task ticks its checklist; a repeat moving on to its next
@@ -856,14 +858,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ?.filter((t) => t.parentId === task.id && !t.completed && t.id !== task.id) ?? [];
         for (const child of children) complete(child);
       };
-      complete(task);
+      for (const task of list) complete(task);
+      if (!done.length) return;
 
-      const nextDate = done[0].updates.startDate;
+      const nextDate = list.length === 1 ? done[0].updates.startDate : undefined;
       const next = nextDate
         ? new Date(`${nextDate}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
         : undefined;
       undoToast(
-        `${task.name} done`,
+        list.length === 1 ? `${list[0].name} done` : `${list.length} tasks done`,
         () => {
           for (const { id, updates } of done) {
             const patch = restorePatch(before.get(id)!, updates);
@@ -889,17 +892,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     for (const childId of childIds) updateTask(childId, { parentId: id });
   }, [saveWrite, setTasks, updateTask]);
 
-  const deleteTask = useCallback(async (id: string) => {
+  const deleteTask = useCallback(async (input: string | string[]) => {
     const tasks = queryClient.getQueryData<Task[]>(APP_DATA_KEYS.tasks) ?? [];
-    const task = tasks.find((t) => t.id === id);
-    const childIds = tasks.filter((t) => t.parentId === id).map((t) => t.id);
-    if (!(await saveWrite({ op: "delete", table: "tasks", id }, "delete the task"))) return;
+    const deleted = new Set<string>();
+    for (const id of Array.isArray(input) ? input : [input]) {
+      if (await saveWrite({ op: "delete", table: "tasks", id }, "delete the task")) deleted.add(id);
+    }
+    if (!deleted.size) return;
     // The database moves its child tasks back to the top level (on delete set
     // null); the cache follows.
     setTasks((prev) =>
-      prev.filter((t) => t.id !== id).map((t) => (t.parentId === id ? { ...t, parentId: undefined } : t)),
+      prev
+        .filter((t) => !deleted.has(t.id))
+        .map((t) => (t.parentId && deleted.has(t.parentId) ? { ...t, parentId: undefined } : t)),
     );
-    if (task) undoToast(`${task.name} deleted`, () => void restoreTask(task, childIds));
+    const gone = tasks.filter((t) => deleted.has(t.id)).sort((a, b) => Number(!!a.parentId) - Number(!!b.parentId));
+    if (!gone.length) return;
+    undoToast(gone.length === 1 ? `${gone[0].name} deleted` : `${gone.length} tasks deleted`, () => {
+      void (async () => {
+        for (const task of gone) {
+          await restoreTask(task, tasks.filter((t) => t.parentId === task.id && !deleted.has(t.id)).map((t) => t.id));
+        }
+      })();
+    });
   }, [queryClient, restoreTask, saveWrite, setTasks]);
 
   const rescheduleTasks = useCallback(

@@ -47,6 +47,8 @@ import { TaskViewMenu } from "./TaskViewMenu";
 import { CompletionCheck, StrikeText } from "./TaskCompletion";
 import { useCompletionHold } from "@/hooks/useCompletionHold";
 import type { TabId } from "@/components/layout/Navigation";
+import { taskSelection, useTaskSelected } from "@/lib/taskSelection";
+import { TaskBulkBar } from "./TaskBulkBar";
 
 const NO_CHILDREN: Task[] = [];
 
@@ -101,6 +103,7 @@ const TaskItem = memo(function TaskItem({
   // A Board card starts folded to its check and name; opening it shows the full card.
   const [open, setOpen] = useState(false);
   const [dropTarget, setDropTarget] = useState(false);
+  const selected = useTaskSelected(task.id);
   const cat = taskCategories.find((c) => c.id === task.categoryId);
   const repeatLabel = describeRepeat(task.repeat, task.startDate);
   const progress = subtaskProgress(task, subtasks);
@@ -246,6 +249,20 @@ const TaskItem = memo(function TaskItem({
           ? { opacity: 0, x: -20 }
           : { opacity: 0, height: 0, marginTop: 0, paddingTop: 0, paddingBottom: 0, transition: EXPAND_TRANSITION }
       }
+      data-task-id={task.id}
+      data-selected={selected || undefined}
+      onMouseDown={(e: React.MouseEvent) => {
+        if (e.shiftKey && !(e.target as HTMLElement).closest("input, textarea")) e.preventDefault();
+      }}
+      onClickCapture={(e: React.MouseEvent) => {
+        if (!(e.ctrlKey || e.metaKey || e.shiftKey) || (e.target as HTMLElement).closest("input, textarea")) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.shiftKey) {
+          const cards = document.querySelectorAll<HTMLElement>("[data-task-id]");
+          taskSelection.extendTo(task.id, Array.from(cards, (el) => el.dataset.taskId!));
+        } else taskSelection.toggle(task.id);
+      }}
       draggable={draggable}
       onDragStart={(e: Event) => {
         (e as DragEvent).dataTransfer?.setData("text/plain", task.id);
@@ -274,7 +291,7 @@ const TaskItem = memo(function TaskItem({
         taskDrag.id = null;
       }}
       className={`glass-card-hover ${board ? "px-3 py-2.5" : "p-4"} group overflow-hidden ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${
-        dropTarget ? "ring-1 ring-primary/60 bg-primary/10" : ""
+        dropTarget ? "ring-1 ring-primary/60 bg-primary/10" : selected ? "ring-1 ring-primary bg-primary/10" : ""
       }`}
     >
       {board ? (
@@ -1032,6 +1049,7 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
   const fadeTimer = useRef<number>();
   const { still } = useAppActivity();
   useEffect(() => () => window.clearTimeout(fadeTimer.current), []);
+  useEffect(() => taskSelection.clear, []);
 
   const switchView = (next: View) => {
     if (next === selected) return;
@@ -1156,6 +1174,7 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
       <div className={`grid gap-4 ${view === "kanban" ? "grid-cols-[minmax(0,1fr)_260px]" : "grid-cols-1 lg:grid-cols-[1fr_260px]"}`}>
         <div className="space-y-4 min-w-0">
           <CapacityCard />
+          <TaskBulkBar today={today} />
           {/* Switching List/Board fades the old view out, then the new one in;
               reduced motion (OS setting or performance mode) swaps at once. The
               fade runs on each glass card and header (data-fade on .engine-view,
