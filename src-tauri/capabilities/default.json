@@ -75,6 +75,7 @@
     "allow-installer-cancel-build",
     "allow-installer-reveal",
     "allow-update-check",
+    "allow-update-download",
     "allow-update-install",
     "allow-sidecar-ensure",
     "allow-setup-env-status",
