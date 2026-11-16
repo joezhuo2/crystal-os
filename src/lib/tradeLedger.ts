@@ -205,10 +205,14 @@ function toPosition(w: Work, today: string, superficialLoss: boolean): Position 
   };
 }
 
-export function buildLedger(events: TradeEvent[], today: string): LedgerResult {
-  const fills = dropSupersededPartials(events)
+export function ledgerFills(events: TradeEvent[]): TradeEvent[] {
+  return dropSupersededPartials(events)
     .filter((e) => (e.status === "filled" || e.status === "partial") && e.quantity > 0)
     .sort((a, b) => ms(a.time) - ms(b.time));
+}
+
+export function buildLedger(events: TradeEvent[], today: string): LedgerResult {
+  const fills = ledgerFills(events);
 
   const works: Work[] = [];
   const current = new Map<string, Work>();

@@ -29,11 +29,11 @@ import { CumulativeChart, PnlCalendar, TickerBars } from "./TradesCharts";
 import { PositionDialog } from "./PositionDialog";
 import { TradeDialog, type TradeDraft } from "./TradeDialog";
 import { DataTable, EmailLink, Empty, Td, Th } from "./shared";
-import { DividendsTable } from "./LedgerSections";
+import { AcbSection, DividendsTable } from "./LedgerSections";
 import { ContributionRoom } from "./ContributionRoom";
 import { dateTime, pnlClass, qtyLabel, shortDate } from "./format";
 
-type Section = "closed" | "open" | "orders" | "tags" | "fx" | "dividends" | "room";
+type Section = "closed" | "open" | "orders" | "tags" | "fx" | "dividends" | "acb" | "room";
 
 type CurrencyView = "ALL" | TradeCurrency;
 
@@ -44,6 +44,7 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: "tags", label: "Tags" },
   { id: "fx", label: "FX" },
   { id: "dividends", label: "Dividends" },
+  { id: "acb", label: "ACB" },
   { id: "room", label: "Room" },
 ];
 
@@ -632,7 +633,7 @@ function Ledger({ data, sync, onNavigate }: { data: TradesData; sync: ReturnType
   };
 
   const syncing = sync.isPending || !!data.syncing;
-  const counts: Record<Section, number> = { closed: closedRows.length, open: openRows.length, orders: orders.length, tags: 0, fx: data.fx.length, dividends: dividends.length, room: 0 };
+  const counts: Record<Section, number> = { closed: closedRows.length, open: openRows.length, orders: orders.length, tags: 0, fx: data.fx.length, dividends: dividends.length, acb: 0, room: 0 };
   const shownSection = useDeferredValue(section);
   const { still } = useAppActivity();
   const statsTitle = view === "ALL" && currencies.length > 1 ? `All in USD (C$1 = US$${rate.toFixed(3)})` : undefined;
@@ -666,12 +667,14 @@ function Ledger({ data, sync, onNavigate }: { data: TradesData; sync: ReturnType
         <TagsTable closed={counted} journal={data.journal} />
       ) : shownSection === "dividends" ? (
         <DividendsTable dividends={dividends} year={today.slice(0, 4)} />
+      ) : shownSection === "acb" ? (
+        <AcbSection events={data.events} fx={data.fx} today={today} />
       ) : shownSection === "room" ? (
         <ContributionRoom today={today} />
       ) : (
         <FxTable fx={data.fx} />
       ),
-    [shownSection, closedRows, openRows, orders, counted, dividends, data.journal, data.fx, today, openPosition, addMissing, editEvent],
+    [shownSection, closedRows, openRows, orders, counted, dividends, data.events, data.journal, data.fx, today, openPosition, addMissing, editEvent],
   );
   const hasData = data.events.length > 0 || data.dividends.length > 0;
 

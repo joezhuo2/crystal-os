@@ -90,7 +90,6 @@ function parseFx(email: TradeEmail, f: Map<string, string>): ParsedEmail {
   return { kind: "fx", fx };
 }
 
-// shortcut: no sample dividend email was to hand, so this reads both "Label: value" lines and a sentence; tighten it against a real one
 function parseDividend(email: TradeEmail, f: Map<string, string>, haystack: string): ParsedEmail {
   const candidates = [
     f.get("symbol"),
