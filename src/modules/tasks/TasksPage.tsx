@@ -2,7 +2,7 @@ import { Fragment, memo, useCallback, useEffect, useMemo, useState, useRef } fro
 import { useAppActions, useLoadError, useTaskCategories, useTasks, type Task, type Priority } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
 import { m, AnimatePresence } from "framer-motion";
-import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock, Clock, ChevronDown, StickyNote, AlarmClock } from "lucide-react";
+import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock, ChevronDown, StickyNote, AlarmClock } from "lucide-react";
 import {
   cleanRepeat,
   describeRepeat,
@@ -32,7 +32,6 @@ import {
 import PomodoroTimer from "./PomodoroTimer";
 import { CategoryManagerButton } from "@/components/views/CategoryManager";
 import { CapacityCard } from "./CapacityBar";
-import { clampEstimate, ESTIMATE_PRESETS, formatEstimate, MAX_ESTIMATE } from "@/lib/capacity";
 import { canNest, MAX_NOTES, nestTargets, splitByParent, subtaskProgress, taskDrag, type ChecklistItem } from "@/lib/subtasks";
 import { NoteLinkButton, NoteNavigateContext, NotePicker } from "./TaskNoteLink";
 import { TopicChips, TopicLinkControl } from "@/modules/observatory/TopicLinkControl";
@@ -49,6 +48,7 @@ import { useCompletionHold } from "@/hooks/useCompletionHold";
 import type { TabId } from "@/components/layout/Navigation";
 import { taskSelection, useTaskSelected } from "@/lib/taskSelection";
 import { TaskBulkBar } from "./TaskBulkBar";
+import { DateChip, EstimateChip, EstimatePicker, PriorityChip } from "./TaskQuickEdit";
 
 const NO_CHILDREN: Task[] = [];
 
@@ -67,7 +67,6 @@ type NestHandlers = {
   nest: (childId: string, parentId: string) => void;
 };
 
-const priorityLabel: Record<Priority, string> = { low: "Low", medium: "Med", high: "High", urgent: "Urgent" };
 const priorityClass: Record<Priority, string> = { low: "priority-low", medium: "priority-medium", high: "priority-high", urgent: "priority-urgent" };
 /** The Board's row labels. */
 const priorityName: Record<Priority, string> = { low: "Low", medium: "Medium", high: "High", urgent: "Urgent" };
@@ -136,22 +135,14 @@ const TaskItem = memo(function TaskItem({
       <StrikeText done={done} still={still}>{task.name}</StrikeText>
     </p>
   );
-  const dates = (
-    <span className="text-[10px] text-muted-foreground truncate">
-      {task.startDate} {task.startTime} – {task.endDate === task.startDate ? "" : `${task.endDate} `}{task.endTime}
-    </span>
-  );
-  const priority = <span className={`text-[10px] font-semibold shrink-0 ${priorityClass[task.priority]}`}>{priorityLabel[task.priority]}</span>;
+  const dates = <DateChip task={task} />;
+  const priority = <PriorityChip task={task} />;
   const category = cat && (
     <span className="text-[10px] px-1.5 py-0.5 rounded-full truncate" style={{ background: `${cat.color}22`, color: cat.color }}>
       {cat.name}
     </span>
   );
-  const estimate = task.estimateMinutes && (
-    <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 tabular-nums shrink-0" title="Estimate">
-      <Clock className="w-2.5 h-2.5" />{formatEstimate(task.estimateMinutes)}
-    </span>
-  );
+  const estimate = task.estimateMinutes && <EstimateChip task={task} />;
   const repeat = repeatLabel && (
     <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 min-w-0" title="Repeats">
       <Repeat className="w-2.5 h-2.5 shrink-0" /><span className="truncate">{repeatLabel}</span>
@@ -646,34 +637,6 @@ function buildRepeat(r: ReturnType<typeof initialRepeat>): RepeatRule | undefine
     case "monthly":
       return { kind: "monthly" };
   }
-}
-
-/** Quick picks for how long a task takes, plus a minutes box for anything else. Tapping the lit chip clears it. */
-function EstimatePicker({ value, onChange }: { value: number | undefined; onChange: (v: number | undefined) => void }) {
-  return (
-    <div>
-      <label className="text-xs text-muted-foreground mb-1 block" id="estimate-label">Estimate</label>
-      <div className="flex items-center gap-1" role="group" aria-labelledby="estimate-label">
-        {ESTIMATE_PRESETS.map((minutes) => {
-          const on = value === minutes;
-          return (
-            <button key={minutes} type="button" aria-pressed={on}
-              onClick={() => onChange(on ? undefined : minutes)}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors ${
-                on ? "bg-primary text-primary-foreground" : "bg-secondary/50 text-muted-foreground hover:text-foreground"
-              }`}>
-              {formatEstimate(minutes)}
-            </button>
-          );
-        })}
-        <NumberInput unstyled min={1} max={MAX_ESTIMATE} inputMode="numeric" placeholder="min"
-          aria-label="Estimate in minutes"
-          value={value ?? ""}
-          onChange={(e) => onChange(clampEstimate(e.target.value))}
-          className="w-16 bg-secondary/50 rounded-lg px-2 py-1.5 text-sm outline-none" />
-      </div>
-    </div>
-  );
 }
 
 /** "Subtask of" picker value for no parent. */

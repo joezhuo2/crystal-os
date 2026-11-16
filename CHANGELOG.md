@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Inline quick edit in The Engine.** Click the date, priority or estimate on a task card to change it there, without opening the form. Picking a new day keeps the task's length and offers Undo.
 - **Bulk edit in The Engine.** Ctrl-click task cards to select them, or Shift-click to select a range, then complete, snooze, re-categorise, re-prioritise or delete them together from the bar that appears. Each action has one Undo. Escape clears the selection.
 - **Email to task.** **Make task** on an email in The Courier adds a task named after its subject, due on the bill's due date (or today), with the sender and a link to the email in its notes.
 - **Smart "Now" card.** One line at the top of Home picks what matters most right now: an event starting within the hour (with "Leave now" when it has a place and starts within 30 minutes), an overdue task, Observatory cards to review, habits left after 6 PM, or a task due today. Click it to go there.

@@ -4,17 +4,11 @@ import { ThemedSelect } from "@/components/ui/field-controls";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { canSnooze } from "@/lib/snooze";
 import { taskSelection, useSelectedTaskIds } from "@/lib/taskSelection";
+import { PRIORITY_OPTIONS } from "./TaskQuickEdit";
 import { SnoozePopover } from "./TaskSnooze";
 
 const BUTTON =
   "flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors";
-
-const PRIORITIES: { value: Priority; label: string }[] = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-  { value: "urgent", label: "Urgent" },
-];
 
 export function TaskBulkBar({ today }: { today: string }) {
   const ids = useSelectedTaskIds();
@@ -69,8 +63,8 @@ export function TaskBulkBar({ today }: { today: string }) {
         value=""
         placeholder="Priority"
         aria-label="Priority for the selected tasks"
-        options={PRIORITIES}
-        onChange={(p) => setAll({ priority: p as Priority }, PRIORITIES.find((o) => o.value === p)?.label ?? p)}
+        options={PRIORITY_OPTIONS}
+        onChange={(p) => setAll({ priority: p as Priority }, PRIORITY_OPTIONS.find((o) => o.value === p)?.label ?? p)}
         className="w-28 py-1 text-xs"
       />
       <button

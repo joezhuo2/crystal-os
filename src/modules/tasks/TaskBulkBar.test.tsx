@@ -4,6 +4,7 @@ import type { Task } from "@/contexts/AppContext";
 import { taskSelection } from "@/lib/taskSelection";
 import { toLocalDateStr } from "@/lib/utils";
 
+const updateTask = vi.fn();
 const completeTask = vi.fn();
 const deleteTask = vi.fn();
 const rescheduleTasks = vi.fn();
@@ -24,7 +25,7 @@ const base = (id: string, name: string, over: Partial<Task> = {}): Task => ({
 const tasks = [base("a", "Alpha"), base("b", "Beta"), base("c", "Gamma"), base("d", "Delta")];
 
 vi.mock("@/contexts/AppContext", () => ({
-  useAppActions: () => ({ updateTask: vi.fn(), completeTask, deleteTask, rescheduleTasks }),
+  useAppActions: () => ({ updateTask, completeTask, deleteTask, rescheduleTasks }),
   useTaskCategories: () => [{ id: "c1", name: "Work", color: "hsl(0 0% 50%)" }],
   useTasks: () => tasks,
   useLoadError: () => false,
@@ -70,5 +71,15 @@ describe("The Engine's bulk edit", () => {
     fireEvent.click(screen.getByText("Delta"), { ctrlKey: true });
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     expect(deleteTask).toHaveBeenCalledWith(["b", "d"]);
+  });
+});
+
+describe("The Engine's inline quick edit", () => {
+  it("changes the priority from the card's chip without expanding the card", () => {
+    render(<TasksPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Change the priority of Alpha" }));
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Urgent" }));
+    expect(screen.getByRole("button", { name: "Show details of Alpha" }).getAttribute("aria-expanded")).toBe("false");
+    expect(updateTask).toHaveBeenCalledWith("a", { priority: "urgent" });
   });
 });
