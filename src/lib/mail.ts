@@ -136,6 +136,38 @@ export function latestJobs(items: MailItem[]): MailItem[] {
   return [...latest.values()];
 }
 
+export const JOB_STAGES = ["applied", "interview", "offer", "rejected"] as const;
+export type JobStage = (typeof JOB_STAGES)[number];
+export const FOLLOW_UP_DAYS = 7;
+
+export function jobPipeline(items: MailItem[]): Record<JobStage, MailItem[]> {
+  const board: Record<JobStage, MailItem[]> = { applied: [], interview: [], offer: [], rejected: [] };
+  const jobs = newestFirst(items, "job");
+  for (const latest of latestJobs(items)) {
+    const company = latest.company?.toLowerCase();
+    const staged = company ? jobs.find((j) => j.company?.toLowerCase() === company && j.jobStatus && j.jobStatus !== "update") : latest;
+    const status = staged?.jobStatus;
+    board[status && status !== "update" ? status : "applied"].push(latest);
+  }
+  return board;
+}
+
+export const needsFollowUp = (item: MailItem, stage: JobStage, now: Date) =>
+  (stage === "applied" || stage === "interview") && now.getTime() - Date.parse(item.receivedAt) >= FOLLOW_UP_DAYS * DAY_MS;
+
+export function jobFollowUpAlerts(items: MailItem[], now: Date) {
+  const board = jobPipeline(items);
+  return (["applied", "interview"] as const).flatMap((stage) =>
+    board[stage]
+      .filter((j) => needsFollowUp(j, stage, now))
+      .map((j) => ({
+        key: `job-follow-up:${j.id}`,
+        title: `Follow up with ${jobCompany(j)}`,
+        body: `No reply in ${Math.floor((now.getTime() - Date.parse(j.receivedAt)) / DAY_MS)} days since "${j.subject}".`,
+      })),
+  );
+}
+
 const dueWithin = (item: MailItem, from: string, days: number) => !!item.dueDate && item.dueDate >= from && item.dueDate <= addDays(from, days);
 
 export function mailSummary(items: MailItem[], now: Date) {

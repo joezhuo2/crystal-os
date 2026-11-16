@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueLabel, latestJobs, mailRecap, mailTask, mailSummary, newestFirst, relativeDate, sortBills, type MailItem } from "./mail";
+import { dueLabel, jobFollowUpAlerts, jobPipeline, latestJobs, mailRecap, mailTask, mailSummary, newestFirst, relativeDate, sortBills, type MailItem } from "./mail";
 
 let n = 0;
 const item = (over: Partial<MailItem>): MailItem => ({
@@ -43,6 +43,27 @@ describe("latestJobs", () => {
       item({ id: "board-2", category: "job", from: "LinkedIn", jobStatus: "applied", receivedAt: "2026-11-02T00:00:00Z" }),
     ];
     expect(latestJobs(items).map((i) => i.id)).toEqual(["acme-2", "board-1", "board-2"]);
+  });
+});
+
+describe("jobPipeline", () => {
+  const items = [
+    item({ id: "acme-1", category: "job", company: "Acme", jobStatus: "interview", receivedAt: "2026-11-01T00:00:00Z" }),
+    item({ id: "acme-2", category: "job", company: "Acme", jobStatus: "update", receivedAt: "2026-11-05T00:00:00Z" }),
+    item({ id: "beta", category: "job", company: "Beta", jobStatus: "applied", receivedAt: "2026-11-01T00:00:00Z" }),
+    item({ id: "gone", category: "job", company: "Gone", jobStatus: "rejected", receivedAt: "2026-10-01T00:00:00Z" }),
+  ];
+
+  it("files each company under its newest known stage", () => {
+    const board = jobPipeline(items);
+    expect(board.interview.map((i) => i.id)).toEqual(["acme-2"]);
+    expect(board.applied.map((i) => i.id)).toEqual(["beta"]);
+    expect(board.rejected.map((i) => i.id)).toEqual(["gone"]);
+    expect(board.offer).toEqual([]);
+  });
+
+  it("asks for a follow-up after a week of silence, never for a rejection", () => {
+    expect(jobFollowUpAlerts(items, new Date("2026-11-09T00:00:00Z")).map((a) => a.key)).toEqual(["job-follow-up:beta"]);
   });
 });
 
