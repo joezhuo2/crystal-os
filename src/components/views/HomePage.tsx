@@ -13,6 +13,9 @@ import {
 import { appUi } from "@/lib/appUi";
 import { m } from "framer-motion";
 import { isTaskOverdue, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
+import { journalPrompt, useSecondZone, zoneClock } from "@/lib/homeExtras";
+import { useHabitsData } from "@/hooks/useHabits";
+import { dueToday } from "@/lib/habits";
 import { useSkyScene } from "@/hooks/useSkyScene";
 import { useToday } from "@/hooks/useToday";
 import { awakeTasks } from "@/lib/snooze";
@@ -53,6 +56,7 @@ import type { TabId } from "@/modules/registry";
 import { MailWidget } from "@/modules/mail/MailWidget";
 import { TradesWidget } from "@/modules/trades/TradesWidget";
 
+const NowCard = lazy(() => import("./NowCard"));
 const ObservatoryWidget = lazy(() => import("@/modules/observatory/ObservatoryWidget").then((m) => ({ default: m.ObservatoryWidget })));
 
 /** The greeting and clock, on the Orbit's black hole, with this week so far. */
@@ -75,6 +79,10 @@ function Clock({ onClick }: { onClick?: () => void }) {
   const { url: backdropUrl, opacity: backdropOpacity } = useImageBackdrop("orbit", "card");
   const teaser = useOrbitTeaser(time);
   const { unseen } = useOrbitReady(time);
+  const second = zoneClock(time, useSecondZone());
+  const habitsData = useHabitsData().data;
+  const today = toLocalDateStr(time);
+  const { due: activeHabits, done: habitsDone } = dueToday(habitsData?.habits ?? [], habitsData?.checks ?? [], today);
 
   // A ready review opens as usual; otherwise land on this week so far, which
   // is what the teaser below counts.
@@ -116,11 +124,16 @@ function Clock({ onClick }: { onClick?: () => void }) {
         </div>
         <p className="text-sm text-muted-foreground mt-1">
           {time.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+          {second && <span className="tabular-nums"> · {second.city} {second.time}</span>}
         </p>
         <p className="orbit-teaser mt-3 truncate">
           {teaser
             ? `This week · ${teaser.done} done · ${formatMinutes(teaser.focusMinutes)} focus`
             : "This week · gathering orbit…"}
+          {activeHabits.length > 0 && ` · Habits ${habitsDone}/${activeHabits.length} today`}
+        </p>
+        <p className="text-xs text-muted-foreground/80 mt-1 truncate" title={journalPrompt(time)}>
+          {journalPrompt(time)}
         </p>
       </div>
     </div>
@@ -687,6 +700,7 @@ function VaultSticker({ onClick }: { onClick?: () => void }) {
 
 export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   const { uninstalled } = useInstalledModules();
+  const installed = useCallback((tab: string) => !uninstalled.includes(tab as TabId), [uninstalled]);
   const go = (tab: string) => () => onNavigate?.(tab);
   const widgets: (HomeWidget & { module: TabId })[] = [
     { id: "clock", module: "orbit", label: "The Orbit", render: () => <Clock onClick={go("orbit")} /> },
@@ -721,6 +735,9 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
   return (
     <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <OnboardingCard onNavigate={onNavigate} />
+      <Suspense fallback={null}>
+        <NowCard installed={installed} onNavigate={onNavigate} />
+      </Suspense>
       <HomeGrid widgets={widgets.filter((widget) => !uninstalled.includes(widget.module))} />
     </m.div>
   );

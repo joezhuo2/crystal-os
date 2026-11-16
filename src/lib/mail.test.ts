@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueLabel, latestJobs, mailRecap, mailSummary, newestFirst, relativeDate, sortBills, type MailItem } from "./mail";
+import { dueLabel, latestJobs, mailRecap, mailTask, mailSummary, newestFirst, relativeDate, sortBills, type MailItem } from "./mail";
 
 let n = 0;
 const item = (over: Partial<MailItem>): MailItem => ({
@@ -126,5 +126,14 @@ describe("mailRecap", () => {
   it("returns null when there is nothing to say", () => {
     expect(mailRecap([], "2026-11-13")).toBeNull();
     expect(mailRecap([item({ category: "order", receivedAt: local("2026-11-12") })], "2026-11-13")).toBeNull();
+  });
+});
+
+describe("mailTask", () => {
+  it("is due on the bill's date, or today when that has passed", () => {
+    const mail = { subject: " Hydro bill ", from: "Hydro", url: "https://mail.example/1", dueDate: "2026-11-20" };
+    expect(mailTask(mail, "c1", "2026-11-16")).toMatchObject({ name: "Hydro bill", startDate: "2026-11-16", endDate: "2026-11-20", categoryId: "c1", notes: "From Hydro\nhttps://mail.example/1" });
+    expect(mailTask({ ...mail, dueDate: "2026-11-01" }, "c1", "2026-11-16").endDate).toBe("2026-11-16");
+    expect(mailTask({ ...mail, subject: "", dueDate: undefined }, "c1", "2026-11-16").name).toBe("Email from Hydro");
   });
 });

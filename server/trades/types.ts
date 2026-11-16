@@ -38,6 +38,17 @@ export interface FxConversion {
   url?: string;
 }
 
+export interface Dividend {
+  id: string;
+  source: "email" | "csv";
+  account: string;
+  symbol: string;
+  amount: number;
+  currency: TradeCurrency;
+  time: string;
+  url?: string;
+}
+
 export type TradeGrade = "A" | "B" | "C" | "D" | "F";
 
 export interface TradeJournal {
@@ -54,6 +65,7 @@ export interface TradeJournal {
 export interface TradesData {
   events: TradeEvent[];
   fx: FxConversion[];
+  dividends: Dividend[];
   journal: Record<string, TradeJournal>;
   lastSync: string | null;
   syncing?: boolean;

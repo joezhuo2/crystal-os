@@ -4,6 +4,7 @@ import { type RequireUser } from "./auth/requireUser";
 import { createAiConfig, type AiEnv } from "./ai/config";
 import { createAiMiddleware } from "./ai/plugin";
 import { createCalendarMiddleware } from "./calendar/plugin";
+import { createDataMiddleware } from "./data/plugin";
 import { createMailMiddleware } from "./mail/plugin";
 import { createObsidianMiddleware } from "./obsidian/plugin";
 import { createTradesMiddleware } from "./trades/plugin";
@@ -32,6 +33,8 @@ export interface ApiEnv extends AiEnv {
   MAIL_AI_PROVIDER?: string;
   MAIL_AI_MODEL?: string;
   MAIL_AI_API_KEY?: string;
+  VITE_SUPABASE_URL?: string;
+  VITE_SUPABASE_ANON_KEY?: string;
 }
 
 export interface ApiHandlerOptions {
@@ -86,6 +89,10 @@ export function createApiHandler({ env, requireUser, rootDir }: ApiHandlerOption
     createAiMiddleware(ai, requireUser),
     createMailMiddleware(mailConfig, requireUser, { returnUrl: null, ai }),
     createTradesMiddleware(mailConfig, requireUser),
+    createDataMiddleware(
+      { rootDir, supabaseUrl: env.VITE_SUPABASE_URL, supabaseAnonKey: env.VITE_SUPABASE_ANON_KEY },
+      requireUser,
+    ),
   ];
 
   return (req, res) => {

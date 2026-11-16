@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { FxConversion, OptionContract, TradeCurrency, TradeEvent, TradeStatus } from "./types";
+import type { Dividend, FxConversion, OptionContract, TradeCurrency, TradeEvent, TradeStatus } from "./types";
 
 export interface TradeEmail {
   messageId: string;
@@ -9,7 +9,7 @@ export interface TradeEmail {
   url?: string;
 }
 
-export type ParsedEmail = { kind: "trade"; event: TradeEvent } | { kind: "fx"; fx: FxConversion } | null;
+export type ParsedEmail = { kind: "trade"; event: TradeEvent } | { kind: "fx"; fx: FxConversion } | { kind: "dividend"; dividend: Dividend } | null;
 
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 const ZONE_HOURS: Record<string, number> = { EDT: -4, EST: -5 };
@@ -21,6 +21,8 @@ const STATUS_PHRASES: [RegExp, TradeStatus][] = [
   [/your order has been rejected/i, "rejected"],
 ];
 const FX_PHRASE = /your funds have been converted/i;
+const DIVIDEND_PHRASE = /dividend/i;
+const NOT_A_SYMBOL = new Set(["TFSA", "RRSP", "FHSA", "RESP", "LIRA", "USD", "CAD"]);
 
 function fields(text: string): Map<string, string> {
   const out = new Map<string, string>();
@@ -88,12 +90,38 @@ function parseFx(email: TradeEmail, f: Map<string, string>): ParsedEmail {
   return { kind: "fx", fx };
 }
 
+function parseDividend(email: TradeEmail, f: Map<string, string>, haystack: string): ParsedEmail {
+  const candidates = [
+    f.get("symbol"),
+    /\bfrom\s+([A-Z][A-Z0-9.]{0,9})\b/.exec(haystack)?.[1],
+    ...[...haystack.matchAll(/\(([A-Z][A-Z0-9.]{0,9})\)/g)].map((m) => m[1]),
+  ];
+  const symbol = candidates.find((s) => s && !NOT_A_SYMBOL.has(s.toUpperCase()))?.toUpperCase();
+  const raw = f.get("amount") ?? f.get("total") ?? f.get("dividend") ?? haystack;
+  const m = /(US)?\$\s*([\d,]+(?:\.\d+)?)\s*(USD|CAD)?/i.exec(raw);
+  const amount = m ? toNumber(m[2]) : NaN;
+  if (!symbol || !m || !(amount > 0)) return null;
+  const account = f.get("account") ?? /\bin your\s+([A-Za-z][A-Za-z -]*?)\s+account/i.exec(haystack)?.[1] ?? "";
+  const dividend: Dividend = {
+    id: email.messageId,
+    source: "email",
+    account: account.replace(/\s*\(.*\)\s*$/, ""),
+    symbol,
+    amount,
+    currency: m[1] || m[3]?.toUpperCase() === "USD" ? "USD" : "CAD",
+    time: emailTime(f.get("time")) ?? email.receivedAt,
+  };
+  if (email.url) dividend.url = email.url;
+  return { kind: "dividend", dividend };
+}
+
 export function parseWealthsimpleEmail(email: TradeEmail): ParsedEmail {
   const text = email.text ?? "";
   const haystack = `${email.subject}\n${text}`;
   const f = fields(text);
 
   if (FX_PHRASE.test(haystack)) return parseFx(email, f);
+  if (DIVIDEND_PHRASE.test(email.subject)) return parseDividend(email, f, haystack);
 
   const status = STATUS_PHRASES.find(([re]) => re.test(email.subject))?.[1] ?? STATUS_PHRASES.find(([re]) => re.test(haystack))?.[1];
   if (!status) return null;
@@ -171,9 +199,9 @@ function csvRows(csv: string): string[][] {
 }
 
 // shortcut: export format inferred, adjust mapping when a real export does not match
-export function parseTradesCsv(csv: string): { events: TradeEvent[]; skipped: number } {
+export function parseTradesCsv(csv: string): { events: TradeEvent[]; dividends: Dividend[]; skipped: number } {
   const rows = csvRows(csv);
-  if (rows.length === 0) return { events: [], skipped: 0 };
+  if (rows.length === 0) return { events: [], dividends: [], skipped: 0 };
   const header = rows[0].map((h) => h.trim().toLowerCase());
   const col = (row: string[], name: string) => {
     const i = header.indexOf(name);
@@ -181,11 +209,35 @@ export function parseTradesCsv(csv: string): { events: TradeEvent[]; skipped: nu
   };
   const activity = header.includes("activity_type");
   const events: TradeEvent[] = [];
+  const dividends: Dividend[] = [];
   const seen = new Map<string, number>();
   let skipped = 0;
 
   for (const row of rows.slice(1)) {
     const date = col(row, activity ? "transaction_date" : "date");
+    if (activity && /^dividend/i.test(col(row, "activity_type"))) {
+      const amount = Math.abs(toNumber(col(row, "net_cash_amount")));
+      const paid = new Date(date);
+      const cur = (col(row, "currency") || "CAD").toUpperCase();
+      const ticker = col(row, "symbol").toUpperCase();
+      if (!ticker || !(amount > 0) || (cur !== "USD" && cur !== "CAD") || Number.isNaN(paid.getTime())) {
+        skipped++;
+        continue;
+      }
+      const hash = createHash("sha1").update(row.map((v) => v.trim().toLowerCase()).join("|")).digest("hex");
+      const n = seen.get(hash) ?? 0;
+      seen.set(hash, n + 1);
+      dividends.push({
+        id: `csv:div:${n === 0 ? hash : createHash("sha1").update(`${hash}#${n}`).digest("hex")}`,
+        source: "csv",
+        account: col(row, "account_type") || "Non-registered",
+        symbol: ticker,
+        amount,
+        currency: cur,
+        time: paid.toISOString(),
+      });
+      continue;
+    }
     const sideRaw = activity
       ? /^trade$/i.test(col(row, "activity_type"))
         ? (/buy|sell/i.exec(col(row, "activity_sub_type"))?.[0] ?? /buy|sell/i.exec(col(row, "direction"))?.[0] ?? "")
@@ -221,5 +273,5 @@ export function parseTradesCsv(csv: string): { events: TradeEvent[]; skipped: nu
     if (net !== "" && Number.isFinite(toNumber(net))) event.total = Math.abs(toNumber(net));
     events.push(event);
   }
-  return { events, skipped };
+  return { events, dividends, skipped };
 }

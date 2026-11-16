@@ -24,6 +24,21 @@ export interface MailCacheSettings {
   retainDays: number;
 }
 
+export function mailTask(item: Pick<MailItem, "subject" | "from" | "url" | "dueDate">, categoryId: string, today: string) {
+  const due = item.dueDate && item.dueDate >= today ? item.dueDate : today;
+  return {
+    name: (item.subject.trim() || `Email from ${item.from}`).slice(0, 200),
+    startDate: today,
+    startTime: "",
+    endDate: due,
+    endTime: "",
+    priority: "medium" as const,
+    categoryId,
+    completed: false,
+    notes: `From ${item.from}\n${item.url}`,
+  };
+}
+
 export interface MailItem {
   id: string;
   accountId: string;

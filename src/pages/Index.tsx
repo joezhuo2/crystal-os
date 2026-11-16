@@ -3,7 +3,7 @@ import { AppProvider } from "@/contexts/AppContext";
 import { appUi, useAppUi } from "@/lib/appUi";
 import { recordRecent } from "@/lib/recents";
 import { useAuth } from "@/contexts/AuthContext";
-import LoginPage from "@/components/auth/LoginPage";
+import ImportPage from "@/components/auth/ImportPage";
 import AppSplash from "@/components/layout/AppSplash";
 import { SidebarNav, BottomNav, visibleTabIds, type TabId } from "@/components/layout/Navigation";
 import { AnimatePresence } from "framer-motion";
@@ -21,6 +21,8 @@ import { isDesktop } from "@/lib/platform";
 import { hidePortal } from "@/lib/portalNative";
 import QuickAddDialog from "@/components/QuickAddDialog";
 import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
+import { usePrivacyHotkey } from "@/hooks/usePrivacyHotkey";
+import { NoteNavigateContext } from "@/modules/tasks/TaskNoteLink";
 import { useDndHotkey, useHomeHotkey, usePaletteHotkey } from "@/hooks/useGlobalHotkey";
 import { useQuickCommands } from "@/hooks/useQuickCommands";
 import { inTerminal } from "@/lib/hotkey";
@@ -168,7 +170,7 @@ const GlobalOverlays = memo(function GlobalOverlays() {
 });
 
 const Index = () => {
-  const { session, loading } = useAuth();
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTabRaw] = useState<TabId>("home");
   const { uninstalled } = useInstalledModules();
   // Pages of uninstalled modules can't be opened; one uninstalled while open falls back to Home.
@@ -187,6 +189,7 @@ const Index = () => {
   const View = views[viewTab];
   useHomeHotkey(() => setActiveTab("home"));
   useDndHotkey();
+  usePrivacyHotkey();
   useShortcut("general.nextPage", () => setActiveTab((t) => stepTab(visibleTabIds(), t, 1)));
   useShortcut("general.previousPage", () => setActiveTab((t) => stepTab(visibleTabIds(), t, -1)));
 
@@ -226,7 +229,9 @@ const Index = () => {
     () => (
       <ViewEnter key={viewTab} fade={!still}>
         <Suspense fallback={null}>
-          <View onNavigate={setActiveTab} />
+          <NoteNavigateContext.Provider value={setActiveTab}>
+            <View onNavigate={setActiveTab} />
+          </NoteNavigateContext.Provider>
         </Suspense>
       </ViewEnter>
     ),
@@ -275,9 +280,9 @@ const Index = () => {
 
   if (loading) return <AppSplash />;
 
-  // AppProvider sits inside this check so it never mounts without a user and
-  // therefore never issues an unauthenticated query.
-  if (!session) return <LoginPage />;
+  // AppProvider sits inside this check so it never loads the local data
+  // before a pending import has filled it.
+  if (!user) return <ImportPage />;
 
   const rootClass = monochrome
     ? "default-root"

@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import { checklist, type ChecklistState, type EnvStatus } from "./setup";
 
 const env = (over: Partial<EnvStatus> = {}): EnvStatus => ({
-  VITE_SUPABASE_URL: true,
-  VITE_SUPABASE_ANON_KEY: true,
   GOOGLE_CLIENT_ID: true,
   GOOGLE_CLIENT_SECRET: true,
   ...over,
@@ -25,10 +23,8 @@ describe("checklist", () => {
   });
 
   it("says which keys are missing", () => {
-    const noSupabase = checklist(state({ env: env({ VITE_SUPABASE_ANON_KEY: false }) }))[0];
-    expect(noSupabase.done).toBe(false);
-    expect(noSupabase.detail).toMatch(/Supabase keys are missing/);
     const noGoogle = checklist(state({ env: env({ GOOGLE_CLIENT_SECRET: false }) }));
+    expect(noGoogle[0].done).toBe(false);
     expect(noGoogle[0].detail).toMatch(/Google keys are missing/);
     expect(noGoogle.find((i) => i.id === "calendar")?.detail).toMatch(/Needs the Google keys/);
   });

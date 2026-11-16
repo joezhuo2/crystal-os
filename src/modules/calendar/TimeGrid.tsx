@@ -6,7 +6,7 @@ import type { Task } from "@/contexts/AppContext";
 import { taskColor, tasksForDate } from "@/lib/horizonDots";
 import { toLocalDateStr } from "@/lib/utils";
 import { usePerfSettings } from "@/lib/perfSettings";
-import { MINUTES_PER_DAY, draggedStart, dropSlot, fromMinutes, layoutDay, snapMinutes } from "@/lib/timeGrid";
+import { MINUTES_PER_DAY, daysBetween, draggedStart, dropSlot, fromMinutes, layoutDay, resizedSpan, shiftedSpan, snapMinutes } from "@/lib/timeGrid";
 
 /** Height of one hour, in px. */
 const HOUR_PX = 48;
@@ -31,6 +31,9 @@ interface DragState {
   moved: boolean;
   date: string;
   minutes: number;
+  length: number;
+  edge?: "start" | "end";
+  multiDay: boolean;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
@@ -125,8 +128,8 @@ export default function TimeGrid({
   onEdit: (event: CalendarEvent) => void;
   /** Clicking a day's heading, e.g. to open it in the day view. */
   onSelectDate?: (date: string) => void;
-  /** Dragging a single-day timed event to another time or day. */
-  onMoveEvent?: (event: CalendarEvent, date: string, startTime: string, endTime: string) => void;
+  /** Dragging an event to another time or day; `endDate` is passed when it is not `date`. */
+  onMoveEvent?: (event: CalendarEvent, date: string, startTime: string, endTime: string, endDate?: string) => void;
   dropMinutes?: number;
   onDropTask?: (date: string, startTime: string, endTime: string) => void;
 }) {
@@ -139,8 +142,10 @@ export default function TimeGrid({
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const suppressClick = useRef(false);
+  const allDayDrag = useRef<{ event: CalendarEvent; date: string } | null>(null);
+  const [allDayOver, setAllDayOver] = useState<string | null>(null);
   const [hover, setHover] = useState<{ date: string; minutes: number; durationMin: number } | null>(null);
-  const ghost = drag?.moved ? drag : hover;
+  const ghost = drag?.moved ? { date: drag.date, minutes: drag.minutes, durationMin: drag.length } : hover;
 
   const slotAt = (e: ReactDragEvent<HTMLElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -178,7 +183,7 @@ export default function TimeGrid({
     endMin: number,
   ) => {
     if (!onMoveEvent || e.button !== 0 || e.pointerType === "touch") return;
-    if (event.allDay || event.startDate !== event.endDate || event.startDate !== date) return;
+    if (event.allDay || event.startDate !== date) return;
     e.currentTarget.setPointerCapture?.(e.pointerId);
     updateDrag({
       id: event.id,
@@ -192,6 +197,9 @@ export default function TimeGrid({
       moved: false,
       date,
       minutes: startMin,
+      length: Math.max(endMin - startMin, 0),
+      edge: (e.target as HTMLElement).dataset?.resize as DragState["edge"],
+      multiDay: event.startDate !== event.endDate,
     });
   };
 
@@ -202,13 +210,23 @@ export default function TimeGrid({
     const dy = e.clientY - d.originY;
     const moved = d.moved || Math.hypot(dx, dy) > DRAG_THRESHOLD_PX;
     if (!moved) return;
+    if (d.edge) {
+      const span = resizedSpan(d.startMin, d.startMin + d.durationMin, d.edge, dy / PX_PER_MIN);
+      updateDrag({ ...d, dx, dy, moved, minutes: span.startMin, length: span.endMin - span.startMin });
+      return;
+    }
     updateDrag({
       ...d,
       dx,
       dy,
       moved,
       date: columnAt(e.clientX, d.originDate),
-      minutes: draggedStart(d.startMin, d.durationMin, dy / PX_PER_MIN),
+      ...(d.multiDay
+        ? (() => {
+            const minutes = draggedStart(d.startMin, 0, dy / PX_PER_MIN);
+            return { minutes, length: Math.min(d.durationMin, MINUTES_PER_DAY - minutes) };
+          })()
+        : { minutes: draggedStart(d.startMin, d.durationMin, dy / PX_PER_MIN) }),
     });
   };
 
@@ -223,8 +241,15 @@ export default function TimeGrid({
       suppressClick.current = false;
     }, 0);
     if (!commit) return;
-    if (d.date === d.originDate && d.minutes === d.startMin) return;
-    onMoveEvent?.(event, d.date, fromMinutes(d.minutes), fromMinutes(d.minutes + d.durationMin));
+    const same = d.date === d.originDate && d.minutes === d.startMin;
+    if (d.multiDay) {
+      if (same) return;
+      const span = shiftedSpan(event, daysBetween(d.originDate, d.date), d.minutes - d.startMin);
+      onMoveEvent?.(event, span.startDate, span.startTime, span.endTime, span.endDate);
+      return;
+    }
+    if (same && d.length === d.durationMin) return;
+    onMoveEvent?.(event, d.date, fromMinutes(d.minutes), fromMinutes(d.minutes + d.length));
   };
 
   const days = useMemo(
@@ -299,12 +324,45 @@ export default function TimeGrid({
         <div className="grid border-b border-white/5 pb-1 mb-1" style={{ gridTemplateColumns: columns }}>
           <span className="text-[10px] text-muted-foreground self-center pr-2 text-right">all day</span>
           {days.map(({ date, allDay, allDayTasks }) => (
-            <div key={date} className="space-y-0.5 px-0.5 min-w-0">
+            <div
+              key={date}
+              data-all-day={date}
+              className={`space-y-0.5 px-0.5 min-w-0 rounded ${allDayOver === date ? "ring-1 ring-primary/60 bg-primary/10" : ""}`}
+              onDragOver={(e) => {
+                if (!allDayDrag.current) return;
+                e.preventDefault();
+                if (allDayOver !== date) setAllDayOver(date);
+              }}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setAllDayOver(null);
+              }}
+              onDrop={(e) => {
+                const dragged = allDayDrag.current;
+                allDayDrag.current = null;
+                setAllDayOver(null);
+                if (!dragged) return;
+                e.preventDefault();
+                const delta = daysBetween(dragged.date, date);
+                if (!delta) return;
+                const span = shiftedSpan(dragged.event, delta);
+                onMoveEvent?.(dragged.event, span.startDate, "", "", span.endDate);
+              }}
+            >
               {allDay.map((event) => (
                 <GlassTip key={event.id} label={event.summary} hint="All day" detail={<EventDetail event={event} />} colors={tip}>
                   <button
                     type="button"
                     onClick={() => onEdit(event)}
+                    draggable={!!onMoveEvent}
+                    onDragStart={(e) => {
+                      allDayDrag.current = { event, date };
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", event.id);
+                    }}
+                    onDragEnd={() => {
+                      allDayDrag.current = null;
+                      setAllDayOver(null);
+                    }}
                     className="w-full text-left text-[11px] px-1.5 py-0.5 rounded truncate"
                     style={{ background: `color-mix(in srgb, ${color} 30%, transparent)` }}
                   >
@@ -433,9 +491,13 @@ export default function TimeGrid({
               {timed.map(({ event, startMin, endMin, column, columns: lanes }) => {
                 const height = (endMin - startMin) * PX_PER_MIN;
                 const dragging = drag?.id === event.id && drag.moved;
-                const label = dragging
-                  ? `${shortTime(fromMinutes(drag.minutes))}${drag.date === date ? "" : ` · ${dayLabel(drag.date)}`}`
-                  : timeRange(event);
+                const label = !dragging
+                  ? timeRange(event)
+                  : drag.edge
+                    ? `${shortTime(fromMinutes(drag.minutes))} – ${shortTime(fromMinutes(drag.minutes + drag.length))}`
+                    : `${shortTime(fromMinutes(drag.minutes))}${drag.date === date ? "" : ` · ${dayLabel(drag.date)}`}`;
+                const resizable =
+                  !!onMoveEvent && height >= 20 && !event.allDay && event.startDate === date && event.endDate === date;
                 return (
                   <GlassTip
                     key={event.id}
@@ -456,10 +518,10 @@ export default function TimeGrid({
                       onPointerUp={(e) => endDrag(e, event, true)}
                       onPointerCancel={(e) => endDrag(e, event, false)}
                       className={`absolute rounded-md px-1.5 py-0.5 text-left overflow-hidden text-[11px] leading-tight border hover:brightness-125 transition-[filter] ${
-                        dragging ? "z-30 cursor-grabbing shadow-lg brightness-125 select-none" : ""
+                        dragging ? `z-30 shadow-lg brightness-125 select-none ${drag.edge ? "cursor-ns-resize" : "cursor-grabbing"}` : ""
                       }`}
                       style={{
-                        transform: dragging ? `translate(${drag.dx}px, ${drag.dy}px)` : undefined,
+                        transform: dragging && !drag.edge ? `translate(${drag.dx}px, ${drag.dy}px)` : undefined,
                         top: startMin * PX_PER_MIN,
                         height: Math.max(height - 1, 14),
                         left: `calc(${(column / lanes) * 100}% + 1px)`,
@@ -468,6 +530,8 @@ export default function TimeGrid({
                         borderColor: `color-mix(in srgb, ${color} 55%, transparent)`,
                       }}
                     >
+                      {resizable && <span data-resize="start" aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5 cursor-ns-resize" />}
+                      {resizable && <span data-resize="end" aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize" />}
                       <span className="font-medium block truncate">{event.summary}</span>
                       {(dragging || (height >= 30 && event.startTime)) && (
                         <span className="text-muted-foreground block truncate">{label}</span>

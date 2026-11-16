@@ -135,9 +135,12 @@ describe("parseTradesCsv", () => {
   ].join("\n");
 
   it("imports trade rows of the activities export and skips the rest", () => {
-    const { events, skipped } = parseTradesCsv(ACTIVITY);
-    expect(skipped).toBe(2);
+    const { events, dividends, skipped } = parseTradesCsv(ACTIVITY);
+    expect(skipped).toBe(1);
     expect(events).toHaveLength(2);
+    expect(dividends).toEqual([
+      { id: expect.stringMatching(/^csv:div:[0-9a-f]{40}$/), source: "csv", account: "TFSA", symbol: "NVDA", amount: 1.5, currency: "USD", time: "2026-10-03T00:00:00.000Z" },
+    ]);
     expect(events[0]).toMatchObject({ source: "csv", status: "filled", account: "TFSA", side: "buy", symbol: "NVDA", quantity: 2, price: 206.5, total: 413, currency: "USD", time: "2026-10-01T00:00:00.000Z" });
     expect(events[1]).toMatchObject({ side: "sell", total: 420 });
   });
@@ -165,6 +168,30 @@ describe("parseTradesCsv", () => {
 
   it("skips rows with an unknown currency or bad date and tolerates an empty file", () => {
     expect(parseTradesCsv("date,account,side,symbol,quantity,price,currency\nnope,TFSA,buy,AAA,1,1,USD\n2026-10-05,TFSA,buy,AAA,1,1,EUR").skipped).toBe(2);
-    expect(parseTradesCsv("")).toEqual({ events: [], skipped: 0 });
+    expect(parseTradesCsv("")).toEqual({ events: [], dividends: [], skipped: 0 });
+  });
+});
+
+describe("dividend emails", () => {
+  it("reads labelled lines", () => {
+    expect(parse("You received a dividend", ["Account: TFSA (******ABC123)", "Symbol: xeqt", "Amount: US$12.34"])).toEqual({
+      kind: "dividend",
+      dividend: { id: "m1", source: "email", account: "TFSA", symbol: "XEQT", amount: 12.34, currency: "USD", time: RECEIVED, url: "https://mail.example/m1" },
+    });
+  });
+
+  it("reads a sentence, taking the ticker in brackets and not the account", () => {
+    const r = parse("Your dividend has arrived", ["You received a dividend of $1,204.50 CAD from Royal Bank of Canada (RY.TO) in your Non-registered account (TFSA)."]);
+    expect(r).toMatchObject({ kind: "dividend", dividend: { symbol: "RY.TO", amount: 1204.5, currency: "CAD", account: "Non-registered" } });
+  });
+
+  it("ignores a dividend email with no ticker or no amount", () => {
+    expect(parse("Dividend reinvestment is now on", ["You can change this in settings."])).toBeNull();
+    expect(parse("You received a dividend", ["Symbol: NVDA"])).toBeNull();
+  });
+
+  it("still reads an order email whose body mentions dividends", () => {
+    const r = parse("Your order has been filled", ["Account: TFSA", "Type: Market Buy", "Symbol: NVDA", "Shares: 1", "Average price: US$5.00", "Dividends are paid in cash."]);
+    expect(r).toMatchObject({ kind: "trade" });
   });
 });

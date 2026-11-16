@@ -21,7 +21,7 @@ const events: TradeEvent[] = [
   },
 ];
 
-const data: TradesData = { events, fx: [], journal: {}, lastSync: null, errors: [], connected: true };
+const data: TradesData = { events, fx: [], dividends: [], journal: {}, lastSync: null, errors: [], connected: true };
 
 vi.mock("@/hooks/useTrades", () => ({
   useTrades: () => ({ data, isLoading: false, isError: false, error: null }),
@@ -32,6 +32,8 @@ vi.mock("@/hooks/useTrades", () => ({
   useUpdateTradeEvent: () => ({ mutate: vi.fn(), isPending: false }),
   useSaveTradeJournal: () => ({ mutate: vi.fn(), isPending: false }),
 }));
+
+vi.mock("@/components/ItemNoteLink", () => ({ ItemNoteLink: () => null }));
 
 import TradesPage from "./TradesPage";
 

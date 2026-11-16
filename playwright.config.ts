@@ -1,9 +1,6 @@
 import { defineConfig } from "@playwright/test";
 import { config as loadEnv } from "dotenv";
 
-// E2E_EMAIL and E2E_PASSWORD live in .env.local next to the Supabase keys
-// (git-ignored). Use a dedicated test account: the smoke test writes a task
-// and a transaction to it, then deletes them.
 loadEnv({ path: ".env.local", quiet: true });
 
 // Not 8080, so a dev server you already have open is left alone.
@@ -18,8 +15,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
-  // One retry in CI absorbs a slow Supabase round trip; locally a failure
-  // should show up straight away.
+  // One retry in CI absorbs a slow runner; locally a failure should show up
+  // straight away.
   retries: process.env.CI ? 1 : 0,
   reporter: [
     [process.env.CI ? "github" : "list"],
@@ -41,6 +38,8 @@ export default defineConfig({
         command: `npx vite --port ${port} --strictPort`,
         url: `http://127.0.0.1:${port}`,
         reuseExistingServer: !process.env.CI,
+        // The smoke test adds and deletes rows; keep them out of your own data.
+        env: { CRYSTAL_DATA_ROOT: "test-results/e2e-data" },
         timeout: 120_000,
       },
 });

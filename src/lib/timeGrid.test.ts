@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
-import { draggedStart, dropSlot, fromMinutes, layoutDay, snapMinutes, taskBlockMinutes, toMinutes, weekDates } from "./timeGrid";
+import { daysBetween, draggedStart, dropSlot, fromMinutes, layoutDay, resizedSpan, shiftedSpan, snapMinutes, taskBlockMinutes, toMinutes, weekDates } from "./timeGrid";
 
 function event(id: string, start: string, end: string, extra: Partial<CalendarEvent> = {}): CalendarEvent {
   return {
@@ -105,6 +105,45 @@ describe("draggedStart", () => {
   it("stays inside the day", () => {
     expect(draggedStart(30, 60, -500)).toBe(0);
     expect(draggedStart(1300, 60, 500)).toBe(1439 - 60);
+  });
+});
+
+describe("resizedSpan", () => {
+  it("moves one edge, snapped to 10 minutes", () => {
+    expect(resizedSpan(540, 600, "end", 24)).toEqual({ startMin: 540, endMin: 620 });
+    expect(resizedSpan(540, 600, "start", -31)).toEqual({ startMin: 510, endMin: 600 });
+  });
+
+  it("keeps at least 10 minutes and stays inside the day", () => {
+    expect(resizedSpan(540, 600, "end", -500)).toEqual({ startMin: 540, endMin: 550 });
+    expect(resizedSpan(540, 600, "start", 500)).toEqual({ startMin: 590, endMin: 600 });
+    expect(resizedSpan(540, 600, "start", -5000)).toEqual({ startMin: 0, endMin: 600 });
+    expect(resizedSpan(540, 600, "end", 5000)).toEqual({ startMin: 540, endMin: 1439 });
+  });
+});
+
+describe("shiftedSpan", () => {
+  it("moves an all-day event by whole days, keeping its length", () => {
+    expect(shiftedSpan(event("a", "", "", { allDay: true, endDate: "2026-10-02" }), 3)).toEqual({
+      startDate: "2026-10-03",
+      startTime: "",
+      endDate: "2026-10-05",
+      endTime: "",
+    });
+  });
+
+  it("moves a timed multi-day event by days and minutes, rolling the end over midnight", () => {
+    expect(shiftedSpan(event("a", "22:00", "23:30", { endDate: "2026-10-01" }), -1, 60)).toEqual({
+      startDate: "2026-09-29",
+      startTime: "23:00",
+      endDate: "2026-10-01",
+      endTime: "00:30",
+    });
+  });
+
+  it("counts days between two dates across a month end", () => {
+    expect(daysBetween("2026-09-29", "2026-10-02")).toBe(3);
+    expect(daysBetween("2026-10-02", "2026-09-29")).toBe(-3);
   });
 });
 

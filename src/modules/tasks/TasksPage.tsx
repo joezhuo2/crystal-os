@@ -2,7 +2,7 @@ import { Fragment, memo, useCallback, useEffect, useMemo, useState, useRef } fro
 import { useAppActions, useLoadError, useTaskCategories, useTasks, type Task, type Priority } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
 import { m, AnimatePresence } from "framer-motion";
-import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock, Clock, ChevronDown, StickyNote, AlarmClock } from "lucide-react";
+import { Plus, Check, Trash2, LayoutList, Columns, Sun, CalendarDays, Infinity as InfinityIcon, X, Pencil, Repeat, AlertTriangle, CalendarClock, ChevronDown, StickyNote, AlarmClock } from "lucide-react";
 import {
   cleanRepeat,
   describeRepeat,
@@ -32,7 +32,6 @@ import {
 import PomodoroTimer from "./PomodoroTimer";
 import { CategoryManagerButton } from "@/components/views/CategoryManager";
 import { CapacityCard } from "./CapacityBar";
-import { clampEstimate, ESTIMATE_PRESETS, formatEstimate, MAX_ESTIMATE } from "@/lib/capacity";
 import { canNest, MAX_NOTES, nestTargets, splitByParent, subtaskProgress, taskDrag, type ChecklistItem } from "@/lib/subtasks";
 import { NoteLinkButton, NoteNavigateContext, NotePicker } from "./TaskNoteLink";
 import { TopicChips, TopicLinkControl } from "@/modules/observatory/TopicLinkControl";
@@ -47,6 +46,11 @@ import { TaskViewMenu } from "./TaskViewMenu";
 import { CompletionCheck, StrikeText } from "./TaskCompletion";
 import { useCompletionHold } from "@/hooks/useCompletionHold";
 import type { TabId } from "@/components/layout/Navigation";
+import { taskSelection, useTaskSelected } from "@/lib/taskSelection";
+import { TaskBulkBar } from "./TaskBulkBar";
+import { TaskRepeatHistory } from "./TaskRepeatHistory";
+import { SomedayView, TodayView, UpcomingView } from "./TaskDayViews";
+import { DateChip, EstimateChip, EstimatePicker, PriorityChip } from "./TaskQuickEdit";
 
 const NO_CHILDREN: Task[] = [];
 
@@ -65,7 +69,6 @@ type NestHandlers = {
   nest: (childId: string, parentId: string) => void;
 };
 
-const priorityLabel: Record<Priority, string> = { low: "Low", medium: "Med", high: "High", urgent: "Urgent" };
 const priorityClass: Record<Priority, string> = { low: "priority-low", medium: "priority-medium", high: "priority-high", urgent: "priority-urgent" };
 /** The Board's row labels. */
 const priorityName: Record<Priority, string> = { low: "Low", medium: "Medium", high: "High", urgent: "Urgent" };
@@ -101,6 +104,7 @@ const TaskItem = memo(function TaskItem({
   // A Board card starts folded to its check and name; opening it shows the full card.
   const [open, setOpen] = useState(false);
   const [dropTarget, setDropTarget] = useState(false);
+  const selected = useTaskSelected(task.id);
   const cat = taskCategories.find((c) => c.id === task.categoryId);
   const repeatLabel = describeRepeat(task.repeat, task.startDate);
   const progress = subtaskProgress(task, subtasks);
@@ -133,22 +137,14 @@ const TaskItem = memo(function TaskItem({
       <StrikeText done={done} still={still}>{task.name}</StrikeText>
     </p>
   );
-  const dates = (
-    <span className="text-[10px] text-muted-foreground truncate">
-      {task.startDate} {task.startTime} – {task.endDate === task.startDate ? "" : `${task.endDate} `}{task.endTime}
-    </span>
-  );
-  const priority = <span className={`text-[10px] font-semibold shrink-0 ${priorityClass[task.priority]}`}>{priorityLabel[task.priority]}</span>;
+  const dates = <DateChip task={task} />;
+  const priority = <PriorityChip task={task} />;
   const category = cat && (
     <span className="text-[10px] px-1.5 py-0.5 rounded-full truncate" style={{ background: `${cat.color}22`, color: cat.color }}>
       {cat.name}
     </span>
   );
-  const estimate = task.estimateMinutes && (
-    <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 tabular-nums shrink-0" title="Estimate">
-      <Clock className="w-2.5 h-2.5" />{formatEstimate(task.estimateMinutes)}
-    </span>
-  );
+  const estimate = task.estimateMinutes && <EstimateChip task={task} />;
   const repeat = repeatLabel && (
     <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 min-w-0" title="Repeats">
       <Repeat className="w-2.5 h-2.5 shrink-0" /><span className="truncate">{repeatLabel}</span>
@@ -207,6 +203,7 @@ const TaskItem = memo(function TaskItem({
             {/* A Board card shows its notes in full above, in its notes line. */}
             {task.notes && !board && <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words select-text">{task.notes}</p>}
             <ChecklistEditor items={task.checklist ?? []} onChange={(checklist) => updateTask(task.id, { checklist })} />
+            {task.repeat && <TaskRepeatHistory task={task} today={today} />}
             {subtasks.length > 0 && (
               <div className="space-y-0.5" role="group" aria-label="Subtasks">
                 {subtasks.map((child) => (
@@ -246,6 +243,20 @@ const TaskItem = memo(function TaskItem({
           ? { opacity: 0, x: -20 }
           : { opacity: 0, height: 0, marginTop: 0, paddingTop: 0, paddingBottom: 0, transition: EXPAND_TRANSITION }
       }
+      data-task-id={task.id}
+      data-selected={selected || undefined}
+      onMouseDown={(e: React.MouseEvent) => {
+        if (e.shiftKey && !(e.target as HTMLElement).closest("input, textarea")) e.preventDefault();
+      }}
+      onClickCapture={(e: React.MouseEvent) => {
+        if (!(e.ctrlKey || e.metaKey || e.shiftKey) || (e.target as HTMLElement).closest("input, textarea")) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.shiftKey) {
+          const cards = document.querySelectorAll<HTMLElement>("[data-task-id]");
+          taskSelection.extendTo(task.id, Array.from(cards, (el) => el.dataset.taskId!));
+        } else taskSelection.toggle(task.id);
+      }}
       draggable={draggable}
       onDragStart={(e: Event) => {
         (e as DragEvent).dataTransfer?.setData("text/plain", task.id);
@@ -274,7 +285,7 @@ const TaskItem = memo(function TaskItem({
         taskDrag.id = null;
       }}
       className={`glass-card-hover ${board ? "px-3 py-2.5" : "p-4"} group overflow-hidden ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${
-        dropTarget ? "ring-1 ring-primary/60 bg-primary/10" : ""
+        dropTarget ? "ring-1 ring-primary/60 bg-primary/10" : selected ? "ring-1 ring-primary bg-primary/10" : ""
       }`}
     >
       {board ? (
@@ -631,34 +642,6 @@ function buildRepeat(r: ReturnType<typeof initialRepeat>): RepeatRule | undefine
   }
 }
 
-/** Quick picks for how long a task takes, plus a minutes box for anything else. Tapping the lit chip clears it. */
-function EstimatePicker({ value, onChange }: { value: number | undefined; onChange: (v: number | undefined) => void }) {
-  return (
-    <div>
-      <label className="text-xs text-muted-foreground mb-1 block" id="estimate-label">Estimate</label>
-      <div className="flex items-center gap-1" role="group" aria-labelledby="estimate-label">
-        {ESTIMATE_PRESETS.map((minutes) => {
-          const on = value === minutes;
-          return (
-            <button key={minutes} type="button" aria-pressed={on}
-              onClick={() => onChange(on ? undefined : minutes)}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors ${
-                on ? "bg-primary text-primary-foreground" : "bg-secondary/50 text-muted-foreground hover:text-foreground"
-              }`}>
-              {formatEstimate(minutes)}
-            </button>
-          );
-        })}
-        <NumberInput unstyled min={1} max={MAX_ESTIMATE} inputMode="numeric" placeholder="min"
-          aria-label="Estimate in minutes"
-          value={value ?? ""}
-          onChange={(e) => onChange(clampEstimate(e.target.value))}
-          className="w-16 bg-secondary/50 rounded-lg px-2 py-1.5 text-sm outline-none" />
-      </div>
-    </div>
-  );
-}
-
 /** "Subtask of" picker value for no parent. */
 const NO_PARENT = "__none__";
 
@@ -869,7 +852,14 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
   );
 }
 
-type View = "list" | "kanban";
+const VIEWS = [
+  { id: "list", label: "List", Icon: LayoutList },
+  { id: "kanban", label: "Board", Icon: Columns },
+  { id: "today", label: "Today", Icon: Sun },
+  { id: "upcoming", label: "Upcoming", Icon: CalendarDays },
+  { id: "someday", label: "Someday", Icon: InfinityIcon },
+] as const;
+type View = (typeof VIEWS)[number]["id"];
 
 /**
  * The drag-to-nest handlers. Stable across renders (they read the latest
@@ -1032,6 +1022,7 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
   const fadeTimer = useRef<number>();
   const { still } = useAppActivity();
   useEffect(() => () => window.clearTimeout(fadeTimer.current), []);
+  useEffect(() => taskSelection.clear, []);
 
   const switchView = (next: View) => {
     if (next === selected) return;
@@ -1050,7 +1041,7 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
     }, VIEW_FADE_MS);
   };
 
-  useShortcut("engine.cycleView", () => switchView(selected === "list" ? "kanban" : "list"));
+  useShortcut("engine.cycleView", () => switchView(VIEWS[(VIEWS.findIndex((v) => v.id === selected) + 1) % VIEWS.length].id));
   useShortcut("engine.newTask", () => setShowTaskForm(true));
 
   // Child tasks show inside their parent, not in the lists. Sort & Filter
@@ -1104,6 +1095,10 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
     );
   };
 
+  const card = (task: Task, overdue?: boolean) => (
+    <TaskItem key={task.id} task={task} subtasks={childrenOf.get(task.id)} nesting={nesting} overdue={overdue} today={today} />
+  );
+
   // Dropping a child task anywhere on the list (not on a card) moves it back
   // to the top level.
   const draggedChild = () => {
@@ -1136,12 +1131,11 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
     <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <GlideEffect className="flex glass-card p-0.5 rounded-lg [--cd-glide-bg:hsl(var(--primary))] [--cd-glide-shadow:none] [--cd-glide-radius:0.375rem]">
-          <button data-active={selected === "list" || undefined} onClick={() => switchView("list")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${selected === "list" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <LayoutList className="w-3.5 h-3.5 inline mr-1" />List
-          </button>
-          <button data-active={selected === "kanban" || undefined} onClick={() => switchView("kanban")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${selected === "kanban" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <Columns className="w-3.5 h-3.5 inline mr-1" />Board
-          </button>
+          {VIEWS.map(({ id, label, Icon }) => (
+            <button key={id} data-active={selected === id || undefined} onClick={() => switchView(id)} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${selected === id ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+              <Icon className="w-3.5 h-3.5 inline mr-1" />{label}
+            </button>
+          ))}
         </GlideEffect>
         <CategoryManagerButton mode="task" />
         <TaskViewMenu />
@@ -1156,6 +1150,7 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
       <div className={`grid gap-4 ${view === "kanban" ? "grid-cols-[minmax(0,1fr)_260px]" : "grid-cols-1 lg:grid-cols-[1fr_260px]"}`}>
         <div className="space-y-4 min-w-0">
           <CapacityCard />
+          <TaskBulkBar today={today} />
           {/* Switching List/Board fades the old view out, then the new one in;
               reduced motion (OS setting or performance mode) swaps at once. The
               fade runs on each glass card and header (data-fade on .engine-view,
@@ -1249,10 +1244,16 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
                   </AnimatePresence>
                 </CollapsedGroup>
               </div>
-            ) : (
+            ) : view === "kanban" ? (
               <KanbanBoard key={viewKey} tasks={sortedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />
+            ) : view === "today" ? (
+              <TodayView key={viewKey} tasks={sortedTasks} today={today} card={card} />
+            ) : view === "upcoming" ? (
+              <UpcomingView key={viewKey} tasks={sortedTasks} today={today} card={card} />
+            ) : (
+              <SomedayView tasks={snoozedSections(snoozedTasks).someday} card={card} />
             )}
-            <SnoozedSection tasks={snoozedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />
+            {view !== "someday" && <SnoozedSection tasks={snoozedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />}
           </div>
         </div>
         <div className={view === "kanban" ? "" : "hidden lg:block"}>

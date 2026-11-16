@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.17.0] - 2026-11-16 - Your data moves to your device, plus 25 new features.
+
+### Changed
+
+- **Your data now lives on your device.** Tasks, transactions, categories, habits and review history are stored as JSON files in the app's data folder instead of Supabase. There is no account and no sign-in screen.
+- On the first launch after updating, Crystal OS copies your data from Supabase once: silently if you were still signed in, otherwise after you enter your Supabase email and password. Nothing is deleted from Supabase. You can also start fresh.
+- The local API checks a token made fresh on each launch instead of a Supabase session.
+
+### Removed
+
+- The Supabase client, the sign-in screen, the Supabase keys in **Local API keys**, and `npm run verify:rls`.
+
+### Added
+
+- **ACB report.** The Ledger's **ACB** section works out the adjusted cost base of each security in your non-registered accounts, in Canadian dollars, for a tax year: every sale with its proceeds, ACB and gain or loss, what you still held at year end, and **Export CSV**. US dollar trades use the average rate of your conversions; superficial losses, short sales and written options are not handled, so check it before you file.
+- **Contribution room tracker.** The Ledger's **Room** section keeps your TFSA, RRSP and FHSA room for the year: enter each account's room from CRA, log contributions and withdrawals, and see what is left or how far over you are. It is kept on your device with the rest of your data.
+- **Dividend tracking in The Ledger.** Sync now also reads Wealthsimple dividend emails, and an activity CSV's dividend rows are imported with its trades. A **Dividends** section lists each payment, with totals for the year, all time and per ticker.
+- **Review insights.** Reviews gain an **Insights** card with findings in plain words when the period has enough to go on: the habit whose days carry the most or least focus, your deepest focus weekday, the weekday you finish the most tasks, and the category furthest off its estimates. They are in the exported review too.
+- **Mood tags, a mood note and a mood heatmap.** The Today card takes tags (tired, calm, social and so on) and a one-line note with the mood, saved in the daily note. The Mood card in weekly and monthly reviews shows a calendar lit by each day's mood, with the tags and note on hover, and the most used tags.
+- **Quantified habits.** Give a habit a daily amount and a unit (8 glasses, 30 min) in **Manage habits**. Its chip on the Today card shows the amount so far with **-** and **+** next to it and fills as you go; the day counts as done once the amount is reached, and a partial day does not.
+- **Habit schedules.** In **Manage habits**, a habit can be for every day, for chosen weekdays, or for a number of times a week. Days off do not break the streak, are left out of the day counts and review rates, and get no reminder.
+- **Multi-day and all-day drag.** In the week and day views, drag an all-day event along the all-day strip to another day, and drag a timed event that runs past midnight from its first day to another day or time. Both keep their length and offer **Undo**.
+- **Resize events by dragging.** In the week and day views, drag the top or bottom edge of a timed single-day event to change when it starts or ends, snapped to 10 minutes, with the same dashed outline and **Undo** toast as a move.
+- **Duplicate an event.** **Duplicate** in the event form turns it into a copy: change the day or time, then **Add Copy**. The original is left as it was; a copy of one occurrence of a series is a single event.
+- **Keyboard navigation in The Horizon.** **T** goes to today in the month, week and day views, the left and right arrows page, and **1** to **4** pick the month, week, day and agenda views. All can be rebound in Settings.
+- **Free/busy finder.** The palette's free-slot search also takes `free:1h<7d` (a free hour in the next 7 days), `free:30m` and `find 2h free this week`, next to `next 2h`.
+- **Schedule today (off by default).** Turn it on in Settings → The Engine to get a **Schedule today** button on the Fits today? bar. It blocks time in your Google calendar for today's estimated tasks, most pressing first, in the free slots of your work day. Tasks already blocked today are skipped.
+- **Recurring-task history.** A repeating task's details show its streak, how many times it has been done and its last five completion dates.
+- **Today, Upcoming and Someday views in The Engine**, next to List and Board. Today has a seven-day strip with a task count per day; pick a day to see its tasks. Upcoming groups the next two weeks by day. Someday lists the tasks parked there. **V** now steps through all five views.
+- **Inline quick edit in The Engine.** Click the date, priority or estimate on a task card to change it there, without opening the form. Picking a new day keeps the task's length and offers Undo.
+- **Bulk edit in The Engine.** Ctrl-click task cards to select them, or Shift-click to select a range, then complete, snooze, re-categorise, re-prioritise or delete them together from the bar that appears. Each action has one Undo. Escape clears the selection.
+- **Email to task.** **Make task** on an email in The Courier adds a task named after its subject, due on the bill's due date (or today), with the sender and a link to the email in its notes.
+- **Smart "Now" card.** One line at the top of Home picks what matters most right now: an event starting within the hour (with "Leave now" when it has a place and starts within 30 minutes), an overdue task, Observatory cards to review, habits left after 6 PM, or a task due today. Click it to go there.
+- **More on the Home widgets.** The clock shows today's habits (done out of active), a daily journal prompt and, if you pick one under Settings → The Orbit, the time in a second time zone. The Ledger widget draws the month's profit and loss as a sparkline. The Courier widget counts the emails that arrived since you last opened The Courier.
+- **Search filters.** In the search bar, `type:task`, `type:event`, `type:note`, `type:mail`, `type:transaction` or `type:chat` limits the results to one kind; `due:today`, `due:tomorrow`, `due:overdue`, `due:<7d` or `due:<2w` keeps tasks and events due by then; `#school` keeps a task or transaction category, or a note tag. Task search now reads notes and checklists too.
+- **Universal linking.** Link a transaction, a trade order, an email or a calendar event to a vault note with the link button on its row (or in the event form). The note's **Connections** section lists its linked tasks and items; click one to open it.
+- **Privacy mode quick toggle.** **Ctrl+Shift+H** (change it under Settings → Keyboard) turns privacy mode on or off; hold it to peek and it blurs again when you let go. The tray menu has **Toggle privacy mode** too.
+- **Command palette actions.** Type `complete <task>`, `snooze <task> to friday`, `focus on <task>`, `add <task>` or `log 25 for Lunch` and press Enter to run it. **Toggle privacy mode**, **Toggle Do Not Disturb** and **Switch theme** are in the palette too.
+- **Palette fuzzy matching.** Tasks, transactions, settings and commands still match with a typo or with the words in another order. The last five `add` and `log` commands are listed under **Recent commands** to run again.
+- A **Stop WSL** button in the Terminal header runs `wsl --shutdown` in the active terminal.
+- `CONTRIBUTING.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md`.
+
 ## [v0.16.1] - 2026-11-15 - Release build fix.
 
 ### Fixed

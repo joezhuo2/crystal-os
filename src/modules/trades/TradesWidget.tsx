@@ -7,6 +7,7 @@ import { usesSidecar } from "@/lib/platform";
 import { toLocalDateStr } from "@/lib/utils";
 import { formatMoney, formatPct, instrumentLabel } from "@/lib/trades";
 import { buildLedger, filterPositions, tradeStats } from "@/lib/tradeLedger";
+import { runningTotal, sparklinePath } from "@/lib/homeExtras";
 
 const pnlTone = (v: number) => (v >= 0 ? "text-accent" : "text-red-400");
 
@@ -22,7 +23,11 @@ export function TradesWidget({ onClick }: { onClick?: () => void }) {
     const latest = positions
       .filter((p) => p.status !== "open" && !p.incomplete)
       .sort((a, b) => (b.closedAt ?? "").localeCompare(a.closedAt ?? ""))[0];
+    const closed = month
+      .filter((p) => p.status !== "open" && !p.incomplete)
+      .sort((a, b) => (a.closedAt ?? "").localeCompare(b.closedAt ?? ""));
     return {
+      trend: (currency: string) => runningTotal(closed.filter((p) => p.currency === currency).map((p) => p.realizedPnl)),
       stats: tradeStats(month),
       open: positions.filter((p) => p.status === "open").length,
       latest,
@@ -58,6 +63,11 @@ export function TradesWidget({ onClick }: { onClick?: () => void }) {
                     {formatMoney(s.totalPnl, s.currency, true)}
                   </span>
                   <span className="text-sm text-muted-foreground">in {monthName}</span>
+                  {summary.trend(s.currency).length > 1 && (
+                    <svg viewBox="0 0 64 20" className={`ml-auto h-5 w-16 shrink-0 ${pnlTone(s.totalPnl)}`} role="img" aria-label={`Profit and loss so far in ${monthName}`}>
+                      <path d={sparklinePath([0, ...summary.trend(s.currency)], 64, 20)} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+                    </svg>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground tabular-nums">
                   {s.count} {s.count === 1 ? "trade" : "trades"} · {formatPct(s.winRate)} win rate

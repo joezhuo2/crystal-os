@@ -22,10 +22,11 @@ describe("capacity settings", () => {
     expect(capacitySettings.setTime("dayStart", "08:30")).toBe(true);
     expect(capacitySettings.setTime("dayEnd", "18:00")).toBe(true);
     capacitySettings._reset();
-    expect(capacitySettings.getState()).toEqual({ dayStart: "08:30", dayEnd: "18:00" });
+    expect(capacitySettings.getState()).toEqual({ dayStart: "08:30", dayEnd: "18:00", autoSchedule: false });
     expect(JSON.parse(localStorage.getItem(CAPACITY_SETTINGS_KEY) ?? "null")).toEqual({
       dayStart: "08:30",
       dayEnd: "18:00",
+      autoSchedule: false,
     });
   });
 
@@ -46,6 +47,8 @@ describe("capacity settings", () => {
     expect(parseCapacitySettings(JSON.stringify({ dayStart: "07:00", dayEnd: "15:30" }))).toEqual({
       dayStart: "07:00",
       dayEnd: "15:30",
+      autoSchedule: false,
     });
+    expect(parseCapacitySettings(JSON.stringify({ dayStart: "07:00", dayEnd: "15:30", autoSchedule: true })).autoSchedule).toBe(true);
   });
 });

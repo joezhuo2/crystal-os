@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useCallback, useMemo, useEffect, useRef, useState } from "react";
 import { hashKey, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/localDb";
 import { pomodoro } from "@/lib/pomodoro";
 import { ORBIT_QUERY_KEY } from "@/lib/orbitReview";
 import { useAuth } from "@/contexts/AuthContext";
@@ -93,9 +93,9 @@ export type TaskChange = { id: string; updates: Partial<Task> };
 export type AppActions = {
   addTask: (task: Omit<Task, "id">) => Promise<string | null>;
   updateTask: (id: string, updates: Partial<Task>) => void;
-  deleteTask: (id: string) => void;
+  deleteTask: (id: string | string[]) => void;
   /** Marks a task done today, or moves an "after completion" repeat to its next date. */
-  completeTask: (task: Task) => void;
+  completeTask: (task: Task | Task[]) => void;
   /**
    * Applies date, snooze or column changes to one or more tasks with a single
    * Undo toast that puts every changed field back.
@@ -243,7 +243,7 @@ function cacheSetters(client: QueryClient) {
   };
 }
 
-// ── helpers to map between Supabase snake_case and app camelCase ──
+// ── helpers to map between stored snake_case rows and app camelCase ──
 
 type TaskRow = ReturnType<typeof mapTaskToDb> & {
   id: string;
@@ -356,7 +356,7 @@ type DbRow = { id: string } & Record<string, unknown>;
 
 /** One keyset page of a table: rows after `afterId`, in id order. */
 function fetchPage(table: "tasks" | "transactions", afterId: string | null, limit: number) {
-  const query = supabase.from(table).select("*");
+  const query = db.from(table).select("*");
   return (afterId ? query.gt("id", afterId) : query).order("id").limit(limit);
 }
 
@@ -380,9 +380,9 @@ function reportError(action: string, error: { message: string } | null): boolean
 
 // ── offline queue ──
 
-/** Sends one task, transaction or completion write to Supabase. */
+/** Sends one task, transaction or completion write to the local store. */
 async function sendWrite(write: QueuedWrite): Promise<WriteResult> {
-  const table = supabase.from(write.table);
+  const table = db.from(write.table);
   if (write.op === "insert") return await table.insert({ ...write.row, id: write.id });
   if (write.op === "update") return await table.update(write.row).eq("id", write.id);
   return await table.delete().eq("id", write.id);
@@ -416,7 +416,7 @@ async function resolveCategories<T extends TaskCategory | FinancialCategory>(
   }
 
   const seeded = await seedDefaultCategories(
-    supabase as unknown as CategoryClient,
+    db as unknown as CategoryClient,
     table,
     defaults.map(({ name, color }) => ({ name, color })),
   );
@@ -476,7 +476,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [queryClient]);
 
   /**
-   * Sends a write, or keeps it for later when Supabase cannot be reached.
+   * Sends a write, or keeps it for later when the local API cannot be reached.
    * Resolves true when the write was saved or queued (the caller then updates
    * the lists), false when the server rejected it (already reported).
    *
@@ -491,7 +491,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         offlineQueue.push({ ...spec, queuedAt: new Date().toISOString() });
         if (wasEmpty) {
           toast("Saved on this device", {
-            description: "Supabase can't be reached. Your changes will sync when it's back.",
+            description: "The local API can't be reached. Your changes will be saved when it's back.",
           });
         }
         return true;
@@ -512,7 +512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 
   // Retry when the browser comes back online, and every 30 s while anything
-  // is waiting (a Supabase outage does not fire "online").
+  // is waiting (a stopped local API does not fire "online").
   useEffect(() => {
     if (!user) return;
     const retry = () => {
@@ -528,8 +528,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ── Fetch all data when a user is present ──
   //
-  // No .eq("user_id", …) filters appear anywhere below. RLS does that
-  // server-side, and duplicating it here would be a second place to get wrong.
   useEffect(() => {
     offlineQueue.use(user?.id ?? null);
     if (!user) {
@@ -587,13 +585,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const [, , taskCatRes, finCatRes] = await Promise.all([
         tasksLoad.firstPage,
         txLoad.firstPage,
-        supabase.from("task_categories").select("*").order("name"),
-        supabase.from("financial_categories").select("*").order("name"),
+        db.from("task_categories").select("*").order("name"),
+        db.from("financial_categories").select("*").order("name"),
       ]);
 
       if (!active) return;
 
-      // Writes still waiting (Supabase answered the load but not the flush,
+      // Writes still waiting (the local API answered the load but not the flush,
       // or the load came from elsewhere) stay on screen until they are sent.
       const queued = offlineQueue.get();
       const queuedTasks = pendingInserts(queued, "tasks") as TaskRow[];
@@ -633,9 +631,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       active = false;
     };
-    // Keyed on user.id, not on user. Supabase hands back a new user object on
-    // every hourly token refresh, so depending on the object itself would
-    // refetch the whole dashboard once an hour for no reason.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, reloadToken]);
 
@@ -665,11 +660,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Observatory topics without a task focus under a "topic:" id, which is not a tasks row.
       const linked = taskId && !taskId.startsWith("topic:") ? { ...row, task_id: taskId, task_title: taskTitle } : row;
       void (async () => {
-        let { error } = await supabase.from("focus_sessions").insert(linked);
+        let { error } = await db.from("focus_sessions").insert(linked);
         // Before 0008_focus_task_title.sql there is no task_title column; the
         // run still saves, linked by id only.
         if (error && taskId && isMissingColumn(error)) {
-          ({ error } = await supabase.from("focus_sessions").insert({ ...row, task_id: taskId }));
+          ({ error } = await db.from("focus_sessions").insert({ ...row, task_id: taskId }));
         }
         if (reportError("save your focus time", error)) return;
         queryClient.invalidateQueries({ queryKey: ORBIT_QUERY_KEY });
@@ -729,14 +724,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         offlineQueue.remove(isQueuedTick);
         return;
       }
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("task_completions")
         .select("id")
         .eq("task_id", taskId)
         .order("completed_at", { ascending: false })
         .limit(1);
       if (reportError("update the completion history", error) || !data?.length) return;
-      const { error: deleteError } = await supabase.from("task_completions").delete().eq("id", data[0].id);
+      const { error: deleteError } = await db.from("task_completions").delete().eq("id", data[0].id);
       if (reportError("update the completion history", deleteError)) return;
       queryClient.invalidateQueries({ queryKey: ORBIT_QUERY_KEY });
     },
@@ -832,12 +827,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [forgetCompletion, queryClient, saveWrite, setTasks]);
 
   const completeTask = useCallback(
-    (task: Task) => {
+    (input: Task | Task[]) => {
+      const list = Array.isArray(input) ? input : [input];
       // Every task this completion touches (the task and its open children)
       // and the fields it changed, for Undo.
       const done: TaskChange[] = [];
       const before = new Map<string, Task>();
       const complete = (task: Task) => {
+        if (before.has(task.id)) return;
         const timing = completionUpdates(task, toLocalDateStr());
         const rolled = "startDate" in timing;
         // Completing a task ticks its checklist; a repeat moving on to its next
@@ -861,14 +858,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ?.filter((t) => t.parentId === task.id && !t.completed && t.id !== task.id) ?? [];
         for (const child of children) complete(child);
       };
-      complete(task);
+      for (const task of list) complete(task);
+      if (!done.length) return;
 
-      const nextDate = done[0].updates.startDate;
+      const nextDate = list.length === 1 ? done[0].updates.startDate : undefined;
       const next = nextDate
         ? new Date(`${nextDate}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
         : undefined;
       undoToast(
-        `${task.name} done`,
+        list.length === 1 ? `${list[0].name} done` : `${list.length} tasks done`,
         () => {
           for (const { id, updates } of done) {
             const patch = restorePatch(before.get(id)!, updates);
@@ -894,17 +892,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     for (const childId of childIds) updateTask(childId, { parentId: id });
   }, [saveWrite, setTasks, updateTask]);
 
-  const deleteTask = useCallback(async (id: string) => {
+  const deleteTask = useCallback(async (input: string | string[]) => {
     const tasks = queryClient.getQueryData<Task[]>(APP_DATA_KEYS.tasks) ?? [];
-    const task = tasks.find((t) => t.id === id);
-    const childIds = tasks.filter((t) => t.parentId === id).map((t) => t.id);
-    if (!(await saveWrite({ op: "delete", table: "tasks", id }, "delete the task"))) return;
+    const deleted = new Set<string>();
+    for (const id of Array.isArray(input) ? input : [input]) {
+      if (await saveWrite({ op: "delete", table: "tasks", id }, "delete the task")) deleted.add(id);
+    }
+    if (!deleted.size) return;
     // The database moves its child tasks back to the top level (on delete set
     // null); the cache follows.
     setTasks((prev) =>
-      prev.filter((t) => t.id !== id).map((t) => (t.parentId === id ? { ...t, parentId: undefined } : t)),
+      prev
+        .filter((t) => !deleted.has(t.id))
+        .map((t) => (t.parentId && deleted.has(t.parentId) ? { ...t, parentId: undefined } : t)),
     );
-    if (task) undoToast(`${task.name} deleted`, () => void restoreTask(task, childIds));
+    const gone = tasks.filter((t) => deleted.has(t.id)).sort((a, b) => Number(!!a.parentId) - Number(!!b.parentId));
+    if (!gone.length) return;
+    undoToast(gone.length === 1 ? `${gone[0].name} deleted` : `${gone.length} tasks deleted`, () => {
+      void (async () => {
+        for (const task of gone) {
+          await restoreTask(task, tasks.filter((t) => t.parentId === task.id && !deleted.has(t.id)).map((t) => t.id));
+        }
+      })();
+    });
   }, [queryClient, restoreTask, saveWrite, setTasks]);
 
   const rescheduleTasks = useCallback(
@@ -956,7 +966,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ── Task Categories ──
   const addTaskCategory = useCallback(async (cat: Omit<TaskCategory, "id">) => {
-    const { data, error } = await supabase.from("task_categories").insert(mapCategoryToDb(cat)).select().single();
+    const { data, error } = await db.from("task_categories").insert(mapCategoryToDb(cat)).select().single();
     if (reportError("add the category", error) || !data) return null;
     const added = mapCategoryFromDb(data) as TaskCategory;
     setTaskCategories((prev) => [...prev, added]);
@@ -964,20 +974,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [setTaskCategories]);
 
   const deleteTaskCategory = useCallback(async (id: string) => {
-    const { error } = await supabase.from("task_categories").delete().eq("id", id);
+    const { error } = await db.from("task_categories").delete().eq("id", id);
     if (reportError("delete the category", error)) return;
     setTaskCategories((prev) => prev.filter((c) => c.id !== id));
   }, [setTaskCategories]);
 
   // ── Financial Categories ──
   const addFinancialCategory = useCallback(async (cat: Omit<FinancialCategory, "id">) => {
-    const { data, error } = await supabase.from("financial_categories").insert(mapCategoryToDb(cat)).select().single();
+    const { data, error } = await db.from("financial_categories").insert(mapCategoryToDb(cat)).select().single();
     if (reportError("add the category", error) || !data) return;
     setFinancialCategories((prev) => [...prev, mapCategoryFromDb(data) as FinancialCategory]);
   }, [setFinancialCategories]);
 
   const deleteFinancialCategory = useCallback(async (id: string) => {
-    const { error } = await supabase.from("financial_categories").delete().eq("id", id);
+    const { error } = await db.from("financial_categories").delete().eq("id", id);
     if (reportError("delete the category", error)) return;
     setFinancialCategories((prev) => prev.filter((c) => c.id !== id));
   }, [setFinancialCategories]);

@@ -29,7 +29,7 @@ const event = (id: string, time: string): TradeEvent => ({
 describe("trades store", () => {
   it("starts empty and round-trips updates", async () => {
     const store = createTradesStore(dir);
-    expect(await store.read()).toEqual({ known: {}, events: [], fx: [], edits: {}, journal: {}, lastSync: null });
+    expect(await store.read()).toEqual({ known: {}, events: [], fx: [], dividends: [], edits: {}, journal: {}, lastSync: null });
 
     await store.update((s) => {
       s.events.push(event("a", "2026-10-01T00:00:00.000Z"));
@@ -69,6 +69,7 @@ describe("trades store", () => {
       known: {},
       events: [event("c", "2026-10-04T00:00:00.000Z"), event("b", "2026-10-02T00:00:00.000Z"), event("a", "2026-10-01T00:00:00.000Z"), event("gone", "2026-10-05T00:00:00.000Z")],
       fx: [],
+      dividends: [],
       edits: { b: edited, gone: null },
       journal: {},
       lastSync: null,

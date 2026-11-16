@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Archive, Bell, BellRing, GripVertical, Plus } from "lucide-react";
+import { Archive, Bell, BellRing, CalendarDays, GripVertical, Plus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,8 +15,129 @@ import { GlassTip } from "@/components/ui/glass-tooltip";
 import { useHabitActions, useHabitsData } from "@/hooks/useHabits";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { NumberInput } from "@/components/ui/number-input";
-import { HABIT_COLORS, HABIT_NAME_MAX, type Habit } from "@/lib/habits";
+import { HABIT_COLORS, HABIT_NAME_MAX, HABIT_UNIT_MAX, type Habit } from "@/lib/habits";
 import { MAX_HABIT_REMINDERS_PER_DAY, habitReminders, useHabitReminders } from "@/lib/habitReminders";
+
+const WEEKDAY_BUTTONS = [
+  { day: 1, label: "Mo" },
+  { day: 2, label: "Tu" },
+  { day: 3, label: "We" },
+  { day: 4, label: "Th" },
+  { day: 5, label: "Fr" },
+  { day: 6, label: "Sa" },
+  { day: 0, label: "Su" },
+];
+
+const scheduleHint = (habit: Habit) =>
+  habit.weeklyTarget
+    ? `${habit.weeklyTarget} times a week`
+    : habit.weekdays?.length
+      ? WEEKDAY_BUTTONS.filter((b) => habit.weekdays?.includes(b.day)).map((b) => b.label).join(" ")
+      : "Every day";
+
+/** Every day, chosen weekdays, or a number of times a week. */
+function SchedulePicker({ habit }: { habit: Habit }) {
+  const { updateHabit } = useHabitActions();
+  const mode = habit.weeklyTarget ? "weekly" : habit.weekdays?.length ? "days" : "daily";
+  const set = (changes: { weekdays?: number[] | null; weeklyTarget?: number | null }) => void updateHabit(habit.id, changes);
+  return (
+    <div className="grid gap-2">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Schedule for ${habit.name}`}>
+        {(
+          [
+            ["daily", "Every day", { weekdays: null, weeklyTarget: null }],
+            ["days", "Chosen days", { weekdays: [1, 2, 3, 4, 5], weeklyTarget: null }],
+            ["weekly", "Times a week", { weekdays: null, weeklyTarget: 3 }],
+          ] as const
+        ).map(([id, label, changes]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={mode === id}
+            className={`orbit-chip ${mode === id ? "orbit-chip-on" : ""}`}
+            onClick={() => mode !== id && set({ ...changes, weekdays: changes.weekdays && [...changes.weekdays] })}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {mode === "days" && (
+        <div className="flex gap-1" role="group" aria-label={`Days for ${habit.name}`}>
+          {WEEKDAY_BUTTONS.map(({ day, label }) => {
+            const on = !!habit.weekdays?.includes(day);
+            return (
+              <button
+                key={day}
+                type="button"
+                aria-pressed={on}
+                className={`orbit-chip px-2 ${on ? "orbit-chip-on" : ""}`}
+                onClick={() => {
+                  const next = on ? (habit.weekdays ?? []).filter((d) => d !== day) : [...(habit.weekdays ?? []), day];
+                  set({ weekdays: next.length ? next : null });
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {mode === "weekly" && (
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <NumberInput
+            unstyled
+            min={1}
+            max={7}
+            value={habit.weeklyTarget ?? 3}
+            onChange={(e) => set({ weeklyTarget: Math.max(1, Math.min(7, Math.round(Number(e.target.value)) || 1)) })}
+            aria-label={`Times a week for ${habit.name}`}
+            className="orbit-textarea py-1.5 text-xs w-16 text-right"
+          />
+          times a week, on any days
+        </label>
+      )}
+      <p className="text-[11px] text-muted-foreground">Days off do not break the streak.</p>
+      <AmountPicker habit={habit} />
+    </div>
+  );
+}
+
+/** A daily amount to reach (8 glasses, 30 min); empty for a plain tick. */
+function AmountPicker({ habit }: { habit: Habit }) {
+  const { updateHabit } = useHabitActions();
+  const [unit, setUnit] = useState(habit.unit ?? "");
+  useEffect(() => setUnit(habit.unit ?? ""), [habit.unit]);
+  return (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <NumberInput
+        unstyled
+        min={0}
+        max={9999}
+        placeholder="1"
+        value={habit.target ?? ""}
+        onChange={(e) => {
+          const target = Math.min(9999, Math.round(Number(e.target.value)) || 0);
+          void updateHabit(habit.id, { target: target > 0 ? target : null });
+        }}
+        aria-label={`Daily amount for ${habit.name}`}
+        className="orbit-textarea py-1.5 text-xs w-16 text-right"
+      />
+      <input
+        value={unit}
+        onChange={(e) => setUnit(e.target.value)}
+        onBlur={() => unit.trim() !== (habit.unit ?? "") && void updateHabit(habit.id, { unit: unit.trim() || null })}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        }}
+        maxLength={HABIT_UNIT_MAX}
+        placeholder="unit"
+        aria-label={`Unit for ${habit.name}`}
+        className="orbit-textarea py-1.5 text-xs w-24"
+      />
+      a day (empty: a plain tick)
+    </div>
+  );
+}
 
 /** A reminder time for one habit and how many hourly reminders a day it gets. */
 function ReminderPicker({ habit }: { habit: Habit }) {
@@ -79,6 +200,7 @@ function HabitRow({
   const [name, setName] = useState(habit.name);
   const [picking, setPicking] = useState(false);
   const [reminding, setReminding] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
   const reminder = useHabitReminders()[habit.id];
   useEffect(() => setName(habit.name), [habit.name]);
 
@@ -131,6 +253,17 @@ function HabitRow({
           aria-label="Habit name"
           className="orbit-habit-name"
         />
+        <GlassTip label="Schedule and amount" hint={scheduleHint(habit)} tone="orbit">
+          <button
+            type="button"
+            className="orbit-icon-button"
+            aria-label={`Schedule for ${habit.name}`}
+            aria-expanded={scheduling}
+            onClick={() => setScheduling((s) => !s)}
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+          </button>
+        </GlassTip>
         <GlassTip label="Reminder" hint={reminder ? `At ${reminder.time}` : "Off"} tone="orbit">
           <button
             type="button"
@@ -151,6 +284,11 @@ function HabitRow({
       {picking && (
         <div className="mt-2.5 pl-7">
           <ColorPicker value={habit.color} onChange={(color) => void updateHabit(habit.id, { color })} label={`Colour of ${habit.name}`} />
+        </div>
+      )}
+      {scheduling && (
+        <div className="mt-2.5 pl-7">
+          <SchedulePicker habit={habit} />
         </div>
       )}
       {reminding && (

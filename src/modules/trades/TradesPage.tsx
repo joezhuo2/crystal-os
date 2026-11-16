@@ -1,6 +1,7 @@
 import { useCallback, useDeferredValue, useMemo, useRef, useState, type ReactNode } from "react";
 import { m } from "framer-motion";
 import { toast } from "sonner";
+import { ItemNoteLink } from "@/components/ItemNoteLink";
 import { AlertTriangle, ArrowDown, ArrowUp, FileUp, Mail, NotebookPen, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,10 +28,12 @@ import type { TabId } from "@/modules/registry";
 import { CumulativeChart, PnlCalendar, TickerBars } from "./TradesCharts";
 import { PositionDialog } from "./PositionDialog";
 import { TradeDialog, type TradeDraft } from "./TradeDialog";
-import { EmailLink } from "./shared";
+import { DataTable, EmailLink, Empty, Td, Th } from "./shared";
+import { AcbSection, DividendsTable } from "./LedgerSections";
+import { ContributionRoom } from "./ContributionRoom";
 import { dateTime, pnlClass, qtyLabel, shortDate } from "./format";
 
-type Section = "closed" | "open" | "orders" | "tags" | "fx";
+type Section = "closed" | "open" | "orders" | "tags" | "fx" | "dividends" | "acb" | "room";
 
 type CurrencyView = "ALL" | TradeCurrency;
 
@@ -40,6 +43,9 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: "orders", label: "Orders" },
   { id: "tags", label: "Tags" },
   { id: "fx", label: "FX" },
+  { id: "dividends", label: "Dividends" },
+  { id: "acb", label: "ACB" },
+  { id: "room", label: "Room" },
 ];
 
 const PERIODS = [
@@ -62,33 +68,6 @@ const periodFrom = (period: string, today: string) => {
 };
 
 const daysUntil = (expiry: string, today: string) => Math.round((new Date(`${expiry}T12:00:00`).getTime() - new Date(`${today}T12:00:00`).getTime()) / 86_400_000);
-
-function DataTable({ head, children }: { head: ReactNode; children: ReactNode }) {
-  return (
-    <table className="w-full text-xs">
-      <thead className="sticky top-0 z-10 bg-background/85 backdrop-blur-sm text-left text-muted-foreground">
-        <tr>{head}</tr>
-      </thead>
-      <tbody>{children}</tbody>
-    </table>
-  );
-}
-
-const HIDE_NARROW = "hidden lg:table-cell";
-
-const Th = ({ children, right, sr, hide }: { children?: ReactNode; right?: boolean; sr?: string; hide?: boolean }) => (
-  <th scope="col" className={`px-3 py-2.5 font-medium ${right ? "text-right" : ""} ${hide ? HIDE_NARROW : ""}`}>
-    {sr ? <span className="sr-only">{sr}</span> : children}
-  </th>
-);
-
-const Td = ({ children, right, hide, className = "" }: { children?: ReactNode; right?: boolean; hide?: boolean; className?: string }) => (
-  <td className={`px-3 py-2.5 break-words ${right ? "text-right tabular-nums" : ""} ${hide ? HIDE_NARROW : ""} ${className}`}>{children}</td>
-);
-
-function Empty({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`p-8 text-center text-sm text-muted-foreground ${className}`}>{children}</div>;
-}
 
 function StatsStrip({ stats, title }: { stats: TradeStats; title?: string }) {
   const c = stats.currency;
@@ -397,6 +376,7 @@ function OrdersTable({ rows, onEdit, onDelete }: { rows: TradeEvent[]; onEdit: (
             </Td>
             <Td>
               <div className="flex justify-end gap-1">
+                <ItemNoteLink kind="trade" itemId={e.id} title={`${e.side === "buy" ? "Buy" : "Sell"} ${e.symbol} · ${e.time.slice(0, 10)}`} />
                 <button type="button" aria-label={`Edit the ${e.symbol} order`} onClick={() => onEdit(e)} className="p-1 text-muted-foreground hover:text-primary">
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -593,6 +573,10 @@ function Ledger({ data, sync, onNavigate }: { data: TradesData; sync: ReturnType
       ),
     [ledger.orders, filter.account, filter.kind, view],
   );
+  const dividends = useMemo(
+    () => data.dividends.filter((d) => (!filter.account || d.account === filter.account) && (view === "ALL" || d.currency === view)),
+    [data.dividends, filter.account, view],
+  );
   const selected = selectedId ? ledger.positions.find((p) => p.id === selectedId) : undefined;
 
   const openPosition = useCallback((p: Position) => setSelectedId(p.id), []);
@@ -623,7 +607,13 @@ function Ledger({ data, sync, onNavigate }: { data: TradesData; sync: ReturnType
     try {
       const csv = await file.text();
       importCsv.mutate(csv, {
-        onSuccess: (r) => toast.success(`Imported ${r.imported} ${r.imported === 1 ? "trade" : "trades"}`, { description: r.skipped ? `${r.skipped} rows skipped` : undefined }),
+        onSuccess: (r) =>
+          toast.success(`Imported ${r.imported} ${r.imported === 1 ? "trade" : "trades"}`, {
+            description:
+              [r.dividends_imported ? `${r.dividends_imported} ${r.dividends_imported === 1 ? "dividend" : "dividends"}` : "", r.skipped ? `${r.skipped} rows skipped` : ""]
+                .filter(Boolean)
+                .join(" · ") || undefined,
+          }),
         onError: (err) => toast.error("Could not import the file", { description: err.message }),
       });
     } catch (err) {
@@ -643,7 +633,7 @@ function Ledger({ data, sync, onNavigate }: { data: TradesData; sync: ReturnType
   };
 
   const syncing = sync.isPending || !!data.syncing;
-  const counts: Record<Section, number> = { closed: closedRows.length, open: openRows.length, orders: orders.length, tags: 0, fx: data.fx.length };
+  const counts: Record<Section, number> = { closed: closedRows.length, open: openRows.length, orders: orders.length, tags: 0, fx: data.fx.length, dividends: dividends.length, acb: 0, room: 0 };
   const shownSection = useDeferredValue(section);
   const { still } = useAppActivity();
   const statsTitle = view === "ALL" && currencies.length > 1 ? `All in USD (C$1 = US$${rate.toFixed(3)})` : undefined;
@@ -675,12 +665,18 @@ function Ledger({ data, sync, onNavigate }: { data: TradesData; sync: ReturnType
         <OrdersTable rows={orders} onEdit={editEvent} onDelete={setDeleting} />
       ) : shownSection === "tags" ? (
         <TagsTable closed={counted} journal={data.journal} />
+      ) : shownSection === "dividends" ? (
+        <DividendsTable dividends={dividends} year={today.slice(0, 4)} />
+      ) : shownSection === "acb" ? (
+        <AcbSection events={data.events} fx={data.fx} today={today} />
+      ) : shownSection === "room" ? (
+        <ContributionRoom today={today} />
       ) : (
         <FxTable fx={data.fx} />
       ),
-    [shownSection, closedRows, openRows, orders, counted, data.journal, data.fx, today, openPosition, addMissing, editEvent],
+    [shownSection, closedRows, openRows, orders, counted, dividends, data.events, data.journal, data.fx, today, openPosition, addMissing, editEvent],
   );
-  const hasData = data.events.length > 0;
+  const hasData = data.events.length > 0 || data.dividends.length > 0;
 
   return (
     <>
@@ -708,7 +704,7 @@ function Ledger({ data, sync, onNavigate }: { data: TradesData; sync: ReturnType
           <Mail className="w-6 h-6 text-primary shrink-0" aria-hidden />
           <div className="flex-1 min-w-48 space-y-1">
             <p className="text-sm font-semibold">Connect Gmail to collect your trades</p>
-            <p className="text-xs text-muted-foreground">The Ledger reads your Wealthsimple order emails. Connect a Google account in The Courier, or add trades by hand or from a CSV.</p>
+            <p className="text-xs text-muted-foreground">The Ledger reads your Wealthsimple order and dividend emails. Connect a Google account in The Courier, or add trades by hand or from a CSV.</p>
           </div>
           {onNavigate && (
             <Button size="sm" onClick={() => onNavigate("mail")}>

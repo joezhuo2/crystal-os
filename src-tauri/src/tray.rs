@@ -19,11 +19,13 @@ use crate::window;
 const POMODORO_EVENT: &str = "tray://pomodoro";
 const QUICK_ADD_EVENT: &str = "tray://quick-add";
 const CHECK_UPDATE_EVENT: &str = "tray://check-update";
+const PRIVACY_EVENT: &str = "tray://privacy";
 
 const ID_SHOW_HIDE: &str = "show-hide";
 const ID_POMODORO_TOGGLE: &str = "pomodoro-toggle";
 const ID_POMODORO_RESET: &str = "pomodoro-reset";
 const ID_QUICK_ADD: &str = "quick-add";
+const ID_PRIVACY: &str = "privacy";
 const ID_CHECK_UPDATE: &str = "check-update";
 const ID_QUIT: &str = "quit";
 
@@ -61,6 +63,7 @@ pub fn init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
   let toggle = MenuItem::with_id(app, ID_POMODORO_TOGGLE, "Start", true, None::<&str>)?;
   let reset = MenuItem::with_id(app, ID_POMODORO_RESET, "Reset", true, None::<&str>)?;
   let quick_add = MenuItem::with_id(app, ID_QUICK_ADD, "Quick Add…", true, None::<&str>)?;
+  let privacy = MenuItem::with_id(app, ID_PRIVACY, "Toggle privacy mode", true, None::<&str>)?;
   let version = app.package_info().version.to_string();
   let update = MenuItem::with_id(app, "update-status", update_label(None, &version), false, None::<&str>)?;
   let check_update = MenuItem::with_id(app, ID_CHECK_UPDATE, "Check for updates", true, None::<&str>)?;
@@ -76,6 +79,7 @@ pub fn init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
       &reset,
       &PredefinedMenuItem::separator(app)?,
       &quick_add,
+      &privacy,
       &PredefinedMenuItem::separator(app)?,
       &update,
       &check_update,
@@ -130,6 +134,9 @@ fn handle_menu<R: Runtime>(app: &AppHandle<R>, id: &str) {
     ID_QUICK_ADD => {
       window::show(app);
       let _ = app.emit(QUICK_ADD_EVENT, ());
+    }
+    ID_PRIVACY => {
+      let _ = app.emit(PRIVACY_EVENT, ());
     }
     ID_CHECK_UPDATE => {
       window::show(app);

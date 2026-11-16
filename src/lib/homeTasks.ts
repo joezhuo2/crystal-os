@@ -7,6 +7,13 @@ import { taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 
 export const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
+export const PRIORITY_OPTIONS: { value: Priority; label: string; short: string; className: string }[] = [
+  { value: "low", label: "Low", short: "Low", className: "priority-low" },
+  { value: "medium", label: "Medium", short: "Med", className: "priority-medium" },
+  { value: "high", label: "High", short: "High", className: "priority-high" },
+  { value: "urgent", label: "Urgent", short: "Urgent", className: "priority-urgent" },
+];
+
 /** A priority the table doesn't know sorts after every known one. */
 const rank = (p: Priority) => PRIORITY_RANK[p] ?? 4;
 
@@ -43,4 +50,10 @@ export function upcomingTasks(tasks: Task[], today: string): UpcomingTask[] {
         a.date.localeCompare(b.date) ||
         a.task.startTime.localeCompare(b.task.startTime),
     );
+}
+
+export function upcomingByDate(tasks: Task[], today: string): { date: string; tasks: Task[] }[] {
+  const byDate = new Map<string, Task[]>();
+  for (const { task, date } of upcomingTasks(tasks, today)) byDate.set(date, [...(byDate.get(date) ?? []), task]);
+  return [...byDate].sort(([a], [b]) => a.localeCompare(b)).map(([date, list]) => ({ date, tasks: list }));
 }

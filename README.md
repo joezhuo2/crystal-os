@@ -4,16 +4,15 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
-![Supabase](https://img.shields.io/badge/Supabase-2.97-3ECF8E?logo=supabase&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-1693%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.16.1-6366F1)
+![Version](https://img.shields.io/badge/version-0.17.0-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-> A personal productivity dashboard built with React, TypeScript, Supabase, your Google Calendar, and your Obsidian vault. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
+> A personal productivity dashboard built with React, TypeScript, your Google Calendar, and your Obsidian vault. Your data stays on your device. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
 <p align="center"><img src="docs/images/crystal-os-tour.gif" alt="A tour of Crystal OS: The Pulse, The Engine, The Horizon, The Orbit, The Vault, The Ledger, The Courier, The Atmosphere, The Observatory (courses, topics and a review card), The Archive, The Portal and Settings" width="840"></p>
 
-Current release: **v0.16.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.17.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 [Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
@@ -29,7 +28,7 @@ Current release: **v0.16.1** — see [CHANGELOG.md](CHANGELOG.md) for release hi
 | **🏠 Home widgets** | A 3×3 grid: the greeting and clock (on The Orbit's black hole, with this week's tasks done and focus time; opens The Orbit), weather (with a one-line nudge such as "Rain from 4 PM, take an umbrella"), and a Vault card (this month's net, in/out, top spend); the Engine (top 3 open tasks with quick-complete and add, a free-time bar with today's planned work and a nudge toward the next task ("Want to start Write report?"), or once today is clear the next 14 days' tasks, highest priority first, with a nudge to get a head start on one), today's calendar events, the Archive, and The Ledger (this month's realized P/L, win rate, open positions and your last trade); then Nebula, Portal and Terminal boxes. The weather, Engine, Horizon, Archive, Nebula, Portal and Terminal boxes are each themed like their page (a small Living Sky with your Atmosphere settings, the Engine's red black hole, the Horizon's black hole, the Archive's violet black hole, your Nebula palette, the Portal's warm black hole). Every card opens its page; each loading widget has its own shimmer skeleton. Drag a widget by its box to move it; **Edit layout** resizes (1–3 columns), hides, shows and resets them, saved per device. The whole page sits on a white-gold black hole in deep navy, with a navy-and-gold sidebar, a white-gold Crystal logo and a matching search bar (Alt+Shift+Space on desktop, Ctrl+K on the web); the cards keep their own looks. **Settings → Backgrounds** swaps the Home, Settings, Horizon, Engine, Orbit, Portal and Archive images for your own and sets their blur and opacity |
 | **💰 Financials** | Transaction tracking (income/expenses), categories, monthly summaries, and balance overview |
 | **📈 The Ledger** | A trade journal built from your Wealthsimple order emails. Every time you open The Ledger or The Courier it reads new fill, partial-fill, cancel, expiry and rejection emails (and CAD/USD conversions) from your connected Gmail, and rebuilds your stock and option trades with **average-cost** P/L in $ and %. An **All / USD / CAD** switch shows everything in US$ (CAD converted at the average rate of your conversion emails) or one currency; filters narrow by account (TFSA, non-registered, …), stocks or options, period and tag. Stats (realized P/L, win rate, profit factor, average win and loss, best and worst, average hold), a cumulative P/L chart, P/L by ticker and a daily P/L calendar sit above **Closed**, **Open**, **Orders**, **Tags** and **FX** lists. Options left open past expiry close as expired at 0, partial fills are de-duplicated, a sale with no buy in your email history is flagged with **Add the missing buy**, and possible superficial losses and the estimated 1.5% FX fee are marked as estimates. Each trade has a journal: a plan (thesis, target, stop), a review (reflection, followed my rules, grade A–F) and tags, also addable when you add a trade by hand; the Tags list shows which habits make or lose money. Trades can be added, edited, hidden or imported from a Wealthsimple CSV. Unrealized P/L is not tracked (it needs live prices). Data stays on your machine in `trades.json` |
-| **📶 Offline saves** | Task and transaction changes made while Supabase is unreachable are kept on the device and replayed in order once it answers again (on reconnect, every 30 s, and at the next start), instead of failing the save. See [Offline queue](#-offline-queue) |
+| **📶 Offline saves** | Task and transaction changes made while the local API is unreachable are kept in the browser's storage and replayed in order once it answers again (on reconnect, every 30 s, and at the next start), instead of failing the save. See [Offline queue](#-offline-queue) |
 | **🌤️ Weather** | Current conditions + 7-day forecast for any of ~840 Canadian locations (searchable city picker, or **Use my location** for the nearest one), the Air Quality Health Index from the nearest station with its 24 h peak, the UV index with advice, and how much daylight is left, over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
 | **📖 The Archive** | Browse, search, read and edit your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown, a **Connections** section under each note (the notes it links to, the notes that link back, and the notes sharing one of its tags or categories, each one click away), and a CodeMirror markdown editor that refuses to overwrite a note changed on disk since you opened it. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
 | **🔭 The Observatory** | Study courses stored as Obsidian vault markdown: one folder per course with a `_course.md`, topic notes and a `progress.md`. Create, edit, archive and rename courses, or import a University of Waterloo course outline to fill in the learning outcomes, the weekly plan as topics, and the assessments with exam weights, or start from a starter course. Review questions with FSRS spaced repetition in short, priority-ordered observations, and track grades with a calculator per course. Drop PDFs to file them automatically, then **Process all** to pull questions from textbooks, question sheets and slides (with on-device OCR) into Review. Its own indigo backdrop, a **Settings** section, **N** for a new course and **R** to review. Phases 1 to 3 of 5: integrations and Claude features are still to come |
@@ -97,7 +96,7 @@ Current release: **v0.16.1** — see [CHANGELOG.md](CHANGELOG.md) for release hi
 | **Frontend** | React 18, TypeScript, Vite |
 | **UI** | shadcn/ui (Radix UI), Tailwind CSS, Lucide Icons |
 | **State** | TanStack Query (React Query v5) cache for app data, `useSyncExternalStore` stores for UI and settings |
-| **Backend** | Supabase (PostgreSQL, Auth, Realtime) |
+| **Backend** | A local Node API (the `crystal-api` sidecar on desktop, Vite middleware in dev) storing JSON files |
 | **Vault** | Vite middleware plugin + `fast-glob` + `gray-matter` (Node-only, server side) |
 | **Calendar** | Vite middleware plugin + `google-auth-library` OAuth2 and the Calendar v3 REST API (Node-only, server side) |
 | **Desktop** | Tauri 2 (Rust): global hotkeys, autostart, tray, native vault fs — plus a Node sidecar for the web APIs |
@@ -124,13 +123,12 @@ From then on, **Settings → Install & update → Check for updates** installs n
 
 ### First-run setup
 
-You need a [Supabase](https://supabase.com) project of your own (the free tier works); Crystal OS keeps your tasks and transactions there.
+Crystal OS has no account and no sign-in. Tasks, transactions, habits and review history are JSON files on your computer.
 
-1. In the Supabase SQL Editor, run the files in [`supabase/migrations/`](supabase/migrations) in order. See [Database Schema](#-database-schema-supabase).
-2. Under **Authentication → Users**, create your account, then turn off new signups under **Authentication → Providers**.
-3. Open Crystal OS and use the **Finish setting up** card on Home (or **Settings → Startup → Local API keys**) to enter `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and, for Google Calendar, the Google client ID and secret; it writes `%APPDATA%\com.crystalos.desktop\.env.local` for you. You can still create that file by hand from [`.env.example`](.env.example). For Google Calendar, add the `GOOGLE_*` keys with `GOOGLE_REDIRECT_URI=http://127.0.0.1:8787/api/calendar/auth/callback` (see [The Horizon](#-the-horizon-google-calendar-integration)).
-4. Restart Crystal OS (tray → **Quit Crystal OS**, then open it again) and sign in.
-5. Optional: in **The Archive**, **Choose vault folder** to pick your Obsidian vault; in **Settings → The Nebula**, add a NIM key.
+1. For Google Calendar: open Crystal OS and use the **Finish setting up** card on Home (or **Settings → Startup → Local API keys**) to enter the Google client ID and secret; it writes `%APPDATA%\com.crystalos.desktop\.env.local` for you. You can still create that file by hand from [`.env.example`](.env.example).
+2. Restart Crystal OS (tray → **Quit Crystal OS**, then open it again).
+3. Coming from v0.16 or older: your data was in Supabase. On the first launch Crystal OS copies it to this device, silently if you were still signed in, otherwise after you enter your Supabase email and password once. Nothing is deleted from Supabase. **Start fresh without importing** skips it; to be asked again, delete `data\meta.json` in the folder below.
+4. Optional: in **The Archive**, **Choose vault folder** to pick your Obsidian vault; in **Settings → The Nebula**, add a NIM key.
 
 ### Where things live
 
@@ -139,7 +137,7 @@ You need a [Supabase](https://supabase.com) project of your own (the free tier w
 | Program | `%LOCALAPPDATA%\Crystal OS\` |
 | Settings (`settings.json`), `.env.local`, Portal sessions, Nebula chats | `%APPDATA%\com.crystalos.desktop\` |
 | Logs (`diagnostics.log`) | `%LOCALAPPDATA%\com.crystalos.desktop\logs\` |
-| Tasks, transactions, categories, review history | Your Supabase project |
+| Tasks, transactions, categories, habits, review history | `%APPDATA%\com.crystalos.desktop\data\` (one JSON file per table) |
 
 Uninstall from **Settings → Apps → Installed apps**. Your settings and logs stay unless you tick the option to delete app data. See [docs/PRIVACY.md](docs/PRIVACY.md) for everything Crystal OS stores and what it sends where.
 
@@ -149,7 +147,6 @@ Uninstall from **Settings → Apps → Installed apps**. Your settings and logs 
 
 ### Prerequisites
 - Node.js 18+ (recommended: use [nvm](https://github.com/nvm-sh/nvm))
-- Supabase account (free tier works)
 - An Obsidian vault on disk — optional; the app runs without one and The Archive shows a "vault unavailable" notice
 
 ### Installation
@@ -180,22 +177,14 @@ GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URI=http://localhost:8080/api/calendar/auth/callback
 # Written automatically after you click Connect. Leave blank.
 GOOGLE_REFRESH_TOKEN=
-
-# Optional: a dedicated test user for the E2E smoke test (npm run test:e2e).
-E2E_EMAIL=
-E2E_PASSWORD=
 ```
 
 Changing `OBSIDIAN_VAULT_PATH` or the `GOOGLE_*` keys requires a dev-server restart — Vite reads them once at config time. The one exception is `GOOGLE_REFRESH_TOKEN`, which the OAuth callback also holds in memory, so connecting takes effect immediately.
 
-> **Note:** the Supabase URL and anon key are read from `VITE_SUPABASE_URL` and
-> `VITE_SUPABASE_ANON_KEY` in `.env.local`. Being `VITE_`-prefixed, they are inlined
-> into the client bundle and are public at runtime — that is normal for the anon key.
-> Row Level Security is what protects the data. Never expose the `service_role` key.
->
-> This app has no registration flow by design. Create your single account in the
-> Supabase dashboard under **Authentication → Users**, and disable new signups under
-> **Authentication → Providers**.
+> **Note:** in development, tasks, transactions, habits and review history are stored in
+> `data/` at the project root (git-ignored). There is no account. `/api/*` only answers
+> requests that carry the token the dev server hands to its own page, so another site
+> open in your browser cannot read or change your data.
 
 ---
 
@@ -216,7 +205,7 @@ server/
 │   ├── envFile.test.ts         # 12 unit tests over envFile.ts
 │   └── events.test.ts          # 21 unit tests over the event mappers
 ├── auth/
-│   └── requireUser.ts          # Supabase token check for authenticated routes
+│   └── requireUser.ts          # Local token check for every /api route
 ├── sidecar.ts                  # Node sidecar (crystal-api): serves the APIs on 127.0.0.1:8787
 └── standalone.ts               # Both middlewares, shared by dev server, preview, and sidecar
 
@@ -313,8 +302,8 @@ src/
 │   ├── useSkyScene.ts          # Living Sky state: phase of day, weather look, moon, for the chosen city
 │   └── use-toast.ts            # Toast notifications (Sonner)
 ├── lib/
-│   ├── supabase.ts             # Supabase client + helpers
-│   ├── offlineQueue.ts         # Task/transaction writes kept in localStorage while Supabase is unreachable, replayed in order
+│   ├── localDb.ts              # Query client for the local JSON store (server/data)
+│   ├── offlineQueue.ts         # Task/transaction writes kept in localStorage while the local API is unreachable, replayed in order
 │   ├── undo.ts                 # 5 s Undo toast and the patch that restores changed task fields
 │   ├── pendingEventDeletes.ts  # Calendar deletes held for the Undo window, hidden from every loaded range until sent
 │   ├── weatherNudge.ts         # One-line weather nudge for the Home weather box, from the hourly forecast
@@ -656,58 +645,28 @@ Saved per device in `localStorage` (`crystal-os-task-view`). The rules live in `
 
 Runs are saved in `focus_sessions` with `task_id` and `task_title` ([migration 0008](supabase/migrations/0008_focus_task_title.sql)). Before it is applied, the insert retries without `task_title` and The Orbit's history falls back to the old columns. The rules live in `src/lib/pomodoro.ts` and `src/lib/focusTask.ts` (unit-tested).
 
-## 🗄️ Database Schema (Supabase)
+## 🗄️ Data storage
+
+Tasks, transactions, categories, habits and review history are stored on your device, one JSON file per table, in `data/` under the app config directory (`%APPDATA%\com.crystalos.desktop\` on desktop, the project root in development):
 
 ```sql
-tasks                (id, user_id, name, start_date, start_time, end_date,
+tasks                (id, name, start_date, start_time, end_date,
                       end_time, priority, category_id, completed, repeat_days,
                       repeat_kind, repeat_weekdays, estimate_minutes,
-                      notes, checklist, parent_id)
-transactions         (id, user_id, name, amount, type, category_id, date)
-task_categories      (id, user_id, name, color)
-financial_categories (id, user_id, name, color)
-settings             (user_id, key, value)   -- primary key (user_id, key)
-task_completions     (id, user_id, task_id, title, category_id, completed_at)
-focus_sessions       (id, user_id, started_at, ended_at, seconds, task_id, task_title)
-habits               (id, user_id, name, color, position, created_at, archived_at)
-habit_checks         (id, user_id, habit_id, day)   -- unique (habit_id, day)
+                      notes, checklist, note_path, parent_id,
+                      snoozed_until, someday, created_at)
+transactions         (id, name, amount, type, category_id, date)
+task_categories      (id, name, color)
+financial_categories (id, name, color)
+task_completions     (id, task_id, title, category_id, completed_at)
+focus_sessions       (id, started_at, ended_at, seconds, task_id, task_title)
+habits               (id, name, color, position, created_at, archived_at)
+habit_checks         (id, habit_id, day)   -- unique (habit_id, day)
 ```
 
-Row Level Security is enabled on every table, with select/insert/update/delete
-policies scoped to `auth.uid() = user_id`. `user_id` defaults to `auth.uid()`, so the
-client never sends it. Category foreign keys are `on delete set null`, so deleting a
-category leaves its tasks intact and uncategorised rather than deleting them.
+The local API (`server/data`) reads and writes them. Deleting a category leaves its tasks intact and uncategorised; deleting a task keeps its child tasks, its completion history and its focus runs. Each write replaces the file through a temporary file, so a crash cannot leave half a file. To back up or move your data, copy the `data` folder.
 
-Apply [`supabase/migrations/0001_auth_and_rls.sql`](supabase/migrations/0001_auth_and_rls.sql)
-in the Supabase Dashboard → SQL Editor, then run `npm run verify:rls` to confirm the
-anon role can read and write nothing. Then apply
-[`supabase/migrations/0002_task_repeat_kinds.sql`](supabase/migrations/0002_task_repeat_kinds.sql)
-(v0.7.5), which adds the repeat kind (`days`, `weekly`, `monthly`, `after`) and weekdays.
-Task saves fail until it is applied. Older rows with only `repeat_days` keep repeating every N days.
-Then apply [`supabase/migrations/0003_orbit_review.sql`](supabase/migrations/0003_orbit_review.sql)
-(v0.8.0), which adds `task_completions` (a row per tick, kept when the task is renamed or deleted)
-and `focus_sessions` (a row per Pomodoro focus run) for The Orbit. It is safe to run twice. Until it is
-applied The Orbit shows a banner and counts no completions or focus time; everything else works.
-Then apply [`supabase/migrations/0004_habits.sql`](supabase/migrations/0004_habits.sql)
-(v0.8.10), which adds `habits` and `habit_checks` (a row per habit per local day done) for the
-habit tracker. It is safe to run twice. Until it is applied the Today card says so and the reviews
-leave habits out.
-Then apply [`supabase/migrations/0005_task_estimates.sql`](supabase/migrations/0005_task_estimates.sql)
-(v0.9.1), which adds `tasks.estimate_minutes` (1 to 1440, null for no estimate). It is safe to run twice.
-Until it is applied, saving a task with an estimate fails; tasks without one save as before.
-Then apply [`supabase/migrations/0006_task_notes_subtasks.sql`](supabase/migrations/0006_task_notes_subtasks.sql)
-(v0.9.3), which adds `tasks.notes`, `tasks.checklist` (a JSON array of `{id, text, done}`) and
-`tasks.parent_id` (`on delete set null`, so deleting a parent keeps its child tasks). It is safe to
-run twice. Until it is applied, saving a task with notes, a checklist or a parent fails; other tasks
-save as before.
-Then apply [`supabase/migrations/0007_task_snooze.sql`](supabase/migrations/0007_task_snooze.sql)
-(v0.9.4), which adds `tasks.snoozed_until` (a date) and `tasks.someday` (boolean, default false). It is
-safe to run twice. Until it is applied, snoozing a task fails; tasks that were never snoozed save as
-before.
-Then apply [`supabase/migrations/0008_focus_task_title.sql`](supabase/migrations/0008_focus_task_title.sql)
-(v0.9.5), which adds `focus_sessions.task_title` (text) and an index on `focus_sessions(task_id)`. It is
-safe to run twice. Until it is applied, a focus run linked to a task is saved with its task id only (no
-name copied), and The Orbit names such a task from the task list while it exists.
+The SQL files in [`supabase/migrations/`](supabase/migrations) describe the Supabase schema used up to v0.16. They are kept for the one-time import (see [First-run setup](#first-run-setup)) and are not needed for a new install.
 
 ---
 
@@ -731,9 +690,9 @@ npm run build:desktop # Sidecar + web build + Windows installer
 npm run build:release # Same, plus the updater signature and latest.json for a GitHub release
 ```
 
-**CI.** `.github/workflows/ci.yml` runs on every pull request and push to `main`, on Windows: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, then `cargo check --locked` in `src-tauri`. A second job, `e2e`, runs alongside it: `npm run test:e2e` in the runner's Edge, signed in as the test user from the `E2E_EMAIL` and `E2E_PASSWORD` repository secrets (plus `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`). In CI a failed test is retried once, failures show up as annotations on the run, and the HTML report and traces are uploaded as the `playwright-report` artifact (kept 7 days). Without the E2E secrets, on a fork's pull request for example, the tests are skipped rather than failed. Pushing a `v*` tag runs `release.yml` (see [Publishing a release](#packaged-build)).
+**CI.** `.github/workflows/ci.yml` runs on every pull request and push to `main`, on Windows: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, then `cargo check --locked` in `src-tauri`. A second job, `e2e`, runs alongside it: `npm run test:e2e` in the runner's Edge, against a throwaway data folder (`test-results/e2e-data`). In CI a failed test is retried once, failures show up as annotations on the run, and the HTML report and traces are uploaded as the `playwright-report` artifact (kept 7 days). Pushing a `v*` tag runs `release.yml` (see [Publishing a release](#packaged-build)).
 
-**Before a release**, run `npm run badges` and `npm run test:e2e`. The smoke test signs in, adds and deletes a task, logs and deletes a transaction, and opens every page, failing on any uncaught error or a page that renders nothing. It starts its own Vite server on port 8090 (`E2E_PORT` to change) and uses the Edge that ships with Windows (`E2E_CHANNEL=chrome` or an empty value for Playwright's Chromium). Point it at a test user created in the Supabase dashboard, not your own account; Row Level Security keeps its rows apart from yours. If a run dies between adding and deleting, the next run deletes the leftover `E2E smoke …` rows first.
+**Before a release**, run `npm run badges` and `npm run test:e2e`. The smoke test adds and deletes a task, logs and deletes a transaction, and opens every page, failing on any uncaught error or a page that renders nothing. It starts its own Vite server on port 8090 (`E2E_PORT` to change) and uses the Edge that ships with Windows (`E2E_CHANNEL=chrome` or an empty value for Playwright's Chromium). It keeps its rows in `test-results/e2e-data`, apart from your own data. If a run dies between adding and deleting, the next run deletes the leftover `E2E smoke …` rows first.
 
 ---
 
@@ -774,9 +733,9 @@ Or let CI do steps 1 to 3: bump the version in `package.json`, `src-tauri/Cargo.
 
 **Back up the updater key.** It is `%USERPROFILE%\.tauri\crystal-os.key` (plus its password, if any). Keep a copy somewhere other than this machine, such as a password manager. Losing it means installed copies can no longer update in place; they would need a manual install of a build signed with a new key.
 
-`VITE_SUPABASE_*` are baked in at build time. The sidecar reads its server-side settings from the app config directory:
+The sidecar reads its server-side settings from the app config directory:
 
-1. Copy `.env.local` to `%APPDATA%\com.crystalos.desktop\.env.local`. It needs the `VITE_SUPABASE_*` keys too, for token checks.
+1. Copy `.env.local` to `%APPDATA%\com.crystalos.desktop\.env.local`.
 2. Add `http://127.0.0.1:8787/api/calendar/auth/callback` as a second authorized redirect URI on your Google OAuth client, and set `GOOGLE_REDIRECT_URI` to it in that copy.
 3. Launch Crystal OS. **Connect** in The Horizon opens Google in your default browser. Once it reports success, switch back to the app.
 
@@ -928,7 +887,7 @@ The palette is an overlay over whichever page is open. On desktop one shortcut d
 |-------|--------|
 | `add Buy milk` | Creates a task |
 | `log 25 for Lunch` | Records an expense |
-| `next 5h` | Finds the next free 5-hour block (`1.5h` and `2 hours` work too), today or in the next 14 days, inside the work day set in **Settings → The Engine** and around timed events in the calendar picked in The Horizon. Selecting it opens The Horizon's create-event form on that slot. Without a connected calendar it only looks at the work day |
+| `next 5h`, `free:1h<7d` | Finds the next free 5-hour block (`1.5h` and `2 hours` work too; `free:1h<7d` and `find 1h free this week` limit the search to 7 days), today or in the next 14 days, inside the work day set in **Settings → The Engine** and around timed events in the calendar picked in The Horizon. Selecting it opens The Horizon's create-event form on that slot. Without a connected calendar it only looks at the work day |
 | *"Add a new event"* | Opens The Horizon's create-event form for today |
 | *anything else* | Filters tasks, transactions, vault notes and Settings sections; **Quick Add** is always offered as the first row (after the free block for `next …`) |
 

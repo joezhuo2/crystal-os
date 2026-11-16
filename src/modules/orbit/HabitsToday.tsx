@@ -1,16 +1,20 @@
 import { memo, useState } from "react";
-import { Check, Plus, Settings2 } from "lucide-react";
+import { Check, Minus, Plus, Settings2 } from "lucide-react";
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { HabitManager } from "@/modules/orbit/HabitManager";
 import { HabitsError, useHabitActions, useHabitsData } from "@/hooks/useHabits";
 import {
   TIP_NAMES_SHOWN,
   WEEKDAY_LABELS,
+  amountStep,
   currentStreak,
   dayShare,
   habitGrid,
   indexChecks,
   isActiveOn,
+  restDays,
+  scheduledOn,
+  weekCount,
   type HabitDay,
 } from "@/lib/habits";
 
@@ -72,14 +76,15 @@ const GridCell = memo(function GridCell({ cell, size }: { cell: HabitDay | null;
  */
 export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today: string }) {
   const query = useHabitsData();
-  const { setToday } = useHabitActions();
+  const { setToday, setAmount } = useHabitActions();
   const [managing, setManaging] = useState(false);
 
   const habits = query.data?.habits ?? [];
   const checks = query.data?.checks ?? [];
   const active = habits.filter((h) => isActiveOn(h, today));
   const index = indexChecks(checks);
-  const doneToday = active.filter((h) => index.get(h.id)?.has(today)).length;
+  const due = active.filter((h) => scheduledOn(h, today, index.get(h.id) ?? new Set()));
+  const doneToday = due.filter((h) => index.get(h.id)?.has(today)).length;
   const cells = habitGrid(kind, today, habits, checks);
   const missing = query.error instanceof HabitsError && query.error.missingTables;
 
@@ -90,7 +95,7 @@ export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today
           Habits
           {active.length > 0 && (
             <span className="orbit-habits-count">
-              {doneToday}/{active.length} today
+              {doneToday}/{due.length} today
             </span>
           )}
         </h3>
@@ -134,20 +139,39 @@ export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today
               active.map((h) => {
                 const days = index.get(h.id) ?? new Set<string>();
                 const done = days.has(today);
-                const streak = currentStreak(days, today);
-                return (
+                const streak = currentStreak(days, today, restDays(h, days, today));
+                const resting = !done && !due.includes(h);
+                const amount = h.target ? (checks.find((c) => c.habitId === h.id && c.day === today)?.amount ?? 0) : 0;
+                const step = amountStep(h.target ?? 0);
+                const status = h.weeklyTarget
+                  ? `${weekCount(days, today)}/${h.weeklyTarget} this week`
+                  : done
+                    ? "Done today"
+                    : resting
+                      ? "Rest day"
+                      : "Tick for today";
+                const chip = (
                   <GlassTip
                     key={h.id}
                     label={h.name}
-                    hint={`${streak ? `Streak: ${streakLabel(streak)}` : "No streak yet"} · ${done ? "Done today" : "Tick for today"}`}
+                    hint={`${streak ? `Streak: ${streakLabel(streak)}` : "No streak yet"} · ${status}`}
                     tone="orbit"
                   >
                     <button
                       type="button"
                       aria-pressed={done}
-                      onClick={() => void setToday(h.id, !done)}
-                      className={`orbit-chip orbit-habit-chip ${done ? "orbit-chip-on" : ""}`}
-                      style={{ "--habit": h.color } as React.CSSProperties}
+                      onClick={() => void (h.target ? setAmount(h.id, done ? 0 : h.target) : setToday(h.id, !done))}
+                      className={`orbit-chip orbit-habit-chip ${done ? "orbit-chip-on" : ""} ${resting ? "opacity-50" : ""}`}
+                      style={
+                        {
+                          "--habit": h.color,
+                          ...(h.target && amount && !done
+                            ? {
+                                backgroundImage: `linear-gradient(90deg, color-mix(in srgb, ${h.color} 28%, transparent) ${(amount / h.target) * 100}%, transparent 0)`,
+                              }
+                            : {}),
+                        } as React.CSSProperties
+                      }
                     >
                       {done ? (
                         <Check className="w-3 h-3 orbit-habit-check" aria-hidden="true" />
@@ -155,8 +179,32 @@ export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today
                         <span className="orbit-habit-dot" style={{ background: h.color }} aria-hidden="true" />
                       )}
                       <span className="truncate">{h.name}</span>
+                      {!!h.target && (
+                        <span className="tabular-nums opacity-80">
+                          {amount}/{h.target}
+                          {h.unit ? ` ${h.unit}` : ""}
+                        </span>
+                      )}
                     </button>
                   </GlassTip>
+                );
+                if (!h.target) return chip;
+                return (
+                  <span key={h.id} className="inline-flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      className="orbit-icon-button"
+                      aria-label={`Less ${h.name}`}
+                      disabled={!amount}
+                      onClick={() => void setAmount(h.id, amount - step)}
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    {chip}
+                    <button type="button" className="orbit-icon-button" aria-label={`More ${h.name}`} onClick={() => void setAmount(h.id, amount + step)}>
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </span>
                 );
               })
             )}

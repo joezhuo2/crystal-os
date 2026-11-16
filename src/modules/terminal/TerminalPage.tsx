@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { Minimize2, Plus, RotateCw, SquareTerminal, X } from "lucide-react";
+import { Minimize2, Plus, Power, RotateCw, SquareTerminal, X } from "lucide-react";
 import type { Terminal } from "@xterm/xterm";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { isDesktop } from "@/lib/platform";
@@ -544,6 +544,20 @@ export default function TerminalPage() {
             </button>
           </TooltipTrigger>
           <TooltipContent>Restart this shell with an updated PATH, so newly installed programs are found</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="terminal-btn"
+              onClick={() => activeTab && void writeTerminal(activeTab.id, "wsl.exe --shutdown\r")}
+              disabled={!activeTab || activeTab.exited}
+            >
+              <Power className="w-3.5 h-3.5" />
+              Stop WSL
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Run wsl --shutdown in this terminal, which stops every WSL distro and frees its memory</TooltipContent>
         </Tooltip>
       </header>
 

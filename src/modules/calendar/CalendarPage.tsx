@@ -22,7 +22,9 @@ import {
   Trash2,
   Unplug,
   X,
+  Copy,
 } from "lucide-react";
+import { ItemNoteLink } from "@/components/ItemNoteLink";
 import { toast } from "sonner";
 import { addDays, toLocalDateStr } from "@/lib/utils";
 import { undoToast } from "@/lib/undo";
@@ -736,7 +738,9 @@ function EventForm({
   // must send `undefined` — sending null would wipe the whole series.
   const [recurrenceTouched, setRecurrenceTouched] = useState(false);
 
-  const isSeriesInstance = Boolean(editingEvent?.recurringEventId);
+  const [copying, setCopying] = useState(false);
+  const editing = copying ? null : editingEvent;
+  const isSeriesInstance = Boolean(editing?.recurringEventId);
   const showRecurrence = !isSeriesInstance || scope === "all";
   const pending = create.isPending || update.isPending;
   const error = create.error ?? update.error;
@@ -767,12 +771,12 @@ function EventForm({
       recurrence,
     };
 
-    if (editingEvent) {
+    if (editing) {
       const target = {
         calendarId,
-        eventId: editingEvent.id,
+        eventId: editing.id,
         scope,
-        recurringEventId: editingEvent.recurringEventId,
+        recurringEventId: editing.recurringEventId,
       };
       update.mutate(
         { ...target, input },
@@ -780,7 +784,7 @@ function EventForm({
           onSuccess: () => {
             const description =
               scope === "all" ? "Applied to every occurrence." : undefined;
-            const before = eventInputOf(editingEvent, recurrence);
+            const before = eventInputOf(editing, recurrence);
             if (before) {
               undoToast(
                 "Event updated",
@@ -834,7 +838,7 @@ function EventForm({
       >
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold">
-            {editingEvent ? "Edit Event" : "New Event"}
+            {editing ? "Edit Event" : copying ? "Copy Event" : "New Event"}
           </p>
           <button
             onClick={onClose}
@@ -1019,7 +1023,19 @@ function EventForm({
           </div>
         )}
 
-        {editingEvent && <TopicLinkControl kind="events" id={editingEvent.id} />}
+        {editing && <TopicLinkControl kind="events" id={editing.id} />}
+
+        {editing && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <ItemNoteLink
+              kind="event"
+              itemId={editing.id}
+              title={editing.summary || "(No title)"}
+              meta={{ calendarId: editing.calendarId, date: editing.startDate }}
+            />
+            Link this event to a vault note
+          </div>
+        )}
 
         {error && (
           // Keep the dialog open on failure so nothing typed is ever lost.
@@ -1035,8 +1051,19 @@ function EventForm({
           className="w-full flex items-center justify-center bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-lg py-2.5 text-sm font-medium transition-colors"
         >
           {pending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          {editingEvent ? "Save Changes" : "Add Event"}
+          {editing ? "Save Changes" : copying ? "Add Copy" : "Add Event"}
         </button>
+        {editing && (
+          <button
+            type="button"
+            onClick={() => setCopying(true)}
+            disabled={pending}
+            title="Make a copy: change the day or time, then add it"
+            className="w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors disabled:opacity-50"
+          >
+            <Copy className="w-3.5 h-3.5" /> Duplicate
+          </button>
+        )}
       </m.div>
     </div>
   );
@@ -1309,7 +1336,7 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
     );
   };
   const moveUpdate = useUpdateEvent();
-  const moveEvent = (event: CalendarEvent, date: string, startTime: string, endTime: string) => {
+  const moveEvent = (event: CalendarEvent, date: string, startTime: string, endTime: string, endDate = date) => {
     const before = eventInputOf(event, undefined);
     if (!before) return;
     const target = {
@@ -1319,7 +1346,7 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
       recurringEventId: event.recurringEventId,
     };
     moveUpdate.mutate(
-      { ...target, input: { ...before, startDate: date, endDate: date, startTime, endTime } },
+      { ...target, input: { ...before, startDate: date, endDate, startTime, endTime } },
       {
         onSuccess: () =>
           undoToast("Event moved", () => {
@@ -1378,8 +1405,15 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openEventRequest, view, focusDate, calendarId, eventsQuery.isPending, eventsQuery.isError, events]);
 
-  useShortcut("horizon.previous", () => view === "month" ? pageMonth(-1) : pageGrid(-1), connected && view !== "agenda");
-  useShortcut("horizon.next", () => view === "month" ? pageMonth(1) : pageGrid(1), connected && view !== "agenda");
+  const page = (dir: number) => (view === "month" ? pageMonth(dir) : pageGrid(dir));
+  useShortcut("horizon.previous", () => page(-1), connected && view !== "agenda");
+  useShortcut("horizon.next", () => page(1), connected && view !== "agenda");
+  useShortcut("horizon.previousArrow", () => page(-1), connected && view !== "agenda");
+  useShortcut("horizon.nextArrow", () => page(1), connected && view !== "agenda");
+  useShortcut("horizon.viewMonth", () => setView("month"), connected);
+  useShortcut("horizon.viewWeek", () => setView("week"), connected);
+  useShortcut("horizon.viewDay", () => setView("day"), connected);
+  useShortcut("horizon.viewAgenda", () => setView("agenda"), connected);
   useShortcut("horizon.cycleView", () => setView(VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]), connected);
   useShortcut("horizon.newEvent", () => openCreate(toLocalDateStr()), connected);
   const disconnectCalendar = () => {
@@ -1389,7 +1423,17 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
     });
   };
   useShortcut("horizon.signOut", disconnectCalendar, connected);
-  useShortcut("horizon.openToday", () => setSelectedDay(toLocalDateStr()), connected && view === "month");
+  useShortcut("horizon.openToday", () => {
+    const now = toLocalDateStr();
+    setFocusDate(now);
+    if (view !== "month") return;
+    const d = new Date();
+    if (d.getFullYear() !== currentDate.getFullYear() || d.getMonth() !== currentDate.getMonth()) {
+      setCascade(false);
+      setCurrentDate(new Date(d.getFullYear(), d.getMonth(), 1));
+    }
+    setSelectedDay(now);
+  }, connected && view !== "agenda");
 
   if (!connected) {
     return (

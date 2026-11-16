@@ -23,7 +23,10 @@ function load(): boolean {
 }
 
 let state = load();
+let peeking = false;
 const listeners = new Set<() => void>();
+
+export const PEEK_HOLD_MS = 400;
 
 export const privacySettings = {
   getState: () => state,
@@ -46,12 +49,43 @@ export const privacySettings = {
     listeners.forEach((l) => l());
   },
 
+  blurred: () => state && !peeking,
+
+  setPeek(on: boolean) {
+    if (on === peeking) return;
+    peeking = on;
+    listeners.forEach((l) => l());
+  },
+
   /** Test hook: reload from storage. */
   _reset() {
     state = load();
+    peeking = false;
     listeners.forEach((l) => l());
   },
 };
+
+export function createPrivacyKey(now: () => number = Date.now) {
+  let pressedAt: number | null = null;
+  return {
+    down() {
+      if (pressedAt !== null) return;
+      pressedAt = now();
+      if (state) privacySettings.setPeek(true);
+    },
+    up() {
+      if (pressedAt === null) return;
+      const tapped = now() - pressedAt < PEEK_HOLD_MS;
+      pressedAt = null;
+      privacySettings.setPeek(false);
+      if (tapped) privacySettings.setEnabled(!state);
+    },
+    cancel() {
+      pressedAt = null;
+      privacySettings.setPeek(false);
+    },
+  };
+}
 
 export function usePrivacyMode() {
   return useSyncExternalStore(privacySettings.subscribe, privacySettings.getState);

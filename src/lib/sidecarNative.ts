@@ -4,13 +4,13 @@
  * packaged desktop app, where `apiUrl` points at the sidecar.
  */
 
-let ready: Promise<void> | null = null;
+let ready: Promise<string> | null = null;
 
-/** Resolves once the sidecar accepts connections. Shared by concurrent callers. */
-export function ensureSidecar(): Promise<void> {
+/** Resolves with the sidecar's access token once it accepts connections. Shared by concurrent callers. */
+export function ensureSidecar(): Promise<string> {
   if (!ready) {
     ready = import("@tauri-apps/api/core")
-      .then(({ invoke }) => invoke<void>("sidecar_ensure"))
+      .then(({ invoke }) => invoke<string>("sidecar_ensure"))
       .catch((err) => {
         ready = null;
         throw err;

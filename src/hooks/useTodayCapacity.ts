@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTasks } from "@/contexts/AppContext";
-import { calendarWasConnected, useCalendarEvents, useCalendarStatus } from "@/hooks/useGoogleCalendar";
+import { calendarWasConnected, useCalendarEvents, useCalendarStatus, type CalendarEvent } from "@/hooks/useGoogleCalendar";
 import { todayCapacity, type TodayCapacity } from "@/lib/capacity";
 import { capacityWindow, useCapacitySettings } from "@/lib/capacitySettings";
 import { usesSidecar } from "@/lib/platform";
@@ -41,6 +41,7 @@ export type TodayCapacityState = TodayCapacity & {
   loadingEvents: boolean;
   /** Today's date and the current hour ("2026-10-05T14"), for things that change hourly. */
   hourKey: string;
+  events: CalendarEvent[];
 };
 
 /**
@@ -83,5 +84,6 @@ export function useTodayCapacity(): TodayCapacityState {
     calendarConnected: connected && events !== undefined,
     loadingEvents: status.isLoading || (connected && eventsQuery.isLoading),
     hourKey: `${today}T${now.getHours()}`,
+    events: events ?? [],
   };
 }

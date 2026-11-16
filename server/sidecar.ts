@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import path from "node:path";
 import dotenv from "dotenv";
-import { createRequireUser, createSupabaseVerifier } from "./auth/requireUser";
+import { createLocalVerifier, createRequireUser } from "./auth/requireUser";
 import { createApiHandler } from "./standalone";
 
 /**
@@ -22,15 +22,12 @@ const env = { ...fileEnv, ...process.env } as Record<string, string | undefined>
 env.GOOGLE_REDIRECT_URI ||= `http://127.0.0.1:${port}/api/calendar/auth/callback`;
 env.MAIL_REDIRECT_URI ||= `http://127.0.0.1:${port}/api/mail/auth/callback`;
 
-const requireUser =
-  env.VITE_SUPABASE_URL && env.VITE_SUPABASE_ANON_KEY
-    ? createRequireUser(createSupabaseVerifier(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY))
-    : undefined;
+const requireUser = process.env.CRYSTAL_API_TOKEN
+  ? createRequireUser(createLocalVerifier(process.env.CRYSTAL_API_TOKEN))
+  : undefined;
 
 if (!requireUser) {
-  console.warn(
-    `[crystal-api] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY missing in ${path.join(rootDir, ".env.local")}; every API route will return 503`,
-  );
+  console.warn("[crystal-api] CRYSTAL_API_TOKEN is not set; every API route will return 503");
 }
 
 const server = createServer(createApiHandler({ env, requireUser, rootDir }));

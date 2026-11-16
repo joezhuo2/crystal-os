@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { PRIVACY_MODE_KEY, parsePrivacyMode, privacySettings } from "./privacySettings";
+import { PEEK_HOLD_MS, PRIVACY_MODE_KEY, createPrivacyKey, parsePrivacyMode, privacySettings } from "./privacySettings";
 
 beforeEach(() => {
   localStorage.clear();
@@ -27,5 +27,41 @@ describe("privacySettings", () => {
     privacySettings.setEnabled(false);
     off();
     expect(calls).toBe(1);
+  });
+});
+
+describe("createPrivacyKey", () => {
+  it("toggles on a tap", () => {
+    let t = 0;
+    const key = createPrivacyKey(() => t);
+    key.down();
+    expect(privacySettings.blurred()).toBe(false);
+    t = PEEK_HOLD_MS - 1;
+    key.up();
+    expect(privacySettings.getState()).toBe(false);
+    key.down();
+    key.up();
+    expect(privacySettings.getState()).toBe(true);
+    expect(privacySettings.blurred()).toBe(true);
+  });
+
+  it("peeks while held and blurs again on release", () => {
+    let t = 0;
+    const key = createPrivacyKey(() => t);
+    key.down();
+    expect(privacySettings.blurred()).toBe(false);
+    t = PEEK_HOLD_MS;
+    key.up();
+    expect(privacySettings.getState()).toBe(true);
+    expect(privacySettings.blurred()).toBe(true);
+  });
+
+  it("ends a peek without toggling when the window loses focus", () => {
+    const key = createPrivacyKey(() => 0);
+    key.down();
+    key.cancel();
+    key.up();
+    expect(privacySettings.getState()).toBe(true);
+    expect(privacySettings.blurred()).toBe(true);
   });
 });

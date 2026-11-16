@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Download,
   Flame,
+  Lightbulb,
   ListChecks,
   Loader2,
   Minus,
@@ -261,6 +262,21 @@ function TrendsCard({ review }: { review: Review }) {
             <Delta trend={t} against={t.previous} unit={`last ${unit}`} />
             <Delta trend={t} against={t.average} unit={`${TREND_WINDOW[kind]}-${unit} average`} />
           </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function InsightsCard({ review }: { review: Review }) {
+  return (
+    <section className="orbit-card" aria-labelledby="orbit-insights">
+      <CardTitle icon={Lightbulb}>
+        <span id="orbit-insights">Insights</span>
+      </CardTitle>
+      <ul className="space-y-2 text-sm">
+        {review.insights.map((line) => (
+          <li key={line}>{line}</li>
         ))}
       </ul>
     </section>
@@ -852,6 +868,7 @@ export default function OrbitPage() {
               <FocusCard review={review} />
               <MoneyCard review={review} />
               <TrendsCard review={review} />
+              {review.insights.length > 0 && <InsightsCard review={review} />}
               <MoodCard review={review} />
               {studyInstalled && <StudyCard review={review} />}
               <VaultCard review={review} unavailable={vaultUnavailable} />

@@ -45,6 +45,7 @@ mail-cache.json
 mail-cache.json.tmp
 trades.json
 trades.json.tmp
+/data/
 *.token
 .token
 *.kdbx

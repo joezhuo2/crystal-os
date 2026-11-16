@@ -84,7 +84,7 @@ describe("trades middleware", () => {
   });
 
   it("starts empty and connected", async () => {
-    expect(await json(await call("GET", ""))).toEqual({ events: [], fx: [], journal: {}, lastSync: null, syncing: false, errors: [], connected: true });
+    expect(await json(await call("GET", ""))).toEqual({ events: [], fx: [], dividends: [], journal: {}, lastSync: null, syncing: false, errors: [], connected: true });
   });
 
   it("answers unknown routes and wrong methods", async () => {

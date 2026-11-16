@@ -4,10 +4,16 @@ import {
   habitGrid,
   isActiveOn,
   longestRun,
+  amountStep,
+  indexChecks,
+  isPartial,
   overallRate,
+  restDays,
+  scheduledOn,
   sortHabits,
   streakEndingAt,
   summarizeHabits,
+  weekCount,
   type Habit,
   type HabitCheck,
 } from "./habits";
@@ -154,5 +160,69 @@ describe("habits in the review", () => {
     expect(md).toContain("| Read \\| write | 7/7 | 100% | 7 | 7 |");
     expect(md).toContain("### Note\n\nSteady week.");
     expect(md).toContain("- **Habit completion:** 100%");
+  });
+});
+
+describe("habit schedules", () => {
+  // 2026-11-16 is a Monday.
+  const days = (...list: string[]) => new Set(list);
+
+  it("skips the weekdays a habit is not for, so rest days keep the streak", () => {
+    const gym = { weekdays: [1, 3, 5] };
+    const done = days("2026-11-09", "2026-11-11", "2026-11-13", "2026-11-16");
+    expect(currentStreak(done, "2026-11-16", restDays(gym, done, "2026-11-16"))).toBe(4);
+    expect(currentStreak(done, "2026-11-16")).toBe(1);
+    expect(scheduledOn(gym, "2026-11-17", done)).toBe(false);
+    expect(scheduledOn(gym, "2026-11-18", done)).toBe(true);
+  });
+
+  it("breaks the streak on a missed scheduled day", () => {
+    const gym = { weekdays: [1, 3, 5] };
+    const done = days("2026-11-09", "2026-11-13", "2026-11-16");
+    expect(currentStreak(done, "2026-11-16", restDays(gym, done, "2026-11-16"))).toBe(2);
+  });
+
+  it("keeps a times-a-week streak through the days off of a week that met its target", () => {
+    const run = { weeklyTarget: 2 };
+    const done = days("2026-11-03", "2026-11-05", "2026-11-10", "2026-11-14", "2026-11-16");
+    expect(weekCount(done, "2026-11-12")).toBe(2);
+    expect(currentStreak(done, "2026-11-16", restDays(run, done, "2026-11-16"))).toBe(5);
+    expect(scheduledOn(run, "2026-11-12", done)).toBe(false);
+    expect(scheduledOn(run, "2026-11-17", done)).toBe(true);
+  });
+
+  it("ends a times-a-week streak at a week that fell short", () => {
+    const run = { weeklyTarget: 2 };
+    const done = days("2026-11-03", "2026-11-05", "2026-11-10", "2026-11-16");
+    expect(currentStreak(done, "2026-11-16", restDays(run, done, "2026-11-16"))).toBe(1);
+  });
+
+  it("counts only expected days in a review's rate", () => {
+    const base = { id: "h", name: "Gym", color: "red", position: 0, createdAt: "2026-11-01T12:00:00", archivedAt: null };
+    const checks = ["2026-11-09", "2026-11-11"].map((day) => ({ habitId: "h", day }));
+    const period = { start: "2026-11-09", end: "2026-11-15" };
+    const [weekdays] = summarizeHabits(period, [{ ...base, weekdays: [1, 3, 5] }], checks, "2026-11-20");
+    expect([weekdays.done, weekdays.active, weekdays.rate]).toEqual([2, 3, 67]);
+    const [weekly] = summarizeHabits(period, [{ ...base, weeklyTarget: 2 }], checks, "2026-11-20");
+    expect([weekly.done, weekly.active, weekly.rate]).toEqual([2, 2, 100]);
+  });
+});
+
+describe("quantified habits", () => {
+  it("leaves a day short of the target out of the done days", () => {
+    const checks: HabitCheck[] = [
+      { habitId: "w", day: "2026-11-15", amount: 8 },
+      { habitId: "w", day: "2026-11-16", amount: 3, partial: isPartial(8, 3) },
+    ];
+    expect([...(indexChecks(checks).get("w") ?? [])]).toEqual(["2026-11-15"]);
+  });
+
+  it("knows a partial amount, and steps by 1 or 5", () => {
+    expect(isPartial(8, 7)).toBe(true);
+    expect(isPartial(8, 8)).toBe(false);
+    expect(isPartial(null, 1)).toBe(false);
+    expect(isPartial(8, undefined)).toBe(false);
+    expect(amountStep(8)).toBe(1);
+    expect(amountStep(30)).toBe(5);
   });
 });

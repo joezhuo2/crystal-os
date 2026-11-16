@@ -29,6 +29,7 @@ import { useShortcut } from "@/hooks/useShortcut";
 import { isDesktop } from "@/lib/platform";
 import { useDebouncedValue } from "@/lib/utils";
 import { Markdown } from "@/components/Markdown";
+import { LinkedItems } from "@/components/ItemNoteLink";
 import {
   buildLinkTargets,
   noteConnections,
@@ -360,6 +361,7 @@ function NoteConnectionsPanel({
           <RelatedGroup notePath={note.path} related={related} onOpen={onOpen} />
         </>
       )}
+      <LinkedItems notePath={note.path} />
     </section>
   );
 }
