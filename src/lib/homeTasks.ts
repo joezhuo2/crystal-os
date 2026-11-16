@@ -44,3 +44,9 @@ export function upcomingTasks(tasks: Task[], today: string): UpcomingTask[] {
         a.task.startTime.localeCompare(b.task.startTime),
     );
 }
+
+export function upcomingByDate(tasks: Task[], today: string): { date: string; tasks: Task[] }[] {
+  const byDate = new Map<string, Task[]>();
+  for (const { task, date } of upcomingTasks(tasks, today)) byDate.set(date, [...(byDate.get(date) ?? []), task]);
+  return [...byDate].sort(([a], [b]) => a.localeCompare(b)).map(([date, list]) => ({ date, tasks: list }));
+}

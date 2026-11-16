@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Today, Upcoming and Someday views in The Engine**, next to List and Board. Today has a seven-day strip with a task count per day; pick a day to see its tasks. Upcoming groups the next two weeks by day. Someday lists the tasks parked there. **V** now steps through all five views.
 - **Inline quick edit in The Engine.** Click the date, priority or estimate on a task card to change it there, without opening the form. Picking a new day keeps the task's length and offers Undo.
 - **Bulk edit in The Engine.** Ctrl-click task cards to select them, or Shift-click to select a range, then complete, snooze, re-categorise, re-prioritise or delete them together from the bar that appears. Each action has one Undo. Escape clears the selection.
 - **Email to task.** **Make task** on an email in The Courier adds a task named after its subject, due on the bill's due date (or today), with the sender and a link to the email in its notes.

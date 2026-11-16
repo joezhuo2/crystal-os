@@ -2,7 +2,7 @@ import { Fragment, memo, useCallback, useEffect, useMemo, useState, useRef } fro
 import { useAppActions, useLoadError, useTaskCategories, useTasks, type Task, type Priority } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
 import { m, AnimatePresence } from "framer-motion";
-import { Plus, Check, Trash2, LayoutList, Columns, X, Pencil, Repeat, AlertTriangle, CalendarClock, ChevronDown, StickyNote, AlarmClock } from "lucide-react";
+import { Plus, Check, Trash2, LayoutList, Columns, Sun, CalendarDays, Infinity as InfinityIcon, X, Pencil, Repeat, AlertTriangle, CalendarClock, ChevronDown, StickyNote, AlarmClock } from "lucide-react";
 import {
   cleanRepeat,
   describeRepeat,
@@ -48,6 +48,7 @@ import { useCompletionHold } from "@/hooks/useCompletionHold";
 import type { TabId } from "@/components/layout/Navigation";
 import { taskSelection, useTaskSelected } from "@/lib/taskSelection";
 import { TaskBulkBar } from "./TaskBulkBar";
+import { SomedayView, TodayView, UpcomingView } from "./TaskDayViews";
 import { DateChip, EstimateChip, EstimatePicker, PriorityChip } from "./TaskQuickEdit";
 
 const NO_CHILDREN: Task[] = [];
@@ -849,7 +850,14 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
   );
 }
 
-type View = "list" | "kanban";
+const VIEWS = [
+  { id: "list", label: "List", Icon: LayoutList },
+  { id: "kanban", label: "Board", Icon: Columns },
+  { id: "today", label: "Today", Icon: Sun },
+  { id: "upcoming", label: "Upcoming", Icon: CalendarDays },
+  { id: "someday", label: "Someday", Icon: InfinityIcon },
+] as const;
+type View = (typeof VIEWS)[number]["id"];
 
 /**
  * The drag-to-nest handlers. Stable across renders (they read the latest
@@ -1031,7 +1039,7 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
     }, VIEW_FADE_MS);
   };
 
-  useShortcut("engine.cycleView", () => switchView(selected === "list" ? "kanban" : "list"));
+  useShortcut("engine.cycleView", () => switchView(VIEWS[(VIEWS.findIndex((v) => v.id === selected) + 1) % VIEWS.length].id));
   useShortcut("engine.newTask", () => setShowTaskForm(true));
 
   // Child tasks show inside their parent, not in the lists. Sort & Filter
@@ -1085,6 +1093,10 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
     );
   };
 
+  const card = (task: Task, overdue?: boolean) => (
+    <TaskItem key={task.id} task={task} subtasks={childrenOf.get(task.id)} nesting={nesting} overdue={overdue} today={today} />
+  );
+
   // Dropping a child task anywhere on the list (not on a card) moves it back
   // to the top level.
   const draggedChild = () => {
@@ -1117,12 +1129,11 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
     <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <GlideEffect className="flex glass-card p-0.5 rounded-lg [--cd-glide-bg:hsl(var(--primary))] [--cd-glide-shadow:none] [--cd-glide-radius:0.375rem]">
-          <button data-active={selected === "list" || undefined} onClick={() => switchView("list")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${selected === "list" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <LayoutList className="w-3.5 h-3.5 inline mr-1" />List
-          </button>
-          <button data-active={selected === "kanban" || undefined} onClick={() => switchView("kanban")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${selected === "kanban" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <Columns className="w-3.5 h-3.5 inline mr-1" />Board
-          </button>
+          {VIEWS.map(({ id, label, Icon }) => (
+            <button key={id} data-active={selected === id || undefined} onClick={() => switchView(id)} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${selected === id ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+              <Icon className="w-3.5 h-3.5 inline mr-1" />{label}
+            </button>
+          ))}
         </GlideEffect>
         <CategoryManagerButton mode="task" />
         <TaskViewMenu />
@@ -1231,10 +1242,16 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
                   </AnimatePresence>
                 </CollapsedGroup>
               </div>
-            ) : (
+            ) : view === "kanban" ? (
               <KanbanBoard key={viewKey} tasks={sortedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />
+            ) : view === "today" ? (
+              <TodayView key={viewKey} tasks={sortedTasks} today={today} card={card} />
+            ) : view === "upcoming" ? (
+              <UpcomingView key={viewKey} tasks={sortedTasks} today={today} card={card} />
+            ) : (
+              <SomedayView tasks={snoozedSections(snoozedTasks).someday} card={card} />
             )}
-            <SnoozedSection tasks={snoozedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />
+            {view !== "someday" && <SnoozedSection tasks={snoozedTasks} childrenOf={childrenOf} nesting={nesting} today={today} />}
           </div>
         </div>
         <div className={view === "kanban" ? "" : "hidden lg:block"}>

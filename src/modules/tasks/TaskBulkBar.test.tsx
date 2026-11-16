@@ -83,3 +83,14 @@ describe("The Engine's inline quick edit", () => {
     expect(updateTask).toHaveBeenCalledWith("a", { priority: "urgent" });
   });
 });
+
+describe("The Engine's day views", () => {
+  it("shows today's tasks under a week strip", async () => {
+    render(<TasksPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Today" }));
+    const strip = await screen.findByRole("group", { name: "Week" });
+    expect(strip.querySelectorAll("button")).toHaveLength(7);
+    expect(strip.querySelector("[aria-pressed=true]")?.textContent).toContain("4");
+    expect(screen.getByText("Alpha")).toBeTruthy();
+  });
+});

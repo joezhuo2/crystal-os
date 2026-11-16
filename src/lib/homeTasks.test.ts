@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Priority, Task } from "@/contexts/AppContext";
-import { UPCOMING_DAYS, upcomingDates, upcomingTasks } from "./homeTasks";
+import { UPCOMING_DAYS, upcomingByDate, upcomingDates, upcomingTasks } from "./homeTasks";
 
 const TODAY = "2026-09-23";
 
@@ -66,5 +66,18 @@ describe("upcomingTasks", () => {
       TODAY,
     );
     expect(result).toEqual([{ task: expect.objectContaining({ id: "weekly" }), date: "2026-09-27" }]);
+  });
+});
+
+describe("upcomingByDate", () => {
+  it("groups tasks under their day, earliest day first, highest priority first within a day", () => {
+    const groups = upcomingByDate(
+      [task("later", "urgent", "2026-09-30"), task("soon-low", "low", "2026-09-24"), task("soon-high", "high", "2026-09-24")],
+      TODAY,
+    );
+    expect(groups.map((g) => [g.date, g.tasks.map((t) => t.id)])).toEqual([
+      ["2026-09-24", ["soon-high", "soon-low"]],
+      ["2026-09-30", ["later"]],
+    ]);
   });
 });
