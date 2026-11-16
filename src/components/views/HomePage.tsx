@@ -13,6 +13,9 @@ import {
 import { appUi } from "@/lib/appUi";
 import { m } from "framer-motion";
 import { isTaskOverdue, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
+import { journalPrompt, useSecondZone, zoneClock } from "@/lib/homeExtras";
+import { useHabitsData } from "@/hooks/useHabits";
+import { isActiveOn } from "@/lib/habits";
 import { useSkyScene } from "@/hooks/useSkyScene";
 import { useToday } from "@/hooks/useToday";
 import { awakeTasks } from "@/lib/snooze";
@@ -75,6 +78,11 @@ function Clock({ onClick }: { onClick?: () => void }) {
   const { url: backdropUrl, opacity: backdropOpacity } = useImageBackdrop("orbit", "card");
   const teaser = useOrbitTeaser(time);
   const { unseen } = useOrbitReady(time);
+  const second = zoneClock(time, useSecondZone());
+  const habitsData = useHabitsData().data;
+  const today = toLocalDateStr(time);
+  const activeHabits = (habitsData?.habits ?? []).filter((h) => isActiveOn(h, today));
+  const habitsDone = activeHabits.filter((h) => habitsData?.checks.some((c) => c.habitId === h.id && c.day === today)).length;
 
   // A ready review opens as usual; otherwise land on this week so far, which
   // is what the teaser below counts.
@@ -116,11 +124,16 @@ function Clock({ onClick }: { onClick?: () => void }) {
         </div>
         <p className="text-sm text-muted-foreground mt-1">
           {time.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+          {second && <span className="tabular-nums"> · {second.city} {second.time}</span>}
         </p>
         <p className="orbit-teaser mt-3 truncate">
           {teaser
             ? `This week · ${teaser.done} done · ${formatMinutes(teaser.focusMinutes)} focus`
             : "This week · gathering orbit…"}
+          {activeHabits.length > 0 && ` · Habits ${habitsDone}/${activeHabits.length} today`}
+        </p>
+        <p className="text-xs text-muted-foreground/80 mt-1 truncate" title={journalPrompt(time)}>
+          {journalPrompt(time)}
         </p>
       </div>
     </div>

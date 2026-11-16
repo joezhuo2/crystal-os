@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **More on the Home widgets.** The clock shows today's habits (done out of active), a daily journal prompt and, if you pick one under Settings → The Orbit, the time in a second time zone. The Ledger widget draws the month's profit and loss as a sparkline. The Courier widget counts the emails that arrived since you last opened The Courier.
 - **Search filters.** In the search bar, `type:task`, `type:event`, `type:note`, `type:mail`, `type:transaction` or `type:chat` limits the results to one kind; `due:today`, `due:tomorrow`, `due:overdue`, `due:<7d` or `due:<2w` keeps tasks and events due by then; `#school` keeps a task or transaction category, or a note tag. Task search now reads notes and checklists too.
 - **Universal linking.** Link a transaction, a trade order, an email or a calendar event to a vault note with the link button on its row (or in the event form). The note's **Connections** section lists its linked tasks and items; click one to open it.
 - **Privacy mode quick toggle.** **Ctrl+Shift+H** (change it under Settings → Keyboard) turns privacy mode on or off; hold it to peek and it blurs again when you let go. The tray menu has **Toggle privacy mode** too.

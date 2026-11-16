@@ -47,7 +47,13 @@ import { buildDiagnosticsReport } from "@/lib/diagnostics";
 import { MAX_EVENT_LEAD, notifySettings, useNotifySettings } from "@/lib/notifySettings";
 import { notify } from "@/lib/notifications";
 import { capacitySettings, useCapacitySettings } from "@/lib/capacitySettings";
-import { TimeField } from "@/components/ui/field-controls";
+import { ThemedCombobox, TimeField } from "@/components/ui/field-controls";
+import { secondZone, useSecondZone } from "@/lib/homeExtras";
+
+const ZONE_OPTIONS = [
+  { value: "", label: "None" },
+  ...((Intl as unknown as { supportedValuesOf?(key: string): string[] }).supportedValuesOf?.("timeZone") ?? []).map((zone) => ({ value: zone, label: zone.replace(/_/g, " ") })),
+];
 import { appUi, useAppUi } from "@/lib/appUi";
 import { TAB_INFO, tabAvailable } from "@/components/layout/Navigation";
 import { ALWAYS_SHOWN, navSettings, useNavSettings } from "@/lib/navSettings";
@@ -877,6 +883,7 @@ export default function SettingsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const perf = usePerfSettings();
   const privacyMode = usePrivacyMode();
+  const zone = useSecondZone();
   const showChangelog = useShowChangelog();
   const sky = useAtmosphere();
   const orbit = useOrbitStore();
@@ -1246,6 +1253,17 @@ export default function SettingsPage() {
               description="Writes each weekly, monthly and yearly review to Reviews/Weekly, Reviews/Monthly and Reviews/Yearly in your vault once it is ready (Sunday, the month's last day and December 31, from 6 PM), or the next time the app opens. Never overwrites a note that is already there, and leaves out the reflection, which you can add by exporting again from The Orbit."
             >
               <Switch checked={orbit.autoExport} onCheckedChange={orbitStore.setAutoExport} />
+            </Row>
+            <Row title="Second time zone" description="Shows the time in another city next to the date on the Home clock.">
+              <ThemedCombobox
+                aria-label="Second time zone"
+                className="w-56"
+                value={zone}
+                onChange={secondZone.set}
+                placeholder="None"
+                searchPlaceholder="Search cities…"
+                options={ZONE_OPTIONS}
+              />
             </Row>
           </Section>
         )}

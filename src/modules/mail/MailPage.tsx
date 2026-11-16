@@ -2,6 +2,7 @@ import { useEffect, useState, type ElementType, type ReactNode } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { toast } from "sonner";
 import { ItemNoteLink } from "@/components/ItemNoteLink";
+import { markMailSeen } from "@/lib/homeExtras";
 import { AlertTriangle, Briefcase, ChevronDown, ExternalLink, Mail, Package, RefreshCw, Receipt, ShieldAlert } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -362,6 +363,7 @@ export default function MailPage() {
   const status = useMailStatus();
   const { refetch } = status;
   useTradesSync();
+  useEffect(() => () => markMailSeen(), []);
 
   useEffect(() => {
     const onFocus = () => void refetch();

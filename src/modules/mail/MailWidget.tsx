@@ -2,6 +2,7 @@ import { ChevronRight, Mail } from "lucide-react";
 import { SkeletonLines } from "@/components/ui/dashboard-skeletons";
 import { useMailDigest, useMailStatus } from "@/hooks/useMail";
 import { usesSidecar } from "@/lib/platform";
+import { mailSeenAt, newMailCount } from "@/lib/homeExtras";
 import { toLocalDateStr } from "@/lib/utils";
 import { JOB_STATUS_LABEL, dueLabel, jobCompany, latestJobs, mailWasConnected, sortBills } from "@/lib/mail";
 
@@ -12,12 +13,16 @@ export function MailWidget({ onClick }: { onClick?: () => void }) {
   const today = toLocalDateStr();
   const bills = digest.data ? sortBills(digest.data.items).filter((b) => b.dueDate && b.dueDate >= today).slice(0, 3) : [];
   const jobs = digest.data ? latestJobs(digest.data.items).slice(0, 2) : [];
+  const fresh = digest.data ? newMailCount(digest.data.items, mailSeenAt()) : 0;
 
   return (
     <div onClick={onClick} className="glass-card-hover p-6 cursor-pointer group h-full">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs uppercase tracking-widest text-primary">The Courier</p>
-        <Mail className="w-4 h-4 text-primary" aria-hidden />
+        <span className="flex items-center gap-2">
+          {fresh > 0 && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary tabular-nums">{fresh} new</span>}
+          <Mail className="w-4 h-4 text-primary" aria-hidden />
+        </span>
       </div>
 
       {status.isLoading || digest.isLoading ? (
