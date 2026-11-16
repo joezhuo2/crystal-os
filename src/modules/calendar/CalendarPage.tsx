@@ -1336,7 +1336,7 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
     );
   };
   const moveUpdate = useUpdateEvent();
-  const moveEvent = (event: CalendarEvent, date: string, startTime: string, endTime: string) => {
+  const moveEvent = (event: CalendarEvent, date: string, startTime: string, endTime: string, endDate = date) => {
     const before = eventInputOf(event, undefined);
     if (!before) return;
     const target = {
@@ -1346,7 +1346,7 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
       recurringEventId: event.recurringEventId,
     };
     moveUpdate.mutate(
-      { ...target, input: { ...before, startDate: date, endDate: date, startTime, endTime } },
+      { ...target, input: { ...before, startDate: date, endDate, startTime, endTime } },
       {
         onSuccess: () =>
           undoToast("Event moved", () => {

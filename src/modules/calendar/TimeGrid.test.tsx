@@ -140,6 +140,40 @@ describe("TimeGrid", () => {
     expect(onMoveEvent).toHaveBeenLastCalledWith(base, "2026-09-30", "08:30", "09:30");
   });
 
+  it("drags an all-day event to another day, keeping its length", () => {
+    const onMoveEvent = vi.fn();
+    const trip = { ...base, id: "a", summary: "Trip", allDay: true, startTime: "", endTime: "", startDate: "2026-09-29", endDate: "2026-09-30" };
+    const { container } = render(
+      <TimeGrid
+        dates={["2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02"]}
+        events={[trip]}
+        color="#60a5fa"
+        onEdit={() => {}}
+        onCreateAt={() => {}}
+        onMoveEvent={onMoveEvent}
+      />,
+    );
+    const dataTransfer = { setData: vi.fn(), effectAllowed: "" };
+    fireEvent.dragStart(screen.getAllByRole("button", { name: "Trip" })[0], { dataTransfer });
+    const cell = container.querySelector('[data-all-day="2026-10-01"]') as HTMLElement;
+    fireEvent.dragOver(cell, { dataTransfer });
+    fireEvent.drop(cell, { dataTransfer });
+    expect(onMoveEvent).toHaveBeenCalledWith(trip, "2026-10-01", "", "", "2026-10-02");
+  });
+
+  it("drags a timed multi-day event from its first day, moving both ends", () => {
+    const onMoveEvent = vi.fn();
+    const overnight = { ...base, summary: "Flight", startTime: "22:00", endDate: "2026-10-01", endTime: "06:00" };
+    render(
+      <TimeGrid dates={["2026-09-30", "2026-10-01"]} events={[overnight]} color="#60a5fa" onEdit={() => {}} onCreateAt={() => {}} onMoveEvent={onMoveEvent} />,
+    );
+    const block = screen.getAllByRole("button", { name: /Flight/ })[0];
+    fireEvent.pointerDown(block, { clientX: 10, clientY: 100, button: 0, pointerId: 1 });
+    fireEvent.pointerMove(block, { clientX: 10, clientY: 52, pointerId: 1 });
+    fireEvent.pointerUp(block, { clientX: 10, clientY: 52, pointerId: 1 });
+    expect(onMoveEvent).toHaveBeenCalledWith(overnight, "2026-09-30", "21:00", "05:00", "2026-10-01");
+  });
+
   it("treats a press without travel as a click", () => {
     const onMoveEvent = vi.fn();
     const onEdit = vi.fn();

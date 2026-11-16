@@ -126,6 +126,28 @@ export function resizedSpan(
   return { startMin: Math.max(0, Math.min(endMin - DRAG_STEP_MINUTES, snap(startMin + deltaMin))), endMin };
 }
 
+const dayIndex = (date: string) => Math.round(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
+
+export const daysBetween = (from: string, to: string) => dayIndex(to) - dayIndex(from);
+
+export function shiftedSpan(
+  event: Pick<CalendarEvent, "allDay" | "startDate" | "startTime" | "endDate" | "endTime">,
+  dayDelta: number,
+  minuteDelta = 0,
+): { startDate: string; startTime: string; endDate: string; endTime: string } {
+  if (event.allDay) {
+    return { startDate: addDays(event.startDate, dayDelta), startTime: "", endDate: addDays(event.endDate, dayDelta), endTime: "" };
+  }
+  const shift = (date: string, time: string) => {
+    const total = toMinutes(time) + minuteDelta;
+    const days = Math.floor(total / MINUTES_PER_DAY);
+    return { date: addDays(date, dayDelta + days), time: fromMinutes(total - days * MINUTES_PER_DAY) };
+  };
+  const start = shift(event.startDate, event.startTime);
+  const end = shift(event.endDate, event.endTime);
+  return { startDate: start.date, startTime: start.time, endDate: end.date, endTime: end.time };
+}
+
 export const DEFAULT_TASK_BLOCK_MINUTES = 30;
 
 export function taskBlockMinutes(estimateMinutes?: number | null): number {
