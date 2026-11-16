@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 import { type RequireUser } from "./auth/requireUser";
+import { createAiConfig, type AiEnv } from "./ai/config";
+import { createAiMiddleware } from "./ai/plugin";
 import { createCalendarMiddleware } from "./calendar/plugin";
 import { createMailMiddleware } from "./mail/plugin";
 import { createObsidianMiddleware } from "./obsidian/plugin";
@@ -18,7 +20,7 @@ export const DESKTOP_ORIGINS = new Set([
   "tauri://localhost",
 ]);
 
-export interface ApiEnv {
+export interface ApiEnv extends AiEnv {
   OBSIDIAN_VAULT_PATH?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
@@ -27,8 +29,9 @@ export interface ApiEnv {
   MAIL_REDIRECT_URI?: string;
   MICROSOFT_CLIENT_ID?: string;
   MICROSOFT_CLIENT_SECRET?: string;
-  ANTHROPIC_API_KEY?: string;
+  MAIL_AI_PROVIDER?: string;
   MAIL_AI_MODEL?: string;
+  MAIL_AI_API_KEY?: string;
 }
 
 export interface ApiHandlerOptions {
@@ -60,10 +63,12 @@ export function createApiHandler({ env, requireUser, rootDir }: ApiHandlerOption
     microsoftClientId: env.MICROSOFT_CLIENT_ID,
     microsoftClientSecret: env.MICROSOFT_CLIENT_SECRET,
     redirectUri: env.MAIL_REDIRECT_URI,
-    anthropicApiKey: env.ANTHROPIC_API_KEY,
+    aiProvider: env.MAIL_AI_PROVIDER,
     aiModel: env.MAIL_AI_MODEL,
+    aiApiKey: env.MAIL_AI_API_KEY,
     rootDir,
   };
+  const ai = createAiConfig(env, rootDir);
   const chain: Connect.NextHandleFunction[] = [
     createObsidianMiddleware(env.OBSIDIAN_VAULT_PATH, requireUser),
     createCalendarMiddleware(
@@ -78,7 +83,8 @@ export function createApiHandler({ env, requireUser, rootDir }: ApiHandlerOption
       // Consent runs in the system browser, which has no app to bounce back to.
       { returnUrl: null },
     ),
-    createMailMiddleware(mailConfig, requireUser, { returnUrl: null }),
+    createAiMiddleware(ai, requireUser),
+    createMailMiddleware(mailConfig, requireUser, { returnUrl: null, ai }),
     createTradesMiddleware(mailConfig, requireUser),
   ];
 

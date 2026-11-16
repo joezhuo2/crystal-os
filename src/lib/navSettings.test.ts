@@ -10,16 +10,16 @@ describe("parseNavSettings", () => {
   it("defaults to today's sidebar", () => {
     expect(parseNavSettings(null)).toEqual(DEFAULT_NAV_SETTINGS);
     expect(navLayout(DEFAULT_NAV_SETTINGS)).toEqual({
-      top: ["home", "orbit", "tasks", "calendar", "mail", "financials", "trades", "weather"],
+      top: ["home", "orbit", "tasks", "calendar", "mail", "financials", "trades", "weather", "observatory"],
       bottom: ["archive", "nebula", "portal", "terminal", "settings"],
     });
   });
 
   it("drops unknown pages, never hides Settings, and puts missing pages back in their default place", () => {
     const s = parseNavSettings(JSON.stringify({ order: ["weather", "home", "bogus", "home"], hidden: ["orbit", "settings"], bottom: ["home"] }));
-    expect(s.order.slice(0, 4)).toEqual(["weather", "archive", "nebula", "portal"]);
+    expect(s.order.slice(0, 4)).toEqual(["weather", "archive", "observatory", "nebula"]);
     expect(s.order).toContain("orbit");
-    expect(s.order).toHaveLength(13);
+    expect(s.order).toHaveLength(14);
     expect(s.hidden).toEqual(["orbit"]);
     expect(s.bottom).toEqual(["home"]);
     expect(parseNavSettings("not json")).toEqual(DEFAULT_NAV_SETTINGS);
@@ -36,7 +36,7 @@ describe("navLayout", () => {
 
 describe("moveTab", () => {
   it("swaps with the neighbour in the same group and stops at the ends", () => {
-    const moved = moveTab(DEFAULT_NAV_SETTINGS, "weather", 1);
+    const moved = moveTab(DEFAULT_NAV_SETTINGS, "observatory", 1);
     expect(moved).toBe(DEFAULT_NAV_SETTINGS);
     expect(navLayout(moveTab(DEFAULT_NAV_SETTINGS, "orbit", -1)).top.slice(0, 2)).toEqual(["orbit", "home"]);
     expect(navLayout(moveTab(DEFAULT_NAV_SETTINGS, "archive", 1)).bottom.slice(0, 2)).toEqual(["nebula", "archive"]);

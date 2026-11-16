@@ -3,8 +3,8 @@ import type { ServerResponse } from "node:http";
 import type { Connect, Plugin } from "vite";
 import type { RequireUser } from "../auth/requireUser";
 import { CalendarError as MailError } from "../calendar/errors";
-import { removeEnvValue, upsertEnvValue } from "../calendar/envFile";
 import { readJsonBody, sendCallbackPage, sendJson } from "../calendar/plugin";
+import { cleanApiKey, cleanModel, createAiConfig, saveEnv, type AiChoice, type AiConfig } from "../ai/config";
 import { createMailAi } from "./ai";
 import { createMailCache } from "./cache";
 import { createDigest } from "./digest";
@@ -37,6 +37,15 @@ function sendError(res: ServerResponse, err: unknown) {
 
 export interface MailMiddlewareOptions {
   returnUrl?: string | null;
+  ai?: AiConfig;
+}
+
+const AI_CHOICES: readonly AiChoice[] = ["claude", "nim", "omniroute", "none"];
+
+function cleanChoice(v: unknown): AiChoice | undefined {
+  if (v === undefined) return undefined;
+  if (!AI_CHOICES.includes(v as AiChoice)) throw new MailError("provider must be claude, nim, omniroute or none");
+  return v as AiChoice;
 }
 
 export function createMailMiddleware(
@@ -48,7 +57,12 @@ export function createMailMiddleware(
   const returnUrl = opts.returnUrl === undefined ? "/" : opts.returnUrl;
   const rootDir = config.rootDir ?? process.cwd();
   const store = createMailStore(rootDir);
-  const ai = createMailAi(config.anthropicApiKey || undefined, config.aiModel || undefined);
+  const shared = opts.ai ?? createAiConfig({}, rootDir);
+  const ai = createMailAi(shared, {
+    provider: AI_CHOICES.includes(config.aiProvider as AiChoice) ? (config.aiProvider as AiChoice) : "claude",
+    model: config.aiModel?.trim(),
+    apiKey: config.aiApiKey?.trim(),
+  });
   const pendingStates = new Map<string, { provider: MailProvider; verifier?: string; expiry: number }>();
 
   const configured: Record<MailProvider, boolean> = {
@@ -144,7 +158,7 @@ export function createMailMiddleware(
               google: { configured: configured.google },
               microsoft: { configured: configured.microsoft },
             },
-            ai: { configured: ai.configured, model: ai.model },
+            ai: ai.status(),
             cache: await cache.settings(),
             accounts: (await store.list()).map(({ id, provider, email }) => ({ id, provider, email })),
           };
@@ -179,19 +193,17 @@ export function createMailMiddleware(
         if (route === "/ai") {
           if (method !== "POST") throw new MailError("Use POST", 405);
           const body = ((await readJsonBody(req)) ?? {}) as Record<string, unknown>;
-          const apiKey = body.apiKey === undefined ? undefined : typeof body.apiKey === "string" ? body.apiKey.trim() : "";
-          const model = body.model === undefined ? undefined : typeof body.model === "string" ? body.model.trim() : "";
-          if (apiKey && !/^[\w-]{10,300}$/.test(apiKey)) throw new MailError("That does not look like an Anthropic API key");
-          if (model && !/^[\w.:-]{1,100}$/.test(model)) throw new MailError("That does not look like a model id");
-          ai.set({ apiKey, model });
+          const provider = cleanChoice(body.provider);
+          const model = cleanModel(body.model);
+          const apiKey = cleanApiKey(body.apiKey);
+          ai.set({ provider, model, apiKey });
           digest.clear();
-          sendJson(res, 200, { configured: ai.configured, model: ai.model });
-          setImmediate(() => {
-            void (async () => {
-              if (apiKey !== undefined) await (apiKey ? upsertEnvValue(rootDir, "ANTHROPIC_API_KEY", apiKey) : removeEnvValue(rootDir, "ANTHROPIC_API_KEY"));
-              if (model !== undefined) await (model ? upsertEnvValue(rootDir, "MAIL_AI_MODEL", model) : removeEnvValue(rootDir, "MAIL_AI_MODEL"));
-            })().catch((err) => console.error("[mail] failed to save AI settings:", err instanceof Error ? err.message : String(err)));
-          });
+          sendJson(res, 200, ai.status());
+          const changes: [string, string | null][] = [];
+          if (provider !== undefined) changes.push(["MAIL_AI_PROVIDER", provider]);
+          if (model !== undefined) changes.push(["MAIL_AI_MODEL", model || null]);
+          if (apiKey !== undefined) changes.push(["MAIL_AI_API_KEY", apiKey || null]);
+          void saveEnv(rootDir, changes).catch((err) => console.error("[mail] failed to save AI settings:", err instanceof Error ? err.message : String(err)));
           return;
         }
 
@@ -221,8 +233,8 @@ export function createMailMiddleware(
   };
 }
 
-export function mailApi(config: MailConfig, requireUser?: RequireUser): Plugin {
-  const middleware = createMailMiddleware(config, requireUser);
+export function mailApi(config: MailConfig, requireUser?: RequireUser, ai?: AiConfig): Plugin {
+  const middleware = createMailMiddleware(config, requireUser, { ai });
   return {
     name: "crystal-os:mail-api",
     configureServer(server) {

@@ -40,7 +40,7 @@ describe("mail middleware", () => {
     const res = await fetch(`${base}/status`, authed);
     expect(await res.json()).toEqual({
       providers: { google: { configured: true }, microsoft: { configured: false } },
-      ai: { configured: false, model: "claude-haiku-5-5" },
+      ai: { provider: "claude", model: "", keyOverride: false, configured: false },
       cache: { fetchDays: 30, retainDays: 90 },
       accounts: [],
     });
@@ -83,28 +83,30 @@ describe("mail middleware", () => {
     }
   });
 
-  it("saves the AI key and model without ever returning the key", async () => {
+  it("saves the Courier provider, model and override key without ever returning the key", async () => {
     const post = (body: unknown) =>
       fetch(`${base}/ai`, { method: "POST", headers: { ...authed.headers, "content-type": "application/json" }, body: JSON.stringify(body) });
 
     expect((await post({ apiKey: "sk-ant-x\nEVIL=1" })).status).toBe(400);
     expect((await post({ model: "bad model" })).status).toBe(400);
+    expect((await post({ provider: "gpt" })).status).toBe(400);
 
-    const saved = await post({ apiKey: "sk-ant-test-key-123", model: "claude-sonnet-5-5" });
-    expect(await saved.json()).toEqual({ configured: true, model: "claude-sonnet-5-5" });
+    const saved = await post({ provider: "nim", apiKey: "nvapi-test-key-123", model: "deepseek-ai/deepseek-v4" });
+    expect(await saved.json()).toEqual({ provider: "nim", model: "deepseek-ai/deepseek-v4", keyOverride: true, configured: true });
     const status = await (await fetch(`${base}/status`, authed)).text();
-    expect(status).toContain('"configured":true');
-    expect(status).not.toContain("sk-ant-test-key-123");
+    expect(status).toContain('"keyOverride":true');
+    expect(status).not.toContain("nvapi-test-key-123");
     await vi.waitFor(async () => {
       const env = await readFile(path.join(dir, ".env.local"), "utf-8");
-      expect(env).toContain("ANTHROPIC_API_KEY=sk-ant-test-key-123");
-      expect(env).toContain("MAIL_AI_MODEL=claude-sonnet-5-5");
+      expect(env).toContain("MAIL_AI_PROVIDER=nim");
+      expect(env).toContain("MAIL_AI_API_KEY=nvapi-test-key-123");
+      expect(env).toContain("MAIL_AI_MODEL=deepseek-ai/deepseek-v4");
     });
 
-    const cleared = await post({ apiKey: null, model: "" });
-    expect(await cleared.json()).toEqual({ configured: false, model: "claude-haiku-5-5" });
+    const cleared = await post({ provider: "claude", apiKey: null, model: "" });
+    expect(await cleared.json()).toEqual({ provider: "claude", model: "", keyOverride: false, configured: false });
     await vi.waitFor(async () => {
-      expect(await readFile(path.join(dir, ".env.local"), "utf-8")).not.toContain("ANTHROPIC_API_KEY");
+      expect(await readFile(path.join(dir, ".env.local"), "utf-8")).not.toContain("MAIL_AI_API_KEY");
     });
   });
 

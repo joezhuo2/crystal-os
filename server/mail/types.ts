@@ -14,9 +14,16 @@ export interface StoredAccount extends MailAccount {
 
 export interface MailStatus {
   providers: Record<MailProvider, { configured: boolean }>;
-  ai: { configured: boolean; model: string };
+  ai: MailAiStatus;
   cache: MailCacheSettings;
   accounts: MailAccount[];
+}
+
+export interface MailAiStatus {
+  provider: "claude" | "nim" | "omniroute" | "none";
+  model: string;
+  keyOverride: boolean;
+  configured: boolean;
 }
 
 export interface MailCacheSettings {
@@ -76,7 +83,8 @@ export interface MailConfig {
   microsoftClientId?: string;
   microsoftClientSecret?: string;
   redirectUri?: string;
-  anthropicApiKey?: string;
+  aiProvider?: string;
   aiModel?: string;
+  aiApiKey?: string;
   rootDir?: string;
 }
