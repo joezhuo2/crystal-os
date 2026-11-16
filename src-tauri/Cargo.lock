@@ -664,6 +664,7 @@ dependencies = [
 name = "crystal-os"
 version = "0.15.1"
 dependencies = [
+ "base64 0.22.1",
  "log",
  "notify-debouncer-mini",
  "portable-pty",

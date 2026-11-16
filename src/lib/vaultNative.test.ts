@@ -4,10 +4,14 @@ import {
   VAULT_CHANGED_EVENT,
   clearNativeVaultCache,
   listNotesNative,
+  moveVaultPath,
+  restoreVaultPath,
+  trashVaultPath,
   onVaultChanged,
   parseFrontmatter,
   quickAddNative,
   readNoteNative,
+  writeVaultBinary,
 } from "./vaultNative";
 
 const { invoke, listen, handlers, files, fakeBackend } = vi.hoisted(() => {
@@ -167,5 +171,38 @@ describe("onVaultChanged", () => {
 
     unsubscribe();
     expect(handlers.has(VAULT_CHANGED_EVENT)).toBe(false);
+  });
+});
+
+describe("vault binary and moves", () => {
+  it("sends base64 bytes and the overwrite flag", async () => {
+    invoke.mockImplementationOnce((async () => ({ path: "a.pdf", mtime: 1 })) as never);
+    await writeVaultBinary("a.pdf", new Uint8Array([0, 255, 128, 65]), true);
+    expect(invoke).toHaveBeenCalledWith("write_vault_binary", { path: "a.pdf", data: "AP+AQQ==", overwrite: true });
+  });
+
+  it("sends from and to when moving", async () => {
+    invoke.mockImplementationOnce((async () => ({ path: "b" })) as never);
+    await expect(moveVaultPath("a", "b")).resolves.toEqual({ path: "b" });
+    expect(invoke).toHaveBeenCalledWith("move_vault_path", { from: "a", to: "b" });
+  });
+
+  it("surfaces a conflict as NativeVaultError", async () => {
+    invoke.mockRejectedValueOnce({ code: "conflict", message: "b already exists" });
+    await expect(moveVaultPath("a", "b")).rejects.toMatchObject({ name: "NativeVaultError", code: "conflict" });
+  });
+
+  it("sends the trash and restore args", async () => {
+    invoke.mockImplementationOnce((async () => ({ path: ".trash/a" })) as never);
+    await expect(trashVaultPath("O/a")).resolves.toEqual({ path: ".trash/a" });
+    expect(invoke).toHaveBeenCalledWith("trash_vault_path", { path: "O/a" });
+    invoke.mockImplementationOnce((async () => ({ path: "O/a" })) as never);
+    await expect(restoreVaultPath(".trash/a", "O/a")).resolves.toEqual({ path: "O/a" });
+    expect(invoke).toHaveBeenCalledWith("restore_vault_path", { trashPath: ".trash/a", to: "O/a" });
+  });
+
+  it("maps a restore conflict to NativeVaultError", async () => {
+    invoke.mockRejectedValueOnce({ code: "conflict", message: "O/a already exists" });
+    await expect(restoreVaultPath(".trash/a", "O/a")).rejects.toMatchObject({ name: "NativeVaultError", code: "conflict" });
   });
 });
