@@ -1,4 +1,4 @@
-import type { Ledger, TokenCounts } from "./types";
+import type { DailyTokens, Ledger, TokenCounts } from "./types";
 
 export const EMPTY_COUNTS: TokenCounts = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, estimated: false };
 
@@ -18,6 +18,42 @@ export function addCounts(ledger: Ledger, model: string, delta: Partial<TokenCou
 
 export function mergeLedgers(a: Ledger, b: Ledger): Ledger {
   return Object.entries(b).reduce((acc, [model, counts]) => addCounts(acc, model, counts), a);
+}
+
+export function addDaily(daily: DailyTokens, day: string, projectId: string, ledger: Ledger): DailyTokens {
+  return { ...daily, [day]: { ...daily[day], [projectId]: mergeLedgers(daily[day]?.[projectId] ?? {}, ledger) } };
+}
+
+const PRICES: [RegExp, { input: number; output: number; cacheRead: number }][] = [
+  [/(fable|mythos)-5[-.]2/, { input: 8, output: 40, cacheRead: 0.2 }],
+  [/fable|mythos/, { input: 10, output: 50, cacheRead: 1 }],
+  [/opus-5[-.]5/, { input: 4, output: 20, cacheRead: 0.2 }],
+  [/opus/, { input: 5, output: 25, cacheRead: 0.5 }],
+  [/sonnet-5[-.]5/, { input: 2, output: 10, cacheRead: 0.1 }],
+  [/sonnet-5/, { input: 2, output: 10, cacheRead: 0.2 }],
+  [/sonnet/, { input: 3, output: 15, cacheRead: 0.3 }],
+  [/haiku-5/, { input: 0.1, output: 0.5, cacheRead: 0.01 }],
+  [/haiku/, { input: 1, output: 5, cacheRead: 0.1 }],
+];
+
+export function costOf(ledger: Ledger): number | null {
+  let cost: number | null = null;
+  for (const [model, c] of Object.entries(ledger)) {
+    const price = PRICES.find(([re]) => re.test(model.toLowerCase()))?.[1];
+    if (!price) continue;
+    cost = (cost ?? 0) + (c.input * price.input + c.output * price.output + c.cacheRead * price.cacheRead + c.cacheWrite * price.input * 1.25) / 1_000_000;
+  }
+  return cost;
+}
+
+export const formatCost = (cost: number | null) => (cost === null ? "n/a" : cost < 0.01 ? "<$0.01" : `$${cost.toFixed(2)}`);
+
+export function usageByDay(daily: DailyTokens, days = 7): { day: string; ledger: Ledger }[] {
+  return Object.keys(daily)
+    .sort()
+    .slice(-days)
+    .reverse()
+    .map((day) => ({ day, ledger: Object.values(daily[day]).reduce(mergeLedgers, {} as Ledger) }));
 }
 
 export function totalOf(ledger: Ledger): TokenCounts {

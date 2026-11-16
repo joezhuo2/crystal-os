@@ -24,6 +24,8 @@ const PROGRESS_STEP: u64 = 1024 * 1024;
 #[derive(Default)]
 pub struct UpdaterState {
   pending: Mutex<Option<Update>>,
+  /// The verified installer for `pending`, fetched ahead so the restart does not wait on it.
+  downloaded: Mutex<Option<Vec<u8>>>,
 }
 
 #[derive(Serialize, Clone)]
@@ -70,25 +72,19 @@ pub async fn update_check(app: AppHandle, state: State<'_, UpdaterState>) -> Res
     notes: update.body.clone().filter(|body| !body.trim().is_empty()),
   });
   crate::tray::set_update(&app, info.as_ref().map(|info| info.version.as_str()));
-  *state.pending.lock().unwrap_or_else(|e| e.into_inner()) = update;
+  let mut pending = state.pending.lock().unwrap_or_else(|e| e.into_inner());
+  let same = matches!((pending.as_ref(), update.as_ref()), (Some(a), Some(b)) if a.version == b.version);
+  if !same {
+    state.downloaded.lock().unwrap_or_else(|e| e.into_inner()).take();
+  }
+  *pending = update;
   Ok(info)
 }
 
-/// Downloads and verifies the update found by `update_check`, then starts the
-/// installer. On Windows the app exits as the installer starts, so a success
-/// never returns; progress arrives as `installer://update`.
-#[tauri::command]
-pub async fn update_install(app: AppHandle, state: State<'_, UpdaterState>) -> Result<(), String> {
-  let update = state
-    .pending
-    .lock()
-    .unwrap_or_else(|e| e.into_inner())
-    .clone()
-    .ok_or("No update is waiting. Check for updates first.")?;
-
+async fn download(app: &AppHandle, update: &Update) -> Result<Vec<u8>, String> {
   let mut received: u64 = 0;
   let mut announced: u64 = 0;
-  let bytes = update
+  update
     .download(
       |chunk, total| {
         received += chunk as u64;
@@ -101,7 +97,43 @@ pub async fn update_install(app: AppHandle, state: State<'_, UpdaterState>) -> R
       || {},
     )
     .await
-    .map_err(|err| format!("Could not download the update: {err}"))?;
+    .map_err(|err| format!("Could not download the update: {err}"))
+}
+
+fn pending_update(state: &UpdaterState) -> Result<Update, String> {
+  state
+    .pending
+    .lock()
+    .unwrap_or_else(|e| e.into_inner())
+    .clone()
+    .ok_or_else(|| "No update is waiting. Check for updates first.".to_string())
+}
+
+/// Downloads and verifies the update found by `update_check` and keeps it,
+/// so `update_install` can start the installer at once.
+#[tauri::command]
+pub async fn update_download(app: AppHandle, state: State<'_, UpdaterState>) -> Result<(), String> {
+  let update = pending_update(&state)?;
+  if state.downloaded.lock().unwrap_or_else(|e| e.into_inner()).is_some() {
+    return Ok(());
+  }
+  let bytes = download(&app, &update).await?;
+  *state.downloaded.lock().unwrap_or_else(|e| e.into_inner()) = Some(bytes);
+  Ok(())
+}
+
+/// Downloads and verifies the update found by `update_check`, then starts the
+/// installer. On Windows the app exits as the installer starts, so a success
+/// never returns; progress arrives as `installer://update`.
+#[tauri::command]
+pub async fn update_install(app: AppHandle, state: State<'_, UpdaterState>) -> Result<(), String> {
+  let update = pending_update(&state)?;
+  let ready = state.downloaded.lock().unwrap_or_else(|e| e.into_inner()).take();
+  let bytes = match ready {
+    Some(bytes) => bytes,
+    None => download(&app, &update).await?,
+  };
+  let received = bytes.len() as u64;
   let _ = app.emit(UPDATE_EVENT, UpdateEvent { received, total: received, installing: true });
 
   state.pending.lock().unwrap_or_else(|e| e.into_inner()).take();

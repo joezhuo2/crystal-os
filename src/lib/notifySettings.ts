@@ -15,7 +15,7 @@ export const MAX_EVENT_LEAD = 1440;
 /** Minutes before a task's end time that its "Due soon" reminder shows, by default. */
 export const DEFAULT_TASK_LEAD = 30;
 
-type Flag = "sounds" | "doNotDisturb" | "dndSchedule" | "tasks" | "calendar" | "pomodoro" | "portal" | "reviews" | "taskReminders" | "habitReminders" | "habitReminderStartup" | "pulse";
+type Flag = "sounds" | "doNotDisturb" | "dndSchedule" | "tasks" | "calendar" | "pomodoro" | "portal" | "reviews" | "taskReminders" | "habitReminders" | "habitReminderStartup" | "pulse" | "weatherAlerts";
 
 export interface NotifySettings {
   sounds: boolean;
@@ -53,6 +53,7 @@ export interface NotifySettings {
   habitReminders: boolean;
   /** Also a habit reminder on each launch, for habits past their time and not ticked, beyond the daily count. */
   habitReminderStartup: boolean;
+  weatherAlerts: boolean;
 }
 
 export const DEFAULT_NOTIFY_SETTINGS: NotifySettings = {
@@ -75,6 +76,7 @@ export const DEFAULT_NOTIFY_SETTINGS: NotifySettings = {
   taskReminderRepeat: "once",
   habitReminders: true,
   habitReminderStartup: false,
+  weatherAlerts: true,
 };
 
 /** Whole minutes within range. Anything unreadable falls back to the default. */
@@ -136,6 +138,7 @@ export function parseNotifySettings(raw: string | null): NotifySettings {
     taskReminderRepeat: stored.taskReminderRepeat === "everyLaunch" ? "everyLaunch" : "once",
     habitReminders: flag("habitReminders"),
     habitReminderStartup: flag("habitReminderStartup"),
+    weatherAlerts: flag("weatherAlerts"),
   };
 }
 

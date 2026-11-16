@@ -1,4 +1,4 @@
-import type { JobStatus, MailCategory, MailExtras } from "./types";
+import type { JobStatus, MailCategory, MailExtras, OrderStatus } from "./types";
 
 export interface ClassifyInput {
   from: string;
@@ -108,14 +108,26 @@ export const AMOUNT =
   /(?:(?:US|CA|C|A)?\$|[€£¥]|\b(?:USD|CAD|EUR|GBP)\s?)\s?\d[\d,]*(?:\.\d{1,2})?|\b\d[\d,]*(?:\.\d{2})?\s?(?:USD|CAD|EUR|GBP)\b/;
 
 const MONTH = String.raw`(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?`;
-const DUE_DATE = new RegExp(
-  String.raw`\b(?:due(?:\s+date)?|pay(?:ment)?\s+by|payable\s+by)\b[^\n!?]{0,30}?` +
-    String.raw`(?:(\d{4})-(\d{2})-(\d{2})` +
-    String.raw`|${MONTH}\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(\d{4}))?` +
-    String.raw`|(\d{1,2})(?:st|nd|rd|th)?\s+${MONTH}(?:,?\s+(\d{4}))?` +
-    String.raw`|(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?)`,
-  "i",
-);
+const dateAfter = (prefix: string) =>
+  new RegExp(
+    String.raw`\b(?:${prefix})\b[^\n!?]{0,30}?` +
+      String.raw`(?:(\d{4})-(\d{2})-(\d{2})` +
+      String.raw`|${MONTH}\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(\d{4}))?` +
+      String.raw`|(\d{1,2})(?:st|nd|rd|th)?\s+${MONTH}(?:,?\s+(\d{4}))?` +
+      String.raw`|(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?)`,
+    "i",
+  );
+const DUE_DATE = dateAfter(String.raw`due(?:\s+date)?|pay(?:ment)?\s+by|payable\s+by`);
+const DELIVERY = String.raw`arriv(?:ing|es|al)|deliver(?:y|ed)|expected`;
+const DELIVERY_DATE = dateAfter(DELIVERY);
+const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+const DELIVERY_DAY = new RegExp(String.raw`\b(?:${DELIVERY})\b[^\n!?]{0,20}?\b(today|tomorrow|${WEEKDAYS.join("|")})\b`, "i");
+
+const ORDER_STATUS: [OrderStatus, RegExp][] = [
+  ["out", /\bout for delivery\b/],
+  ["delivered", /\b(has been|was|were|is) delivered\b|^delivered\b|\b(package|order|item|parcel) delivered\b/],
+  ["shipped", /\bshipped\b|\bon (its|the) way\b|\bin transit\b/],
+];
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
 function domainLabels(fromAddress: string): string[] {
@@ -126,8 +138,8 @@ function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-export function extractDueDate(text: string, reference: Date): string | undefined {
-  const m = DUE_DATE.exec(text);
+export function extractDueDate(text: string, reference: Date, pattern = DUE_DATE): string | undefined {
+  const m = pattern.exec(text);
   if (!m) return undefined;
   let year: number | null;
   let month: number;
@@ -153,6 +165,13 @@ export function extractDueDate(text: string, reference: Date): string | undefine
     if (!date) return undefined;
   }
   return `${y}-${pad(month)}-${pad(day)}`;
+}
+
+export function extractDeliveryDate(text: string, reference: Date): string | undefined {
+  const day = DELIVERY_DAY.exec(text)?.[1].toLowerCase();
+  if (!day) return extractDueDate(text, reference, DELIVERY_DATE);
+  const ahead = day === "today" ? 0 : day === "tomorrow" ? 1 : (WEEKDAYS.indexOf(day) - reference.getUTCDay() + 7) % 7;
+  return new Date(Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), reference.getUTCDate() + ahead)).toISOString().slice(0, 10);
 }
 
 export function extractCompany(from: string, fromAddress: string): string | undefined {
@@ -217,6 +236,11 @@ export function classify(input: ClassifyInput, reference: Date): Classification 
     if (company) result.company = company;
     const lower = text.toLowerCase();
     result.jobStatus = JOB_STATUS.find(([, re]) => re.test(lower))?.[0] ?? "update";
+  }
+  if (top.category === "order") {
+    result.orderStatus = ORDER_STATUS.find(([, re]) => re.test(subject) || re.test(snippet))?.[0] ?? "ordered";
+    const deliveryDate = result.orderStatus === "out" ? reference.toISOString().slice(0, 10) : extractDeliveryDate(text, reference);
+    if (deliveryDate && result.orderStatus !== "delivered") result.deliveryDate = deliveryDate;
   }
   return result;
 }

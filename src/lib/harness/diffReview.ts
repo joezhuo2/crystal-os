@@ -22,6 +22,13 @@ export function changeKind(f: Pick<ChangedFile, "status">): ChangeKind {
 /** Every path a commit of `f` has to name: a rename's old path too, so its removal is committed. */
 export const commitPaths = (f: ChangedFile) => (f.origPath ? [f.path, f.origPath] : [f.path]);
 
+export function stepFile(files: Pick<ChangedFile, "path">[], selected: string | null, delta: 1 | -1): string | null {
+  if (files.length === 0) return null;
+  const at = files.findIndex((f) => f.path === selected);
+  if (at === -1) return files[delta === 1 ? 0 : files.length - 1].path;
+  return files[(at + delta + files.length) % files.length].path;
+}
+
 export type DiffLine = { kind: "add" | "del" | "hunk" | "ctx" | "note"; text: string };
 
 const HEADER = /^(diff --git |index |--- |\+\+\+ |new file mode|deleted file mode|similarity index|rename (from|to) |old mode|new mode)/;

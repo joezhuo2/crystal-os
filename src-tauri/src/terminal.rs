@@ -35,6 +35,8 @@ const KEEP_FROM_PROCESS: &[&str] = &["USERNAME", "PSMODULEPATH", "PROCESSOR_ARCH
 struct Session {
   id: u64,
   shell: String,
+  /// The shell menu's id for it, so a restart starts the same one.
+  kind: String,
   /// Taken once the shell exits; dropping it closes the pseudoconsole.
   master: Option<Box<dyn MasterPty + Send>>,
   writer: Box<dyn Write + Send>,
@@ -250,14 +252,46 @@ fn env_value<'a>(env: &'a [(String, String)], name: &str) -> Option<&'a str> {
 /// PowerShell 7 when it is on PATH, otherwise the Windows PowerShell that ships
 /// with Windows.
 #[cfg(windows)]
-fn pick_shell(env: &[(String, String)]) -> Shell {
-  let pwsh = env_value(env, "PATH")
+fn on_path(env: &[(String, String)], exe: &str) -> Option<std::path::PathBuf> {
+  env_value(env, "PATH")
     .into_iter()
     .flat_map(|path| path.split(';'))
     .filter(|dir| !dir.is_empty())
-    .map(|dir| std::path::Path::new(dir).join("pwsh.exe"))
-    .find(|candidate| candidate.is_file());
-  if let Some(pwsh) = pwsh {
+    .map(|dir| std::path::Path::new(dir).join(exe))
+    .find(|candidate| candidate.is_file())
+}
+
+/// The shell picked in the Terminal's shell menu, or an error when it is not installed.
+#[cfg(windows)]
+fn named_shell(kind: &str, env: &[(String, String)]) -> Result<Shell, String> {
+  let root = env_value(env, "SystemRoot").unwrap_or(r"C:\Windows");
+  let existing = |path: String| std::path::Path::new(&path).is_file().then_some(path);
+  match kind {
+    "cmd" => Ok(Shell { name: "Command Prompt", program: format!(r"{root}\System32\cmd.exe"), args: &[] }),
+    "wsl" => existing(format!(r"{root}\System32\wsl.exe"))
+      .map(|program| Shell { name: "WSL", program, args: &["--cd", "~"] })
+      .ok_or_else(|| "WSL is not installed.".to_string()),
+    // System32 also holds a bash.exe, which is the WSL launcher, so PATH is the last place looked.
+    "bash" => ["ProgramFiles", "LOCALAPPDATA"]
+      .iter()
+      .filter_map(|var| env_value(env, var))
+      .flat_map(|base| [format!(r"{base}\Git\bin\bash.exe"), format!(r"{base}\Programs\Git\bin\bash.exe")])
+      .find_map(existing)
+      .or_else(|| on_path(env, "bash.exe").filter(|p| !p.starts_with(root)).map(|p| p.to_string_lossy().into_owned()))
+      .map(|program| Shell { name: "Git Bash", program, args: &["--login", "-i"] })
+      .ok_or_else(|| "Git Bash is not installed.".to_string()),
+    _ => Ok(pick_shell(env)),
+  }
+}
+
+#[cfg(not(windows))]
+fn named_shell(_kind: &str, env: &[(String, String)]) -> Result<Shell, String> {
+  Ok(pick_shell(env))
+}
+
+#[cfg(windows)]
+fn pick_shell(env: &[(String, String)]) -> Shell {
+  if let Some(pwsh) = on_path(env, "pwsh.exe") {
     return Shell { name: "PowerShell", program: pwsh.to_string_lossy().into_owned(), args: &["-NoLogo"] };
   }
   let root = env_value(env, "SystemRoot").unwrap_or(r"C:\Windows");
@@ -322,14 +356,14 @@ impl Scrollback {
 }
 
 /// Starts in `cwd` when given, otherwise in the home folder.
-fn spawn_session(app: &AppHandle, state: &TerminalState, cols: u16, rows: u16, cwd: Option<&str>) -> Result<Session, String> {
+fn spawn_session(app: &AppHandle, state: &TerminalState, cols: u16, rows: u16, cwd: Option<&str>, kind: &str) -> Result<Session, String> {
   if let Some(dir) = cwd.filter(|dir| !std::path::Path::new(dir).is_dir()) {
     return Err(format!("{dir} is not a folder."));
   }
   let pair = native_pty_system().openpty(pty_size(cols, rows)).map_err(|e| e.to_string())?;
 
   let env = fresh_env();
-  let shell = pick_shell(&env);
+  let shell = named_shell(kind, &env)?;
   let mut cmd = CommandBuilder::new(&shell.program);
   cmd.args(shell.args);
   cmd.env_clear();
@@ -394,6 +428,7 @@ fn spawn_session(app: &AppHandle, state: &TerminalState, cols: u16, rows: u16, c
   Ok(Session {
     id,
     shell: shell.name.to_string(),
+    kind: kind.to_string(),
     master: Some(pair.master),
     writer,
     killer,
@@ -427,11 +462,18 @@ pub fn terminal_list(state: State<'_, TerminalState>) -> Vec<TerminalSummary> {
 
 /// Starts a new shell as the last tab, in `cwd` when given.
 #[tauri::command]
-pub fn terminal_open(app: AppHandle, state: State<'_, TerminalState>, cols: u16, rows: u16, cwd: Option<String>) -> Result<TerminalInfo, String> {
+pub fn terminal_open(
+  app: AppHandle,
+  state: State<'_, TerminalState>,
+  cols: u16,
+  rows: u16,
+  cwd: Option<String>,
+  shell: Option<String>,
+) -> Result<TerminalInfo, String> {
   if let Some(err) = limit_error(state.sessions.lock().unwrap().len()) {
     return Err(err);
   }
-  let next = spawn_session(&app, &state, cols, rows, cwd.as_deref())?;
+  let next = spawn_session(&app, &state, cols, rows, cwd.as_deref(), shell.as_deref().unwrap_or("default"))?;
   let info = next.info();
   let mut sessions = state.sessions.lock().unwrap();
   // Checked again: another open may have finished while this shell started.
@@ -459,7 +501,11 @@ pub fn terminal_attach(state: State<'_, TerminalState>, id: u64, cols: u16, rows
 /// other variables read again from the registry. The new session has a new id.
 #[tauri::command]
 pub fn terminal_restart(app: AppHandle, state: State<'_, TerminalState>, id: u64, cols: u16, rows: u16) -> Result<TerminalInfo, String> {
-  let next = spawn_session(&app, &state, cols, rows, None)?;
+  let kind = {
+    let sessions = state.sessions.lock().unwrap();
+    sessions.iter().find(|s| s.id == id).map(|s| s.kind.clone()).ok_or_else(|| no_session(id))?
+  };
+  let next = spawn_session(&app, &state, cols, rows, None, &kind)?;
   let info = next.info();
   let mut sessions = state.sessions.lock().unwrap();
   let Some(slot) = sessions.iter_mut().find(|s| s.id == id) else {

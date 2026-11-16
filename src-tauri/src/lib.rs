@@ -144,6 +144,7 @@ pub fn run() {
       installer::installer_cancel_build,
       installer::installer_reveal,
       updater::update_check,
+      updater::update_download,
       updater::update_install,
       sidecar::sidecar_ensure,
       setup::setup_env_status,

@@ -12,12 +12,17 @@ import {
   Link2,
   NotebookPen,
   Pencil,
+  Pin,
+  PinOff,
   RotateCw,
   Search,
+  Sparkles,
   Tag as TagIcon,
 } from "lucide-react";
 import { appUi, useAppUi } from "@/lib/appUi";
-import { recordRecent } from "@/lib/recents";
+import { readRecents, recordRecent } from "@/lib/recents";
+import { readPinned, togglePinned, writePinned } from "@/lib/pinnedNotes";
+import { useSemanticSearch } from "@/lib/semantic";
 import {
   usePickVault,
   useVaultNote,
@@ -366,12 +371,32 @@ function NoteConnectionsPanel({
   );
 }
 
+function QuickNotes({ label, items, onSelect }: { label: string; items: { path: string; title: string }[]; onSelect: (path: string) => void }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="shrink-0">
+      <p className="mb-1 text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <div className="flex flex-wrap gap-1">
+        {items.map((item) => (
+          <button key={item.path} data-private onClick={() => onSelect(item.path)} className="obsidian-tag max-w-full truncate rounded-full px-2 py-0.5 text-[11px]">
+            {item.title}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function NoteReader({
   linkTargets,
   allNotes,
+  pinned,
+  onTogglePin,
 }: {
   linkTargets: Map<string, string>;
   allNotes: VaultNote[];
+  pinned: string[];
+  onTogglePin: (path: string) => void;
 }) {
   const selectedNotePath = useAppUi((s) => s.selectedNotePath);
   const { setSelectedNotePath } = appUi;
@@ -461,6 +486,14 @@ function NoteReader({
         <p className="text-xs text-muted-foreground uppercase tracking-widest min-w-0 break-all flex-1">
           {note.path}
         </p>
+        <button
+          onClick={() => onTogglePin(note.path)}
+          aria-pressed={pinned.includes(note.path)}
+          className="obsidian-action flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border shrink-0"
+        >
+          {pinned.includes(note.path) ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+          {pinned.includes(note.path) ? "Unpin" : "Pin"}
+        </button>
         {!editing && (
           <button
             onClick={() => setEditingPath(note.path)}
@@ -632,18 +665,45 @@ export default function ArchivePage() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, 250);
 
+  const [semantic, setSemantic] = useState(false);
   const { data, isLoading, error } = useVaultNotes({
-    q: debouncedSearch.trim() || undefined,
+    q: semantic ? undefined : debouncedSearch.trim() || undefined,
     tag: activeTag ?? undefined,
   });
 
-  const notes = useMemo(() => data?.notes ?? [], [data]);
+  const listed = useMemo(() => data?.notes ?? [], [data]);
 
   // Wikilinks resolve against the whole vault, not only the filtered list. On
   // desktop this reads the same cached listing; on the web it is one request.
   const { data: everything } = useVaultNotes({ limit: ALL_NOTES });
-  const allNotes = everything?.notes ?? notes;
+  const allNotes = everything?.notes ?? listed;
   const linkTargets = useMemo(() => buildLinkTargets(allNotes), [allNotes]);
+  const meaning = useSemanticSearch(semantic, debouncedSearch, allNotes);
+  const notes = useMemo(() => {
+    if (!meaning.hits) return listed;
+    const byPath = new Map(allNotes.map((n) => [n.path, n]));
+    const tag = activeTag?.toLowerCase();
+    return meaning.hits.flatMap(({ path }) => {
+      const note = byPath.get(path);
+      return note && (!tag || note.tags.some((t) => t.toLowerCase() === tag)) ? [note] : [];
+    });
+  }, [meaning.hits, listed, allNotes, activeTag]);
+  const total = meaning.hits ? notes.length : (data?.total ?? 0);
+
+  const [pinned, setPinned] = useState(readPinned);
+  const togglePin = useCallback((path: string) => {
+    setPinned((list) => {
+      const next = togglePinned(list, path);
+      writePinned(next);
+      return next;
+    });
+  }, []);
+  const quick = useMemo(() => {
+    const titles = new Map(allNotes.map((n) => [n.path, n.title]));
+    const known = (paths: string[]) => paths.flatMap((path) => (titles.has(path) ? [{ path, title: titles.get(path)! }] : []));
+    const recent = readRecents().flatMap((r) => (r.kind === "note" && r.id !== selectedNotePath && !pinned.includes(r.id) ? [r.id] : []));
+    return { pinned: known(pinned), recent: known(recent).slice(0, 5) };
+  }, [allNotes, pinned, selectedNotePath]);
 
   const toggleTag = useCallback(
     (tag: string | null) => setActiveTag((current) => (tag === null || current === tag ? null : tag)),
@@ -704,7 +764,30 @@ export default function ArchivePage() {
               placeholder="Search the vault…"
               className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
             />
+            <button
+              type="button"
+              aria-pressed={semantic}
+              aria-label="Search by meaning"
+              title="Search by meaning, with a model that runs on this device"
+              onClick={() => setSemantic((on) => !on)}
+              className={`shrink-0 rounded-md p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${semantic ? "bg-primary/15 text-primary" : "text-muted-foreground/60 hover:text-foreground"}`}
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
           </div>
+          {meaning.state.status === "indexing" && (
+            <p role="status" className="shrink-0 text-xs text-muted-foreground">
+              {meaning.state.total > 0 ? `Reading your notes: ${meaning.state.done} of ${meaning.state.total}` : "Loading the search model (about 23 MB the first time)…"}
+            </p>
+          )}
+          {meaning.state.status === "error" && (
+            <p role="alert" className="shrink-0 text-xs text-destructive">
+              Search by meaning is unavailable: {meaning.state.message}
+            </p>
+          )}
+
+          <QuickNotes label="Pinned" items={quick.pinned} onSelect={setSelectedNotePath} />
+          <QuickNotes label="Recent" items={quick.recent} onSelect={setSelectedNotePath} />
 
           {/* Top half: tags, scrolls on its own so a big tag cloud never buries the list. */}
           {(data?.allTags.length ?? 0) > 0 && (
@@ -715,7 +798,7 @@ export default function ArchivePage() {
 
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1 border-t border-white/5 shrink-0">
             <TagIcon className="w-3 h-3" />
-            {isLoading ? "Loading…" : `${data?.total ?? 0} note${data?.total === 1 ? "" : "s"}`}
+            {isLoading ? "Loading…" : `${total} note${total === 1 ? "" : "s"}`}
           </div>
 
           {/* Bottom half: filtered notes. */}
@@ -740,7 +823,7 @@ export default function ArchivePage() {
         </div>
 
         {/* ── Right pane: reader ── */}
-        <NoteReader linkTargets={linkTargets} allNotes={allNotes} />
+        <NoteReader linkTargets={linkTargets} allNotes={allNotes} pinned={pinned} onTogglePin={togglePin} />
       </div>
     </div>
   );

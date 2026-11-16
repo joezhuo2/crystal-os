@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput as ThemedNumberInput } from "@/components/ui/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { AmbientSoundManager } from "@/modules/tasks/AmbientSound";
 import { Switch } from "@/components/ui/switch";
 import HotkeySettingsDialog from "@/components/HotkeySettingsDialog";
 import SetupKeysDialog from "@/components/SetupKeysDialog";
@@ -1102,6 +1103,12 @@ export default function SettingsPage() {
             >
               <Switch checked={capacity.autoSchedule} onCheckedChange={capacitySettings.setAutoSchedule} />
             </Row>
+            <Row
+              title="Focus sounds"
+              description="Pick a sound under the Pomodoro timer and it plays while a focus phase runs. Brown, pink and white noise and rain are built in; add your own loops here (a café recording, music), up to 20 MB each, kept on this device."
+            >
+              <AmbientSoundManager />
+            </Row>
           </Section>
         )}
 
@@ -1230,6 +1237,9 @@ export default function SettingsPage() {
             description="When a weekly, monthly or yearly review is ready (6 PM on its last day), or the next time the app opens if you have not opened it yet. Once per review, with an Open button; reviews ready together share one toast."
           >
             <Switch checked={notifications.reviews} onCheckedChange={(on) => notifySettings.setFlag("reviews", on)} />
+          </Row>
+          <Row title="Severe weather alerts" description="When Environment Canada issues a warning, watch or advisory for your Atmosphere location. Once a day per alert.">
+            <Switch checked={notifications.weatherAlerts} onCheckedChange={(on) => notifySettings.setFlag("weatherAlerts", on)} />
           </Row>
           <Row
             title="Habit reminders"

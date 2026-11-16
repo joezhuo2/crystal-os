@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { addCounts, claudeContextUsed, claudeUsageDelta, contextWindowFor, estimateDshTurn, formatTokens, mergeLedgers, totalOf } from "./tokenLedger";
+import { addCounts, addDaily, costOf, formatCost, usageByDay, claudeContextUsed, claudeUsageDelta, contextWindowFor, estimateDshTurn, formatTokens, mergeLedgers, totalOf } from "./tokenLedger";
+
+describe("usage summary", () => {
+  const counts = (input: number, output: number) => ({ input, output, cacheRead: 0, cacheWrite: 0, estimated: false });
+
+  it("prices Claude models at list rates and leaves other models unpriced", () => {
+    expect(costOf({ "claude-opus-5-5": counts(1_000_000, 100_000) })).toBeCloseTo(6);
+    expect(costOf({ "claude-sonnet-5-5[1m]": { input: 0, output: 0, cacheRead: 1_000_000, cacheWrite: 1_000_000, estimated: false } })).toBeCloseTo(2.6);
+    expect(costOf({ "Kimi K3": counts(1_000_000, 1_000_000) })).toBeNull();
+    expect(formatCost(null)).toBe("n/a");
+    expect(formatCost(0.004)).toBe("<$0.01");
+    expect(formatCost(6)).toBe("$6.00");
+  });
+
+  it("totals each day across projects, newest day first", () => {
+    let daily = addDaily({}, "2026-11-15", "a", { m: counts(1, 1) });
+    daily = addDaily(daily, "2026-11-16", "a", { m: counts(2, 0) });
+    daily = addDaily(daily, "2026-11-16", "b", { m: counts(3, 0) });
+    expect(usageByDay(daily).map((d) => [d.day, d.ledger.m.input])).toEqual([["2026-11-16", 5], ["2026-11-15", 1]]);
+  });
+});
 
 describe("token ledger", () => {
   it("adds counts per model and keeps the estimate flag sticky", () => {

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.18.0] - 2026-11-16 - The last 13 starred ideas: job pipeline, package tracking, search by meaning and more.
+
+### Added
+
+- **Job application pipeline.** The Courier's Job applications card has four tabs, Applied, Interview, Offer and Rejected, each with a count. A company sits under its newest known stage. An application or interview with no email for a week shows **Follow up** and sends one reminder.
+- **Package tracking.** Order emails are read for their status (ordered, shipped, out for delivery, delivered) and arrival day, shown on the Orders card. Each expected delivery is an all-day entry in The Horizon; click it to open the email.
+- **Severe weather alerts.** A notification when Environment Canada has a warning, watch or advisory in effect for your Atmosphere location, once a day per alert. Turn it off under Settings → Notifications.
+- **Precipitation chart.** The Atmosphere shows the chance of precipitation for each of the next 12 hours as bars.
+- **Pinned and recent notes.** **Pin** a note from its header; pinned notes and the last five you opened sit above the tags in The Archive.
+- **PDF embeds and attachments in notes.** `![[file.pdf]]` shows the PDF's first ten pages in the note. While editing, paste an image or drop a PDF or image on the editor: it is saved in an `attachments` folder beside the note and embedded where the cursor is (desktop app).
+- **Search by meaning.** The sparkle button in The Archive's search box ranks notes by what they are about, not only by matching words. It uses a small model that runs on your device; the model (about 23 MB) is downloaded from Hugging Face the first time, and no note text leaves your machine.
+- **Per-project defaults in The Nebula.** A new chat starts with the model tier, effort and mode last used in that project.
+- **Usage by day and by project in The Nebula.** The token panel lists the last seven days and every project with tokens and an estimated cost at Anthropic's API list prices (other models show n/a).
+- **Keyboard shortcuts in the Changes pane.** With the pane focused: **J**/**K** or the arrow keys move between files, **A** accepts the file, **R** twice reverts it.
+- **Focus sounds.** Pick brown, pink or white noise or rain under the Pomodoro timer and it plays while a focus phase runs. Add your own loops under Settings → The Engine.
+- **Background updates.** A new version is downloaded quietly after launch; the toast then offers **Restart to update**. If the download fails it offers **Update now** as before.
+- **Choice of shell.** A menu beside the Terminal's **+** picks the shell for new terminals: PowerShell, Command Prompt, Git Bash or WSL. Restarting a terminal keeps its shell.
+
+### Fixed
+
+- An Observatory action button no longer starts its "done" timer after the button has gone.
+
 ## [v0.17.0] - 2026-11-16 - Your data moves to your device, plus 25 new features.
 
 ### Changed

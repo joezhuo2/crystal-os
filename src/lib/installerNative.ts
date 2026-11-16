@@ -128,8 +128,13 @@ export function checkForUpdate() {
   return invoke<UpdateInfo | null>("update_check");
 }
 
+/** Downloads and verifies the update the last check found, ready for `installUpdate`. */
+export function downloadUpdate() {
+  return invoke<void>("update_download");
+}
+
 /**
- * Downloads, verifies and installs the update the last check found. The app
+ * Downloads (unless `downloadUpdate` already did), verifies and installs the update the last check found. The app
  * exits as the installer starts, so this only ever settles with an error.
  */
 export function installUpdate() {

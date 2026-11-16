@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { harnessNative } from "@/lib/harness/native";
 import {
+  stepFile,
   changeKind,
   commitMessage,
   commitPaths,
@@ -130,8 +131,20 @@ export default function DiffReview({ cwd, chatTitle, running }: { cwd: string; c
 
   const diff = current ? diffs[current.path] : undefined;
 
+  const onKey = (e: React.KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+    if (e.ctrlKey || e.metaKey || e.altKey || target.tagName === "TEXTAREA" || target.tagName === "INPUT") return;
+    const key = e.key.toLowerCase();
+    if (key === "j" || key === "arrowdown") setSelected(stepFile(files, selected, 1));
+    else if (key === "k" || key === "arrowup") setSelected(stepFile(files, selected, -1));
+    else if (key === "a" && current) toggleAccept(current.path);
+    else if (key === "r" && current && !busy) void revert(current);
+    else return;
+    e.preventDefault();
+  };
+
   return (
-    <section className="nebula-panel flex max-h-[45%] min-h-0 shrink-0 flex-col px-3 py-2" aria-label="Changes from this run">
+    <section tabIndex={-1} onKeyDown={onKey} className="nebula-panel flex max-h-[45%] min-h-0 shrink-0 flex-col px-3 py-2 focus:outline-none" aria-label="Changes from this run">
       <div className="flex items-center gap-2">
         <FileDiff className="h-4 w-4 text-[var(--nebula-c)]" />
         <span className="text-sm font-medium">Changes</span>
@@ -139,6 +152,7 @@ export default function DiffReview({ cwd, chatTitle, running }: { cwd: string; c
           {files.length} file{files.length === 1 ? "" : "s"}
           {accepted.size > 0 && ` · ${accepted.size} accepted`}
         </span>
+        <span className="hidden text-[11px] text-white/35 lg:inline">J/K file · A accept · R revert (twice)</span>
         <div className="ml-auto flex items-center gap-1">
           <NebulaTip label="Refresh" hint="Read the folder's changes again" side="bottom">
             <button type="button" className="nebula-chip px-2" onClick={refresh} aria-label="Refresh changes">

@@ -67,6 +67,7 @@ fn main() {
     "installer_cancel_build",
     "installer_reveal",
     "update_check",
+    "update_download",
     "update_install",
     "sidecar_ensure",
     "setup_env_status",

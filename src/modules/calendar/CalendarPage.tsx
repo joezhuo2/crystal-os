@@ -3,7 +3,9 @@ import { TopicChips, TopicLinkControl } from "@/modules/observatory/TopicLinkCon
 import { TopicNavigateContext } from "@/modules/observatory/topicLinkIndex";
 import type { TabId } from "@/modules/registry";
 import { apiRequest } from "@/lib/apiRequest";
-import { openExternal } from "@/lib/platform";
+import { isDesktop, openExternal, usesSidecar } from "@/lib/platform";
+import { useMailDigest, useMailStatus } from "@/hooks/useMail";
+import { deliveryEvents, isDelivery, mailWasConnected } from "@/lib/mail";
 import { m, AnimatePresence, type Variants } from "framer-motion";
 import {
   AlertTriangle,
@@ -1289,7 +1291,10 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
           const to = last.toLocaleDateString("en-US", sameMonth ? { day: "numeric" } : { month: "short", day: "numeric" });
           return `${from} – ${to}, ${last.getFullYear()}`;
         })();
-  const events = eventsQuery.data?.events ?? [];
+  const mailStatus = useMailStatus(!usesSidecar() || mailWasConnected());
+  const mailItems = useMailDigest(mailStatus.data?.accounts).data?.items;
+  const calendarEvents = eventsQuery.data?.events;
+  const events = useMemo(() => [...(calendarEvents ?? []), ...deliveryEvents(mailItems ?? [])], [calendarEvents, mailItems]);
   const today = useToday();
   const allTasks = useTasks();
   const tasks = useMemo(
@@ -1305,6 +1310,11 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
   const openCreate = (date: string, time?: string, endTime?: string) =>
     setFormState({ open: true, event: null, date, time, endTime });
   const openEdit = (event: CalendarEvent) => {
+    if (isDelivery(event)) {
+      if (isDesktop()) void openExternal(event.htmlLink);
+      else window.open(event.htmlLink, "_blank", "noreferrer");
+      return;
+    }
     recordRecent({ kind: "event", id: event.id, title: event.summary, calendarId, date: event.startDate });
     setFormState({ open: true, event, date: event.startDate });
   };
@@ -1338,7 +1348,7 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
   const moveUpdate = useUpdateEvent();
   const moveEvent = (event: CalendarEvent, date: string, startTime: string, endTime: string, endDate = date) => {
     const before = eventInputOf(event, undefined);
-    if (!before) return;
+    if (!before || isDelivery(event)) return;
     const target = {
       calendarId,
       eventId: event.id,

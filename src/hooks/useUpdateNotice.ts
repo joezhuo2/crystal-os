@@ -18,21 +18,28 @@ export function useUpdateNotice() {
     let unlisten: (() => void) | undefined;
 
     const check = async (manual: boolean) => {
-      const { checkForUpdate, installUpdate } = await import("@/lib/installerNative");
+      const { checkForUpdate, downloadUpdate, installUpdate } = await import("@/lib/installerNative");
       const update = await checkForUpdate();
       if (cancelled) return;
       if (!update) {
         if (manual) toast("Crystal OS is up to date");
         return;
       }
-      toast(`Crystal OS ${update.version} is available`, {
+      const ready = await downloadUpdate().then(
+        () => true,
+        () => false,
+      );
+      if (cancelled) return;
+      toast(ready ? `Crystal OS ${update.version} is ready to install` : `Crystal OS ${update.version} is available`, {
         id: "update-available",
-        description: `You are on ${update.currentVersion}. Install it now, or later from Settings.`,
+        description: ready
+          ? `You are on ${update.currentVersion}. The update is downloaded; restart to finish, now or later from Settings.`
+          : `You are on ${update.currentVersion}. Install it now, or later from Settings.`,
         duration: Infinity,
         action: {
-          label: "Update now",
+          label: ready ? "Restart to update" : "Update now",
           onClick: () => {
-            toast.loading("Downloading update. Crystal OS will restart.");
+            toast.loading(ready ? "Installing update. Crystal OS will restart." : "Downloading update. Crystal OS will restart.");
             installUpdate().catch((err) =>
               toast.error("Update failed", { description: errorText(err) }),
             );

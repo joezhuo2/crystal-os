@@ -87,8 +87,8 @@ export function createDigest({ store, ai, cache, fetchAccount }: DigestDeps) {
       const verdict = verdicts.get(item.id);
       if (!verdict) return [item];
       if (!verdict.category) return [];
-      const { amount, dueDate, company, jobStatus, ...rest } = item;
-      const rules = verdict.category === item.category ? { amount, dueDate, company, jobStatus } : {};
+      const { amount, dueDate, company, jobStatus, deliveryDate, orderStatus, ...rest } = item;
+      const rules = verdict.category === item.category ? { amount, dueDate, company, jobStatus, deliveryDate, orderStatus } : {};
       return [{ ...rest, ...rules, ...verdict, category: verdict.category, confident: true, classifiedBy: "ai" }];
     });
 

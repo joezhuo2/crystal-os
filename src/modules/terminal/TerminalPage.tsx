@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { Minimize2, Plus, Power, RotateCw, SquareTerminal, X } from "lucide-react";
 import type { Terminal } from "@xterm/xterm";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { isDesktop } from "@/lib/platform";
 import { useShortcut } from "@/hooks/useShortcut";
 import {
@@ -14,6 +15,10 @@ import {
   listTerminals,
   onTerminalEvent,
   openTerminal,
+  parseShell,
+  readShell,
+  writeShell,
+  TERMINAL_SHELLS,
   resizeTerminal,
   restartTerminal,
   writeTerminal,
@@ -362,13 +367,14 @@ export default function TerminalPage() {
     };
   }, [desktop, hub]);
 
+  const [shell, setShell] = useState(readShell);
   const newTab = useCallback(async () => {
     if (busy || tabsRef.current.length >= MAX_TERMINALS) return;
     setBusy(true);
     setError(null);
     const size = (activeKey && panes.current.get(activeKey)?.size()) || { cols: DEFAULT_COLS, rows: DEFAULT_ROWS };
     try {
-      const info = await openTerminal(size.cols, size.rows);
+      const info = await openTerminal(size.cols, size.rows, undefined, shell);
       const tab = tabFor(info.id, info.shell, info.exited);
       setTabs((current) => [...current, tab]);
       select(tab.key);
@@ -377,7 +383,7 @@ export default function TerminalPage() {
     } finally {
       setBusy(false);
     }
-  }, [activeKey, busy, select]);
+  }, [activeKey, busy, select, shell]);
 
   const closeTab = useCallback(
     (key: string) => {
@@ -619,6 +625,25 @@ export default function TerminalPage() {
             {full ? `${MAX_TERMINALS} terminals is the limit` : "New terminal (Ctrl+Shift+T)"}
           </TooltipContent>
         </Tooltip>
+        <Select
+          value={shell}
+          onValueChange={(value) => {
+            const next = parseShell(value);
+            setShell(next);
+            writeShell(next);
+          }}
+        >
+          <SelectTrigger className="terminal-btn h-8 w-auto gap-1.5 border-0 px-2.5 text-xs" aria-label="Shell for new terminals">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(TERMINAL_SHELLS).map(([id, label]) => (
+              <SelectItem key={id} value={id}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <span className="ml-auto pl-2 shrink-0 text-[10px] uppercase tracking-[0.18em] text-neutral-500 terminal-font">
           {tabs.length}/{MAX_TERMINALS}
         </span>

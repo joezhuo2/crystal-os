@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { changeKind, commitMessage, commitPaths, diffStats, parseDiff, type ChangedFile } from "./diffReview";
+import { changeKind, commitMessage, commitPaths, diffStats, parseDiff, stepFile, type ChangedFile } from "./diffReview";
 
 const file = (status: string, path: string, origPath: string | null = null): ChangedFile => ({ status, path, origPath });
+
+describe("stepFile", () => {
+  it("moves through the files and wraps at both ends", () => {
+    const files = [file(" M", "a"), file(" M", "b"), file(" M", "c")];
+    expect(stepFile(files, null, 1)).toBe("a");
+    expect(stepFile(files, null, -1)).toBe("c");
+    expect(stepFile(files, "c", 1)).toBe("a");
+    expect(stepFile(files, "a", -1)).toBe("c");
+    expect(stepFile([], "a", 1)).toBeNull();
+  });
+});
 
 describe("changeKind", () => {
   it("reads git's porcelain letters", () => {

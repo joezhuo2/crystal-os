@@ -1,3 +1,4 @@
+import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 import type { AiChoice } from "@/lib/ai";
 import { apiRequest } from "@/lib/apiRequest";
 import { addDays, toLocalDateStr } from "@/lib/utils";
@@ -5,6 +6,7 @@ import { addDays, toLocalDateStr } from "@/lib/utils";
 export type MailProvider = "google" | "microsoft";
 export type MailCategory = "bill" | "job" | "order" | "security";
 export type JobStatus = "applied" | "interview" | "offer" | "rejected" | "update";
+export type OrderStatus = "ordered" | "shipped" | "out" | "delivered";
 
 export interface MailAccount {
   id: string;
@@ -57,6 +59,8 @@ export interface MailItem {
   dueDate?: string;
   company?: string;
   jobStatus?: JobStatus;
+  deliveryDate?: string;
+  orderStatus?: OrderStatus;
   details?: { label: string; value: string }[];
 }
 
@@ -134,6 +138,72 @@ export function latestJobs(items: MailItem[]): MailItem[] {
     if (!latest.has(key)) latest.set(key, item);
   }
   return [...latest.values()];
+}
+
+export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = { ordered: "Ordered", shipped: "Shipped", out: "Out for delivery", delivered: "Delivered" };
+
+export const isDelivery = (event: Pick<CalendarEvent, "id">) => event.id.startsWith("delivery:");
+
+export function deliveries(items: MailItem[]): MailItem[] {
+  const seen = new Set<string>();
+  return newestFirst(items, "order").filter((i) => {
+    const key = `${i.fromAddress}|${i.deliveryDate}`;
+    if (!i.deliveryDate || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function deliveryEvents(items: MailItem[]): CalendarEvent[] {
+  return deliveries(items).map((i) => ({
+    id: `delivery:${i.id}`,
+    calendarId: "",
+    summary: `Delivery: ${i.from}`,
+    description: i.subject,
+    location: "",
+    allDay: true,
+    startDate: i.deliveryDate!,
+    startTime: "",
+    endDate: i.deliveryDate!,
+    endTime: "",
+    startISO: `${i.deliveryDate}T00:00:00`,
+    endISO: `${i.deliveryDate}T23:59:59`,
+    recurrence: null,
+    recurringEventId: null,
+    htmlLink: i.url,
+  }));
+}
+
+export const JOB_STAGES =["applied", "interview", "offer", "rejected"] as const;
+export type JobStage = (typeof JOB_STAGES)[number];
+export const FOLLOW_UP_DAYS = 7;
+
+export function jobPipeline(items: MailItem[]): Record<JobStage, MailItem[]> {
+  const board: Record<JobStage, MailItem[]> = { applied: [], interview: [], offer: [], rejected: [] };
+  const jobs = newestFirst(items, "job");
+  for (const latest of latestJobs(items)) {
+    const company = latest.company?.toLowerCase();
+    const staged = company ? jobs.find((j) => j.company?.toLowerCase() === company && j.jobStatus && j.jobStatus !== "update") : latest;
+    const status = staged?.jobStatus;
+    board[status && status !== "update" ? status : "applied"].push(latest);
+  }
+  return board;
+}
+
+export const needsFollowUp = (item: MailItem, stage: JobStage, now: Date) =>
+  (stage === "applied" || stage === "interview") && now.getTime() - Date.parse(item.receivedAt) >= FOLLOW_UP_DAYS * DAY_MS;
+
+export function jobFollowUpAlerts(items: MailItem[], now: Date) {
+  const board = jobPipeline(items);
+  return (["applied", "interview"] as const).flatMap((stage) =>
+    board[stage]
+      .filter((j) => needsFollowUp(j, stage, now))
+      .map((j) => ({
+        key: `job-follow-up:${j.id}`,
+        title: `Follow up with ${jobCompany(j)}`,
+        body: `No reply in ${Math.floor((now.getTime() - Date.parse(j.receivedAt)) / DAY_MS)} days since "${j.subject}".`,
+      })),
+  );
 }
 
 const dueWithin = (item: MailItem, from: string, days: number) => !!item.dueDate && item.dueDate >= from && item.dueDate <= addDays(from, days);

@@ -23,6 +23,25 @@ describe("harness store", () => {
     expect(persistence.saveState).toHaveBeenCalled();
   });
 
+  it("starts a project's new chats with the options last used in that project", () => {
+    const a = harness.addProject("a", "C:/a");
+    const b = harness.addProject("b", "C:/b");
+    const first = harness.createChat(a.id);
+    harness.setChatOptions(first.id, { tier: "high", mode: "plan" });
+    harness.setChatOptions(harness.createChat(b.id).id, { tier: "low", effort: "max", mode: "manual" });
+    expect(harness.createChat(a.id)).toMatchObject({ tier: "high", effort: "max", mode: "plan" });
+    expect(harness.createChat(b.id)).toMatchObject({ tier: "low", effort: "max", mode: "manual" });
+  });
+
+  it("keeps token totals per day and project", () => {
+    const p = harness.addProject("app", "C:/p");
+    const chat = harness.createChat(p.id);
+    harness.addTokens(chat.id, { "claude-opus-5-5": { input: 10, output: 5, cacheRead: 0, cacheWrite: 0, estimated: false } });
+    const days = Object.values(harness.getState().dailyTokens);
+    expect(days).toHaveLength(1);
+    expect(days[0][p.id]["claude-opus-5-5"].input).toBe(10);
+  });
+
   it("titles a chat from its first user message", () => {
     const p = harness.addProject("app", "C:/p");
     const chat = harness.createChat(p.id);

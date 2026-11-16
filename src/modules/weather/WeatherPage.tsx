@@ -25,6 +25,7 @@ import {
 import {
   useWeather,
   getMoonPhase,
+  precipitationNext,
   useCityList,
   AVAILABLE_CITIES,
   resolveSuggestions,
@@ -404,6 +405,32 @@ function HourlyForecastSection({ hourly }: { hourly: HourlyForecast[] }) {
   );
 }
 
+function PrecipitationChart({ hourly }: { hourly: HourlyForecast[] }) {
+  const hours = precipitationNext(hourly);
+  if (hours.length === 0) return null;
+  const peak = hours.reduce((a, b) => (b.chance > a.chance ? b : a));
+  return (
+    <div className="glass-card p-6 col-span-full">
+      <p className="text-xs text-muted-foreground uppercase tracking-widest mb-4">Chance of precipitation · next {hours.length} h</p>
+      <div
+        role="img"
+        aria-label={peak.chance === 0 ? `No precipitation expected in the next ${hours.length} hours` : `Chance of precipitation peaks at ${peak.chance}% around ${formatHour(peak.timestamp)}`}
+        className="flex items-end gap-2"
+      >
+        {hours.map((h) => (
+          <div key={h.timestamp} className="flex flex-1 min-w-0 flex-col items-center gap-1">
+            <span className="text-[10px] tabular-nums text-blue-400">{h.chance}%</span>
+            <div className="flex h-20 w-full items-end rounded bg-background/20">
+              <div className="w-full rounded bg-blue-400/70" style={{ height: `${h.chance}%` }} />
+            </div>
+            <span className="text-[10px] text-muted-foreground">{formatHour(h.timestamp)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Detailed Info Cards ──
 
 function DetailCards({ data }: { data: WeatherData | undefined }) {
@@ -530,6 +557,7 @@ export default function WeatherPage() {
     >
       <CurrentConditions data={data} cityId={cityId} onCityChange={atmosphere.setCity} />
       {data && <HourlyForecastSection hourly={data.hourly} />}
+      {data && <PrecipitationChart hourly={data.hourly} />}
       {data && <SevenDayForecast forecasts={data.dailyForecasts} />}
       {data && <DetailCards data={data} />}
 

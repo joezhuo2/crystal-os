@@ -22,14 +22,21 @@ import { useTradesSync } from "@/hooks/useTrades";
 import { useDisconnectMail, useMailDigest, useMailStatus, useRefreshMailDigest } from "@/hooks/useMail";
 import { AI_PROVIDER_LABELS } from "@/lib/ai";
 import { isDesktop, openExternal } from "@/lib/platform";
+import { deliver } from "@/lib/notifications";
 import { toLocalDateStr } from "@/lib/utils";
 import {
+  JOB_STAGES,
   JOB_STATUS_LABEL,
+  ORDER_STATUS_LABEL,
+  formatDay,
   PROVIDER_LABEL,
   dueLabel,
   isOverdue,
   jobCompany,
-  latestJobs,
+  jobFollowUpAlerts,
+  jobPipeline,
+  needsFollowUp,
+  type JobStage,
   mailSummary,
   newestFirst,
   relativeDate,
@@ -219,13 +226,14 @@ function ItemRow({ item, now, showAccount, children }: { item: MailItem; now: Da
   );
 }
 
-function Card({ title, icon: Icon, empty, days, children }: { title: string; icon: ElementType; empty: boolean; days: number; children: ReactNode }) {
+function Card({ title, icon: Icon, empty, days, tabs, children }: { title: string; icon: ElementType; empty: boolean; days: number; tabs?: ReactNode; children: ReactNode }) {
   return (
     <section className="glass-card-hover p-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs text-muted-foreground uppercase tracking-widest">{title}</h2>
         <Icon className="w-4 h-4 text-primary" aria-hidden />
       </div>
+      {tabs}
       {empty ? <p className="text-sm text-muted-foreground">Nothing in the last {days} days.</p> : <ul className="space-y-0.5 max-h-96 overflow-y-auto scrollbar-thin">{children}</ul>}
     </section>
   );
@@ -233,6 +241,11 @@ function Card({ title, icon: Icon, empty, days, children }: { title: string; ico
 
 function Dashboard({ status }: { status: MailStatus }) {
   const digest = useMailDigest(status.accounts);
+  const [stage, setStage] = useState<JobStage>("applied");
+  const items = digest.data?.items;
+  useEffect(() => {
+    if (items) deliver(jobFollowUpAlerts(items, new Date()));
+  }, [items]);
   const refresh = useRefreshMailDigest(status.accounts);
   const now = new Date();
   const today = toLocalDateStr(now);
@@ -294,7 +307,8 @@ function Dashboard({ status }: { status: MailStatus }) {
 
   const summary = mailSummary(data.items, now);
   const bills = sortBills(data.items);
-  const jobs = latestJobs(data.items);
+  const board = jobPipeline(data.items);
+  const jobs = board[stage];
   const orders = newestFirst(data.items, "order");
   const security = newestFirst(data.items, "security");
   const row = (item: MailItem, extra?: ReactNode) => (
@@ -348,18 +362,47 @@ function Dashboard({ status }: { status: MailStatus }) {
               ),
             )}
           </Card>
-          <Card title="Job applications" icon={Briefcase} days={days} empty={jobs.length === 0}>
+          <Card
+            title="Job applications"
+            icon={Briefcase}
+            days={days}
+            empty={jobs.length === 0}
+            tabs={
+              <div role="tablist" aria-label="Application stage" className="mb-2 flex gap-1">
+                {JOB_STAGES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    role="tab"
+                    aria-selected={stage === s}
+                    onClick={() => setStage(s)}
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${stage === s ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-primary/5"}`}
+                  >
+                    {JOB_STATUS_LABEL[s]} <span className="tabular-nums opacity-70">{board[s].length}</span>
+                  </button>
+                ))}
+              </div>
+            }
+          >
             {jobs.map((j) =>
               row(
                 { ...j, from: jobCompany(j) },
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${j.jobStatus === "rejected" ? "bg-red-400/10 text-red-400" : j.jobStatus === "offer" || j.jobStatus === "interview" ? "bg-accent/10 text-accent" : "bg-primary/10 text-primary"}`}>
-                  {JOB_STATUS_LABEL[j.jobStatus ?? "update"]}
-                </span>,
+                needsFollowUp(j, stage, now) ? <span className="shrink-0 rounded-full bg-amber-400/10 px-2 py-0.5 text-[11px] font-medium text-amber-400">Follow up</span> : undefined,
               ),
             )}
           </Card>
           <Card title="Orders & deliveries" icon={Package} days={days} empty={orders.length === 0}>
-            {orders.map((o) => row(o))}
+            {orders.map((o) =>
+              row(
+                o,
+                o.orderStatus && (
+                  <div className="shrink-0 text-right text-xs text-muted-foreground">
+                    <p>{ORDER_STATUS_LABEL[o.orderStatus]}</p>
+                    {o.deliveryDate && <p>Arrives {formatDay(o.deliveryDate)}</p>}
+                  </div>
+                ),
+              ),
+            )}
           </Card>
           <Card title="Security alerts" icon={ShieldAlert} days={days} empty={security.length === 0}>
             {security.map((s) => row(s))}
