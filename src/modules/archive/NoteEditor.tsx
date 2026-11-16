@@ -7,6 +7,34 @@ import { tags as t } from "@lezer/highlight";
 import { toast } from "sonner";
 import { AlertTriangle, Loader2, Save, X } from "lucide-react";
 import { useRawNote, useSaveNote, vaultErrorCode, type RawNote } from "@/hooks/useVault";
+import { attachmentPath } from "@/lib/attachments";
+import { isDesktop } from "@/lib/platform";
+import { writeVaultBinary } from "@/lib/vaultNative";
+
+function attachFiles(notePath: string, files: FileList | undefined, view: EditorView, event: Event): boolean {
+  const now = new Date();
+  const picked = [...(files ?? [])].flatMap((file) => {
+    const path = attachmentPath(notePath, file, now);
+    return path ? [{ file, path }] : [];
+  });
+  if (picked.length === 0) return false;
+  event.preventDefault();
+  if (!isDesktop()) {
+    toast.info("Attachments are saved by the desktop app only");
+    return true;
+  }
+  void (async () => {
+    for (const { file, path } of picked) {
+      try {
+        await writeVaultBinary(path, new Uint8Array(await file.arrayBuffer()), false);
+        view.dispatch(view.state.replaceSelection(`![[${path}]]\n`));
+      } catch (err) {
+        toast.error(`Could not attach ${file.name}`, { description: err instanceof Error ? err.message : String(err) });
+      }
+    }
+  })();
+  return true;
+}
 
 /**
  * Unsaved edits, by note path, kept for the life of the window. Switching notes
@@ -143,8 +171,12 @@ export default function NoteEditor({ path, onDone }: { path: string; onDone: () 
       editorTheme,
       EditorView.lineWrapping,
       keymap.of([{ key: "Mod-s", preventDefault: true, run: () => (submitRef.current(), true) }]),
+      EditorView.domEventHandlers({
+        paste: (e, view) => attachFiles(path, e.clipboardData?.files, view, e),
+        drop: (e, view) => attachFiles(path, e.dataTransfer?.files, view, e),
+      }),
     ],
-    [],
+    [path],
   );
 
   if (isLoading || (!base && !error)) {
@@ -174,7 +206,7 @@ export default function NoteEditor({ path, onDone }: { path: string; onDone: () 
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <span className="text-xs text-muted-foreground">
-          {dirty ? "Unsaved changes" : "No changes"} · Ctrl+S to save
+          {dirty ? "Unsaved changes" : "No changes"} · Ctrl+S to save · Paste an image, or drop a PDF or image, to attach it
         </span>
         <button
           onClick={cancel}

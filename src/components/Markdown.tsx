@@ -1,4 +1,4 @@
-import { memo, useEffect, useState, type ReactNode } from "react";
+import { lazy, memo, Suspense, useEffect, useState, type ReactNode } from "react";
 import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -6,8 +6,9 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { readVaultBinary } from "@/lib/vaultNative";
 
+const VaultPdf = lazy(() => import("./VaultPdf"));
 const VAULT = "vault-embed:";
-const EMBED = /!\[\[([^\]|#]+\.(png|jpe?g|webp|gif))(?:\|([^\]]*))?\]\]/gi;
+const EMBED = /!\[\[([^\]|#]+\.(png|jpe?g|webp|gif|pdf))(?:\|([^\]]*))?\]\]/gi;
 const MIME: Record<string, string> = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", gif: "image/gif" };
 
 interface MdNode { type: string; value?: string; url?: string; alt?: string; children?: MdNode[] }
@@ -62,8 +63,17 @@ const COMPONENTS: Components = {
   pre: ({ node: _node, className, ...props }) => (
     <pre className={["font-mono", className].filter(Boolean).join(" ")} {...props} />
   ),
-  img: ({ node: _node, src, alt, ...props }) =>
-    typeof src === "string" && src.startsWith(VAULT) ? <VaultImage path={decodeURIComponent(src.slice(VAULT.length))} alt={alt} /> : <img src={src} alt={alt} {...props} />,
+  img: ({ node: _node, src, alt, ...props }) => {
+    if (typeof src !== "string" || !src.startsWith(VAULT)) return <img src={src} alt={alt} {...props} />;
+    const path = decodeURIComponent(src.slice(VAULT.length));
+    return /\.pdf$/i.test(path) ? (
+      <Suspense fallback={null}>
+        <VaultPdf path={path} />
+      </Suspense>
+    ) : (
+      <VaultImage path={path} alt={alt} />
+    );
+  },
 };
 
 export const Markdown = memo(function Markdown({ children }: { children: string }) {
