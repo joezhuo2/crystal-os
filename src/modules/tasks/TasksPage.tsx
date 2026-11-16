@@ -48,6 +48,7 @@ import { useCompletionHold } from "@/hooks/useCompletionHold";
 import type { TabId } from "@/components/layout/Navigation";
 import { taskSelection, useTaskSelected } from "@/lib/taskSelection";
 import { TaskBulkBar } from "./TaskBulkBar";
+import { TaskRepeatHistory } from "./TaskRepeatHistory";
 import { SomedayView, TodayView, UpcomingView } from "./TaskDayViews";
 import { DateChip, EstimateChip, EstimatePicker, PriorityChip } from "./TaskQuickEdit";
 
@@ -202,6 +203,7 @@ const TaskItem = memo(function TaskItem({
             {/* A Board card shows its notes in full above, in its notes line. */}
             {task.notes && !board && <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words select-text">{task.notes}</p>}
             <ChecklistEditor items={task.checklist ?? []} onChange={(checklist) => updateTask(task.id, { checklist })} />
+            {task.repeat && <TaskRepeatHistory task={task} today={today} />}
             {subtasks.length > 0 && (
               <div className="space-y-0.5" role="group" aria-label="Subtasks">
                 {subtasks.map((child) => (
