@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Command palette actions.** Type `complete <task>`, `snooze <task> to friday`, `focus on <task>`, `add <task>` or `log 25 for Lunch` and press Enter to run it. **Toggle privacy mode**, **Toggle Do Not Disturb** and **Switch theme** are in the palette too.
+- **Palette fuzzy matching.** Tasks, transactions, settings and commands still match with a typo or with the words in another order. The last five `add` and `log` commands are listed under **Recent commands** to run again.
 - A **Stop WSL** button in the Terminal header runs `wsl --shutdown` in the active terminal.
 - `CONTRIBUTING.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md`.
 

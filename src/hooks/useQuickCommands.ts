@@ -3,7 +3,7 @@ import { useAppActions, useTaskCategories } from "@/contexts/AppContext";
 import { useQuickAdd } from "@/hooks/useVault";
 import { isDesktop } from "@/lib/platform";
 import { formatClock, pomodoro } from "@/lib/pomodoro";
-import { COMMAND_DONE_EVENT, COMMAND_RUN_EVENT, parseQuickCommand, type QuickCommandResult } from "@/lib/quickCommand";
+import { COMMAND_DONE_EVENT, COMMAND_RUN_EVENT, parseQuickCommand, quickTask, type QuickCommandResult } from "@/lib/quickCommand";
 import { toLocalDateStr } from "@/lib/utils";
 
 function startFocus(minutes?: number): QuickCommandResult {
@@ -51,16 +51,7 @@ export function useQuickCommands() {
         case "task": {
           const today = toLocalDateStr();
           // shortcut: addTask reports a failed save only as a toast in the main window, so this cannot say it failed; return its result here if it ever gets one.
-          addTask({
-            name: command.name,
-            startDate: today,
-            startTime: "09:00",
-            endDate: today,
-            endTime: "10:00",
-            priority: "medium",
-            categoryId: categories[0]?.id ?? "",
-            completed: false,
-          });
+          addTask(quickTask(command.name, categories[0]?.id ?? "", today));
           return { ok: true, message: `Task added for today: ${command.name}` };
         }
       }

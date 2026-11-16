@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { useAppActions, useFinancialCategories, useTaskCategories, useTasks, useTransactions, type Task } from "@/contexts/AppContext";
 import { nestTargets } from "@/lib/subtasks";
+import { fuzzyRank, fuzzyScore } from "@/lib/fuzzy";
+import { parsePaletteCommand, readRecentCommands, recordRecentCommand, type PaletteCommand } from "@/lib/paletteCommand";
+import { quickTask } from "@/lib/quickCommand";
+import { pomodoro } from "@/lib/pomodoro";
+import { privacySettings } from "@/lib/privacySettings";
+import { notifySettings } from "@/lib/notifySettings";
+import { themeSettings } from "@/lib/themeSettings";
 import { canSnooze, formatSnoozeDate, ownSnoozed, snoozePresets, snoozeTitle, snoozeUpdates, UNSNOOZE } from "@/lib/snooze";
 import { toast } from "sonner";
 import { appUi } from "@/lib/appUi";
@@ -54,6 +61,11 @@ import {
   Package,
   PanelLeft,
   Mail,
+  EyeOff,
+  BellOff,
+  Palette,
+  Timer,
+  Zap,
 } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
 import { isDesktop, openExternal } from "@/lib/platform";
@@ -144,7 +156,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const mailOn = on("mail");
   const observatoryOn = on("observatory");
   const tasks = useTasks();
-  const { updateTask, rescheduleTasks } = useAppActions();
+  const { updateTask, rescheduleTasks, addTask, addTransaction, completeTask } = useAppActions();
   // "Make subtask of…": the task being nested while the bar lists parents for it.
   const [nestPick, setNestChild] = useState<Task | null>(null);
   const nestChild = tasksOn ? nestPick : null;
@@ -175,34 +187,25 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
 
   // Read once per open: the overlay remounts every time the bar opens.
   const [recents] = useState(readRecents);
+  const [recentCommands] = useState(readRecentCommands);
 
   // ---------- Natural-language parsing ----------
   const addPrefix = search.toLowerCase().startsWith("add ");
   const logPrefix = search.toLowerCase().startsWith("log ");
 
   // ---------- Search existing data ----------
+  const usable = (c: PaletteCommand<Task> | null) =>
+    !c || (c.kind === "log" ? financialsOn : tasksOn && (c.kind !== "snooze" || canSnooze(c.task))) ? c : null;
+  const command = usable(parsePaletteCommand(search, tasks, toLocalDateStr()));
+
   const matchedTasks =
-    tasksOn && search.length >= 2 && !addPrefix && !logPrefix
-      ? tasks.filter(
-          (t) =>
-            t.name.toLowerCase().includes(search.toLowerCase()) ||
-            taskCategories
-              .find((c) => c.id === t.categoryId)
-              ?.name.toLowerCase()
-              .includes(search.toLowerCase()),
-        )
+    tasksOn && search.length >= 2 && !addPrefix && !logPrefix && !command
+      ? fuzzyRank(search, tasks, (t) => `${t.name} ${taskCategories.find((c) => c.id === t.categoryId)?.name ?? ""}`)
       : [];
 
   const matchedTransactions =
-    financialsOn && search.length >= 2 && !addPrefix && !logPrefix
-      ? transactions.filter(
-          (t) =>
-            t.name.toLowerCase().includes(search.toLowerCase()) ||
-            financialCategories
-              .find((c) => c.id === t.categoryId)
-              ?.name.toLowerCase()
-              .includes(search.toLowerCase()),
-        )
+    financialsOn && search.length >= 2 && !addPrefix && !logPrefix && !command
+      ? fuzzyRank(search, transactions, (t) => `${t.name} ${financialCategories.find((c) => c.id === t.categoryId)?.name ?? ""}`)
       : [];
 
   // ---------- "next 5h": the next free block in The Horizon ----------
@@ -340,6 +343,82 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
     close();
   };
 
+  const runCommand = (c: PaletteCommand<Task>, text: string) => {
+    const today = toLocalDateStr();
+    if (c.kind === "add") {
+      void addTask(quickTask(c.name, taskCategories[0]?.id ?? "", today)).then((id) => {
+        if (id) toast.success(`Task added for today: ${c.name}`);
+      });
+      recordRecentCommand(text);
+    } else if (c.kind === "log") {
+      addTransaction({ name: c.name, amount: c.amount, type: "expense", categoryId: financialCategories[0]?.id ?? "", date: today });
+      toast.success(`Logged ${c.amount.toFixed(2)} for ${c.name}`);
+      recordRecentCommand(text);
+    } else if (c.kind === "complete") {
+      completeTask(c.task);
+    } else if (c.kind === "focus") {
+      const state = pomodoro.getState();
+      pomodoro.setTask({ id: c.task.id, title: c.task.name });
+      if (state.phase === "break") pomodoro.reset();
+      if (!pomodoro.getState().running) pomodoro.start();
+      toast.success(`Focusing on ${c.task.name}`);
+    } else if (c.until) {
+      rescheduleTasks([{ id: c.task.id, updates: snoozeUpdates(c.until) }], snoozeTitle(c.task.name, c.until, today));
+    } else {
+      return startSnoozing(c.task);
+    }
+    close();
+  };
+
+  const commandLabel = (c: PaletteCommand<Task>): [string, string] => {
+    if (c.kind === "add") return [`Add task "${c.name}"`, "Today, in your first category"];
+    if (c.kind === "log") return [`Log ${c.amount.toFixed(2)} for "${c.name}"`, "An expense, today"];
+    if (c.kind === "complete") return [`Complete "${c.task.name}"`, "Mark it done"];
+    if (c.kind === "focus") return [`Start focus on "${c.task.name}"`, "Links the Pomodoro to it and starts the timer"];
+    if (c.until === "someday") return [`Snooze "${c.task.name}" to Someday`, "Hidden until you unsnooze it"];
+    if (c.until) return [`Snooze "${c.task.name}" until ${formatSnoozeDate(c.until, toLocalDateStr())}`, "Hidden until that day"];
+    return [`Snooze "${c.task.name}"…`, "Pick a day"];
+  };
+
+  const handleRecentCommand = (text: string) => {
+    const parsed = usable(parsePaletteCommand(text, tasks, toLocalDateStr()));
+    if (parsed) return runCommand(parsed, text);
+    setSearch(text);
+    inputRef.current?.focus();
+  };
+
+  const toggles = [
+    {
+      value: "toggle privacy mode blur hide amounts",
+      label: "Toggle privacy mode",
+      hint: privacySettings.getState() ? "On" : "Off",
+      Icon: EyeOff,
+      run: () => {
+        const next = !privacySettings.getState();
+        privacySettings.setEnabled(next);
+        toast.success(`Privacy mode ${next ? "on" : "off"}`);
+      },
+    },
+    {
+      value: "toggle dnd do not disturb quiet notifications",
+      label: "Toggle Do Not Disturb",
+      hint: notifySettings.getState().doNotDisturb ? "On" : "Off",
+      Icon: BellOff,
+      run: () => {
+        const next = !notifySettings.getState().doNotDisturb;
+        notifySettings.setFlag("doNotDisturb", next);
+        toast.success(`Do Not Disturb ${next ? "on" : "off"}`);
+      },
+    },
+    {
+      value: "switch theme toggle change orbit default appearance",
+      label: "Switch theme",
+      hint: themeSettings.getState().theme === "orbit" ? "Orbit" : "Default",
+      Icon: Palette,
+      run: () => themeSettings.setTheme(themeSettings.getState().theme === "orbit" ? "default" : "orbit"),
+    },
+  ];
+
   const handleUnsnooze = (task: Task) => {
     rescheduleTasks([{ id: task.id, updates: UNSNOOZE }], `${task.name} is back`);
     close();
@@ -475,9 +554,8 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
           // chats on their messages, and
           // Quick Add is always offered — neither can pass a local substring
           // test against the raw query, so they opt out of cmdk's filter.
-          if (value === "quick-add-vault" || value === "free-slot" || value.startsWith("note-") || value.startsWith("nebula-chat-") || value.startsWith("mail-") || value.startsWith("event-") || value.startsWith("obs-")) return 1;
-          if (value.toLowerCase().includes(search.toLowerCase())) return 1;
-          return 0;
+          if (value === "quick-add-vault" || value === "free-slot" || value === "run-command" || value.startsWith("note-") || value.startsWith("nebula-chat-") || value.startsWith("mail-") || value.startsWith("event-") || value.startsWith("obs-")) return 1;
+          return fuzzyScore(search, value);
         }}
       >
         {/* Search Input */}
@@ -613,8 +691,37 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
 
                 {!search && (
                   <p className="px-3 py-3 text-sm text-muted-foreground/70">
-                    Search for anything: tasks, events, mail, notes, transactions, chats and settings.
+                    Search for anything, or run a command: "complete …", "snooze … to friday", "focus on …", "toggle privacy".
                   </p>
+                )}
+
+                {command && (
+                  <CommandGroup heading="Run">
+                    <CommandItem value="run-command" onSelect={() => runCommand(command, search)} className={ITEM}>
+                      <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                        {command.kind === "focus" ? <Timer className="w-4 h-4" /> : command.kind === "snooze" ? <AlarmClock className="w-4 h-4" /> : command.kind === "log" ? <DollarSign className="w-4 h-4" /> : command.kind === "add" ? <Plus className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{commandLabel(command)[0]}</p>
+                        <p className="text-xs text-muted-foreground">{commandLabel(command)[1]}</p>
+                      </div>
+                      <kbd className="rounded-md border px-2 py-0.5 text-[10px] text-muted-foreground font-medium tracking-wider">ENTER</kbd>
+                    </CommandItem>
+                  </CommandGroup>
+                )}
+
+                {!search && recentCommands.length > 0 && (
+                  <CommandGroup heading="Recent commands">
+                    {recentCommands.map((text) => (
+                      <CommandItem key={text} value={`recent-command-${text}`} onSelect={() => handleRecentCommand(text)} className={ITEM}>
+                        <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                          <Zap className="w-4 h-4" />
+                        </div>
+                        <p className="flex-1 min-w-0 text-sm font-medium truncate">{text}</p>
+                        <span className="text-xs text-muted-foreground/50">run again</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
                 )}
 
                 {search && vaultGroup}
@@ -1030,6 +1137,24 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                         <span className="text-sm font-medium">Open Settings</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">hotkeys, startup, vault</span>
                       </CommandItem>
+                      {search &&
+                        toggles.map(({ value, label, hint, Icon, run }) => (
+                          <CommandItem
+                            key={value}
+                            value={value}
+                            onSelect={() => {
+                              run();
+                              close();
+                            }}
+                            className={ITEM}
+                          >
+                            <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <span className="text-sm font-medium">{label}</span>
+                            <span className="ml-auto text-xs text-muted-foreground/50">{hint}</span>
+                          </CommandItem>
+                        ))}
                       {/* Individual sections only once something is typed, or the list would crowd the empty bar. */}
                       {search &&
                         SETTINGS_SECTIONS.filter((section) => (!section.desktopOnly || isDesktop()) && (!section.module || on(section.module))).map((section) => {

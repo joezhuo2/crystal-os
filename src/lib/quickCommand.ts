@@ -21,6 +21,19 @@ const NOTE_WORDS = new Set(["note", "idea", "n"]);
 const FOCUS_WORDS = new Set(["focus", "f"]);
 
 /** "task buy milk", "note an idea", "focus 25". Anything else is saved as a note. */
+export function quickTask(name: string, categoryId: string, today: string) {
+  return {
+    name,
+    startDate: today,
+    startTime: "09:00",
+    endDate: today,
+    endTime: "10:00",
+    priority: "medium" as const,
+    categoryId,
+    completed: false,
+  };
+}
+
 export function parseQuickCommand(input: string): QuickCommand {
   const text = input.trim();
   if (!text) return { kind: "invalid", reason: "Type a command first" };
