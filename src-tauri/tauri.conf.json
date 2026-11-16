@@ -32,7 +32,7 @@
       "csp": {
         "default-src": "'self'",
         "script-src": "'self' 'wasm-unsafe-eval'",
-        "connect-src": "'self' ipc: http://ipc.localhost http://127.0.0.1:8787 https://*.supabase.co wss://*.supabase.co https://api.weather.gc.ca https://nominatim.openstreetmap.org https://router.project-osrm.org",
+        "connect-src": "'self' ipc: http://ipc.localhost http://127.0.0.1:8787 https://*.supabase.co wss://*.supabase.co https://api.weather.gc.ca https://nominatim.openstreetmap.org https://router.project-osrm.org https://huggingface.co https://*.huggingface.co https://*.hf.co",
         "img-src": "'self' data: blob: https:",
         "style-src": "'self' 'unsafe-inline'",
         "font-src": "'self' data:"

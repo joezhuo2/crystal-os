@@ -5,7 +5,6 @@ export function attachmentPath(notePath: string, file: { name: string; type: str
   if (!ext) return null;
   const dir = notePath.slice(0, notePath.lastIndexOf("/") + 1);
   const stamp = now.toISOString().replace(/\D/g, "").slice(0, 14);
-  // A pasted screenshot arrives as "image.png", which says nothing.
   const base = /^image\.\w+$/i.test(file.name) ? "" : file.name.replace(/\.[^.]+$/, "").replace(/[\\/:*?"<>|#^[\]]/g, " ").trim();
   return `${dir}attachments/${base || "Pasted"} ${stamp}.${ext}`;
 }

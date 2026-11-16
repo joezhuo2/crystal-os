@@ -16,11 +16,13 @@ import {
   PinOff,
   RotateCw,
   Search,
+  Sparkles,
   Tag as TagIcon,
 } from "lucide-react";
 import { appUi, useAppUi } from "@/lib/appUi";
 import { readRecents, recordRecent } from "@/lib/recents";
 import { readPinned, togglePinned, writePinned } from "@/lib/pinnedNotes";
+import { useSemanticSearch } from "@/lib/semantic";
 import {
   usePickVault,
   useVaultNote,
@@ -663,18 +665,30 @@ export default function ArchivePage() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, 250);
 
+  const [semantic, setSemantic] = useState(false);
   const { data, isLoading, error } = useVaultNotes({
-    q: debouncedSearch.trim() || undefined,
+    q: semantic ? undefined : debouncedSearch.trim() || undefined,
     tag: activeTag ?? undefined,
   });
 
-  const notes = useMemo(() => data?.notes ?? [], [data]);
+  const listed = useMemo(() => data?.notes ?? [], [data]);
 
   // Wikilinks resolve against the whole vault, not only the filtered list. On
   // desktop this reads the same cached listing; on the web it is one request.
   const { data: everything } = useVaultNotes({ limit: ALL_NOTES });
-  const allNotes = everything?.notes ?? notes;
+  const allNotes = everything?.notes ?? listed;
   const linkTargets = useMemo(() => buildLinkTargets(allNotes), [allNotes]);
+  const meaning = useSemanticSearch(semantic, debouncedSearch, allNotes);
+  const notes = useMemo(() => {
+    if (!meaning.hits) return listed;
+    const byPath = new Map(allNotes.map((n) => [n.path, n]));
+    const tag = activeTag?.toLowerCase();
+    return meaning.hits.flatMap(({ path }) => {
+      const note = byPath.get(path);
+      return note && (!tag || note.tags.some((t) => t.toLowerCase() === tag)) ? [note] : [];
+    });
+  }, [meaning.hits, listed, allNotes, activeTag]);
+  const total = meaning.hits ? notes.length : (data?.total ?? 0);
 
   const [pinned, setPinned] = useState(readPinned);
   const togglePin = useCallback((path: string) => {
@@ -750,7 +764,27 @@ export default function ArchivePage() {
               placeholder="Search the vault…"
               className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
             />
+            <button
+              type="button"
+              aria-pressed={semantic}
+              aria-label="Search by meaning"
+              title="Search by meaning, with a model that runs on this device"
+              onClick={() => setSemantic((on) => !on)}
+              className={`shrink-0 rounded-md p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${semantic ? "bg-primary/15 text-primary" : "text-muted-foreground/60 hover:text-foreground"}`}
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
           </div>
+          {meaning.state.status === "indexing" && (
+            <p role="status" className="shrink-0 text-xs text-muted-foreground">
+              {meaning.state.total > 0 ? `Reading your notes: ${meaning.state.done} of ${meaning.state.total}` : "Loading the search model (about 23 MB the first time)…"}
+            </p>
+          )}
+          {meaning.state.status === "error" && (
+            <p role="alert" className="shrink-0 text-xs text-destructive">
+              Search by meaning is unavailable: {meaning.state.message}
+            </p>
+          )}
 
           <QuickNotes label="Pinned" items={quick.pinned} onSelect={setSelectedNotePath} />
           <QuickNotes label="Recent" items={quick.recent} onSelect={setSelectedNotePath} />
@@ -764,7 +798,7 @@ export default function ArchivePage() {
 
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1 border-t border-white/5 shrink-0">
             <TagIcon className="w-3 h-3" />
-            {isLoading ? "Loading…" : `${data?.total ?? 0} note${data?.total === 1 ? "" : "s"}`}
+            {isLoading ? "Loading…" : `${total} note${total === 1 ? "" : "s"}`}
           </div>
 
           {/* Bottom half: filtered notes. */}

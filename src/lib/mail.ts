@@ -144,7 +144,6 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = { ordered: "Order
 
 export const isDelivery = (event: Pick<CalendarEvent, "id">) => event.id.startsWith("delivery:");
 
-// shortcut: one sender's emails for the same arrival day count as one package; match on order numbers if two parcels collide
 export function deliveries(items: MailItem[]): MailItem[] {
   const seen = new Set<string>();
   return newestFirst(items, "order").filter((i) => {
