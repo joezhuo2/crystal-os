@@ -82,13 +82,14 @@ fn valid_model_id(id: &str) -> bool {
 
 impl NebulaConfig {
   pub fn validate(&self) -> Result<(), String> {
-    for url in [&self.omniroute_base_url, &self.nim_base_url] {
+    for url in [&self.omniroute_base_url, &self.nim_base_url].into_iter().filter(|u| !u.trim().is_empty()) {
       if !valid_url(url) {
         return Err(format!("Invalid endpoint URL: {url}"));
       }
     }
-    let models = [&self.omniroute_model, &self.nim_models.kimi, &self.nim_models.deepseek, &self.nim_models.nemotron];
-    if let Some(bad) = models.iter().find(|m| !valid_model_id(m)) {
+    let models = [&self.nim_models.kimi, &self.nim_models.deepseek, &self.nim_models.nemotron];
+    let omniroute = (!self.omniroute_model.trim().is_empty()).then_some(&self.omniroute_model);
+    if let Some(bad) = models.into_iter().chain(omniroute).find(|m| !valid_model_id(m)) {
       return Err(format!("Invalid model id: {bad}"));
     }
     if !super::claude::valid_model(&self.claude_model) {
@@ -98,6 +99,45 @@ impl NebulaConfig {
       return Err("Projects folder must be an absolute path".into());
     }
     Ok(())
+  }
+}
+
+pub type MasterEnv = BTreeMap<String, String>;
+
+const ENV_NAMES: [&str; 6] = ["NVIDIA_API_KEY", "NVIDIA_BASE_URL", "NVIDIA_MODEL", "OMNIROUTE_API_KEY", "OMNIROUTE_BASE_URL", "OMNIROUTE_MODEL"];
+
+pub fn parse_master_env(content: &str) -> MasterEnv {
+  let mut out = MasterEnv::new();
+  for line in content.lines().map(str::trim_start).filter(|l| !l.starts_with('#')) {
+    let Some((key, value)) = line.split_once('=') else { continue };
+    let (key, value) = (key.trim(), value.trim().trim_matches(['"', '\'']));
+    if ENV_NAMES.contains(&key) {
+      if value.is_empty() {
+        out.remove(key);
+      } else {
+        out.insert(key.to_string(), value.to_string());
+      }
+    }
+  }
+  out
+}
+
+fn blank_or(own: &str, master: Option<&String>, ok: fn(&str) -> bool, default: &str) -> String {
+  if !own.trim().is_empty() {
+    return own.to_string();
+  }
+  master.filter(|v| ok(v)).cloned().unwrap_or_else(|| default.to_string())
+}
+
+impl NebulaConfig {
+  pub fn resolved(&self, env: &MasterEnv) -> NebulaConfig {
+    let defaults = NebulaConfig::default();
+    NebulaConfig {
+      omniroute_base_url: blank_or(&self.omniroute_base_url, env.get("OMNIROUTE_BASE_URL"), valid_url, &defaults.omniroute_base_url),
+      omniroute_model: blank_or(&self.omniroute_model, env.get("OMNIROUTE_MODEL"), valid_model_id, &defaults.omniroute_model),
+      nim_base_url: blank_or(&self.nim_base_url, env.get("NVIDIA_BASE_URL"), valid_url, &defaults.nim_base_url),
+      ..self.clone()
+    }
   }
 }
 
@@ -171,8 +211,9 @@ pub fn dsh_patch(config: &NebulaConfig, skill_dirs: &[String]) -> Value {
   ])
 }
 
-pub fn write_dsh_files(home: &Path, config: &NebulaConfig, skill_dirs: &[String]) -> Result<(), String> {
+pub fn write_dsh_files(home: &Path, config: &NebulaConfig, env: &MasterEnv, skill_dirs: &[String]) -> Result<(), String> {
   std::fs::create_dir_all(home).map_err(|e| e.to_string())?;
+  let config = &config.resolved(env);
   let settings = serde_json::to_string_pretty(&dsh_settings(config)).map_err(|e| e.to_string())?;
   atomic_write(&home.join("settings.yaml"), settings.as_bytes())?;
   let patch = serde_json::to_string_pretty(&dsh_patch(config, skill_dirs)).map_err(|e| e.to_string())?;
@@ -258,8 +299,21 @@ pub struct KeyStatus {
   pub omniroute: bool,
 }
 
-pub fn key_status(home: &Path) -> KeyStatus {
-  KeyStatus { nvidia: get_key(home, "nvidia").is_some(), omniroute: get_key(home, "omniroute").is_some() }
+pub fn effective_key(home: &Path, provider: &str, env: &MasterEnv) -> Option<String> {
+  get_key(home, provider).or_else(|| env.get(key_ref(provider)?).cloned())
+}
+
+/// Master keys to hand dsh via its environment, which it prefers over the credentials file.
+pub fn fallback_key_env(home: &Path, env: &MasterEnv) -> Vec<(String, String)> {
+  ["nvidia", "omniroute"]
+    .into_iter()
+    .filter(|p| get_key(home, p).is_none())
+    .filter_map(|p| key_ref(p).and_then(|name| env.get(name).map(|v| (name.to_string(), v.clone()))))
+    .collect()
+}
+
+pub fn key_status(home: &Path, env: &MasterEnv) -> KeyStatus {
+  KeyStatus { nvidia: effective_key(home, "nvidia", env).is_some(), omniroute: effective_key(home, "omniroute", env).is_some() }
 }
 
 #[cfg(test)]
@@ -271,7 +325,7 @@ mod tests {
     let dir = tempfile::tempdir().unwrap();
     let config = NebulaConfig { projects_root: "C:/Users/Joe/Documents/Projects".into(), ..Default::default() };
     let skills = vec![forward_slashes(Path::new(r"C:\Users\Joe\.claude\skills\"))];
-    write_dsh_files(dir.path(), &config, &skills).unwrap();
+    write_dsh_files(dir.path(), &config, &MasterEnv::new(), &skills).unwrap();
 
     let settings: Value = serde_json::from_str(&std::fs::read_to_string(dir.path().join("settings.yaml")).unwrap()).unwrap();
     let nim = &settings["llm-pi-ai"]["providers"]["nvidia-nim"]["models"];
@@ -286,16 +340,16 @@ mod tests {
   #[test]
   fn keys_round_trip_without_exposing_placeholder() {
     let dir = tempfile::tempdir().unwrap();
-    write_dsh_files(dir.path(), &NebulaConfig::default(), &[]).unwrap();
-    assert!(!key_status(dir.path()).omniroute);
+    write_dsh_files(dir.path(), &NebulaConfig::default(), &MasterEnv::new(), &[]).unwrap();
+    assert!(!key_status(dir.path(), &MasterEnv::new()).omniroute);
     set_key(dir.path(), "nvidia", Some("nvapi-test")).unwrap();
     set_key(dir.path(), "omniroute", Some("sk-local")).unwrap();
-    assert!(key_status(dir.path()).nvidia);
+    assert!(key_status(dir.path(), &MasterEnv::new()).nvidia);
     assert_eq!(get_key(dir.path(), "omniroute").as_deref(), Some("sk-local"));
     set_key(dir.path(), "omniroute", None).unwrap();
     assert!(get_key(dir.path(), "omniroute").is_none());
     set_key(dir.path(), "nvidia", None).unwrap();
-    assert!(!key_status(dir.path()).nvidia);
+    assert!(!key_status(dir.path(), &MasterEnv::new()).nvidia);
     assert!(set_key(dir.path(), "openai", Some("x")).is_err());
   }
 
@@ -305,5 +359,50 @@ mod tests {
     assert!(config.validate().is_ok() || cfg!(not(windows)));
     config.nim_base_url = "ftp://x".into();
     assert!(config.validate().is_err());
+  }
+
+  fn master() -> MasterEnv {
+    parse_master_env("# c\nNVIDIA_API_KEY=\"nv-master\"\nOMNIROUTE_API_KEY='om-master'\nNVIDIA_BASE_URL=https://nim.example/v1\nOMNIROUTE_BASE_URL=bad url\nOMNIROUTE_MODEL=my/model\nUNRELATED=1\n")
+  }
+
+  #[test]
+  fn parses_only_master_names_and_strips_quotes() {
+    let env = master();
+    assert_eq!(env.get("NVIDIA_API_KEY").map(String::as_str), Some("nv-master"));
+    assert_eq!(env.get("OMNIROUTE_API_KEY").map(String::as_str), Some("om-master"));
+    assert!(!env.contains_key("UNRELATED"));
+    assert!(parse_master_env("NVIDIA_API_KEY=\n").is_empty());
+  }
+
+  #[test]
+  fn blank_endpoints_use_master_then_default_and_own_wins() {
+    let blank = NebulaConfig { nim_base_url: " ".into(), omniroute_base_url: String::new(), omniroute_model: String::new(), ..Default::default() };
+    let r = blank.resolved(&master());
+    assert_eq!(r.nim_base_url, "https://nim.example/v1");
+    assert_eq!(r.omniroute_base_url, NebulaConfig::default().omniroute_base_url);
+    assert_eq!(r.omniroute_model, "my/model");
+    let own = NebulaConfig { nim_base_url: "https://own/v1".into(), omniroute_model: "own".into(), ..Default::default() };
+    let r = own.resolved(&master());
+    assert_eq!((r.nim_base_url.as_str(), r.omniroute_model.as_str()), ("https://own/v1", "own"));
+    assert_eq!(blank.resolved(&MasterEnv::new()).nim_base_url, NebulaConfig::default().nim_base_url);
+  }
+
+  #[test]
+  fn keys_fall_back_to_master_only_when_own_is_unset() {
+    let dir = tempfile::tempdir().unwrap();
+    write_dsh_files(dir.path(), &NebulaConfig::default(), &MasterEnv::new(), &[]).unwrap();
+    let env = master();
+    assert!(key_status(dir.path(), &env).nvidia && key_status(dir.path(), &env).omniroute);
+    assert_eq!(fallback_key_env(dir.path(), &env).len(), 2);
+    set_key(dir.path(), "nvidia", Some("own")).unwrap();
+    assert_eq!(effective_key(dir.path(), "nvidia", &env).as_deref(), Some("own"));
+    assert_eq!(fallback_key_env(dir.path(), &env), vec![("OMNIROUTE_API_KEY".to_string(), "om-master".to_string())]);
+    assert!(fallback_key_env(dir.path(), &MasterEnv::new()).is_empty());
+  }
+
+  #[test]
+  fn validate_accepts_blank_endpoints() {
+    let config = NebulaConfig { projects_root: "C:/Projects".into(), nim_base_url: String::new(), omniroute_base_url: String::new(), omniroute_model: String::new(), ..Default::default() };
+    assert!(config.validate().is_ok() || cfg!(not(windows)));
   }
 }

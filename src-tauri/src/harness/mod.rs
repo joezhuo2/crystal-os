@@ -90,6 +90,10 @@ fn harness_dir<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
   Ok(app_dir(app)?.join("harness"))
 }
 
+fn master_env<R: Runtime>(app: &AppHandle<R>) -> config::MasterEnv {
+  app_dir(app).ok().and_then(|d| std::fs::read_to_string(d.join(".env.local")).ok()).map(|c| config::parse_master_env(&c)).unwrap_or_default()
+}
+
 fn dsh_home<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
   Ok(app_dir(app)?.join("dsh"))
 }
@@ -150,7 +154,7 @@ pub async fn harness_env_status(app: AppHandle) -> Result<EnvStatus, String> {
       claude: claude::resolve_binary(&env).map(|p| p.display().to_string()),
       dsh_version: DSH_VERSION,
       runtime_installed: installed_dsh_version(&home).as_deref() == Some(DSH_VERSION) && dsh_bin(&home).is_file(),
-      keys: config::key_status(&home),
+      keys: config::key_status(&home, &master_env(&app)),
     })
   })
   .await
@@ -240,7 +244,7 @@ pub fn harness_set_config(app: AppHandle, state: State<'_, HarnessState>, config
   config::save(&harness_dir(&app)?.join("config.json"), &config)?;
   let env = crate::terminal::fresh_env();
   let skills = discovery::skill_dirs(&roots(&env)?);
-  config::write_dsh_files(&dsh_home(&app)?, &config, &skills)
+  config::write_dsh_files(&dsh_home(&app)?, &config, &master_env(&app), &skills)
 }
 
 #[tauri::command]
@@ -248,7 +252,7 @@ pub fn harness_set_key(app: AppHandle, state: State<'_, HarnessState>, provider:
   let _io = state.io.lock().unwrap();
   let home = dsh_home(&app)?;
   config::set_key(&home, &provider, key.as_deref())?;
-  Ok(config::key_status(&home))
+  Ok(config::key_status(&home, &master_env(&app)))
 }
 
 #[tauri::command]
@@ -279,8 +283,9 @@ pub struct ProbeResult {
 #[tauri::command]
 pub async fn harness_probe(app: AppHandle, provider: String) -> Result<ProbeResult, String> {
   tauri::async_runtime::spawn_blocking(move || {
-    let config = config::load(&harness_dir(&app)?.join("config.json"));
-    let key = config::get_key(&dsh_home(&app)?, &provider);
+    let master = master_env(&app);
+    let config = config::load(&harness_dir(&app)?.join("config.json")).resolved(&master);
+    let key = config::effective_key(&dsh_home(&app)?, &provider, &master);
     let (base, wanted) = match provider.as_str() {
       "nvidia" => (config.nim_base_url.clone(), vec![config.nim_models.kimi, config.nim_models.deepseek, config.nim_models.nemotron]),
       "omniroute" => (config.omniroute_base_url.clone(), Vec::new()),
@@ -344,7 +349,8 @@ pub async fn harness_dsh_start(app: AppHandle, state: State<'_, HarnessState>, w
     let node = which(&env, "node").ok_or("Node.js was not found on PATH")?;
     let config = config::load(&harness_dir(&app)?.join("config.json"));
     let skills = discovery::skill_dirs(&roots(&env)?);
-    config::write_dsh_files(&home, &config, &skills)?;
+    let master = master_env(&app);
+    config::write_dsh_files(&home, &config, &master, &skills)?;
 
     let mut child_env: Vec<(String, String)> = claude::scrub_env(env)
       .into_iter()
@@ -354,6 +360,7 @@ pub async fn harness_dsh_start(app: AppHandle, state: State<'_, HarnessState>, w
         upper != config::NVIDIA_KEY_REF && upper != config::OMNIROUTE_KEY_REF && !upper.starts_with("DSH_")
       })
       .collect();
+    child_env.extend(config::fallback_key_env(&home, &master));
     child_env.push(("DSH_HOME".into(), home.display().to_string()));
     child_env.push(("NO_COLOR".into(), "1".into()));
 
