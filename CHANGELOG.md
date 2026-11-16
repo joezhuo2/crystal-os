@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.18.0] - 2026-11-16 - The last 13 starred ideas: job pipeline, package tracking, search by meaning and more.
+
 ### Added
 
 - **Job application pipeline.** The Courier's Job applications card has four tabs, Applied, Interview, Offer and Rejected, each with a count. A company sits under its newest known stage. An application or interview with no email for a week shows **Follow up** and sends one reminder.
