@@ -15,10 +15,19 @@ export const FREE_SLOT_DAYS = 14;
 
 /** "next 5h", "next 1.5 hours" → minutes, or null when the query is not one. */
 export function parseFreeSlotQuery(query: string): number | null {
-  const match = /^next\s+(\d+(?:\.\d+)?)\s*h(?:ours?|rs?)?$/i.exec(query.trim());
+  return parseFreeSlot(query)?.minutes ?? null;
+}
+
+export function parseFreeSlot(query: string): { minutes: number; days: number } | null {
+  const q = query.trim();
+  const match =
+    /^next\s+(\d+(?:\.\d+)?)\s*(h)(?:ours?|rs?)?$/i.exec(q) ??
+    /^free:\s*(\d+(?:\.\d+)?)\s*(h|m)(?:\s*<\s*(\d+)\s*d)?$/i.exec(q) ??
+    /^find\s+(\d+(?:\.\d+)?)\s*(h)(?:ours?|rs?)?\s+free(\s+this\s+week)?$/i.exec(q);
   if (!match) return null;
-  const minutes = Math.round(Number(match[1]) * 60);
-  return minutes > 0 ? minutes : null;
+  const minutes = Math.round(Number(match[1]) * (match[2].toLowerCase() === "h" ? 60 : 1));
+  const within = match[3] === undefined ? FREE_SLOT_DAYS : Number(match[3]) || 7;
+  return minutes > 0 ? { minutes, days: Math.min(FREE_SLOT_DAYS, Math.max(1, within)) } : null;
 }
 
 export type FreeSlot = { date: string; start: number; end: number };

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Free/busy finder.** The palette's free-slot search also takes `free:1h<7d` (a free hour in the next 7 days), `free:30m` and `find 2h free this week`, next to `next 2h`.
 - **Schedule today (off by default).** Turn it on in Settings → The Engine to get a **Schedule today** button on the Fits today? bar. It blocks time in your Google calendar for today's estimated tasks, most pressing first, in the free slots of your work day. Tasks already blocked today are skipped.
 - **Recurring-task history.** A repeating task's details show its streak, how many times it has been done and its last five completion dates.
 - **Today, Upcoming and Someday views in The Engine**, next to List and Board. Today has a seven-day strip with a task count per day; pick a day to see its tasks. Upcoming groups the next two weeks by day. Someday lists the tasks parked there. **V** now steps through all five views.

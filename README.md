@@ -887,7 +887,7 @@ The palette is an overlay over whichever page is open. On desktop one shortcut d
 |-------|--------|
 | `add Buy milk` | Creates a task |
 | `log 25 for Lunch` | Records an expense |
-| `next 5h` | Finds the next free 5-hour block (`1.5h` and `2 hours` work too), today or in the next 14 days, inside the work day set in **Settings → The Engine** and around timed events in the calendar picked in The Horizon. Selecting it opens The Horizon's create-event form on that slot. Without a connected calendar it only looks at the work day |
+| `next 5h`, `free:1h<7d` | Finds the next free 5-hour block (`1.5h` and `2 hours` work too; `free:1h<7d` and `find 1h free this week` limit the search to 7 days), today or in the next 14 days, inside the work day set in **Settings → The Engine** and around timed events in the calendar picked in The Horizon. Selecting it opens The Horizon's create-event form on that slot. Without a connected calendar it only looks at the work day |
 | *"Add a new event"* | Opens The Horizon's create-event form for today |
 | *anything else* | Filters tasks, transactions, vault notes and Settings sections; **Quick Add** is always offered as the first row (after the free block for `next …`) |
 

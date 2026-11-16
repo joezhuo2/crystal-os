@@ -76,7 +76,7 @@ import { calendarWasConnected, useCalendarEvents, useCalendarStatus } from "@/ho
 import { pickedCalendarId } from "@/hooks/useTodayCapacity";
 import { capacityWindow, useCapacitySettings } from "@/lib/capacitySettings";
 import { formatEstimate } from "@/lib/capacity";
-import { findFreeSlot, FREE_SLOT_DAYS, parseFreeSlotQuery } from "@/lib/freeSlot";
+import { findFreeSlot, FREE_SLOT_DAYS, parseFreeSlot } from "@/lib/freeSlot";
 import { fromMinutes } from "@/lib/timeGrid";
 import { usesSidecar } from "@/lib/platform";
 import { useNebulaSearchIndex } from "@/hooks/useHarness";
@@ -219,7 +219,8 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const matchedTransactions = text ? fuzzyRank(text, filteredTransactions, (t) => `${t.name} ${txCategory(t) ?? ""}`) : filteredTransactions;
 
   // ---------- "next 5h": the next free block in The Horizon ----------
-  const slotMinutes = parseFreeSlotQuery(search);
+  const slot = parseFreeSlot(search);
+  const slotMinutes = slot?.minutes ?? null;
   const capacity = useCapacitySettings();
   const eventsWanted = calendarOn && !addPrefix && !logPrefix && slotMinutes === null && wantsType(filters, "event") && !filters.overdue;
   const eventQuery = eventsWanted ? text : "";
@@ -246,6 +247,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
           now: new Date(),
           minutes: slotMinutes,
           window: capacityWindow(capacity),
+          days: slot?.days,
         });
 
   const eventRange = useMemo(() => {
@@ -690,7 +692,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                             ? `Looking for a free ${formatEstimate(slotMinutes)} block…`
                             : freeSlot
                               ? `Next free ${formatEstimate(slotMinutes)}: ${slotDay(freeSlot.date)}, ${fromMinutes(freeSlot.start)}–${fromMinutes(freeSlot.end)}`
-                              : `No free ${formatEstimate(slotMinutes)} block in the next ${FREE_SLOT_DAYS} days`}
+                              : `No free ${formatEstimate(slotMinutes)} block in the next ${slot?.days === 1 ? "day" : `${slot?.days ?? FREE_SLOT_DAYS} days`}`}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {!slotLoading && !calendarConnected

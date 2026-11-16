@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 import type { Task } from "@/contexts/AppContext";
-import { findFreeSlot, parseFreeSlotQuery, planToday } from "./freeSlot";
+import { findFreeSlot, parseFreeSlot, parseFreeSlotQuery, planToday } from "./freeSlot";
 
 const WINDOW = { start: 9 * 60, end: 17 * 60 };
 const NOW = new Date(2026, 9, 5, 8, 0);
@@ -37,6 +37,23 @@ describe("parseFreeSlotQuery", () => {
     expect(parseFreeSlotQuery("next 0h")).toBeNull();
     expect(parseFreeSlotQuery("next meeting")).toBeNull();
     expect(parseFreeSlotQuery("add next 5h")).toBeNull();
+  });
+});
+
+describe("parseFreeSlot", () => {
+  it("reads free:1h<7d, minutes, and the spelled-out form", () => {
+    expect(parseFreeSlot("free:1h<7d")).toEqual({ minutes: 60, days: 7 });
+    expect(parseFreeSlot("free: 30m < 3d")).toEqual({ minutes: 30, days: 3 });
+    expect(parseFreeSlot("free:2h")).toEqual({ minutes: 120, days: 14 });
+    expect(parseFreeSlot("Find 1 h free this week")).toEqual({ minutes: 60, days: 7 });
+    expect(parseFreeSlot("find 1.5 hours free")).toEqual({ minutes: 90, days: 14 });
+    expect(parseFreeSlot("next 5h")).toEqual({ minutes: 300, days: 14 });
+  });
+
+  it("caps the days at the range the palette loads, and ignores the rest", () => {
+    expect(parseFreeSlot("free:1h<90d")?.days).toBe(14);
+    expect(parseFreeSlot("free:0h")).toBeNull();
+    expect(parseFreeSlot("free time")).toBeNull();
   });
 });
 
