@@ -12,12 +12,15 @@ import {
   Link2,
   NotebookPen,
   Pencil,
+  Pin,
+  PinOff,
   RotateCw,
   Search,
   Tag as TagIcon,
 } from "lucide-react";
 import { appUi, useAppUi } from "@/lib/appUi";
-import { recordRecent } from "@/lib/recents";
+import { readRecents, recordRecent } from "@/lib/recents";
+import { readPinned, togglePinned, writePinned } from "@/lib/pinnedNotes";
 import {
   usePickVault,
   useVaultNote,
@@ -366,12 +369,32 @@ function NoteConnectionsPanel({
   );
 }
 
+function QuickNotes({ label, items, onSelect }: { label: string; items: { path: string; title: string }[]; onSelect: (path: string) => void }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="shrink-0">
+      <p className="mb-1 text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <div className="flex flex-wrap gap-1">
+        {items.map((item) => (
+          <button key={item.path} data-private onClick={() => onSelect(item.path)} className="obsidian-tag max-w-full truncate rounded-full px-2 py-0.5 text-[11px]">
+            {item.title}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function NoteReader({
   linkTargets,
   allNotes,
+  pinned,
+  onTogglePin,
 }: {
   linkTargets: Map<string, string>;
   allNotes: VaultNote[];
+  pinned: string[];
+  onTogglePin: (path: string) => void;
 }) {
   const selectedNotePath = useAppUi((s) => s.selectedNotePath);
   const { setSelectedNotePath } = appUi;
@@ -461,6 +484,14 @@ function NoteReader({
         <p className="text-xs text-muted-foreground uppercase tracking-widest min-w-0 break-all flex-1">
           {note.path}
         </p>
+        <button
+          onClick={() => onTogglePin(note.path)}
+          aria-pressed={pinned.includes(note.path)}
+          className="obsidian-action flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border shrink-0"
+        >
+          {pinned.includes(note.path) ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+          {pinned.includes(note.path) ? "Unpin" : "Pin"}
+        </button>
         {!editing && (
           <button
             onClick={() => setEditingPath(note.path)}
@@ -645,6 +676,21 @@ export default function ArchivePage() {
   const allNotes = everything?.notes ?? notes;
   const linkTargets = useMemo(() => buildLinkTargets(allNotes), [allNotes]);
 
+  const [pinned, setPinned] = useState(readPinned);
+  const togglePin = useCallback((path: string) => {
+    setPinned((list) => {
+      const next = togglePinned(list, path);
+      writePinned(next);
+      return next;
+    });
+  }, []);
+  const quick = useMemo(() => {
+    const titles = new Map(allNotes.map((n) => [n.path, n.title]));
+    const known = (paths: string[]) => paths.flatMap((path) => (titles.has(path) ? [{ path, title: titles.get(path)! }] : []));
+    const recent = readRecents().flatMap((r) => (r.kind === "note" && r.id !== selectedNotePath && !pinned.includes(r.id) ? [r.id] : []));
+    return { pinned: known(pinned), recent: known(recent).slice(0, 5) };
+  }, [allNotes, pinned, selectedNotePath]);
+
   const toggleTag = useCallback(
     (tag: string | null) => setActiveTag((current) => (tag === null || current === tag ? null : tag)),
     [],
@@ -706,6 +752,9 @@ export default function ArchivePage() {
             />
           </div>
 
+          <QuickNotes label="Pinned" items={quick.pinned} onSelect={setSelectedNotePath} />
+          <QuickNotes label="Recent" items={quick.recent} onSelect={setSelectedNotePath} />
+
           {/* Top half: tags, scrolls on its own so a big tag cloud never buries the list. */}
           {(data?.allTags.length ?? 0) > 0 && (
             <div className="flex-1 basis-0 min-h-0 overflow-y-auto scrollbar-thin -mx-1 px-1">
@@ -740,7 +789,7 @@ export default function ArchivePage() {
         </div>
 
         {/* ── Right pane: reader ── */}
-        <NoteReader linkTargets={linkTargets} allNotes={allNotes} />
+        <NoteReader linkTargets={linkTargets} allNotes={allNotes} pinned={pinned} onTogglePin={togglePin} />
       </div>
     </div>
   );
