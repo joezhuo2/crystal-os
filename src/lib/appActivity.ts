@@ -86,7 +86,7 @@ export function startAppActivity() {
     root.classList.toggle("app-hidden", !state.visible);
     root.classList.toggle("perf-still", perfSettings.getState().reduceTransitions);
     root.classList.toggle("perf-backdrop-still", perfSettings.getState().stillBackdrops);
-    root.classList.toggle("privacy-mode", privacySettings.getState());
+    root.classList.toggle("privacy-mode", privacySettings.blurred());
     root.dataset.theme = themeSettings.getState().theme;
   };
   appActivity.subscribe(apply);

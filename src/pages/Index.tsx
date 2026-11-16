@@ -21,6 +21,7 @@ import { isDesktop } from "@/lib/platform";
 import { hidePortal } from "@/lib/portalNative";
 import QuickAddDialog from "@/components/QuickAddDialog";
 import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
+import { usePrivacyHotkey } from "@/hooks/usePrivacyHotkey";
 import { useDndHotkey, useHomeHotkey, usePaletteHotkey } from "@/hooks/useGlobalHotkey";
 import { useQuickCommands } from "@/hooks/useQuickCommands";
 import { inTerminal } from "@/lib/hotkey";
@@ -187,6 +188,7 @@ const Index = () => {
   const View = views[viewTab];
   useHomeHotkey(() => setActiveTab("home"));
   useDndHotkey();
+  usePrivacyHotkey();
   useShortcut("general.nextPage", () => setActiveTab((t) => stepTab(visibleTabIds(), t, 1)));
   useShortcut("general.previousPage", () => setActiveTab((t) => stepTab(visibleTabIds(), t, -1)));
 

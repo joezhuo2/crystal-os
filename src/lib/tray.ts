@@ -9,12 +9,14 @@
 
 import { isDesktop } from "@/lib/platform";
 import { formatClock, pomodoro, type PomodoroState } from "@/lib/pomodoro";
+import { privacySettings } from "@/lib/privacySettings";
 
 /** Emitted by Rust with "toggle" or "reset" when a Pomodoro item is clicked. */
 export const TRAY_POMODORO_EVENT = "tray://pomodoro";
 /** Emitted by Rust after showing the window from "Quick Add…". */
 export const TRAY_QUICK_ADD_EVENT = "tray://quick-add";
 export const TRAY_CHECK_UPDATE_EVENT = "tray://check-update";
+export const TRAY_PRIVACY_EVENT = "tray://privacy";
 
 /** Mirrors `PomodoroView` in src-tauri/src/tray.rs. */
 export interface TrayPomodoroView {
@@ -75,6 +77,10 @@ export function initTrayBridge(): () => void {
     const unlisten = await listen(TRAY_POMODORO_EVENT, (e) => applyTrayPomodoroAction(e.payload));
     if (cancelled) unlisten();
     else cleanups.push(unlisten);
+
+    const unlistenPrivacy = await listen(TRAY_PRIVACY_EVENT, () => privacySettings.setEnabled(!privacySettings.getState()));
+    if (cancelled) unlistenPrivacy();
+    else cleanups.push(unlistenPrivacy);
   })();
 
   return () => {
