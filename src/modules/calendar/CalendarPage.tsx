@@ -1391,8 +1391,15 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openEventRequest, view, focusDate, calendarId, eventsQuery.isPending, eventsQuery.isError, events]);
 
-  useShortcut("horizon.previous", () => view === "month" ? pageMonth(-1) : pageGrid(-1), connected && view !== "agenda");
-  useShortcut("horizon.next", () => view === "month" ? pageMonth(1) : pageGrid(1), connected && view !== "agenda");
+  const page = (dir: number) => (view === "month" ? pageMonth(dir) : pageGrid(dir));
+  useShortcut("horizon.previous", () => page(-1), connected && view !== "agenda");
+  useShortcut("horizon.next", () => page(1), connected && view !== "agenda");
+  useShortcut("horizon.previousArrow", () => page(-1), connected && view !== "agenda");
+  useShortcut("horizon.nextArrow", () => page(1), connected && view !== "agenda");
+  useShortcut("horizon.viewMonth", () => setView("month"), connected);
+  useShortcut("horizon.viewWeek", () => setView("week"), connected);
+  useShortcut("horizon.viewDay", () => setView("day"), connected);
+  useShortcut("horizon.viewAgenda", () => setView("agenda"), connected);
   useShortcut("horizon.cycleView", () => setView(VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]), connected);
   useShortcut("horizon.newEvent", () => openCreate(toLocalDateStr()), connected);
   const disconnectCalendar = () => {
@@ -1402,7 +1409,17 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
     });
   };
   useShortcut("horizon.signOut", disconnectCalendar, connected);
-  useShortcut("horizon.openToday", () => setSelectedDay(toLocalDateStr()), connected && view === "month");
+  useShortcut("horizon.openToday", () => {
+    const now = toLocalDateStr();
+    setFocusDate(now);
+    if (view !== "month") return;
+    const d = new Date();
+    if (d.getFullYear() !== currentDate.getFullYear() || d.getMonth() !== currentDate.getMonth()) {
+      setCascade(false);
+      setCurrentDate(new Date(d.getFullYear(), d.getMonth(), 1));
+    }
+    setSelectedDay(now);
+  }, connected && view !== "agenda");
 
   if (!connected) {
     return (
