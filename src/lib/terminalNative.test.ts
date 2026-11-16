@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TerminalHub, TerminalStream, type TerminalEvent, type TerminalInfo } from "./terminalNative";
+import { parseShell, TerminalHub, TerminalStream, type TerminalEvent, type TerminalInfo } from "./terminalNative";
 
 function setup() {
   const written: string[] = [];
@@ -94,5 +94,14 @@ describe("TerminalHub", () => {
     hub.attach(second.stream, info(1, "while away"));
     expect(first.written).toEqual([]);
     expect(second.written).toEqual(["while away"]);
+  });
+});
+
+describe("parseShell", () => {
+  it("keeps a known shell and falls back to the default for anything else", () => {
+    expect(parseShell("wsl")).toBe("wsl");
+    expect(parseShell("zsh")).toBe("default");
+    expect(parseShell("toString")).toBe("default");
+    expect(parseShell(null)).toBe("default");
   });
 });

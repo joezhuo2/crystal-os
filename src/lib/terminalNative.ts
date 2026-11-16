@@ -51,8 +51,33 @@ export function listTerminals() {
 }
 
 /** Starts a new shell. Fails when `MAX_TERMINALS` are already running. */
-export function openTerminal(cols: number, rows: number, cwd?: string) {
-  return invoke<TerminalInfo>("terminal_open", { cols, rows, cwd: cwd ?? null });
+export function openTerminal(cols: number, rows: number, cwd?: string, shell: TerminalShell = "default") {
+  return invoke<TerminalInfo>("terminal_open", { cols, rows, cwd: cwd ?? null, shell });
+}
+
+export const TERMINAL_SHELLS = { default: "PowerShell", cmd: "Command Prompt", bash: "Git Bash", wsl: "WSL" } as const;
+export type TerminalShell = keyof typeof TERMINAL_SHELLS;
+
+const SHELL_KEY = "crystal-os-terminal-shell";
+
+export function parseShell(raw: string | null): TerminalShell {
+  return raw && Object.keys(TERMINAL_SHELLS).includes(raw) ? (raw as TerminalShell) : "default";
+}
+
+export function readShell(): TerminalShell {
+  try {
+    return parseShell(localStorage.getItem(SHELL_KEY));
+  } catch {
+    return "default";
+  }
+}
+
+export function writeShell(shell: TerminalShell) {
+  try {
+    localStorage.setItem(SHELL_KEY, shell);
+  } catch {
+    /* ignore localStorage errors */
+  }
 }
 
 /** Resizes shell `id` to the view and returns it with its scrollback. */
