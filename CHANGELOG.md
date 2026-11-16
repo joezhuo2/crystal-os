@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.16.1] - 2026-11-15 - Release build fix.
+
+### Fixed
+
+- The release build no longer fails on a test that removed its temporary folder while a settings save was still writing. No app changes from v0.16.0.
+
 ## [v0.16.0] - 2026-11-15 - The Observatory.
 
 ### Added
