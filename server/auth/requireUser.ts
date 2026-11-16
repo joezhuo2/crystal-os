@@ -1,12 +1,9 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage } from "node:http";
-import { createClient } from "@supabase/supabase-js";
 
 export type AuthedUser = { id: string; email?: string };
 
-/**
- * The slice of the Supabase client this module needs. Narrowed to an interface
- * so tests can supply a stub and run without network access.
- */
+/** Checks a bearer token. An interface so tests can supply a stub. */
 export interface TokenVerifier {
   getUser(token: string): Promise<{
     data: { user: AuthedUser | null };
@@ -34,11 +31,7 @@ export function readBearerToken(req: IncomingMessage): string | null {
 /**
  * Builds the per-request authorization check used by both API plugins.
  *
- * Validation goes through Supabase rather than local signature verification so
- * this stays correct whether the project signs with a symmetric secret or an
- * asymmetric key. Because that is a network round trip, successful validations
- * are cached briefly — vault browsing issues many requests in quick succession
- * and should not pay for a round trip each time. Rejections are never cached.
+ * Successful checks are cached briefly; rejections are never cached.
  */
 export function createRequireUser(
   verifier: TokenVerifier,
@@ -71,12 +64,13 @@ export function createRequireUser(
   };
 }
 
-/** The production verifier, backed by the project's anon key. */
-export function createSupabaseVerifier(url: string, anonKey: string): TokenVerifier {
-  const client = createClient(url, anonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+export function createLocalVerifier(token: string): TokenVerifier {
+  const digest = (value: string) => createHash("sha256").update(value).digest();
+  const expected = digest(token);
   return {
-    getUser: (token) => client.auth.getUser(token) as ReturnType<TokenVerifier["getUser"]>,
+    getUser: async (candidate) =>
+      token && timingSafeEqual(digest(candidate), expected)
+        ? { data: { user: { id: "local" } }, error: null }
+        : { data: { user: null }, error: { message: "Invalid token" } },
   };
 }

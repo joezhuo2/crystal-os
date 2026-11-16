@@ -59,8 +59,6 @@ const SHOTS: Shot[] = [
 // The tour: one stop per page, plus the Observatory's course and review views.
 const TOUR = new Set(["home", "engine", "horizon", "orbit", "vault", "ledger", "courier", "atmosphere", "observatory", "observatory-course", "observatory-review", "archive", "portal", "settings"]);
 
-const SUPABASE_HOST = new URL(process.env.VITE_SUPABASE_URL ?? "https://unset.supabase.co").host;
-const PROJECT_REF = SUPABASE_HOST.split(".")[0];
 const VERSION = JSON.parse(readFileSync("package.json", "utf8")).version as string;
 
 // Public, non-personal data: Toronto's weather and fonts.
@@ -68,31 +66,7 @@ const PASS_HOSTS = [/(^|\.)weather\.gc\.ca$/, /(^|\.)fonts\.(googleapis|gstatic)
 
 const SKELETONS = "main .skeleton-shimmer, main .animate-pulse, main [class*='skeleton']";
 
-const b64 = (v: unknown) => Buffer.from(JSON.stringify(v)).toString("base64url");
-const expiresAt = Math.floor(Date.now() / 1000) + 10 * 365 * 86_400;
-const user = {
-  id: sample.SAMPLE_USER_ID,
-  aud: "authenticated",
-  role: "authenticated",
-  email: sample.SAMPLE_EMAIL,
-  email_confirmed_at: sample.at(-120, "09:00"),
-  app_metadata: { provider: "email", providers: ["email"] },
-  user_metadata: {},
-  identities: [],
-  created_at: sample.at(-120, "09:00"),
-  updated_at: sample.at(-1, "09:00"),
-};
-const session = {
-  access_token: `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ sub: user.id, email: user.email, role: "authenticated", aud: "authenticated", exp: expiresAt })}.sample`,
-  token_type: "bearer",
-  expires_in: expiresAt - Math.floor(Date.now() / 1000),
-  expires_at: expiresAt,
-  refresh_token: "sample-refresh-token",
-  user,
-};
-
 const storage: Record<string, string> = {
-  [`sb-${PROJECT_REF}-auth-token`]: JSON.stringify(session),
   "crystal-os-privacy-mode": "false",
   "crystal-os-theme": "default",
   "crystal-os-flux-lines": "1",
@@ -121,41 +95,34 @@ function compare(a: string, b: string): number {
 
 const OPS: Record<string, (c: number) => boolean> = { eq: (c) => c === 0, gt: (c) => c > 0, gte: (c) => c >= 0, lt: (c) => c < 0, lte: (c) => c <= 0 };
 
-function selectRows(rows: Record<string, unknown>[], params: URLSearchParams) {
-  let out = [...rows];
-  for (const [key, value] of params) {
-    const m = /^(eq|gt|gte|lt|lte)\.(.*)$/.exec(value);
-    if (m) out = out.filter((r) => OPS[m[1]](compare(String(r[key] ?? ""), m[2])));
-  }
-  const [col, dir] = (params.get("order") ?? "").split(",")[0].split(".");
-  if (col) out.sort((a, b) => compare(String(a[col] ?? ""), String(b[col] ?? "")) * (dir === "desc" ? -1 : 1));
-  const limit = Number(params.get("limit"));
-  return limit > 0 ? out.slice(0, limit) : out;
+interface DataQuery {
+  table: string;
+  op: string;
+  filters?: { column: string; op: string; value: unknown }[];
+  order?: { column: string; ascending: boolean };
+  limit?: number;
 }
 
-function supabase(route: Route, url: URL, blocked: string[]) {
-  const req = route.request();
-  if (url.pathname.startsWith("/auth/v1/")) {
-    if (url.pathname.endsWith("/user")) return json(route, user);
-    if (url.pathname.endsWith("/token")) return json(route, session);
-    if (url.pathname.endsWith("/logout")) return route.fulfill({ status: 204 });
+function selectRows(rows: Record<string, unknown>[], query: DataQuery) {
+  let out = [...rows];
+  for (const { column, op, value } of query.filters ?? []) {
+    out = out.filter((r) => OPS[op](compare(String(r[column] ?? ""), String(value))));
   }
-  const table = /^\/rest\/v1\/([a-z_]+)$/.exec(url.pathname)?.[1];
-  if (table && table in sample.supabaseTables) {
-    if (req.method() !== "GET" && req.method() !== "HEAD") return route.fulfill({ status: 204 });
-    const rows = selectRows(sample.supabaseTables[table], url.searchParams);
-    const range = { "Content-Range": rows.length ? `0-${rows.length - 1}/${rows.length}` : "*/0" };
-    if ((req.headers().accept ?? "").includes("vnd.pgrst.object")) return rows[0] ? json(route, rows[0], 200, range) : json(route, { code: "PGRST116", message: "no rows" }, 406);
-    return json(route, rows, 200, range);
-  }
-  blocked.push(`${req.method()} ${url.href}`);
-  return route.abort();
+  const { column, ascending } = query.order ?? { column: "", ascending: true };
+  if (column) out.sort((a, b) => compare(String(a[column] ?? ""), String(b[column] ?? "")) * (ascending ? 1 : -1));
+  return query.limit ? out.slice(0, query.limit) : out;
 }
 
 function api(route: Route, url: URL, blocked: string[]) {
   const p = url.pathname;
   const q = url.searchParams;
   const get = route.request().method() === "GET";
+  if (get && p === "/api/session") return json(route, { token: "sample" });
+  if (get && p === "/api/data/status") return json(route, { needsImport: false });
+  if (p === "/api/data/query") {
+    const query = route.request().postDataJSON() as DataQuery;
+    return json(route, { data: query.op === "select" ? selectRows(sample.dataTables[query.table] ?? [], query) : null });
+  }
   if (get && p === "/api/calendar/status") return json(route, sample.calendarStatus);
   if (get && p === "/api/calendar/calendars") return json(route, sample.calendarList);
   if (get && p === "/api/calendar/events") {
@@ -197,13 +164,11 @@ async function sampleContext(browser: Browser, baseURL: string, video?: string):
   // Allow-list routing: anything not mocked or known-public is aborted, so no real data can load.
   await context.route("**/*", (route) => {
     const url = new URL(route.request().url());
-    if (url.host === SUPABASE_HOST) return supabase(route, url, blocked);
     if (url.origin === origin) return url.pathname.startsWith("/api/") ? api(route, url, blocked) : route.continue();
     if (url.protocol.startsWith("http") && PASS_HOSTS.some((h) => h.test(url.hostname))) return route.continue();
     blocked.push(`${route.request().method()} ${url.href}`);
     return route.abort();
   });
-  await context.routeWebSocket(/supabase/, (ws) => ws.close());
   // A mid-morning clock, so the greeting, Today views and work-day capacity read like a working day.
   await context.clock.install({ time: sample.NOW });
   // Still backdrops and no fades for the tour: moving backgrounds and cross-fades change every pixel of a frame and balloon the GIF.

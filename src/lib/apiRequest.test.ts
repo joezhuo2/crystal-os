@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiRequest, shouldRetry } from "./apiRequest";
-import { supabase } from "./supabase";
+import { apiToken, forgetApiToken } from "./apiToken";
 
-const getSession = vi.spyOn(supabase.auth, "getSession");
+vi.mock("./apiToken", () => ({ apiToken: vi.fn(), forgetApiToken: vi.fn() }));
 
 function mockFetch(response: Partial<Response> & { json?: () => Promise<unknown> }) {
   const fn = vi.fn().mockResolvedValue({ ok: true, status: 200, ...response });
@@ -11,10 +11,7 @@ function mockFetch(response: Partial<Response> & { json?: () => Promise<unknown>
 }
 
 beforeEach(() => {
-  getSession.mockResolvedValue({
-    data: { session: { access_token: "tok-abc" } },
-    error: null,
-  } as never);
+  vi.mocked(apiToken).mockResolvedValue("tok-abc");
 });
 
 afterEach(() => {
@@ -23,7 +20,7 @@ afterEach(() => {
 });
 
 describe("apiRequest", () => {
-  it("attaches the current access token as a bearer header", async () => {
+  it("attaches the local API token as a bearer header", async () => {
     const fetchMock = mockFetch({ json: async () => ({ ok: true }) });
 
     await apiRequest("/api/obsidian/notes");
@@ -36,10 +33,7 @@ describe("apiRequest", () => {
     const fetchMock = mockFetch({ json: async () => ({}) });
 
     await apiRequest("/api/obsidian/notes");
-    getSession.mockResolvedValue({
-      data: { session: { access_token: "tok-refreshed" } },
-      error: null,
-    } as never);
+    vi.mocked(apiToken).mockResolvedValue("tok-refreshed");
     await apiRequest("/api/obsidian/notes");
 
     const [, second] = fetchMock.mock.calls[1];
@@ -60,14 +54,12 @@ describe("apiRequest", () => {
     expect(headers.get("Authorization")).toBe("Bearer tok-abc");
   });
 
-  it("sends no Authorization header when there is no session", async () => {
-    getSession.mockResolvedValue({ data: { session: null }, error: null } as never);
+  it("reports a token that cannot be fetched as a 503 without calling the API", async () => {
+    vi.mocked(apiToken).mockRejectedValue(new Error("The local API refused to start a session (403)"));
     const fetchMock = mockFetch({ json: async () => ({}) });
 
-    await apiRequest("/api/obsidian/notes");
-
-    const [, init] = fetchMock.mock.calls[0];
-    expect(new Headers(init.headers).has("Authorization")).toBe(false);
+    await expect(apiRequest("/api/obsidian/notes")).rejects.toMatchObject({ status: 503 });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("surfaces the server's error message", async () => {
@@ -100,6 +92,7 @@ describe("apiRequest", () => {
     mockFetch({ ok: false, status: 401, json: async () => ({ error: "Unauthorized" }) });
 
     await expect(apiRequest("/x")).rejects.toMatchObject({ status: 401 });
+    expect(forgetApiToken).toHaveBeenCalled();
   });
 });
 

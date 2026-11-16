@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { readFileSync } from "fs";
+import { randomBytes } from "crypto";
 import { componentTagger } from "lovable-tagger";
 import { obsidianApi } from "./server/obsidian/plugin";
 import { calendarApi } from "./server/calendar/plugin";
@@ -9,10 +10,9 @@ import { mailApi } from "./server/mail/plugin";
 import { tradesApi } from "./server/trades/plugin";
 import { aiApi } from "./server/ai/plugin";
 import { createAiConfig } from "./server/ai/config";
-import {
-  createRequireUser,
-  createSupabaseVerifier,
-} from "./server/auth/requireUser";
+import { dataApi } from "./server/data/plugin";
+import { localSessionApi } from "./server/auth/localSession";
+import { createLocalVerifier, createRequireUser } from "./server/auth/requireUser";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -22,12 +22,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
   // Built once per server so the token cache is shared across both plugins.
-  const requireUser =
-    env.VITE_SUPABASE_URL && env.VITE_SUPABASE_ANON_KEY
-      ? createRequireUser(
-          createSupabaseVerifier(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY),
-        )
-      : undefined;
+  const apiToken = randomBytes(32).toString("hex");
+  const requireUser = createRequireUser(createLocalVerifier(apiToken));
 
   const mailConfig = {
     googleClientId: env.GOOGLE_CLIENT_ID,
@@ -89,6 +85,11 @@ export default defineConfig(({ mode }) => {
       aiApi(ai, requireUser),
       mailApi(mailConfig, requireUser, ai),
       tradesApi(mailConfig, requireUser),
+      localSessionApi(apiToken),
+      dataApi(
+        { rootDir: env.CRYSTAL_DATA_ROOT, supabaseUrl: env.VITE_SUPABASE_URL, supabaseAnonKey: env.VITE_SUPABASE_ANON_KEY },
+        requireUser,
+      ),
       mode === "development" && componentTagger(),
     ].filter(Boolean),
     resolve: {
@@ -110,7 +111,6 @@ export default defineConfig(({ mode }) => {
           manualChunks(id) {
             if (!id.includes("node_modules")) return;
             if (/node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|@remix-run)[\\/]/.test(id)) return "react";
-            if (id.includes("@supabase")) return "supabase";
           },
         },
       },

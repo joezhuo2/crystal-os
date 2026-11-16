@@ -1,14 +1,11 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 /**
- * Release smoke test: sign in, add and remove a task, log and remove a
- * transaction, and open every page, failing on any uncaught error or a page
- * that renders nothing. Run with `npm run test:e2e`; see playwright.config.ts
- * for the account it uses.
+ * Release smoke test: add and remove a task, log and remove a transaction,
+ * and open every page, failing on any uncaught error or a page that renders
+ * nothing. Run with `npm run test:e2e`; see playwright.config.ts for the data
+ * folder it uses.
  */
-
-const email = process.env.E2E_EMAIL;
-const password = process.env.E2E_PASSWORD;
 
 /** Sidebar labels on the web build. The Nebula and Terminal are desktop only. */
 const PAGES = [
@@ -22,8 +19,6 @@ const PAGES = [
   "Settings",
 ] as const;
 
-test.skip(!email || !password, "Set E2E_EMAIL and E2E_PASSWORD in .env.local to run the smoke test.");
-
 let pageErrors: string[] = [];
 
 test.beforeEach(async ({ page }) => {
@@ -31,9 +26,10 @@ test.beforeEach(async ({ page }) => {
   page.on("pageerror", (err) => pageErrors.push(`${err.name}: ${err.message}`));
 
   await page.goto("/");
-  await page.getByLabel("Email").fill(email!);
-  await page.getByLabel("Password").fill(password!);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  // With Supabase keys in .env.local, the first run offers the one-time import.
+  const fresh = page.getByRole("button", { name: "Start fresh without importing" });
+  await expect(page.locator("aside").or(fresh)).toBeVisible({ timeout: 20_000 });
+  if (await fresh.isVisible()) await fresh.click();
   await expect(page.locator("aside")).toBeVisible({ timeout: 20_000 });
 });
 
@@ -62,7 +58,7 @@ async function deleteRow(row: Locator) {
 
 /**
  * Delete rows a previous run left behind when it failed between adding and
- * deleting, so the test account does not fill up with them.
+ * deleting, so the test data does not fill up with them.
  */
 async function sweepLeftovers(rows: Locator) {
   for (let left = await rows.count(); left > 0; left--) {
@@ -93,7 +89,7 @@ test("adds and deletes a task", async ({ page }) => {
   const row = page.locator("main .glass-card-hover").filter({ hasText: name });
   await expect(row).toHaveCount(1);
 
-  // Survives a reload, so it really reached Supabase.
+  // Survives a reload, so it really reached the local store.
   await page.reload();
   await openPage(page, "The Engine");
   await expect(row).toHaveCount(1);

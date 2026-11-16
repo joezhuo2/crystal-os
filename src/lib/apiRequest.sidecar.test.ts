@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const ensureSidecar = vi.fn();
 const sidecarLost = vi.fn();
@@ -9,12 +9,6 @@ vi.mock("./platform", () => ({
 }));
 
 const { ApiError, apiRequest } = await import("./apiRequest");
-const { supabase } = await import("./supabase");
-
-beforeEach(() => {
-  vi.spyOn(supabase.auth, "getSession").mockResolvedValue({ data: { session: null }, error: null } as never);
-});
-
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
@@ -23,7 +17,10 @@ afterEach(() => {
 describe("apiRequest in the packaged desktop app", () => {
   it("starts the sidecar before the first request", async () => {
     const order: string[] = [];
-    ensureSidecar.mockImplementation(async () => void order.push("ensure"));
+    ensureSidecar.mockImplementation(async () => {
+      order.push("ensure");
+      return "tok";
+    });
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
@@ -47,7 +44,7 @@ describe("apiRequest in the packaged desktop app", () => {
   });
 
   it("forgets the sidecar when a request cannot connect", async () => {
-    ensureSidecar.mockResolvedValue(undefined);
+    ensureSidecar.mockResolvedValue("tok");
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
     await expect(apiRequest("/api/calendar/status")).rejects.toThrow("Failed to fetch");
     expect(sidecarLost).toHaveBeenCalledTimes(1);

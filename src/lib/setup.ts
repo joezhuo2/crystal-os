@@ -4,8 +4,6 @@ export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Pr
 }
 
 export const SETUP_KEYS = [
-  { key: "VITE_SUPABASE_URL", label: "Supabase URL", placeholder: "https://xxxx.supabase.co", secret: false },
-  { key: "VITE_SUPABASE_ANON_KEY", label: "Supabase anon key", placeholder: "eyJ…", secret: true },
   { key: "GOOGLE_CLIENT_ID", label: "Google client ID", placeholder: "xxxx.apps.googleusercontent.com", secret: false },
   { key: "GOOGLE_CLIENT_SECRET", label: "Google client secret", placeholder: "GOCSPX-…", secret: true },
 ] as const;
@@ -54,19 +52,14 @@ export interface ChecklistState {
 }
 
 export function checklist(state: ChecklistState): ChecklistItem[] {
-  const supabase = Boolean(state.env?.VITE_SUPABASE_URL && state.env?.VITE_SUPABASE_ANON_KEY);
   const google = Boolean(state.env?.GOOGLE_CLIENT_ID && state.env?.GOOGLE_CLIENT_SECRET);
   const items: (ChecklistItem | false)[] = [
     {
       id: "keys",
       title: "Local API keys",
-      detail: !supabase
-        ? "Supabase keys are missing, so the calendar and mail cannot connect."
-        : google
-          ? "Supabase and Google keys are saved."
-          : "Google keys are missing, so the calendar cannot connect.",
+      detail: google ? "Google keys are saved." : "Google keys are missing, so the calendar cannot connect.",
       action: "Enter keys",
-      done: supabase && google,
+      done: google,
     },
     state.installed("archive") && {
       id: "vault",

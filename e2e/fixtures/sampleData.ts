@@ -221,7 +221,7 @@ function buildCompletions() {
 
 export const taskCompletions = buildCompletions();
 
-export const supabaseTables: Record<string, Record<string, unknown>[]> = {
+export const dataTables: Record<string, Record<string, unknown>[]> = {
   tasks,
   transactions,
   task_categories: taskCategories,

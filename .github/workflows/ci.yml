@@ -50,17 +50,11 @@ jobs:
         working-directory: src-tauri
         run: cargo check --locked
 
-  # Playwright smoke test (e2e/smoke.spec.ts) against the real Supabase project,
-  # signed in as a dedicated test account. Runs alongside `check`. Without the
-  # E2E_EMAIL / E2E_PASSWORD secrets (fork PRs) the tests skip instead of failing.
+  # Playwright smoke test (e2e/smoke.spec.ts) against a throwaway local data
+  # folder. Runs alongside `check`.
   e2e:
     runs-on: windows-latest
     timeout-minutes: 20
-    env:
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
-      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 

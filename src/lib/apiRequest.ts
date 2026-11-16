@@ -1,6 +1,6 @@
 import { apiUrl, usesSidecar } from "./platform";
-import { ensureSidecar, sidecarLost } from "./sidecarNative";
-import { supabase } from "./supabase";
+import { apiToken, forgetApiToken } from "./apiToken";
+import { sidecarLost } from "./sidecarNative";
 
 /** Carries the HTTP status so retry policy can distinguish 401 from 503. */
 export class ApiError extends Error {
@@ -26,35 +26,21 @@ export function shouldRetry(failureCount: number, error: unknown): boolean {
 }
 
 /**
- * Every call to the vault and calendar middleware goes through here.
- *
- * The token is read at call time rather than passed in, and deliberately so.
- * Supabase rotates the access token roughly hourly; a token captured at mount
- * would start returning 401 an hour into a session while the database queries
- * carried on working. Putting it in a react-query `queryKey` would instead
- * invalidate every cached query on each refresh. `getSession()` returns the
- * cached session and refreshes it only when needed, so reading it per call is
- * cheap and makes staleness structurally impossible.
+ * Every call to the local API goes through here, carrying its access token
+ * (src/lib/apiToken.ts). On desktop, asking for the token also starts the
+ * sidecar, on the first request rather than with the app.
  */
 export async function apiRequest<T>(
   url: string,
   init?: RequestInit,
   errorPrefix = "API error",
 ): Promise<T> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-
-  const headers = new Headers(init?.headers);
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-
-  // The desktop sidecar starts on the first request rather than with the app.
   const sidecar = usesSidecar();
-  if (sidecar) {
-    try {
-      await ensureSidecar();
-    } catch (err) {
-      throw new ApiError(err instanceof Error ? err.message : String(err), 503);
-    }
+  const headers = new Headers(init?.headers);
+  try {
+    headers.set("Authorization", `Bearer ${await apiToken()}`);
+  } catch (err) {
+    throw new ApiError(err instanceof Error ? err.message : String(err), 503);
   }
 
   let res: Response;
@@ -67,6 +53,7 @@ export async function apiRequest<T>(
   }
 
   if (!res.ok) {
+    if (res.status === 401) forgetApiToken();
     // The middleware always replies with { error } — surface that instead of a
     // bare status code, since "OBSIDIAN_VAULT_PATH is not set" is actionable.
     let message = `${errorPrefix}: ${res.status}`;

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Your data now lives on your device.** Tasks, transactions, categories, habits and review history are stored as JSON files in the app's data folder instead of Supabase. There is no account and no sign-in screen.
+- On the first launch after updating, Crystal OS copies your data from Supabase once: silently if you were still signed in, otherwise after you enter your Supabase email and password. Nothing is deleted from Supabase. You can also start fresh.
+- The local API checks a token made fresh on each launch instead of a Supabase session.
+
+### Removed
+
+- The Supabase client, the sign-in screen, the Supabase keys in **Local API keys**, and `npm run verify:rls`.
+
 ### Added
 
 - A **Stop WSL** button in the Terminal header runs `wsl --shutdown` in the active terminal.

@@ -1,11 +1,10 @@
 //! The `crystal-api` sidecar: a Node executable that serves `/api/obsidian`
 //! and `/api/calendar` for the packaged app (see server/sidecar.ts).
 //!
-//! It used to start with the app. On desktop the vault is read natively
-//! (vault.rs), so the sidecar only serves the calendar, and many sessions never
-//! touch it. The webview now starts it on its first `/api/*` request through
-//! [`sidecar_ensure`] (src/lib/sidecarNative.ts), which returns once it
-//! accepts connections. `dev:desktop` uses the Vite server's middleware, so
+//! The webview starts it on its first `/api/*` request through
+//! [`sidecar_ensure`] (src/lib/sidecarNative.ts), which returns the access
+//! token every request must carry once the sidecar accepts connections. The
+//! token is made fresh on each launch of the app. `dev:desktop` uses the Vite server's middleware, so
 //! there the command does nothing.
 
 use std::sync::Mutex;
@@ -23,8 +22,19 @@ const START_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
 
 /// The running sidecar, kept so it can be killed on exit. Cleared when the
 /// process ends, so the next request starts a new one.
-#[derive(Default)]
-pub struct SidecarState(Mutex<Option<CommandChild>>);
+pub struct SidecarState {
+  child: Mutex<Option<CommandChild>>,
+  token: String,
+}
+
+impl Default for SidecarState {
+  fn default() -> Self {
+    Self {
+      child: Mutex::new(None),
+      token: format!("{}{}", uuid::Uuid::new_v4().simple(), uuid::Uuid::new_v4().simple()),
+    }
+  }
+}
 
 /// Starts the sidecar unless it is already running. Reads `.env.local` from
 /// the app config dir, e.g. `%APPDATA%\com.crystalos.desktop\.env.local`.
@@ -33,7 +43,7 @@ fn spawn_if_stopped<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
   use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 
   let state = app.state::<SidecarState>();
-  let mut slot = state.0.lock().unwrap();
+  let mut slot = state.child.lock().unwrap();
   if slot.is_some() {
     return Ok(());
   }
@@ -46,6 +56,7 @@ fn spawn_if_stopped<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
     .sidecar("crystal-api")
     .map_err(|e| e.to_string())?
     .env("CRYSTAL_CONFIG_DIR", &config_dir)
+    .env("CRYSTAL_API_TOKEN", &state.token)
     .spawn()
     .map_err(|e| e.to_string())?;
   let pid = child.pid();
@@ -60,7 +71,7 @@ fn spawn_if_stopped<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
         CommandEvent::Terminated(status) => {
           log::error!("[crystal-api] exited: {:?}", status.code);
           let state = handle.state::<SidecarState>();
-          let mut slot = state.0.lock().unwrap();
+          let mut slot = state.child.lock().unwrap();
           if slot.as_ref().is_some_and(|c| c.pid() == pid) {
             *slot = None;
           }
@@ -100,22 +111,18 @@ async fn wait_until_listening() -> Result<(), String> {
 /// Starts the sidecar if needed and resolves once it is listening. Cheap when
 /// it already runs: one connection to the loopback port.
 #[tauri::command]
-pub async fn sidecar_ensure<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-  #[cfg(debug_assertions)]
-  {
-    let _ = app;
-    Ok(())
-  }
+pub async fn sidecar_ensure<R: Runtime>(app: AppHandle<R>) -> Result<String, String> {
   #[cfg(not(debug_assertions))]
   {
     spawn_if_stopped(&app)?;
-    wait_until_listening().await
+    wait_until_listening().await?;
   }
+  Ok(app.state::<SidecarState>().token.clone())
 }
 
 /// Kills the sidecar, if it was started. Called from `stop_children` in lib.rs.
 pub fn stop<R: Runtime>(app: &AppHandle<R>) {
-  if let Some(child) = app.state::<SidecarState>().0.lock().unwrap().take() {
+  if let Some(child) = app.state::<SidecarState>().child.lock().unwrap().take() {
     let _ = child.kill();
   }
 }

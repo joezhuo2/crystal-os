@@ -1,17 +1,17 @@
 /**
  * Local error reporting. Unhandled promise rejections, uncaught errors and
- * failed Supabase writes are kept in memory and, on desktop, appended to
+ * failed data writes are kept in memory and, on desktop, appended to
  * `diagnostics.log` in the app log dir (src-tauri/src/diagnostics.rs).
  * Settings → Diagnostics copies them with some app info so a bug report has
  * something to go on. Nothing is sent anywhere.
  *
  * Entries never include request bodies or query strings, only the method,
- * the path (which names the table) and the error Supabase returned, so task
+ * the table and the error the local API returned, so task
  * titles, amounts and notes stay out of the log.
  */
 import { isDesktop } from "@/lib/platform";
 
-export type DiagnosticKind = "rejection" | "error" | "supabase";
+export type DiagnosticKind = "rejection" | "error" | "data";
 
 export interface DiagnosticEntry {
   at: string;
@@ -119,69 +119,6 @@ export function installGlobalErrorHandlers(target: Window = window): () => void 
     removeHandlers = undefined;
   };
   return removeHandlers;
-}
-
-function requestMethod(input: RequestInfo | URL, init?: RequestInit): string {
-  if (init?.method) return init.method.toUpperCase();
-  if (typeof Request !== "undefined" && input instanceof Request) return input.method.toUpperCase();
-  return "GET";
-}
-
-function requestPath(input: RequestInfo | URL): string {
-  const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-  try {
-    return new URL(raw, "http://localhost").pathname;
-  } catch {
-    return "(unknown path)";
-  }
-}
-
-/** Supabase's error JSON (PostgREST, Storage) boiled down to one line. */
-export function summariseErrorBody(body: string): string {
-  try {
-    const json = JSON.parse(body) as Record<string, unknown>;
-    const code = json.code ?? json.error ?? json.statusCode;
-    const message = json.message ?? json.msg ?? json.error_description;
-    const parts = [code, message, json.details, json.hint].filter(
-      (part): part is string | number => typeof part === "string" || typeof part === "number",
-    );
-    if (parts.length) return parts.join(" · ");
-  } catch {
-    // Not JSON; fall through.
-  }
-  return body.slice(0, 200);
-}
-
-/**
- * A fetch for the Supabase client that records failed writes. Reads are left
- * out (a failed read already shows in the UI as missing data), and so is auth,
- * whose failures are sign-in mistakes rather than bugs.
- */
-export function createLoggingFetch(base: typeof fetch = (input, init) => fetch(input, init)): typeof fetch {
-  return async (input, init) => {
-    const method = requestMethod(input, init);
-    const path = requestPath(input);
-    const watched = method !== "GET" && method !== "HEAD" && !path.includes("/auth/v1/");
-    let response: Response;
-    try {
-      response = await base(input, init);
-    } catch (err) {
-      if (watched) recordDiagnostic("supabase", `${method} ${path} failed: ${describeError(err)}`);
-      throw err;
-    }
-    if (watched && !response.ok) {
-      const status = `${response.status}${response.statusText ? ` ${response.statusText}` : ""}`;
-      // Read a copy in the background so the caller gets the response at once.
-      response
-        .clone()
-        .text()
-        .then(
-          (body) => recordDiagnostic("supabase", `${method} ${path} → ${status}: ${summariseErrorBody(body)}`),
-          () => recordDiagnostic("supabase", `${method} ${path} → ${status}`),
-        );
-    }
-    return response;
-  };
 }
 
 interface NativeLog {

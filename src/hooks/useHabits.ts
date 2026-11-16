@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/localDb";
 import { useAuth } from "@/contexts/AuthContext";
 import { HABIT_NAME_MAX, sortHabits, type Habit, type HabitCheck } from "@/lib/habits";
 import { toLocalDateStr } from "@/lib/utils";
@@ -51,9 +51,9 @@ const fromRow = (r: HabitRow): Habit => ({
 
 async function fetchHabits(): Promise<HabitsData> {
   const [habits, checks] = await Promise.all([
-    supabase.from("habits").select("id, name, color, position, created_at, archived_at"),
+    db.from("habits").select("id, name, color, position, created_at, archived_at"),
     // A few habits a day for years is still well under this.
-    supabase.from("habit_checks").select("habit_id, day").order("day").limit(50_000),
+    db.from("habit_checks").select("habit_id, day").order("day").limit(50_000),
   ]);
   const error = habits.error ?? checks.error;
   if (error) throw new HabitsError(error.message, isMissingTable(error));
@@ -113,8 +113,8 @@ export function useHabitActions() {
           : d.checks.filter((c) => !(c.habitId === habitId && c.day === day)),
       }));
       const { error } = done
-        ? await supabase.from("habit_checks").upsert({ habit_id: habitId, day }, { onConflict: "habit_id,day", ignoreDuplicates: true })
-        : await supabase.from("habit_checks").delete().eq("habit_id", habitId).eq("day", day);
+        ? await db.from("habit_checks").upsert({ habit_id: habitId, day }, { onConflict: "habit_id,day", ignoreDuplicates: true })
+        : await db.from("habit_checks").delete().eq("habit_id", habitId).eq("day", day);
       if (error) {
         undo();
         fail(done ? "tick the habit" : "untick the habit", error);
@@ -129,7 +129,7 @@ export function useHabitActions() {
       if (!clean) return;
       const data = queryClient.getQueryData<HabitsData>(HABITS_QUERY_KEY);
       const position = Math.max(-1, ...(data?.habits ?? []).filter((h) => !h.archivedAt).map((h) => h.position)) + 1;
-      const { data: row, error } = await supabase
+      const { data: row, error } = await db
         .from("habits")
         .insert({ name: clean, color, position })
         .select("id, name, color, position, created_at, archived_at")
@@ -151,7 +151,7 @@ export function useHabitActions() {
         if (!next.name) return;
       }
       const undo = patch((d) => ({ ...d, habits: d.habits.map((h) => (h.id === id ? { ...h, ...next } : h)) }));
-      const { error } = await supabase.from("habits").update(next).eq("id", id);
+      const { error } = await db.from("habits").update(next).eq("id", id);
       if (error) {
         undo();
         fail("update the habit", error);
@@ -165,7 +165,7 @@ export function useHabitActions() {
     async (id: string) => {
       const archivedAt = new Date().toISOString();
       const undo = patch((d) => ({ ...d, habits: d.habits.map((h) => (h.id === id ? { ...h, archivedAt } : h)) }));
-      const { error } = await supabase.from("habits").update({ archived_at: archivedAt }).eq("id", id);
+      const { error } = await db.from("habits").update({ archived_at: archivedAt }).eq("id", id);
       if (error) {
         undo();
         fail("remove the habit", error);
@@ -185,7 +185,7 @@ export function useHabitActions() {
         habits: sortHabits(d.habits.map((h) => (ids.includes(h.id) ? { ...h, position: ids.indexOf(h.id) } : h))),
       }));
       const results = await Promise.all(
-        changed.map((id) => supabase.from("habits").update({ position: ids.indexOf(id) }).eq("id", id)),
+        changed.map((id) => db.from("habits").update({ position: ids.indexOf(id) }).eq("id", id)),
       );
       const error = results.find((r) => r.error)?.error;
       if (error) {

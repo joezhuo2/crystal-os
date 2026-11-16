@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/localDb";
 import { useAppLoading, useTaskCategories, useTasks, useTransactions } from "@/contexts/AppContext";
 import { useHabitsData } from "@/hooks/useHabits";
 import { useVaultNotes } from "@/hooks/useVault";
@@ -65,7 +65,7 @@ function isMissingColumn(error: { code?: string; message?: string }): boolean {
 /** Focus runs with their linked task; without 0008's task_title, by id only. */
 async function fetchFocus(min: string, max: string) {
   const query = (columns: string) =>
-    supabase.from("focus_sessions").select(columns).gte("ended_at", min).lt("ended_at", max).order("ended_at").limit(10_000);
+    db.from("focus_sessions").select(columns).gte("ended_at", min).lt("ended_at", max).order("ended_at").limit(10_000);
   const result = await query("ended_at, seconds, task_id, task_title");
   if (!result.error || !isMissingColumn(result.error)) return result;
   return await query("ended_at, seconds, task_id");
@@ -76,7 +76,7 @@ async function fetchHistory(from: string, to: string): Promise<History> {
   const min = startOfDay(from);
   const max = startOfDay(addDays(to, 1));
   const [completions, focus] = await Promise.all([
-    supabase
+    db
       .from("task_completions")
       .select("title, completed_at, task_id, category_id")
       .gte("completed_at", min)

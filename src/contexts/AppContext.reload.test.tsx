@@ -16,8 +16,8 @@ const taskRow = {
   completed: false,
 };
 
-vi.mock("@/lib/supabase", () => ({
-  supabase: {
+vi.mock("@/lib/localDb", () => ({
+  db: {
     from: (table: string) => {
       const chain: Record<string, unknown> = {};
       for (const m of ["select", "order", "gt", "limit"]) chain[m] = () => chain;

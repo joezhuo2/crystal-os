@@ -3,7 +3,7 @@ import { AppProvider } from "@/contexts/AppContext";
 import { appUi, useAppUi } from "@/lib/appUi";
 import { recordRecent } from "@/lib/recents";
 import { useAuth } from "@/contexts/AuthContext";
-import LoginPage from "@/components/auth/LoginPage";
+import ImportPage from "@/components/auth/ImportPage";
 import AppSplash from "@/components/layout/AppSplash";
 import { SidebarNav, BottomNav, visibleTabIds, type TabId } from "@/components/layout/Navigation";
 import { AnimatePresence } from "framer-motion";
@@ -168,7 +168,7 @@ const GlobalOverlays = memo(function GlobalOverlays() {
 });
 
 const Index = () => {
-  const { session, loading } = useAuth();
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTabRaw] = useState<TabId>("home");
   const { uninstalled } = useInstalledModules();
   // Pages of uninstalled modules can't be opened; one uninstalled while open falls back to Home.
@@ -275,9 +275,9 @@ const Index = () => {
 
   if (loading) return <AppSplash />;
 
-  // AppProvider sits inside this check so it never mounts without a user and
-  // therefore never issues an unauthenticated query.
-  if (!session) return <LoginPage />;
+  // AppProvider sits inside this check so it never loads the local data
+  // before a pending import has filled it.
+  if (!user) return <ImportPage />;
 
   const rootClass = monochrome
     ? "default-root"

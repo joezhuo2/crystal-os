@@ -1,89 +1,87 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
-import { flushPendingDeletes } from "@/lib/pendingEventDeletes";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  LOCAL_USER_ID,
+  cachedSupabaseSession,
+  fetchNeedsImport,
+  importData,
+  skipImport,
+  type ImportCredentials,
+} from "@/lib/dataImport";
 
 type AuthState = {
-  session: Session | null;
-  user: User | null;
-  /** True until the initial session lookup settles. */
+  /** The device's one user, or null until the local data is ready to load. */
+  user: { id: string } | null;
+  /** True until the local API has said whether an import is pending. */
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signOut: () => Promise<void>;
+  /** The local API could not be reached. */
+  error: string | null;
+  retry: () => void;
+  importFromSupabase: (credentials: ImportCredentials) => Promise<{ error: string | null }>;
+  startFresh: () => Promise<{ error: string | null }>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
 
+const LOCAL_USER = { id: LOCAL_USER_ID };
+const messageOf = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
 /**
- * Owns the Supabase session and nothing else. It has no knowledge of tasks,
- * transactions, or any other application data — AppProvider consumes it.
+ * There is no account: data lives on this device. This only holds the app
+ * back until a pending one-time import from Supabase is done or declined.
  */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<{ loading: boolean; ready: boolean; error: string | null }>({
+    loading: true,
+    ready: false,
+    error: null,
+  });
+  const checking = useRef(false);
+
+  const check = useCallback(async () => {
+    if (checking.current) return;
+    checking.current = true;
+    setState({ loading: true, ready: false, error: null });
+    try {
+      let pending = await fetchNeedsImport();
+      const cached = pending ? cachedSupabaseSession() : null;
+      if (cached) {
+        pending = await importData({ refreshToken: cached.refreshToken }).then(
+          () => false,
+          () => true,
+        );
+      }
+      setState({ loading: false, ready: !pending, error: null });
+    } catch (err) {
+      setState({ loading: false, ready: false, error: messageOf(err) });
+    } finally {
+      checking.current = false;
+    }
+  }, []);
 
   useEffect(() => {
-    let active = true;
+    void check();
+  }, [check]);
 
-    // getSession() reads the cached session from local storage and only
-    // contacts Supabase when the token needs refreshing, so this resolves
-    // offline as long as the cached token is still within its lifetime.
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        if (!active) return;
-        setSession(data.session);
-      })
-      .catch(() => {
-        // Offline with an expired token. Fall through to the login screen,
-        // which reports the network failure when a sign-in is attempted.
-        if (active) setSession(null);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    // Fires on sign-in, sign-out, and every background TOKEN_REFRESHED event.
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, next) => {
-      if (active) setSession(next);
-    });
-
-    return () => {
-      active = false;
-      subscription.subscription.unsubscribe();
-    };
-  }, []);
-
-  const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error) return { error: null };
-
-    // A network failure and a rejected password are very different problems
-    // and look identical if both render as "invalid login credentials".
-    const offline = typeof navigator !== "undefined" && !navigator.onLine;
-    if (offline || error.message.toLowerCase().includes("fetch")) {
-      return { error: "Can't reach Supabase — check your connection." };
+  const finish = useCallback(async (work: () => Promise<unknown>) => {
+    try {
+      await work();
+      setState({ loading: false, ready: true, error: null });
+      return { error: null };
+    } catch (err) {
+      return { error: messageOf(err) };
     }
-    return { error: error.message };
-  }, []);
-
-  const signOut = useCallback(async () => {
-    // A calendar delete still inside its Undo window goes out while the
-    // session can still sign it.
-    await flushPendingDeletes();
-    await supabase.auth.signOut();
   }, []);
 
   const value = useMemo<AuthState>(
-    () => ({ session, user: session?.user ?? null, loading, signIn, signOut }),
-    [session, loading, signIn, signOut],
+    () => ({
+      user: state.ready ? LOCAL_USER : null,
+      loading: state.loading,
+      error: state.error,
+      retry: () => void check(),
+      importFromSupabase: (credentials) => finish(() => importData(credentials)),
+      startFresh: () => finish(skipImport),
+    }),
+    [state, check, finish],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

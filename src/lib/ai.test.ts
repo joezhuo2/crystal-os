@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { askAi, parseJsonReply } from "./ai";
-import { supabase } from "./supabase";
 
-vi.spyOn(supabase.auth, "getSession").mockResolvedValue({ data: { session: { access_token: "tok" } }, error: null } as never);
+vi.mock("./apiToken", () => ({ apiToken: async () => "tok", forgetApiToken: () => undefined }));
 
 afterEach(() => vi.unstubAllGlobals());
 

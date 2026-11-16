@@ -634,10 +634,10 @@ function SetupKeysRow() {
       title="Local API keys"
       description={
         !status
-          ? "Supabase and Google keys for the calendar and mail."
+          ? "Google keys for the calendar and mail."
           : missing.length
             ? `Missing: ${missing.join(", ")}. The calendar and mail need them.`
-            : "Supabase and Google keys are saved on this device."
+            : "Google keys are saved on this device."
       }
     >
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
