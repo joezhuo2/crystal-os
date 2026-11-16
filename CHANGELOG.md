@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Contribution room tracker.** The Ledger's **Room** section keeps your TFSA, RRSP and FHSA room for the year: enter each account's room from CRA, log contributions and withdrawals, and see what is left or how far over you are. It is kept on your device with the rest of your data.
 - **Dividend tracking in The Ledger.** Sync now also reads Wealthsimple dividend emails, and an activity CSV's dividend rows are imported with its trades. A **Dividends** section lists each payment, with totals for the year, all time and per ticker.
 - **Review insights.** Reviews gain an **Insights** card with findings in plain words when the period has enough to go on: the habit whose days carry the most or least focus, your deepest focus weekday, the weekday you finish the most tasks, and the category furthest off its estimates. They are in the exported review too.
 - **Mood tags, a mood note and a mood heatmap.** The Today card takes tags (tired, calm, social and so on) and a one-line note with the mood, saved in the daily note. The Mood card in weekly and monthly reviews shows a calendar lit by each day's mood, with the tags and note on hover, and the most used tags.

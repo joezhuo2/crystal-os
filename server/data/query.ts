@@ -10,6 +10,7 @@ export const TABLES = [
   "habits",
   "habit_checks",
   "links",
+  "contributions",
 ] as const;
 
 export type Table = (typeof TABLES)[number];
