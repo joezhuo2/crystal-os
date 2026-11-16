@@ -10,8 +10,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      closeButton
       toastOptions={{
         classNames: {
+          closeButton: "glass-toast-close",
           // Glass, like the app's panels and dialogs (.glass-toast in index.css).
           toast: "group toast glass-toast",
           description: "group-[.toast]:text-muted-foreground",

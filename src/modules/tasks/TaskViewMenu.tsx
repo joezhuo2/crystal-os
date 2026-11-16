@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
 import { useTaskCategories, type Priority } from "@/contexts/AppContext";
 import { DateField, Popup, ThemedSelect, usePopupPosition } from "@/components/ui/field-controls";
+import { NumberInput } from "@/components/ui/number-input";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useShortcut } from "@/hooks/useShortcut";
 import { MAX_ESTIMATE } from "@/lib/capacity";
@@ -179,8 +180,9 @@ function TaskViewPanel() {
             }}
             options={ESTIMATE_OPS.map((o) => ({ value: o, label: o === "==" ? "=" : o === "<=" ? "≤" : "≥" }))}
           />
-          <input
-            type="number"
+          <NumberInput
+            unstyled
+            containerClassName="flex-1"
             inputMode="numeric"
             min={0}
             max={MAX_ESTIMATE}
@@ -191,7 +193,7 @@ function TaskViewPanel() {
             }}
             placeholder="Any"
             aria-label="Estimate minutes"
-            className="flex-1 rounded-lg bg-secondary/50 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-1 focus-visible:ring-primary/50"
+            className="w-full rounded-lg bg-secondary/50 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-1 focus-visible:ring-primary/50"
           />
         </div>
       </Section>

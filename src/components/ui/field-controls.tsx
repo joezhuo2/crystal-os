@@ -173,6 +173,7 @@ export function Popup({
             left: pos?.left ?? 0,
             width: pos?.width,
             visibility: pos ? "visible" : "hidden",
+            pointerEvents: "auto",
           }}
           className={cn("z-[120]", PANEL_CLASS)}
         >

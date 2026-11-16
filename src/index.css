@@ -1749,6 +1749,7 @@
      Image blur (imageBackdrop.ts), so no live CSS filter here either. */
   .horizon-root,
   .engine-root,
+  .observatory-root,
   .image-backdrop {
     background: #000;
   }
@@ -1930,6 +1931,72 @@
 
   .sidebar-engine button svg {
     filter: drop-shadow(0 0 4px rgb(251 146 60 / 0.5));
+  }
+
+  /* The Observatory's palette: a deep indigo night sky with pale silver
+     constellation lines. On <body> as well (Index.tsx) so portalled popups follow it. */
+  .observatory-root,
+  body.observatory-theme {
+    --background: 235 50% 5%;
+    --popover: 235 42% 10%;
+    --card: 235 40% 13%;
+    --secondary: 235 34% 19%;
+    --muted: 235 30% 16%;
+    --border: 232 30% 26%;
+    --input: 232 30% 26%;
+    --primary: 232 82% 68%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 220 60% 80%;
+    --accent: 215 35% 82%;
+    --glow-indigo: 232 85% 66%;
+    --muted-foreground: 225 22% 76%;
+    --glass-border: 220 40% 92%;
+    --orbit-ice: 220 40% 92%;
+    --orbit-cyan: 232 82% 68%;
+  }
+
+  .observatory-panel {
+    height: calc(100dvh - 18rem);
+    min-height: 18rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.25rem;
+  }
+
+  .observatory-title {
+    background: linear-gradient(100deg, #f1f5f9, #c7d2fe 45%, #818cf8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .observatory-root main {
+    --glass-card-bg: linear-gradient(160deg, rgb(24 26 64 / 0.55), rgb(8 9 28 / 0.65));
+    --glass-card-border: rgb(203 213 225 / 0.16);
+    --glass-card-shadow:
+      0 8px 32px rgb(4 4 18 / 0.55),
+      0 0 36px rgb(129 140 248 / 0.07),
+      inset 0 1px 0 rgb(226 232 240 / 0.07);
+    --glass-hover-bg: var(--glass-card-bg);
+    --glass-hover-border: var(--glass-card-border);
+    --glass-hover-shadow: var(--glass-card-shadow);
+    --glass-hover-hover-border: rgb(165 180 252 / 0.4);
+    --glass-hover-hover-shadow:
+      0 8px 32px rgb(4 4 18 / 0.55),
+      0 0 24px rgb(129 140 248 / 0.18),
+      inset 0 1px 0 rgb(226 232 240 / 0.1);
+  }
+
+  .sidebar-observatory {
+    background: linear-gradient(180deg, rgb(28 30 80 / 0.75) 0%, rgb(7 8 26 / 0.85) 50%, rgb(36 38 96 / 0.6) 100%);
+    border-color: transparent;
+    box-shadow:
+      inset -1px 0 0 rgb(203 213 225 / 0.3),
+      6px 0 28px rgb(129 140 248 / 0.16);
+  }
+
+  .sidebar-observatory button svg {
+    filter: drop-shadow(0 0 4px rgb(199 210 254 / 0.5));
   }
 
   /* The Orbit's palette, from its black hole: ice-white photon ring, slate
@@ -3497,6 +3564,22 @@
     background: hsl(var(--glow-indigo) / 0.3);
     box-shadow: 0 0 14px hsl(var(--glow-indigo) / 0.4);
   }
+
+  [data-sonner-toast].glass-toast [data-close-button].glass-toast-close {
+    left: auto;
+    right: 0;
+    transform: translate(35%, -35%);
+    color: hsl(var(--foreground));
+    background: hsl(var(--background) / 0.9);
+    border: 1px solid hsl(var(--glass-border) / 0.2);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  [data-sonner-toast].glass-toast:hover [data-close-button].glass-toast-close,
+  [data-sonner-toast].glass-toast [data-close-button].glass-toast-close:focus-visible {
+    opacity: 1;
+  }
 }
 
 /* ------------------------------------------------------------------
@@ -4732,7 +4815,7 @@ html.perf-still .horizon-dot-cascade {
 }
 
 @layer utilities {
-  html[data-theme="default"] :is(.nebula-title, .obsidian-title, .atmosphere-title, .horizon-title, .engine-title, .home-title, .settings-title, .orbit-title) {
+  html[data-theme="default"] :is(.nebula-title, .obsidian-title, .atmosphere-title, .horizon-title, .engine-title, .observatory-title, .home-title, .settings-title, .orbit-title) {
     background-image: linear-gradient(135deg, #ffffff, #a3a3a3);
   }
 
