@@ -1096,6 +1096,12 @@ export default function SettingsPage() {
                 className="w-32 px-2"
               />
             </Row>
+            <Row
+              title="Schedule today button"
+              description="Adds a button to the Fits today? bar that blocks time in your Google calendar for today's estimated tasks, in the free slots of the work day. Nothing is added until you press it."
+            >
+              <Switch checked={capacity.autoSchedule} onCheckedChange={capacitySettings.setAutoSchedule} />
+            </Row>
           </Section>
         )}
 

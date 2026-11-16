@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
-import { findFreeSlot, parseFreeSlotQuery } from "./freeSlot";
+import type { Task } from "@/contexts/AppContext";
+import { findFreeSlot, parseFreeSlotQuery, planToday } from "./freeSlot";
 
 const WINDOW = { start: 9 * 60, end: 17 * 60 };
 const NOW = new Date(2026, 9, 5, 8, 0);
@@ -70,5 +71,35 @@ describe("findFreeSlot", () => {
     const events = [event({ allDay: true, startTime: "", endTime: "" })];
     expect(findFreeSlot({ events, now: NOW, minutes: 480, window: WINDOW })?.start).toBe(540);
     expect(findFreeSlot({ events: [], now: NOW, minutes: 481, window: WINDOW })).toBeNull();
+  });
+});
+
+describe("planToday", () => {
+  const task = (id: string, estimateMinutes: number | undefined, priority: Task["priority"] = "medium"): Task => ({
+    id,
+    name: id,
+    startDate: "2026-10-05",
+    startTime: "09:00",
+    endDate: "2026-10-05",
+    endTime: "10:00",
+    priority,
+    categoryId: "c",
+    completed: false,
+    estimateMinutes,
+  });
+  const plan = (tasks: Task[], events: CalendarEvent[] = [event()]) =>
+    planToday({ tasks, events, now: NOW, window: WINDOW }).map((b) => [b.task.id, b.start, b.end]);
+
+  it("places the most pressing task first, around events and each other", () => {
+    expect(plan([task("low", 60, "low"), task("urgent", 120, "urgent")])).toEqual([
+      ["urgent", 11 * 60, 13 * 60],
+      ["low", 9 * 60, 10 * 60],
+    ]);
+  });
+
+  it("skips tasks with no estimate, already blocked today, or that do not fit", () => {
+    expect(
+      plan([task("none", undefined), task("Meeting", 30), task("huge", 600), task("fits", 30)]),
+    ).toEqual([["fits", 9 * 60, 9 * 60 + 30]]);
   });
 });

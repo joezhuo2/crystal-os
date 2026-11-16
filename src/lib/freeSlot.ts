@@ -3,8 +3,11 @@
  * of that length inside the work window (Settings → The Engine) that no timed
  * event in The Horizon's calendar overlaps.
  */
+import type { Task } from "@/contexts/AppContext";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 import { busyIntervals, mergeIntervals, type CapacityWindow } from "@/lib/capacity";
+import { PRIORITY_RANK } from "@/lib/homeTasks";
+import { fromMinutes } from "@/lib/timeGrid";
 import { toLocalDateStr } from "@/lib/utils";
 
 /** How many days ahead, today included, the finder looks. */
@@ -51,4 +54,39 @@ export function findFreeSlot({
     }
   }
   return null;
+}
+
+export type PlannedBlock = { task: Task; start: number; end: number };
+
+export function planToday({
+  tasks,
+  events,
+  now,
+  window,
+}: {
+  tasks: Task[];
+  events: CalendarEvent[];
+  now: Date;
+  window: CapacityWindow;
+}): PlannedBlock[] {
+  const today = toLocalDateStr(now);
+  const blocked = new Set(events.filter((e) => e.startDate === today).map((e) => e.summary));
+  const busy = [...events];
+  const blocks: PlannedBlock[] = [];
+  const queue = tasks
+    .filter((t) => t.estimateMinutes && !blocked.has(t.name))
+    .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || a.startTime.localeCompare(b.startTime));
+  for (const task of queue) {
+    const slot = findFreeSlot({ events: busy, now, minutes: task.estimateMinutes!, window, days: 1 });
+    if (!slot) continue;
+    blocks.push({ task, start: slot.start, end: slot.end });
+    busy.push({
+      allDay: false,
+      startDate: today,
+      endDate: today,
+      startTime: fromMinutes(slot.start),
+      endTime: fromMinutes(slot.end),
+    } as CalendarEvent);
+  }
+  return blocks;
 }

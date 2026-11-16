@@ -1,8 +1,13 @@
-import { Gauge } from "lucide-react";
-import type { Task } from "@/contexts/AppContext";
-import { formatEstimate, suggestNextTask, suggestUpcomingTask } from "@/lib/capacity";
-import { useCapacitySettings } from "@/lib/capacitySettings";
-import { useTodayCapacity, type TodayCapacityState } from "@/hooks/useTodayCapacity";
+import { CalendarPlus, Gauge } from "lucide-react";
+import { toast } from "sonner";
+import { useTasks, type Task } from "@/contexts/AppContext";
+import { localTimeZone, useCreateEvent } from "@/hooks/useGoogleCalendar";
+import { formatEstimate, suggestNextTask, suggestUpcomingTask, todaysOpenTasks } from "@/lib/capacity";
+import { capacityWindow, useCapacitySettings } from "@/lib/capacitySettings";
+import { planToday } from "@/lib/freeSlot";
+import { fromMinutes } from "@/lib/timeGrid";
+import { toLocalDateStr } from "@/lib/utils";
+import { pickedCalendarId, useTodayCapacity, type TodayCapacityState } from "@/hooks/useTodayCapacity";
 
 /** "5 PM", "5:30 PM". */
 function formatClock(time: string): string {
@@ -87,6 +92,43 @@ export function CapacityCard() {
   const settings = useCapacitySettings();
   const tone = toneOf(capacity);
   const windowLabel = `${formatClock(settings.dayStart)}–${formatClock(settings.dayEnd)}`;
+  const tasks = useTasks();
+  const createEvent = useCreateEvent();
+
+  const scheduleToday = async () => {
+    const now = new Date();
+    const today = toLocalDateStr(now);
+    const blocks = planToday({
+      tasks: todaysOpenTasks(tasks, today),
+      events: capacity.events,
+      now,
+      window: capacityWindow(settings),
+    });
+    if (!blocks.length) {
+      toast("Nothing to schedule", { description: "No estimated task for today fits a free slot, or they are already blocked." });
+      return;
+    }
+    const results = await Promise.allSettled(
+      blocks.map(({ task, start, end }) =>
+        createEvent.mutateAsync({
+          calendarId: pickedCalendarId(),
+          input: {
+            summary: task.name,
+            allDay: false,
+            startDate: today,
+            endDate: today,
+            startTime: fromMinutes(start),
+            endTime: fromMinutes(end),
+            timeZone: localTimeZone(),
+          },
+        }),
+      ),
+    );
+    const failed = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+    const done = results.filter((r) => r.status === "fulfilled").length;
+    if (done) toast.success(`Blocked time for ${done} task${done === 1 ? "" : "s"}`, { description: "See them in The Horizon." });
+    if (failed) toast.error("Could not block the time", { description: String(failed.reason?.message ?? failed.reason) });
+  };
 
   return (
     <section aria-labelledby="capacity-heading" className="glass-card p-4 space-y-2.5">
@@ -116,6 +158,17 @@ export function CapacityCard() {
           </span>
         )}
       </div>
+      {settings.autoSchedule && capacity.calendarConnected && !capacity.windowOver && (
+        <button
+          type="button"
+          onClick={() => void scheduleToday()}
+          disabled={createEvent.isPending}
+          className="flex items-center gap-1 rounded-md px-2 py-1 -ml-2 text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+        >
+          <CalendarPlus className="w-3.5 h-3.5" />
+          Schedule today
+        </button>
+      )}
       {(capacity.unestimated > 0 || (!capacity.calendarConnected && !capacity.loadingEvents)) && (
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground/80">
           {capacity.unestimated > 0 && <span className="text-amber-300/90">{unestimatedNote(capacity.unestimated)}</span>}

@@ -14,9 +14,10 @@ export interface CapacitySettings {
   dayStart: string;
   /** "HH:MM", when it closes. Always after dayStart. */
   dayEnd: string;
+  autoSchedule: boolean;
 }
 
-export const DEFAULT_CAPACITY_SETTINGS: CapacitySettings = { dayStart: "09:00", dayEnd: "17:00" };
+export const DEFAULT_CAPACITY_SETTINGS: CapacitySettings = { dayStart: "09:00", dayEnd: "17:00", autoSchedule: false };
 
 /**
  * Reads stored settings. A missing or malformed time, or a window that does
@@ -34,8 +35,9 @@ export function parseCapacitySettings(raw: string | null): CapacitySettings {
   const dayEnd = typeof stored.dayEnd === "string" ? stored.dayEnd : "";
   const start = timeToMinutes(dayStart);
   const end = timeToMinutes(dayEnd);
-  if (start === null || end === null || end <= start) return { ...DEFAULT_CAPACITY_SETTINGS };
-  return { dayStart, dayEnd };
+  const autoSchedule = stored.autoSchedule === true;
+  if (start === null || end === null || end <= start) return { ...DEFAULT_CAPACITY_SETTINGS, autoSchedule };
+  return { dayStart, dayEnd, autoSchedule };
 }
 
 /** The window in minutes after midnight. */
@@ -78,13 +80,17 @@ export const capacitySettings = {
    * Sets one end of the window. Returns false, changing nothing, when the
    * window would no longer end after it starts.
    */
-  setTime(key: keyof CapacitySettings, time: string): boolean {
+  setTime(key: "dayStart" | "dayEnd", time: string): boolean {
     const next = { ...state, [key]: time };
     const start = timeToMinutes(next.dayStart);
     const end = timeToMinutes(next.dayEnd);
     if (start === null || end === null || end <= start) return false;
     if (next[key] !== state[key]) set(next);
     return true;
+  },
+
+  setAutoSchedule(on: boolean) {
+    if (on !== state.autoSchedule) set({ ...state, autoSchedule: on });
   },
 
   /** Test hook: reload from storage. */
