@@ -3,7 +3,8 @@ import { AnimatePresence, m } from "framer-motion";
 import { toast } from "sonner";
 import { ItemNoteLink } from "@/components/ItemNoteLink";
 import { markMailSeen } from "@/lib/homeExtras";
-import { AlertTriangle, Briefcase, ChevronDown, ExternalLink, Mail, Package, RefreshCw, Receipt, ShieldAlert } from "lucide-react";
+import { useAppActions, useTaskCategories } from "@/contexts/AppContext";
+import { AlertTriangle, Briefcase, ChevronDown, ExternalLink, ListPlus, Mail, Package, RefreshCw, Receipt, ShieldAlert } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkeletonLines } from "@/components/ui/dashboard-skeletons";
@@ -38,6 +39,7 @@ import {
   type MailItem,
   type MailProvider,
   type MailStatus,
+  mailTask,
 } from "@/lib/mail";
 
 const MISSING_ENV: Record<MailProvider, string[]> = {
@@ -143,6 +145,12 @@ function Accounts({ status }: { status: MailStatus }) {
 function ItemRow({ item, now, showAccount, children }: { item: MailItem; now: Date; showAccount: boolean; children?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const panelId = `mail-details-${item.id}`;
+  const { addTask } = useAppActions();
+  const categories = useTaskCategories();
+  const makeTask = async () => {
+    const task = mailTask(item, categories[0]?.id ?? "", toLocalDateStr());
+    if (await addTask(task)) toast.success("Task added to The Engine", { description: `${task.name} · due ${task.endDate}` });
+  };
   const details = [
     ...(item.details ?? []),
     { label: "From", value: item.fromAddress },
@@ -199,6 +207,9 @@ function ItemRow({ item, now, showAccount, children }: { item: MailItem; now: Da
               <a href={item.url} target="_blank" rel="noreferrer" onClick={(e) => openMailLink(e, item.url)} className="inline-flex items-center gap-1 text-primary hover:underline">
                 Open email <ExternalLink className="w-3 h-3" aria-hidden />
               </a>
+              <button type="button" onClick={() => void makeTask()} className="ml-3 inline-flex items-center gap-1 text-primary hover:underline">
+                Make task <ListPlus className="w-3 h-3" aria-hidden />
+              </button>
               <ItemNoteLink kind="mail" itemId={item.id} title={item.subject} meta={{ url: item.url }} className="ml-2 align-middle" />
             </div>
           </m.div>
