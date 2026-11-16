@@ -296,6 +296,38 @@ export async function createNoteNative(input: {
 }
 
 /* ------------------------------------------------------------------ *
+ * PDFs and moves
+ * ------------------------------------------------------------------ */
+
+export function readVaultBinary(path: string): Promise<ArrayBuffer> {
+  return invoke<ArrayBuffer>("read_vault_binary", { path });
+}
+
+export function writeVaultBinary(
+  path: string,
+  bytes: Uint8Array,
+  overwrite: boolean,
+): Promise<{ path: string; mtime: number }> {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return invoke("write_vault_binary", { path, data: btoa(binary), overwrite });
+}
+
+export function moveVaultPath(from: string, to: string): Promise<{ path: string }> {
+  return invoke("move_vault_path", { from, to });
+}
+
+export function trashVaultPath(path: string): Promise<{ path: string }> {
+  return invoke("trash_vault_path", { path });
+}
+
+export function restoreVaultPath(trashPath: string, to: string): Promise<{ path: string }> {
+  return invoke("restore_vault_path", { trashPath, to });
+}
+
+/* ------------------------------------------------------------------ *
  * Vault folder and live updates
  * ------------------------------------------------------------------ */
 

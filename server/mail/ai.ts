@@ -1,6 +1,7 @@
-import type { JobStatus, MailCategory, MailExtras } from "./types";
+import { chat } from "../ai/chat";
+import type { AiChoice, AiConfig } from "../ai/config";
+import type { JobStatus, MailAiStatus, MailCategory, MailExtras } from "./types";
 
-export const DEFAULT_AI_MODEL = "claude-haiku-5-5";
 const BATCH = 20;
 const MAX_ITEMS = 60;
 const CATEGORIES = new Set(["bill", "job", "order", "security"]);
@@ -54,41 +55,44 @@ function parseVerdicts(text: string, count: number): Map<number, AiVerdict> {
   return out;
 }
 
-export function createMailAi(apiKey: string | undefined, model = DEFAULT_AI_MODEL) {
-  const cache = new Map<string, AiVerdict>();
+export interface MailAiSettings {
+  provider?: AiChoice;
+  model?: string;
+  apiKey?: string;
+}
 
-  function set(next: { apiKey?: string | null; model?: string }) {
+export function createMailAi(shared: AiConfig, settings: MailAiSettings = {}) {
+  const cache = new Map<string, AiVerdict>();
+  let provider: AiChoice = settings.provider ?? "claude";
+  let model = settings.model || "";
+  let apiKey = settings.apiKey || undefined;
+
+  const configured = () => provider !== "none" && shared.configured(provider, apiKey);
+
+  function set(next: { provider?: AiChoice; model?: string; apiKey?: string | null }) {
+    if (next.provider !== undefined) provider = next.provider;
+    if (next.model !== undefined) model = next.model;
     if (next.apiKey !== undefined) apiKey = next.apiKey || undefined;
-    if (next.model !== undefined) model = next.model || DEFAULT_AI_MODEL;
     cache.clear();
   }
 
   async function classifyBatch(items: AiInput[]): Promise<void> {
+    const current = provider;
+    if (current === "none") return;
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": apiKey as string,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 2048,
-          system: PROMPT,
-          messages: [
-            {
-              role: "user",
-              content: JSON.stringify(
-                items.map((item, i) => ({ i, from: item.from, subject: item.subject, snippet: item.snippet })),
-              ),
-            },
-          ],
-        }),
+      const { text } = await chat(shared, {
+        provider: current,
+        model,
+        apiKey,
+        maxTokens: 2048,
+        system: PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: JSON.stringify(items.map((item, i) => ({ i, from: item.from, subject: item.subject, snippet: item.snippet }))),
+          },
+        ],
       });
-      if (!res.ok) return;
-      const data = (await res.json()) as { content?: { type: string; text?: string }[] };
-      const text = (data.content ?? []).map((c) => (c.type === "text" ? c.text ?? "" : "")).join("");
       for (const [i, verdict] of parseVerdicts(text, items.length)) cache.set(items[i].id, verdict);
     } catch {
       return;
@@ -96,7 +100,7 @@ export function createMailAi(apiKey: string | undefined, model = DEFAULT_AI_MODE
   }
 
   async function classify(items: AiInput[]): Promise<Map<string, AiVerdict>> {
-    if (apiKey) {
+    if (configured()) {
       const pending = items.filter((item) => !cache.has(item.id)).slice(0, MAX_ITEMS);
       const batches = [];
       for (let i = 0; i < pending.length; i += BATCH) batches.push(classifyBatch(pending.slice(i, i + BATCH)));
@@ -112,11 +116,9 @@ export function createMailAi(apiKey: string | undefined, model = DEFAULT_AI_MODE
 
   return {
     get configured() {
-      return Boolean(apiKey);
+      return configured();
     },
-    get model() {
-      return model;
-    },
+    status: (): MailAiStatus => ({ provider, model, keyOverride: Boolean(apiKey), configured: configured() }),
     set,
     classify,
   };

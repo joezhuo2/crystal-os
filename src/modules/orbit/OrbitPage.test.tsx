@@ -35,6 +35,8 @@ vi.mock("@/lib/appActivity", async (importOriginal) => ({
 // The Today and Mood cards read the vault; not under test here.
 vi.mock("@/modules/orbit/TodayCard", () => ({ TodayCard: () => null }));
 vi.mock("@/modules/orbit/MoodCard", () => ({ MoodCard: () => null }));
+vi.mock("@/modules/orbit/StudyCard", () => ({ StudyCard: () => null }));
+vi.mock("@/modules/orbit/useOrbitStudy", () => ({ useStudyMarkdown: () => ({ markdown: null, loading: false }), withStudy: (m: string) => m }));
 vi.mock("@/hooks/useVault", () => ({ useCreateNote: () => ({ mutate: vi.fn(), isPending: false }), vaultErrorCode: () => null }));
 vi.mock("@/hooks/useShortcut", () => ({ useShortcut: () => {} }));
 

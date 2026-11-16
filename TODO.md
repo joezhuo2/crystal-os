@@ -14,6 +14,11 @@
 ## Planned List
 
 - [ ] **[Med] Morning plan and evening shutdown.** On the first open of the day, one card with weather, today's events, overdue tasks and habits, where you pick the day's top 3 tasks. In the evening, a shutdown step rolls unfinished tasks to tomorrow and writes a summary to the daily note.
+- [x] **[Med] The Observatory (study).** Phases 1 to 5 are built (not yet checked in the app).
+    - [x] Phase 2, study loop: question callouts, FSRS with ts-fsrs, queue, question types, priority map, streak, daily goal.
+    - [x] Phase 3, resources: drop zone, sorters, manual popup, inbox, textbook, question sheet and slide deck extraction including 4-up handouts, local OCR with Unclear confidence badges, review pool, reader.
+    - [x] Phase 4, integrations: Engine and Horizon links, exam urgency, create task from topic, focus timer auto start/stop, Home widget, command palette.
+    - [x] Phase 5, AI features (provider None by default), Deep Sky and Orbit study stats.
 - [ ] **[Med] The Comet (inbox).** A hotkey captures anything instantly; triage it later into a task, event, note or transaction.
 - [ ] **[Med] The Constellation (people).** Birthdays, last contacted and gift ideas, with reminders in the Horizon.
 

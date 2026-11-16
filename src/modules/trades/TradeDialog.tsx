@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumberInput } from "@/components/ui/number-input";
 import { Textarea } from "@/components/ui/textarea";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
 import { useAddTradeEvent, useSaveTradeJournal, useUpdateTradeEvent } from "@/hooks/useTrades";
@@ -215,7 +216,7 @@ export function TradeDialog({
           {isOption && (
             <>
               <Field label="Strike" htmlFor={`${id}-strike`}>
-                <Input id={`${id}-strike`} type="number" step="any" value={strike} onChange={(e) => setStrike(e.target.value)} />
+                <NumberInput id={`${id}-strike`} step="any" value={strike} onChange={(e) => setStrike(e.target.value)} />
               </Field>
               <Field label="Call or put">
                 <ThemedSelect
@@ -235,16 +236,16 @@ export function TradeDialog({
             </>
           )}
           <Field label={isOption ? "Contracts" : "Shares"} htmlFor={`${id}-qty`}>
-            <Input id={`${id}-qty`} type="number" step="any" min="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            <NumberInput id={`${id}-qty`} step="any" min="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
           </Field>
           <Field label="Order type" htmlFor={`${id}-type`}>
             <Input id={`${id}-type`} value={orderType} onChange={(e) => setOrderType(e.target.value)} />
           </Field>
           <Field label="Price per share" htmlFor={`${id}-price`}>
-            <Input id={`${id}-price`} type="number" step="any" min="0" value={price} onChange={(e) => setPrice(e.target.value)} />
+            <NumberInput id={`${id}-price`} step="any" min="0" value={price} onChange={(e) => setPrice(e.target.value)} />
           </Field>
           <Field label="Total (optional)" htmlFor={`${id}-total`}>
-            <Input id={`${id}-total`} type="number" step="any" min="0" value={total} onChange={(e) => setTotal(e.target.value)} />
+            <NumberInput id={`${id}-total`} step="any" min="0" value={total} onChange={(e) => setTotal(e.target.value)} />
           </Field>
           <Field label="Date">
             <DateField aria-label="Date" value={date} onChange={setDate} />

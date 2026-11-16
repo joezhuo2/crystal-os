@@ -7,6 +7,7 @@ import financials from "./financials/manifest";
 import trades from "./trades/manifest";
 import weather from "./weather/manifest";
 import archive from "./archive/manifest";
+import observatory from "./observatory/manifest";
 import nebula from "./nebula/manifest";
 import portal from "./portal/manifest";
 import terminal from "./terminal/manifest";
@@ -14,7 +15,7 @@ import settings from "./settings/manifest";
 import type { ModuleManifest } from "./types";
 
 /** Every module, in the default sidebar order. */
-export const MODULES = [home, orbit, tasks, calendar, mail, financials, trades, weather, archive, nebula, portal, terminal, settings] as const;
+export const MODULES = [home, orbit, tasks, calendar, mail, financials, trades, weather, archive, observatory, nebula, portal, terminal, settings] as const;
 
 export type TabId = (typeof MODULES)[number]["id"];
 

@@ -11,7 +11,7 @@ const WEEKDAY_INITIAL = ["S", "M", "T", "W", "T", "F", "S"];
 const dayLabel = (day: string) =>
   new Date(`${day}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
-interface FocusBar {
+export interface FocusBar {
   key: string;
   /** Tooltip and screen-reader name. */
   label: string;
@@ -42,7 +42,7 @@ export function FocusMonthBars({ months }: { months: { month: string; minutes: n
   return <Bars bars={bars} gap={5} ariaLabel="Focus per month" />;
 }
 
-function Bars({ bars, gap, ariaLabel }: { bars: FocusBar[]; gap: number; ariaLabel: string }) {
+export function Bars({ bars, gap, ariaLabel, format = formatMinutes }: { bars: FocusBar[]; gap: number; ariaLabel: string; format?: (n: number) => string }) {
   const gradient = useId();
   const max = Math.max(1, ...bars.map((d) => d.minutes));
   const best = bars.reduce((top, d) => (d.minutes > top ? d.minutes : top), 0);
@@ -56,7 +56,7 @@ function Bars({ bars, gap, ariaLabel }: { bars: FocusBar[]; gap: number; ariaLab
       viewBox={`0 0 ${width} ${height}`}
       className="orbit-chart w-full h-auto"
       role="img"
-      aria-label={`${ariaLabel}: ${bars.map((d) => `${d.label} ${formatMinutes(d.minutes)}`).join(", ")}`}
+      aria-label={`${ariaLabel}: ${bars.map((d) => `${d.label} ${format(d.minutes)}`).join(", ")}`}
     >
       <defs>
         <linearGradient id={gradient} x1="0" y1="1" x2="0" y2="0">
@@ -69,7 +69,7 @@ function Bars({ bars, gap, ariaLabel }: { bars: FocusBar[]; gap: number; ariaLab
         const h = d.minutes ? Math.max(3, (d.minutes / max) * (plot - 4)) : 0;
         const x = i * (barWidth + gap);
         return (
-          <GlassTip key={d.key} label={d.label} hint={formatMinutes(d.minutes)} tone="orbit">
+          <GlassTip key={d.key} label={d.label} hint={format(d.minutes)} tone="orbit">
             <g>
               <rect x={x} y={0} width={barWidth} height={plot} rx={Math.min(3, barWidth / 2)} className="orbit-chart-track" />
               {h > 0 && (

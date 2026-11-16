@@ -27,12 +27,21 @@ const tasks: Task[] = [
 
 vi.mock("@/contexts/AppContext", () => ({ useTasks: () => tasks }));
 
+const topics = [{ course: "MATH117", slug: "limits", title: "Limits", tasks: ["b", "gone"] }, { course: "MATH117", slug: "chain-rule", title: "Chain rule", tasks: [] }];
+let topicsOn = true;
+vi.mock("@/modules/observatory/topicLinkIndex", () => ({
+  useObservatoryLinksEnabled: () => topicsOn,
+  useTopicLinkIndex: (on: boolean) => ({ topics: on ? topics : [], tasks: new Map(), events: new Map() }),
+}));
+vi.mock("@/modules/observatory/focusLog", () => ({ appendFocus: vi.fn(async () => ({})) }));
+
 // jsdom has no layout; the combobox scrolls its active row into view.
 Element.prototype.scrollIntoView = () => {};
 
 const { default: PomodoroTask } = await import("./PomodoroTask");
 
 afterEach(() => {
+  topicsOn = true;
   pomodoro._reset();
   taskDrag.id = null;
 });
@@ -79,5 +88,25 @@ describe("PomodoroTask", () => {
     expect(zone.getAttribute("data-drop")).toBe("false");
     fireEvent.drop(zone);
     expect(pomodoro.getState().task).toBeNull();
+  });
+
+  it("lists topics with their course and focuses on one, using its linked open task", () => {
+    render(<PomodoroTask />);
+    fireEvent.click(screen.getByRole("combobox", { name: "Focus task" }));
+    expect(screen.getByRole("option", { name: /Limits/ }).textContent).toContain("MATH117");
+    fireEvent.click(screen.getByRole("option", { name: /Limits/ }));
+    expect(pomodoro.getState().task).toEqual({ id: "b", title: "Limits (MATH117)" });
+  });
+
+  it("focuses an unlinked topic under a topic id, and hides topics when the module is off", () => {
+    const { unmount } = render(<PomodoroTask />);
+    fireEvent.click(screen.getByRole("combobox", { name: "Focus task" }));
+    fireEvent.click(screen.getByRole("option", { name: /Chain rule/ }));
+    expect(pomodoro.getState().task).toEqual({ id: "topic:MATH117/chain-rule", title: "Chain rule (MATH117)" });
+    unmount();
+    topicsOn = false;
+    render(<PomodoroTask />);
+    fireEvent.click(screen.getByRole("combobox", { name: "Focus task" }));
+    expect(screen.queryByRole("option", { name: /Chain rule/ })).toBeNull();
   });
 });

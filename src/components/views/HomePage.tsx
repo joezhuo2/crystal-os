@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { Cloud, Sun, Moon, CloudRain, CloudSun, CloudSnow, CloudLightning, CloudDrizzle, MoonStar } from "lucide-react";
 import {
   useAppActions,
@@ -31,6 +31,7 @@ import {
 import { BookOpen, NotebookPen, CalendarClock, ChevronRight, Gem, PenLine, Plus, Check, Wallet } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
+  SkeletonLines,
   TodayHorizonContentSkeleton,
   VaultContentSkeleton,
   VaultStickerSkeleton,
@@ -51,6 +52,8 @@ import { useInstalledModules } from "@/lib/installedModules";
 import type { TabId } from "@/modules/registry";
 import { MailWidget } from "@/modules/mail/MailWidget";
 import { TradesWidget } from "@/modules/trades/TradesWidget";
+
+const ObservatoryWidget = lazy(() => import("@/modules/observatory/ObservatoryWidget").then((m) => ({ default: m.ObservatoryWidget })));
 
 /** The greeting and clock, on the Orbit's black hole, with this week so far. */
 function Clock({ onClick }: { onClick?: () => void }) {
@@ -693,6 +696,22 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
     { id: "horizon", module: "calendar", label: "The Horizon", render: () => <TodayHorizon onClick={go("calendar")} /> },
     { id: "mail", module: "mail", label: "The Courier", render: () => <MailWidget onClick={go("mail")} /> },
     { id: "ledger", module: "trades", label: "The Ledger", render: () => <TradesWidget onClick={go("trades")} /> },
+    {
+      id: "observatory",
+      module: "observatory",
+      label: "The Observatory",
+      render: () => (
+        <Suspense fallback={<div className="glass-card p-6 h-full"><SkeletonLines count={3} /></div>}>
+          <ObservatoryWidget
+            onClick={go("observatory")}
+            onDeepSky={() => {
+              appUi.setObservatoryTarget({ view: "deepsky" });
+              onNavigate?.("observatory");
+            }}
+          />
+        </Suspense>
+      ),
+    },
     { id: "archive", module: "archive", label: "The Archive", render: () => <ArchiveWidget onClick={go("archive")} /> },
     { id: "nebula", module: "nebula", label: "The Nebula", render: () => <NebulaSpace onClick={go("nebula")} /> },
     { id: "portal", module: "portal", label: "The Portal", render: () => <PortalSpace onClick={go("portal")} /> },

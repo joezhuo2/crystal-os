@@ -2,6 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createAiConfig } from "../ai/config";
 import { createMailAi } from "./ai";
 import { createMailCache } from "./cache";
 import { createDigest, type FetchRange } from "./digest";
@@ -39,7 +40,7 @@ describe("digest", () => {
         msg("3", "Security alert", "New sign-in from Chrome", daysAgo(3)),
       ];
     });
-    const digest = createDigest({ store, ai: createMailAi(undefined), cache: tmpCache(), fetchAccount });
+    const digest = createDigest({ store, ai: createMailAi(createAiConfig({})), cache: tmpCache(), fetchAccount });
 
     const result = await digest.get();
     expect(result.items.map((i) => i.id)).toEqual(["g:3", "g:1"]);
@@ -58,7 +59,7 @@ describe("digest", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
     const digest = createDigest({
       store: { list: async () => [accounts[0]] } as unknown as MailStore,
-      ai: createMailAi("key"),
+      ai: createMailAi(createAiConfig({ ANTHROPIC_API_KEY: "key" })),
       cache: tmpCache(),
       fetchAccount: async () => [msg("1", "Re: the invoice", "see attached", daysAgo(5))],
     });
@@ -76,7 +77,7 @@ describe("digest", () => {
     );
     const digest = createDigest({
       store: { list: async () => [accounts[0]] } as unknown as MailStore,
-      ai: createMailAi("key"),
+      ai: createMailAi(createAiConfig({ ANTHROPIC_API_KEY: "key" })),
       cache: tmpCache(),
       fetchAccount: async () => [
         msg("1", "Order and invoice", "", daysAgo(4)),
@@ -98,7 +99,7 @@ describe("digest", () => {
       .fn<(account: StoredAccount, range: FetchRange) => Promise<FetchedMessage[]>>()
       .mockResolvedValueOnce([msg("1", "Your order has shipped", "", old), msg("2", "Security alert", "New sign-in", recent)])
       .mockResolvedValue([]);
-    const digest = createDigest({ store: one, ai: createMailAi(undefined), cache, fetchAccount });
+    const digest = createDigest({ store: one, ai: createMailAi(createAiConfig({})), cache, fetchAccount });
 
     await digest.get();
     expect(fetchAccount.mock.calls[0][1].since).toBeLessThan(Date.parse(daysAgo(29)));
@@ -124,7 +125,7 @@ describe("digest", () => {
       .mockRejectedValue(new Error("offline"));
     const digest = createDigest({
       store: { list: async () => [accounts[0]] } as unknown as MailStore,
-      ai: createMailAi(undefined),
+      ai: createMailAi(createAiConfig({})),
       cache: tmpCache(),
       fetchAccount,
     });

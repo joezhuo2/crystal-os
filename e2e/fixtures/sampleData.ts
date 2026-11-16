@@ -1,6 +1,10 @@
 import { buildNote, type VaultNoteDetail } from "../../src/lib/vaultCore";
 import type { FxConversion, TradeEvent, TradeJournal, TradesData } from "../../src/lib/trades";
 import type { MailDigest, MailStatus } from "../../src/lib/mail";
+import type { AiStatus } from "../../src/lib/ai";
+import { parseFrontmatter } from "../../src/lib/vaultNative";
+import { emptyProgress, serializeCourse, serializeProgress, serializeTopic, type Course, type Topic } from "../../src/modules/observatory/model";
+import { formatQuestion, type QuestionDraft, type QuestionType } from "../../src/modules/observatory/questions";
 
 export const SAMPLE_EMAIL = "sample@example.com";
 export const SAMPLE_USER_ID = "5a5a5a5a-0000-4000-8000-000000000001";
@@ -303,7 +307,7 @@ export const calendarEvents = buildEvents();
 
 export const mailStatus: MailStatus = {
   providers: { google: { configured: true }, microsoft: { configured: false } },
-  ai: { configured: false, model: "" },
+  ai: { provider: "claude", model: "", keyOverride: false, configured: true },
   cache: { fetchDays: 30, retainDays: 90 },
   accounts: [{ id: "sample-account", provider: "google", email: SAMPLE_EMAIL }],
 };
@@ -471,10 +475,186 @@ function rawNote(seed: NoteSeed): string {
   return `---\n${front.join("\n")}\n---\n${seed.body}`;
 }
 
-export const vaultNotes: (VaultNoteDetail & { raw: string })[] = noteSeeds.map((seed) => {
-  const mtime = Date.parse(at(seed.offset, "09:00"));
-  return {
-    ...buildNote(seed.path, { tags: seed.tags, created: day(seed.offset), ...seed.extra }, seed.body, mtime, seed.body.length, mtime),
-    raw: rawNote(seed),
-  };
-});
+const OBS = "Observatory";
+
+type CourseSeed = Pick<Course, "code" | "name" | "color" | "outcomes" | "exams" | "assessments">;
+type TopicSeed = Partial<Topic> & Pick<Topic, "slug" | "title" | "priority" | "weeks"> & { summary: string; questions: Omit<QuestionDraft, "id">[] };
+
+const card = (prompt: string, answer: string, type: QuestionType = "card") => ({ type, prompt, answer });
+
+const courseSeeds: [CourseSeed, TopicSeed[]][] = [
+  [
+    {
+      code: "MATH201", name: "Calculus II", color: "hsl(192 88% 66%)",
+      outcomes: ["Evaluate integrals with substitution, parts and partial fractions", "Decide whether a series converges", "Build and use Taylor polynomials"],
+      assessments: [{ name: "Assignments", weight: 0.2 }, { name: "Quizzes", weight: 0.1 }],
+      exams: [{ name: "Midterm", date: day(-24), weight: 0.3, done: true }, { name: "Final exam", date: day(12), weight: 0.4 }],
+    },
+    [
+      { slug: "taylor-series", title: "Taylor Series", priority: "high", objective: true, weeks: [9, 10], sections: ["11.10"], summary: "A smooth function is the sum of its derivatives at a point, scaled by powers of the distance.", questions: [
+        card("Write the Maclaurin series for $e^x$ and state where it converges.", "$$\ne^x = \\sum_{n=0}^{\\infty} \\frac{x^n}{n!} = 1 + x + \\frac{x^2}{2!} + \\frac{x^3}{3!} + \\cdots\n$$\n\nIt converges for every real $x$ (radius $R = \\infty$)."),
+        card("What is the degree 3 Taylor polynomial of $\\sin x$ at $a = 0$?", "$T_3(x) = x - \\dfrac{x^3}{6}$"),
+      ] },
+      { slug: "integration-by-parts", title: "Integration by Parts", priority: "high", objective: true, weeks: [2], sections: ["7.1"], summary: "Trade one integral for an easier one: $\\int u\\,dv = uv - \\int v\\,du$.", questions: [
+        card("Evaluate $\\displaystyle\\int x e^{x}\\,dx$.", "1. Let $u = x$ and $dv = e^x\\,dx$, so $du = dx$ and $v = e^x$.\n2. $\\int x e^x\\,dx = x e^x - \\int e^x\\,dx$\n3. $= (x - 1)e^x + C$", "worked"),
+      ] },
+      { slug: "improper-integrals", title: "Improper Integrals", priority: "medium", weeks: [4], sections: ["7.8"], summary: "Integrals over infinite intervals, defined as limits.", questions: [
+        card("For which $p$ does $\\displaystyle\\int_1^{\\infty} \\frac{dx}{x^p}$ converge?\n\n- [ ] $p < 1$\n- [ ] $p = 1$\n- [x] $p > 1$", "It converges exactly when $p > 1$, to $\\frac{1}{p-1}$.", "mc"),
+      ] },
+      { slug: "series-tests", title: "Convergence Tests", priority: "medium", weeks: [6, 7], sections: ["11.4", "11.6"], summary: "Comparison, ratio and root tests for infinite series.", questions: [
+        card("State the ratio test.", "If $L = \\lim_{n\\to\\infty} \\left|\\frac{a_{n+1}}{a_n}\\right|$, the series converges absolutely when $L < 1$ and diverges when $L > 1$."),
+      ] },
+      { slug: "partial-fractions", title: "Partial Fractions", priority: "medium", weeks: [3], sections: ["7.4"], summary: "Split a rational function into simpler pieces.", questions: [
+        card("Decompose $\\dfrac{1}{x(x+1)}$.", "$\\dfrac{1}{x} - \\dfrac{1}{x+1}$"),
+      ] },
+      { slug: "polar-coordinates", title: "Polar Coordinates", priority: "low", weeks: [12], sections: ["10.3"], summary: "Curves written as $r = f(\\theta)$.", questions: [
+        card("Area enclosed by $r = f(\\theta)$ for $a \\le \\theta \\le b$?", "$A = \\dfrac{1}{2}\\displaystyle\\int_a^b f(\\theta)^2\\,d\\theta$"),
+      ] },
+    ],
+  ],
+  [
+    {
+      code: "PHYS110", name: "Mechanics", color: "hsl(38 80% 66%)",
+      outcomes: ["Apply Newton's laws to particles and rigid bodies", "Use energy and momentum conservation"],
+      assessments: [{ name: "Labs", weight: 0.2 }, { name: "Problem sets", weight: 0.2 }],
+      exams: [{ name: "Midterm", date: day(30), weight: 0.25 }, { name: "Final exam", date: day(52), weight: 0.35 }],
+    },
+    [
+      { slug: "newtons-laws", title: "Newton's Laws", priority: "high", objective: true, weeks: [1, 2], sections: ["4.1"], summary: "Net force equals mass times acceleration.", questions: [
+        card("A 2 kg box is pushed with a net force of 10 N. What is its acceleration?", "$a = F/m = 10/2 = 5\\ \\text{m/s}^2$"),
+      ] },
+      { slug: "work-and-energy", title: "Work and Energy", priority: "medium", weeks: [4], sections: ["7.2"], summary: "Work changes kinetic energy.", questions: [
+        card("State the work-energy theorem.", "$W_{net} = \\Delta K = \\tfrac{1}{2}mv_f^2 - \\tfrac{1}{2}mv_i^2$"),
+      ] },
+      { slug: "momentum", title: "Momentum and Collisions", priority: "medium", weeks: [6], sections: ["9.1"], summary: "Momentum is conserved when no external force acts.", questions: [card("Define linear momentum.", "$\\vec p = m\\vec v$")] },
+      { slug: "rotation", title: "Rotational Motion", priority: "low", weeks: [8], sections: ["10.1"], summary: "Torque, moment of inertia and angular acceleration.", questions: [card("Rotational analogue of $F = ma$?", "$\\tau = I\\alpha$")] },
+    ],
+  ],
+  [
+    {
+      code: "CS140", name: "Introduction to Programming", color: "hsl(165 55% 62%)",
+      outcomes: ["Write, test and debug small programs", "Reason about loops, functions and recursion"],
+      assessments: [{ name: "Labs", weight: 0.3 }, { name: "Project", weight: 0.2 }],
+      exams: [{ name: "Final exam", date: day(26), weight: 0.5 }],
+    },
+    [
+      { slug: "recursion", title: "Recursion", priority: "high", objective: true, weeks: [7], sections: ["5.3"], summary: "A function that solves a problem by calling itself on a smaller one.", questions: [
+        card("What does this print?\n\n```python\ndef f(n):\n    return 1 if n <= 1 else n * f(n - 1)\n\nprint(f(4))\n```", "24", "output"),
+      ] },
+      { slug: "loops", title: "Loops", priority: "medium", weeks: [3], sections: ["3.2"], summary: "Repeat work with for and while.", questions: [card("When does a `while` loop check its condition?", "Before every pass, including the first.")] },
+      { slug: "functions", title: "Functions", priority: "medium", weeks: [4], sections: ["4.1"], summary: "Name a piece of work and reuse it.", questions: [card("What is a parameter?", "A name in the function definition that receives an argument.")] },
+    ],
+  ],
+  [
+    {
+      code: "ECON101", name: "Principles of Microeconomics", color: "hsl(330 50% 70%)",
+      outcomes: ["Explain supply, demand and market equilibrium"],
+      assessments: [{ name: "Quizzes", weight: 0.3 }],
+      exams: [{ name: "Final exam", date: day(40), weight: 0.7 }],
+    },
+    [
+      { slug: "supply-and-demand", title: "Supply and Demand", priority: "medium", weeks: [1], sections: ["3"], summary: "Prices settle where supply meets demand.", questions: [card("What happens to price when demand rises and supply is fixed?", "It rises.")] },
+      { slug: "elasticity", title: "Elasticity", priority: "low", weeks: [3], sections: ["5"], summary: "How strongly quantity reacts to price.", questions: [card("Price elasticity of demand?", "$E_d = \\dfrac{\\%\\Delta Q}{\\%\\Delta P}$")] },
+    ],
+  ],
+  [
+    {
+      code: "STAT230", name: "Probability", color: "hsl(255 60% 76%)",
+      outcomes: ["Compute probabilities with counting rules and conditioning", "Work with common discrete and continuous distributions"],
+      assessments: [{ name: "Assignments", weight: 0.25 }],
+      exams: [{ name: "Midterm", date: day(19), weight: 0.3 }, { name: "Final exam", date: day(48), weight: 0.45 }],
+    },
+    [
+      { slug: "conditional-probability", title: "Conditional Probability", priority: "high", weeks: [3], sections: ["4.1"], summary: "Probability once you know something has happened.", questions: [card("Define $P(A \\mid B)$.", "$P(A \\mid B) = \\dfrac{P(A \\cap B)}{P(B)}$ for $P(B) > 0$")] },
+      { slug: "binomial-distribution", title: "Binomial Distribution", priority: "medium", weeks: [5], sections: ["5.3"], summary: "Successes in $n$ independent trials.", questions: [card("PMF of $X \\sim \\text{Bin}(n, p)$?", "$P(X = k) = \\binom{n}{k} p^k (1-p)^{n-k}$")] },
+      { slug: "expectation", title: "Expectation", priority: "medium", weeks: [6], sections: ["7.1"], summary: "The long-run average of a random variable.", questions: [card("Is expectation linear?", "Yes: $E[aX + bY] = aE[X] + bE[Y]$")] },
+    ],
+  ],
+  [
+    {
+      code: "CHEM120", name: "General Chemistry", color: "hsl(12 60% 56%)",
+      outcomes: ["Balance reactions and use stoichiometry"],
+      assessments: [{ name: "Labs", weight: 0.25 }],
+      exams: [{ name: "Final exam", date: day(45), weight: 0.5 }],
+    },
+    [
+      { slug: "stoichiometry", title: "Stoichiometry", priority: "medium", weeks: [2], sections: ["3.4"], summary: "Counting atoms through a reaction.", questions: [card("How many moles are in 36 g of water?", "$36 / 18 = 2$ mol")] },
+      { slug: "ideal-gas-law", title: "Ideal Gas Law", priority: "medium", weeks: [5], sections: ["5.4"], summary: "Pressure, volume and temperature of a gas.", questions: [card("State the ideal gas law.", "$PV = nRT$")] },
+    ],
+  ],
+];
+
+const deepSkyTopics: TopicSeed[] = [
+  { slug: "music-theory-basics", title: "Music Theory Basics", priority: "medium", weeks: [], summary: "Scales, intervals and why some chords sound bright.", questions: [card("How many semitones are in a perfect fifth?", "7"), card("What makes a major triad?", "A root, a major third (4 semitones) and a perfect fifth (7 semitones).")] },
+  { slug: "bayes-rule", title: "Bayes' Rule", priority: "medium", weeks: [], summary: "Updating a belief when new evidence arrives.", questions: [card("State Bayes' rule.", "$P(A \\mid B) = \\dfrac{P(B \\mid A)\\,P(A)}{P(B)}$")] },
+  { slug: "sourdough-starter", title: "Sourdough Starter", priority: "low", weeks: [], summary: "Wild yeast and bacteria kept alive with flour and water.", questions: [card("Why feed a starter at a 1:1:1 ratio?", "Equal parts starter, flour and water keep it active and predictable.")] },
+];
+
+const suggestionSeeds = [
+  { title: "Spaced repetition research", kind: "project suggestion", summary: "Your Website Redesign notes mention learning tools; the science behind spacing effects would fit." },
+  { title: "How tides work", kind: "random idea", summary: "The Moon's pull, the Sun's smaller one and why there are two high tides a day." },
+];
+
+const stored = (dueDays: number, lastDays: number, stability: number) =>
+  ({ dueAt: at(dueDays, "08:00"), lastReviewAt: at(lastDays, "19:00"), stability, difficulty: 5, elapsed_days: 0, scheduled_days: 0, reps: 3, lapses: 0, state: 2 });
+
+function courseProgress(code: string, topics: TopicSeed[]): string {
+  const p = emptyProgress();
+  topics.forEach((t, ti) =>
+    t.questions.forEach((_, qi) => {
+      const key = `${t.slug}/q${qi + 1}`;
+      if (code === "MATH201" && ti === 0 && qi === 0) p.cards[key] = stored(-3, -7, 4);
+      else if (code === "MATH201" && ti === 1) p.cards[key] = stored(-1, -5, 6);
+      else if ((ti + qi) % 3 !== 2) p.cards[key] = stored(4 + ti, -2 - ti, 6 + ti * 5);
+    }),
+  );
+  for (let offset = -6; offset <= 0; offset++) {
+    const runs = offset === 0 ? 2 : 1;
+    for (let r = 0; r < runs; r++) p.log.push({ kind: "observation", topic: topics[(offset + 6 + r) % topics.length]!.slug, at: at(offset, `${pad(8 + r)}:15`) });
+  }
+  return serializeProgress(p, `${p.log.length} reviews logged.`);
+}
+
+function topicNote(code: string, t: TopicSeed): string {
+  const { summary, questions, ...fields } = t;
+  const body = [`> [!summary]\n> ${summary}`, ...questions.map((q, i) => formatQuestion({ ...q, id: `q${i + 1}` }))].join("\n\n");
+  return serializeTopic({ course: code, objective: false, sections: [], sources: [], tasks: [], events: [], ...fields, body: `${body}\n` });
+}
+
+const observatoryRaw: [path: string, raw: string, offset: number][] = [
+  ...courseSeeds.flatMap(([c, topics]): [string, string, number][] => [
+    [`${OBS}/${c.code}/_course.md`, serializeCourse({ ...c, term: "2026F", keywords: [], archived: false }), -40],
+    [`${OBS}/${c.code}/progress.md`, courseProgress(c.code, topics), 0],
+    ...topics.map((t, i): [string, string, number] => [`${OBS}/${c.code}/topics/${t.slug}.md`, topicNote(c.code, t), -30 + i]),
+  ]),
+  ...deepSkyTopics.map((t, i): [string, string, number] => [`${OBS}/DeepSky/topics/${t.slug}.md`, topicNote("DeepSky", t), -8 + i]),
+  [`${OBS}/DeepSky/progress.md`, courseProgress("DeepSky", deepSkyTopics), 0],
+  ...suggestionSeeds.map((s, i): [string, string, number] => [
+    `${OBS}/DeepSky/_ai/${day(-1)} ${s.title}.md`,
+    `---\nkind: ${s.kind}\nstatus: pending\nsource: claude\n---\n# ${s.title}\n\n${s.summary}\n`,
+    -1 + i,
+  ]),
+];
+
+export const vaultNotes: (VaultNoteDetail & { raw: string })[] = [
+  ...noteSeeds.map((seed) => {
+    const mtime = Date.parse(at(seed.offset, "09:00"));
+    return {
+      ...buildNote(seed.path, { tags: seed.tags, created: day(seed.offset), ...seed.extra }, seed.body, mtime, seed.body.length, mtime),
+      raw: rawNote(seed),
+    };
+  }),
+  ...observatoryRaw.map(([path, raw, offset]) => {
+    const mtime = Date.parse(at(offset, "09:00"));
+    const { data, content } = parseFrontmatter(raw);
+    return { ...buildNote(path, data, content, mtime, raw.length, mtime), raw };
+  }),
+];
+
+export const observatorySettings = { aiProvider: "claude", aiModel: "claude-sonnet-5-5", aiDraft: true, deepSkyProjects: true, deepSkyRandom: true };
+
+export const aiStatus: AiStatus = {
+  claude: { configured: true, model: "claude-sonnet-5-5" },
+  nim: { configured: false, baseUrl: "https://integrate.api.nvidia.com/v1", model: "moonshotai/kimi-k3" },
+  omniroute: { configured: false, hasKey: false, baseUrl: "http://localhost:20128/v1", model: "auto/coding" },
+};

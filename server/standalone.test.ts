@@ -64,6 +64,11 @@ describe("createApiHandler", () => {
     expect(res.status).toBe(401);
   });
 
+  it("routes /api/ai through the auth gate", async () => {
+    const res = await call("GET", "/api/ai/status");
+    expect(res.status).toBe(401);
+  });
+
   it("allows preflight from the desktop webview origin", async () => {
     const res = await call("OPTIONS", "/api/obsidian/notes", {
       Origin: "http://tauri.localhost",

@@ -11,6 +11,7 @@ import { toLocalDateStr } from "@/lib/utils";
 import { Plus, Trash2, X, Pencil } from "lucide-react";
 import { CategoryManagerButton } from "@/components/views/CategoryManager";
 import { DateField, ThemedSelect } from "@/components/ui/field-controls";
+import { NumberInput } from "@/components/ui/number-input";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { ChartFrame, DonutChart, LineAreaChart, type Series } from "./FinanceCharts";
 
@@ -216,8 +217,8 @@ export function TransactionDrawer({ onClose, editingTransaction }: { onClose: ()
           className="w-full bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary/50"
           onKeyDown={(e) => e.key === "Enter" && submit()} />
         <div className="grid grid-cols-2 gap-2">
-          <input type="number" step="0.01" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} placeholder="Amount"
-            className="bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none" />
+          <NumberInput unstyled step="0.01" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} placeholder="Amount"
+            className="w-full bg-secondary/50 rounded-lg px-3 py-2.5 text-sm outline-none" />
           <ThemedSelect value={form.type} aria-label="Transaction type"
             onChange={(v) => setForm((f) => ({ ...f, type: v as "income" | "expense" }))}
             options={[

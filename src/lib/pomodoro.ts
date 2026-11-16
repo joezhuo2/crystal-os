@@ -56,6 +56,7 @@ let focusStartedAt: number | null = null;
 /** Focus seconds of this phase already handed over by an earlier task switch. */
 let focusLogged = 0;
 let recorder: ((session: FocusSession) => void) | null = null;
+const focusListeners = new Set<(session: FocusSession) => void>();
 let timer: ReturnType<typeof setTimeout> | null = null;
 const listeners = new Set<() => void>();
 
@@ -105,16 +106,13 @@ function logFocus(remaining: number, whole = false, split = false) {
     focusStartedAt = null;
   }
   if (seconds <= 0 || (!whole && seconds < MIN_LOGGED_FOCUS)) return;
-  try {
-    recorder?.({
-      startedAt: new Date(startedAt),
-      endedAt: new Date(),
-      seconds,
-      taskId: state.task?.id ?? null,
-      taskTitle: state.task?.title ?? null,
-    });
-  } catch {
-    // A failing recorder must not stop the timer.
+  const session = { startedAt: new Date(startedAt), endedAt: new Date(), seconds, taskId: state.task?.id ?? null, taskTitle: state.task?.title ?? null };
+  for (const listener of [recorder, ...focusListeners]) {
+    try {
+      listener?.(session);
+    } catch {
+      // A failing recorder must not stop the timer.
+    }
   }
 }
 
@@ -209,6 +207,14 @@ export const pomodoro = {
   /** Where finished focus goes (AppContext saves it to Supabase). Null to stop. */
   setRecorder(next: ((session: FocusSession) => void) | null) {
     recorder = next;
+  },
+
+  /** Also hear about each logged focus stretch (The Observatory logs study minutes per topic). */
+  onFocusLogged(listener: (session: FocusSession) => void) {
+    focusListeners.add(listener);
+    return () => {
+      focusListeners.delete(listener);
+    };
   },
 
   /** Test hook: back to a fresh 25-minute focus phase. */

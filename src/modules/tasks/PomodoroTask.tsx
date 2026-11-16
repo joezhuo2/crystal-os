@@ -11,12 +11,16 @@ import { ThemedCombobox, type ComboboxOption } from "@/components/ui/field-contr
 import { usePomodoro } from "@/hooks/usePomodoro";
 import { focusTaskOptions } from "@/lib/focusTask";
 import { pomodoro } from "@/lib/pomodoro";
+import { focusTopic } from "@/modules/observatory/focus";
+import { useObservatoryLinksEnabled, useTopicLinkIndex } from "@/modules/observatory/topicLinkIndex";
 import { taskDrag } from "@/lib/subtasks";
 import { cn, toLocalDateStr } from "@/lib/utils";
 
 /** The picker's value for unlinked focus. */
 const NONE = "";
 const NO_TASK: ComboboxOption = { value: NONE, label: "No task" };
+
+const topicKey = (t: { course: string; slug: string }) => `topic:${t.course}/${t.slug}`;
 
 const shortDate = (day: string) =>
   new Date(`${day}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -27,7 +31,10 @@ export default function PomodoroTask() {
   const [dropping, setDropping] = useState(false);
   const today = toLocalDateStr();
 
+  const topicsOn = useObservatoryLinksEnabled();
+  const topics = useTopicLinkIndex(topicsOn).topics;
   const open = useMemo(() => focusTaskOptions(tasks, today), [tasks, today]);
+
   const options = useMemo<ComboboxOption[]>(
     () => [
       NO_TASK,
@@ -36,12 +43,15 @@ export default function PomodoroTask() {
         label: t.name,
         hint: t.startDate < today ? "Overdue" : t.startDate === today ? "Today" : shortDate(t.startDate),
       })),
+      ...topics.map((t) => ({ value: topicKey(t), label: t.title, hint: `Topic · ${t.course}` })),
     ],
-    [open, today],
+    [open, today, topics],
   );
 
   const link = (id: string) => {
     if (id === NONE) return pomodoro.setTask(null);
+    const topic = topics.find((t) => topicKey(t) === id);
+    if (topic) return focusTopic({ code: topic.course, slug: topic.slug, title: topic.title, taskId: topic.tasks.find((tid) => open.some((o) => o.id === tid)) });
     const task = open.find((t) => t.id === id);
     if (task) pomodoro.setTask({ id: task.id, title: task.name });
   };

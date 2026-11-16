@@ -35,7 +35,7 @@ export const visibleTabIds = (): TabId[] => {
 const PHONE_TABS = new Set<TabId>(MODULE_IDS.filter((id) => moduleById[id].phone));
 
 /** The Terminal, Portal, Nebula, Atmosphere, Archive, Horizon, Engine, and Orbit tabs restyle the sidebar to match their pages. */
-type SidebarMode = "default" | "terminal" | "portal" | "nebula" | "atmosphere" | "obsidian" | "horizon" | "engine" | "orbit" | "settings" | "home";
+type SidebarMode = "default" | "terminal" | "portal" | "nebula" | "atmosphere" | "obsidian" | "horizon" | "engine" | "orbit" | "observatory" | "settings" | "home";
 
 interface SidebarNavProps {
   activeTab: TabId;
@@ -82,6 +82,11 @@ const activePillStyle: Record<SidebarMode, React.CSSProperties> = {
     border: "1px solid rgb(186 230 253 / 0.42)",
     boxShadow: "0 0 18px rgb(125 211 252 / 0.3)",
   },
+  observatory: {
+    background: "rgb(165 180 252 / 0.18)",
+    border: "1px solid rgb(226 232 240 / 0.4)",
+    boxShadow: "0 0 18px rgb(129 140 248 / 0.3)",
+  },
   settings: {
     background: "rgb(244 114 182 / 0.18)",
     border: "1px solid rgb(251 182 160 / 0.4)",
@@ -120,7 +125,7 @@ const SidebarButton = memo(function SidebarButton({
       ? active
         ? "text-neutral-50"
         : "text-neutral-500 hover:text-neutral-100 hover:bg-white/5"
-      : mode === "portal" || mode === "nebula" || mode === "atmosphere" || mode === "obsidian" || mode === "horizon" || mode === "engine" || mode === "orbit"
+      : mode === "portal" || mode === "nebula" || mode === "atmosphere" || mode === "obsidian" || mode === "horizon" || mode === "engine" || mode === "orbit" || mode === "observatory"
         ? active
           ? "text-white"
           : "text-white/45 hover:text-white hover:bg-white/5"
@@ -218,11 +223,13 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
                   ? "engine"
                   : activeTab === "orbit"
                     ? "orbit"
-                    : activeTab === "settings"
-                      ? "settings"
-                      : activeTab === "home"
-                        ? "home"
-                        : "default";
+                    : activeTab === "observatory"
+                      ? "observatory"
+                      : activeTab === "settings"
+                        ? "settings"
+                        : activeTab === "home"
+                          ? "home"
+                          : "default";
   const mode: SidebarMode = monochrome ? "default" : pageMode;
   const terminal = mode === "terminal";
   const sidebarClass = terminal
@@ -241,11 +248,13 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
                 ? "sidebar-engine"
                 : mode === "orbit"
                   ? "sidebar-orbit"
-                  : mode === "settings"
-                    ? "sidebar-settings"
-                    : mode === "home"
-                      ? "sidebar-home"
-                      : "";
+                  : mode === "observatory"
+                    ? "sidebar-observatory"
+                    : mode === "settings"
+                      ? "sidebar-settings"
+                      : mode === "home"
+                        ? "sidebar-home"
+                        : "";
   const gradientClass =
     mode === "portal"
       ? "portal-gradient-text"
@@ -261,11 +270,13 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
                 ? "engine-title"
                 : mode === "orbit"
                   ? "orbit-title"
-                  : mode === "settings"
-                    ? "settings-title"
-                    : mode === "home"
-                      ? "home-title"
-                      : "text-gradient-indigo";
+                  : mode === "observatory"
+                    ? "observatory-title"
+                    : mode === "settings"
+                      ? "settings-title"
+                      : mode === "home"
+                        ? "home-title"
+                        : "text-gradient-indigo";
 
   const button = (tab: Tab, badge?: PortalBadge | null, badgeTitle?: string) => (
     <SidebarButton

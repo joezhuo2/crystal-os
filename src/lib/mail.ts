@@ -1,3 +1,4 @@
+import type { AiChoice } from "@/lib/ai";
 import { apiRequest } from "@/lib/apiRequest";
 import { addDays, toLocalDateStr } from "@/lib/utils";
 
@@ -13,7 +14,7 @@ export interface MailAccount {
 
 export interface MailStatus {
   providers: Record<MailProvider, { configured: boolean }>;
-  ai: { configured: boolean; model: string };
+  ai: { provider: AiChoice; model: string; keyOverride: boolean; configured: boolean };
   cache: MailCacheSettings;
   accounts: MailAccount[];
 }
@@ -85,14 +86,7 @@ export async function fetchMailStatus(): Promise<MailStatus> {
   return status;
 }
 
-export const MAIL_AI_MODELS = [
-  { id: "claude-haiku-5-5", label: "Haiku 5.5" },
-  { id: "claude-sonnet-5-5", label: "Sonnet 5.5" },
-  { id: "claude-opus-5-5", label: "Opus 5.5" },
-  { id: "claude-fable-5-2", label: "Fable 5.2" },
-];
-
-export const saveMailAi = (body: { apiKey?: string | null; model?: string }) =>
+export const saveMailAi = (body: { provider?: AiChoice; model?: string; apiKey?: string | null }) =>
   request<MailStatus["ai"]>("/api/mail/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 export const saveMailCache = (body: Partial<MailCacheSettings>) =>

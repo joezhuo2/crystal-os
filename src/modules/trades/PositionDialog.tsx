@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumberInput } from "@/components/ui/number-input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useSaveTradeJournal } from "@/hooks/useTrades";
@@ -125,13 +126,13 @@ function Journal({ position, journal, suggestions }: { position: Position; journ
             <Label htmlFor={`${id}-target`} className="text-xs text-muted-foreground">
               Target price
             </Label>
-            <Input id={`${id}-target`} type="number" step="any" value={target} onChange={(e) => setTarget(e.target.value)} />
+            <NumberInput id={`${id}-target`} step="any" value={target} onChange={(e) => setTarget(e.target.value)} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor={`${id}-stop`} className="text-xs text-muted-foreground">
               Stop price
             </Label>
-            <Input id={`${id}-stop`} type="number" step="any" value={stop} onChange={(e) => setStop(e.target.value)} />
+            <NumberInput id={`${id}-stop`} step="any" value={stop} onChange={(e) => setStop(e.target.value)} />
           </div>
         </div>
       </section>

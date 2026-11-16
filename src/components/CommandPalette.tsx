@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { useAppActions, useFinancialCategories, useTaskCategories, useTasks, useTransactions, type Task } from "@/contexts/AppContext";
 import { nestTargets } from "@/lib/subtasks";
 import { canSnooze, formatSnoozeDate, ownSnoozed, snoozePresets, snoozeTitle, snoozeUpdates, UNSNOOZE } from "@/lib/snooze";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/command";
 import {
   CandlestickChart,
+  Telescope,
   Wallet,
   Plus,
   Search,
@@ -82,6 +83,7 @@ const RECENT_MODULE: Record<RecentItem["kind"], TabId> = {
 };
 
 const ITEM = "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer";
+const ObservatoryCommands = lazy(() => import("@/modules/observatory/ObservatoryCommands").then((m) => ({ default: m.ObservatoryCommands })));
 
 /** Icons for the Settings sections, matching their headers on the Settings page. */
 const SECTION_ICONS: Record<string, React.ElementType> = {
@@ -140,6 +142,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const archiveOn = on("archive");
   const nebulaOn = on("nebula");
   const mailOn = on("mail");
+  const observatoryOn = on("observatory");
   const tasks = useTasks();
   const { updateTask, rescheduleTasks } = useAppActions();
   // "Make subtask of…": the task being nested while the bar lists parents for it.
@@ -472,7 +475,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
           // chats on their messages, and
           // Quick Add is always offered — neither can pass a local substring
           // test against the raw query, so they opt out of cmdk's filter.
-          if (value === "quick-add-vault" || value === "free-slot" || value.startsWith("note-") || value.startsWith("nebula-chat-") || value.startsWith("mail-") || value.startsWith("event-")) return 1;
+          if (value === "quick-add-vault" || value === "free-slot" || value.startsWith("note-") || value.startsWith("nebula-chat-") || value.startsWith("mail-") || value.startsWith("event-") || value.startsWith("obs-")) return 1;
           if (value.toLowerCase().includes(search.toLowerCase())) return 1;
           return 0;
         }}
@@ -780,6 +783,12 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                       })}
                     </CommandGroup>
                   </>
+                )}
+
+                {observatoryOn && !addPrefix && !logPrefix && (
+                  <Suspense fallback={null}>
+                    <ObservatoryCommands search={search} itemClass={ITEM} onNavigate={() => handleNavigate("observatory")} onClose={close} />
+                  </Suspense>
                 )}
 
                 {/* ── Matching calendar events ── */}
@@ -1093,6 +1102,19 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                           </div>
                           <span className="text-sm font-medium">Open The Ledger</span>
                           <span className="ml-auto text-xs text-muted-foreground/50">trades, profit/loss</span>
+                        </CommandItem>
+                      )}
+                      {on("observatory") && (
+                        <CommandItem
+                          value="observatory-study-courses-flashcards-spaced-repetition-fsrs"
+                          onSelect={() => handleNavigate("observatory")}
+                          className={ITEM}
+                        >
+                          <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                            <Telescope className="w-4 h-4" />
+                          </div>
+                          <span className="text-sm font-medium">Open The Observatory</span>
+                          <span className="ml-auto text-xs text-muted-foreground/50">courses, study</span>
                         </CommandItem>
                       )}
                       {isDesktop() && on("terminal") && (

@@ -13,6 +13,7 @@ const taskCategories = [{ id: "c1", name: "Work", color: "hsl(0 0% 50%)" }];
 
 let tasks: Task[] = [];
 
+vi.mock("@/modules/observatory/TopicLinkControl", () => ({ TopicChips: () => null, TopicLinkControl: () => null }));
 vi.mock("@/contexts/AppContext", () => ({
   useAppActions: () => ({ addTask, updateTask, rescheduleTasks }),
   useTaskCategories: () => taskCategories,

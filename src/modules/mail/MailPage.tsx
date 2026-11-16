@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useTradesSync } from "@/hooks/useTrades";
 import { useDisconnectMail, useMailDigest, useMailStatus, useRefreshMailDigest } from "@/hooks/useMail";
+import { AI_PROVIDER_LABELS } from "@/lib/ai";
 import { isDesktop, openExternal } from "@/lib/platform";
 import { toLocalDateStr } from "@/lib/utils";
 import {
@@ -230,7 +231,7 @@ function Dashboard({ status }: { status: MailStatus }) {
       <div>
         <h1 className="text-lg font-semibold">The Courier</h1>
         <p className="text-xs text-muted-foreground">
-          {status.ai.configured ? `Unsure emails are checked by Claude (${status.ai.model})` : "Keyword sorting only"}
+          {status.ai.configured ? `Unsure emails are checked by ${AI_PROVIDER_LABELS[status.ai.provider]}${status.ai.model ? ` (${status.ai.model})` : ""}` : "Keyword sorting only"}
           {data && ` · Updated ${relativeDate(data.generatedAt, now)}`}
         </p>
       </div>

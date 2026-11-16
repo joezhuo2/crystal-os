@@ -1,14 +1,38 @@
-import { useState, useRef } from "react";
+import { useContext, useEffect, useState, useRef } from "react";
 import { Play, Pause, RotateCcw } from "lucide-react";
 import { pomodoro } from "@/lib/pomodoro";
 import { usePomodoro } from "@/hooks/usePomodoro";
 import { useShortcut } from "@/hooks/useShortcut";
+import { useTasks } from "@/contexts/AppContext";
+import { appUi } from "@/lib/appUi";
+import { topicPath } from "@/modules/observatory/model";
+import { useObservatorySettings } from "@/modules/observatory/settings";
+import { TopicNavigateContext, useObservatoryLinksEnabled, useTopicLinkIndex } from "@/modules/observatory/topicLinkIndex";
 import PomodoroTask from "./PomodoroTask";
 
 export default function PomodoroTimer() {
   // Timer state lives in a shared store so it survives leaving this page and
   // the desktop tray can start, pause, and reset it.
-  const { workDuration, breakDuration, remaining: seconds, running, phase } = usePomodoro();
+  const { workDuration, breakDuration, remaining: seconds, running, phase, task } = usePomodoro();
+  const tasks = useTasks();
+  const navigate = useContext(TopicNavigateContext);
+  const { folder } = useObservatorySettings();
+  const linksOn = useObservatoryLinksEnabled();
+  const topicIndex = useTopicLinkIndex(linksOn);
+  const wasRunning = useRef(running);
+
+  // Starting focus on a task made by "Review task" opens that topic's review.
+  useEffect(() => {
+    const started = running && !wasRunning.current && phase === "focus";
+    wasRunning.current = running;
+    if (!started || !linksOn || !task || !navigate) return;
+    const notePath = tasks.find((t) => t.id === task.id)?.notePath;
+    const topic = topicIndex.tasks.get(task.id)?.find((t) => topicPath(folder, t.course, t.slug) === notePath);
+    if (!topic) return;
+    appUi.setObservatoryTarget({ code: topic.course, tab: "Topics", topic: topic.slug });
+    navigate("observatory");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
   const isBreak = phase === "break";
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState("");

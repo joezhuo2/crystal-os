@@ -662,8 +662,9 @@ dependencies = [
 
 [[package]]
 name = "crystal-os"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
+ "base64 0.22.1",
  "log",
  "notify-debouncer-mini",
  "portable-pty",

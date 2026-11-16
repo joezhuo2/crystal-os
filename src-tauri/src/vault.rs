@@ -19,6 +19,7 @@ use std::time::{Duration, UNIX_EPOCH};
 
 use notify_debouncer_mini::notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_mini::{new_debouncer, DebounceEventResult, Debouncer};
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Runtime, Window};
 
@@ -34,6 +35,8 @@ const IGNORED_DIRS: [&str; 1] = ["node_modules"];
 
 /// Refuse to ship absurd files over IPC; a real note is nowhere near this.
 const MAX_NOTE_BYTES: u64 = 10 * 1024 * 1024;
+
+const MAX_BINARY_BYTES: u64 = 100 * 1024 * 1024;
 
 /// Obsidian writes a note several times per save; collapse those into one event.
 const DEBOUNCE: Duration = Duration::from_millis(250);
@@ -89,14 +92,23 @@ fn is_ignored(name: &str) -> bool {
   name.starts_with('.') || IGNORED_DIRS.contains(&name)
 }
 
+fn has_suffix(name: &str, suffix: &str) -> bool {
+  let n = suffix.len();
+  name.len() > n && name.is_char_boundary(name.len() - n) && name[name.len() - n..].eq_ignore_ascii_case(suffix)
+}
+
 fn is_note(name: &str) -> bool {
-  name.len() > 3 && name.is_char_boundary(name.len() - 3) && name[name.len() - 3..].eq_ignore_ascii_case(".md")
+  has_suffix(name, ".md")
+}
+
+fn is_pdf(name: &str) -> bool {
+  has_suffix(name, ".pdf")
 }
 
 /// Normalise a caller-supplied vault-relative path to `Folder/Note.md`.
 /// Mirrors `normalizeNotePath` in src/lib/vaultCore.ts, but stricter: `..`
 /// is refused outright rather than resolved, since nothing legitimate sends it.
-pub fn normalize_relative(raw: &str) -> Result<String, VaultError> {
+fn clean_relative(raw: &str) -> Result<String, VaultError> {
   let invalid = |msg: String| VaultError::new(ErrorCode::InvalidPath, msg);
 
   let rel = raw.trim().replace('\\', "/");
@@ -124,11 +136,42 @@ pub fn normalize_relative(raw: &str) -> Result<String, VaultError> {
     return Err(invalid("path must be a non-empty string".into()));
   }
 
-  let mut rel = parts.join("/");
+  Ok(parts.join("/"))
+}
+
+pub fn normalize_relative(raw: &str) -> Result<String, VaultError> {
+  let mut rel = clean_relative(raw)?;
   if !is_note(&rel) {
     rel.push_str(".md");
   }
   Ok(rel)
+}
+
+/// Like [`normalize_relative`] but for PDFs: the extension is required, never added.
+pub fn normalize_binary(raw: &str) -> Result<String, VaultError> {
+  let rel = clean_relative(raw)?;
+  if !is_pdf(&rel) && ![".png", ".jpg", ".jpeg"].iter().any(|ext| has_suffix(&rel, ext)) {
+    return Err(VaultError::new(ErrorCode::InvalidPath, format!("only .pdf and image files are allowed: {rel}")));
+  }
+  Ok(rel)
+}
+
+/// A move endpoint: a note, a PDF, or an extension-less folder.
+fn normalize_movable(raw: &str) -> Result<String, VaultError> {
+  let rel = clean_relative(raw)?;
+  let last = rel.rsplit('/').next().unwrap_or(&rel);
+  if is_note(last) || is_pdf(last) || !last.contains('.') {
+    Ok(rel)
+  } else {
+    Err(VaultError::new(ErrorCode::InvalidPath, format!("only notes, PDFs and folders can be moved: {rel}")))
+  }
+}
+
+fn join_inside(root: &Path, rel: &str) -> Result<PathBuf, VaultError> {
+  // Join segment by segment: verbatim `\\?\` roots do not accept '/'.
+  let abs = rel.split('/').fold(root.to_path_buf(), |path, part| path.join(part));
+  ensure_inside(root, &abs)?;
+  Ok(abs)
 }
 
 /// Vault-relative, forward-slashed form of `abs`, if it is inside `root`.
@@ -159,10 +202,7 @@ fn ensure_inside(root: &Path, abs: &Path) -> Result<(), VaultError> {
 /// Every file access goes through this.
 fn resolve(root: &Path, raw: &str) -> Result<(PathBuf, String), VaultError> {
   let rel = normalize_relative(raw)?;
-  // Join segment by segment: verbatim `\\?\` roots do not accept '/'.
-  let abs = rel.split('/').fold(root.to_path_buf(), |path, part| path.join(part));
-  ensure_inside(root, &abs)?;
-  Ok((abs, rel))
+  Ok((join_inside(root, &rel)?, rel))
 }
 
 /// Validate a vault folder and return its canonical form.
@@ -346,6 +386,164 @@ pub fn write_note(
 
   let meta = fs::metadata(&abs).map_err(fail)?;
   Ok(WriteResult { mtime: mtime_ms(&meta), size: meta.len(), created: existing.is_none(), path: rel })
+}
+
+pub fn read_binary(root: &Path, raw: &str) -> Result<Vec<u8>, VaultError> {
+  let rel = normalize_binary(raw)?;
+  let abs = join_inside(root, &rel)?;
+  let fail = |err: io::Error| VaultError::from_io(&err, &rel);
+
+  let meta = fs::metadata(&abs).map_err(fail)?;
+  if !meta.is_file() {
+    return Err(VaultError::new(ErrorCode::NotFound, format!("File not found: {rel}")));
+  }
+  if meta.len() > MAX_BINARY_BYTES {
+    return Err(VaultError::new(ErrorCode::Io, format!("File is too large to open: {rel}")));
+  }
+  fs::read(&abs).map_err(fail)
+}
+
+pub fn write_binary(root: &Path, raw: &str, bytes: &[u8], overwrite: bool) -> Result<WriteResult, VaultError> {
+  let rel = normalize_binary(raw)?;
+  let abs = join_inside(root, &rel)?;
+  let fail = |err: io::Error| VaultError::from_io(&err, &rel);
+
+  if bytes.len() as u64 > MAX_BINARY_BYTES {
+    return Err(VaultError::new(ErrorCode::Io, format!("File is too large to save: {rel}")));
+  }
+  if let Some(parent) = abs.parent() {
+    fs::create_dir_all(parent).map_err(fail)?;
+  }
+
+  let conflict = || VaultError::new(ErrorCode::Conflict, format!("{rel} already exists"));
+  let created = fs::symlink_metadata(&abs).is_err();
+  if !created && !overwrite {
+    return Err(conflict());
+  }
+
+  let name = abs.file_name().and_then(|n| n.to_str()).unwrap_or("file.pdf");
+  let tmp = abs.with_file_name(format!(".{name}.crystal-tmp"));
+  // A stale tmp entry may be a symlink; remove the entry itself, then refuse to open through one.
+  let _ = fs::remove_file(&tmp);
+  let staged = fs::OpenOptions::new()
+    .write(true)
+    .create_new(true)
+    .open(&tmp)
+    .and_then(|mut f| f.write_all(bytes).and_then(|_| f.sync_all()));
+  // Rename replaces a symlink entry instead of following it out of the vault.
+  let swapped = staged.and_then(|_| fs::rename(&tmp, &abs));
+  if let Err(err) = swapped {
+    let _ = fs::remove_file(&tmp);
+    return Err(fail(err));
+  }
+
+  let meta = fs::metadata(&abs).map_err(fail)?;
+  Ok(WriteResult { mtime: mtime_ms(&meta), size: meta.len(), created, path: rel })
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct MoveResult {
+  path: String,
+}
+
+fn path_ext(rel: &str) -> Option<String> {
+  rel.rsplit('/').next().and_then(|n| n.rsplit_once('.')).map(|(_, e)| e.to_ascii_lowercase())
+}
+
+const TRASH: &str = ".trash";
+
+/// Move a note, PDF or folder into `<root>/.trash`, picking a free name.
+pub fn trash_path(root: &Path, raw: &str) -> Result<MoveResult, VaultError> {
+  let rel = normalize_movable(raw)?;
+  let from_abs = join_inside(root, &rel)?;
+  let fail = |err: io::Error| VaultError::from_io(&err, &rel);
+  if fs::symlink_metadata(&from_abs).is_err() {
+    return Err(VaultError::new(ErrorCode::NotFound, format!("Not found: {rel}")));
+  }
+  if path_ext(&rel).is_none() && !from_abs.is_dir() {
+    return Err(VaultError::new(ErrorCode::InvalidPath, format!("only notes, PDFs and folders can be moved: {rel}")));
+  }
+
+  let trash_abs = join_inside(root, TRASH)?;
+  fs::create_dir_all(&trash_abs).map_err(fail)?;
+  // The trash folder itself may be a symlink out of the vault.
+  ensure_inside(root, &trash_abs)?;
+
+  let name = rel.rsplit('/').next().unwrap_or(&rel);
+  let (stem, ext) = match name.rsplit_once('.') {
+    Some((s, e)) if !s.is_empty() => (s, format!(".{e}")),
+    _ => (name, String::new()),
+  };
+  let mut candidate = name.to_string();
+  let mut n = 1;
+  while fs::symlink_metadata(trash_abs.join(&candidate)).is_ok() {
+    n += 1;
+    candidate = format!("{stem} {n}{ext}");
+  }
+  fs::rename(&from_abs, trash_abs.join(&candidate)).map_err(fail)?;
+  Ok(MoveResult { path: format!("{TRASH}/{candidate}") })
+}
+
+/// Move one entry from `.trash` back to `to`. Never overwrites.
+pub fn restore_path(root: &Path, trash_rel: &str, to: &str) -> Result<MoveResult, VaultError> {
+  let invalid = |msg: &str| VaultError::new(ErrorCode::InvalidPath, msg);
+  let segment = trash_rel
+    .strip_prefix(".trash/")
+    .filter(|s| !s.is_empty() && !s.contains(['/', '\\']) && *s != "." && *s != "..")
+    .ok_or_else(|| invalid("trash path must be a single entry under .trash"))?;
+  if clean_relative(segment)? != segment {
+    return Err(invalid("trash path must be a single entry under .trash"));
+  }
+  let to_rel = normalize_movable(to)?;
+  let from_abs = join_inside(root, &format!("{TRASH}/{segment}"))?;
+  let to_abs = join_inside(root, &to_rel)?;
+  let fail = |err: io::Error| VaultError::from_io(&err, trash_rel);
+
+  if path_ext(segment) != path_ext(&to_rel) {
+    return Err(invalid("trash path and destination must be the same kind of path"));
+  }
+  if fs::symlink_metadata(&from_abs).is_err() {
+    return Err(VaultError::new(ErrorCode::NotFound, format!("Not found: {trash_rel}")));
+  }
+  if fs::symlink_metadata(&to_abs).is_ok() {
+    return Err(VaultError::new(ErrorCode::Conflict, format!("{to_rel} already exists")));
+  }
+  if let Some(parent) = to_abs.parent() {
+    fs::create_dir_all(parent).map_err(fail)?;
+  }
+  fs::rename(&from_abs, &to_abs).map_err(fail)?;
+  Ok(MoveResult { path: to_rel })
+}
+
+/// Rename a note, PDF or folder inside the vault. Never overwrites.
+pub fn move_path(root: &Path, from: &str, to: &str) -> Result<MoveResult, VaultError> {
+  let from_rel = normalize_movable(from)?;
+  let to_rel = normalize_movable(to)?;
+  let from_abs = join_inside(root, &from_rel)?;
+  let to_abs = join_inside(root, &to_rel)?;
+  let fail = |err: io::Error| VaultError::from_io(&err, &from_rel);
+
+  let ext = path_ext;
+  if ext(&from_rel) != ext(&to_rel) {
+    return Err(VaultError::new(ErrorCode::InvalidPath, "from and to must be the same kind of path"));
+  }
+  if to_rel.to_lowercase().starts_with(&format!("{}/", from_rel.to_lowercase())) {
+    return Err(VaultError::new(ErrorCode::InvalidPath, "cannot move a folder into itself"));
+  }
+  if fs::symlink_metadata(&from_abs).is_err() {
+    return Err(VaultError::new(ErrorCode::NotFound, format!("Not found: {from_rel}")));
+  }
+  if ext(&from_rel).is_none() && !from_abs.is_dir() {
+    return Err(VaultError::new(ErrorCode::InvalidPath, format!("only notes, PDFs and folders can be moved: {from_rel}")));
+  }
+  if fs::symlink_metadata(&to_abs).is_ok() {
+    return Err(VaultError::new(ErrorCode::Conflict, format!("{to_rel} already exists")));
+  }
+  if let Some(parent) = to_abs.parent() {
+    fs::create_dir_all(parent).map_err(fail)?;
+  }
+  fs::rename(&from_abs, &to_abs).map_err(fail)?;
+  Ok(MoveResult { path: to_rel })
 }
 
 /// Vault-relative path worth telling the webview about: a note, or an
@@ -549,6 +747,61 @@ pub async fn write_vault_file<R: Runtime>(
   blocking(move || write_note(&root, &path, &content, expected_mtime)).await
 }
 
+#[tauri::command]
+pub async fn read_vault_binary<R: Runtime>(
+  app: AppHandle<R>,
+  path: String,
+) -> Result<tauri::ipc::Response, VaultError> {
+  let root = active_root(&app)?;
+  blocking(move || read_binary(&root, &path).map(tauri::ipc::Response::new)).await
+}
+
+#[tauri::command]
+pub async fn write_vault_binary<R: Runtime>(
+  app: AppHandle<R>,
+  path: String,
+  data: String,
+  overwrite: bool,
+) -> Result<WriteResult, VaultError> {
+  let root = active_root(&app)?;
+  blocking(move || {
+    if data.len() as u64 > MAX_BINARY_BYTES / 3 * 4 + 4 {
+      return Err(VaultError::new(ErrorCode::Io, "File is too large to save"));
+    }
+    let bytes = BASE64
+      .decode(data)
+      .map_err(|err| VaultError::new(ErrorCode::Io, format!("invalid data: {err}")))?;
+    write_binary(&root, &path, &bytes, overwrite)
+  })
+  .await
+}
+
+#[tauri::command]
+pub async fn move_vault_path<R: Runtime>(
+  app: AppHandle<R>,
+  from: String,
+  to: String,
+) -> Result<MoveResult, VaultError> {
+  let root = active_root(&app)?;
+  blocking(move || move_path(&root, &from, &to)).await
+}
+
+#[tauri::command]
+pub async fn trash_vault_path<R: Runtime>(app: AppHandle<R>, path: String) -> Result<MoveResult, VaultError> {
+  let root = active_root(&app)?;
+  blocking(move || trash_path(&root, &path)).await
+}
+
+#[tauri::command]
+pub async fn restore_vault_path<R: Runtime>(
+  app: AppHandle<R>,
+  trash_path: String,
+  to: String,
+) -> Result<MoveResult, VaultError> {
+  let root = active_root(&app)?;
+  blocking(move || restore_path(&root, &trash_path, &to)).await
+}
+
 /// Restart the file watcher, e.g. after the webview notices events stopped.
 #[tauri::command]
 pub async fn watch_vault<R: Runtime>(app: AppHandle<R>) -> Result<VaultStatus, VaultError> {
@@ -583,6 +836,155 @@ mod tests {
       let err = normalize_relative(bad).unwrap_err();
       assert_eq!(err.code, ErrorCode::InvalidPath, "{bad}");
     }
+  }
+
+  #[test]
+  fn normalize_binary_requires_pdf() {
+    assert_eq!(
+      normalize_binary("Observatory/MATH117/resources/a.PDF").unwrap(),
+      "Observatory/MATH117/resources/a.PDF"
+    );
+    assert_eq!(normalize_binary("Observatory/MATH117/resources/images/q1.png").unwrap(), "Observatory/MATH117/resources/images/q1.png");
+    for bad in ["a.md", "a.exe", "a.svg", "../a.png", "C:/a.pdf", ".obsidian/a.pdf", "a"] {
+      assert_eq!(normalize_binary(bad).unwrap_err().code, ErrorCode::InvalidPath, "{bad}");
+    }
+  }
+
+  #[test]
+  fn binary_round_trip_and_conflict() {
+    let (_dir, root) = vault();
+    let bytes = [0u8, 159, 146, 150, 255];
+    write_binary(&root, "O/a.pdf", &bytes, false).unwrap();
+    assert_eq!(read_binary(&root, "O/a.pdf").unwrap(), bytes);
+    assert_eq!(write_binary(&root, "O/a.pdf", b"x", false).unwrap_err().code, ErrorCode::Conflict);
+    write_binary(&root, "O/a.pdf", b"x", true).unwrap();
+    assert_eq!(read_binary(&root, "O/a.pdf").unwrap(), b"x");
+  }
+
+  #[test]
+  fn moves_folders_without_overwriting() {
+    let (_dir, root) = vault();
+    write_binary(&root, "Observatory/MATH117/resources/a.pdf", b"pdf", false).unwrap();
+    write_binary(&root, "Observatory/MATH119/b.pdf", b"b", false).unwrap();
+
+    let moved = move_path(&root, "Observatory/MATH117", "Observatory/MATH118").unwrap();
+    assert_eq!(moved.path, "Observatory/MATH118");
+    assert_eq!(read_binary(&root, "Observatory/MATH118/resources/a.pdf").unwrap(), b"pdf");
+    assert!(!root.join("Observatory/MATH117").exists());
+
+    let err = move_path(&root, "Observatory/MATH118", "Observatory/MATH119").unwrap_err();
+    assert_eq!(err.code, ErrorCode::Conflict);
+    let err = move_path(&root, "Observatory/MATH118", "Observatory/MATH118/inner").unwrap_err();
+    assert_eq!(err.code, ErrorCode::InvalidPath);
+    let err = move_path(&root, "Observatory/MATH118", "Observatory/x.exe").unwrap_err();
+    assert_eq!(err.code, ErrorCode::InvalidPath);
+    assert_eq!(move_path(&root, "Nope", "Other").unwrap_err().code, ErrorCode::NotFound);
+  }
+
+  #[test]
+  fn trashes_and_restores_folders() {
+    let (_dir, root) = vault();
+    write_binary(&root, "Observatory/MATH117/a.pdf", b"one", false).unwrap();
+    let t = trash_path(&root, "Observatory/MATH117").unwrap();
+    assert_eq!(t.path, ".trash/MATH117");
+    assert_eq!(fs::read(root.join(".trash/MATH117/a.pdf")).unwrap(), b"one");
+    assert!(!root.join("Observatory/MATH117").exists());
+
+    write_binary(&root, "Observatory/MATH117/b.pdf", b"two", false).unwrap();
+    let t2 = trash_path(&root, "Observatory/MATH117").unwrap();
+    assert_eq!(t2.path, ".trash/MATH117 2");
+
+    let back = restore_path(&root, &t.path, "Observatory/MATH117").unwrap();
+    assert_eq!(back.path, "Observatory/MATH117");
+    assert_eq!(read_binary(&root, "Observatory/MATH117/a.pdf").unwrap(), b"one");
+    assert!(!root.join(".trash/MATH117").exists());
+
+    let err = restore_path(&root, &t2.path, "Observatory/MATH117").unwrap_err();
+    assert_eq!(err.code, ErrorCode::Conflict);
+    assert!(root.join(".trash/MATH117 2").exists());
+  }
+
+  #[test]
+  fn trash_numbers_files_before_the_extension() {
+    let (_dir, root) = vault();
+    for _ in 0..2 {
+      write_binary(&root, "a/x.pdf", b"p", false).unwrap();
+      trash_path(&root, "a/x.pdf").unwrap();
+    }
+    assert!(root.join(".trash/x.pdf").exists() && root.join(".trash/x 2.pdf").exists());
+  }
+
+  #[test]
+  fn trash_and_restore_refuse_bad_paths() {
+    let (_dir, root) = vault();
+    fs::create_dir_all(root.join(".trash/a")).unwrap();
+    fs::create_dir_all(root.join("notes/x")).unwrap();
+    for bad in ["", ".", ".obsidian/x", ".trash/a", "../x"] {
+      assert_eq!(trash_path(&root, bad).unwrap_err().code, ErrorCode::InvalidPath, "{bad:?}");
+    }
+    for bad in ["../x", ".trash/a/b", "notes/x", ".trash/", ".trash/..", ".trash/a:b"] {
+      assert_eq!(restore_path(&root, bad, "Z").unwrap_err().code, ErrorCode::InvalidPath, "{bad:?}");
+    }
+    assert!(root.join("notes/x").exists());
+  }
+
+  #[test]
+  fn move_refuses_root_and_non_folders() {
+    let (_dir, root) = vault();
+    write_binary(&root, "a.pdf", b"p", false).unwrap();
+    fs::write(root.join("plain"), "x").unwrap();
+    for bad in ["", "."] {
+      assert_eq!(move_path(&root, bad, "X").unwrap_err().code, ErrorCode::InvalidPath, "from {bad:?}");
+      assert_eq!(move_path(&root, "a.pdf", bad).unwrap_err().code, ErrorCode::InvalidPath, "to {bad:?}");
+    }
+    assert_eq!(move_path(&root, "plain", "other").unwrap_err().code, ErrorCode::InvalidPath);
+    assert!(root.join("plain").exists());
+  }
+
+  #[test]
+  fn refused_overwrite_keeps_original_bytes() {
+    let (_dir, root) = vault();
+    write_binary(&root, "a.pdf", b"keep", false).unwrap();
+    assert_eq!(write_binary(&root, "a.pdf", b"new", false).unwrap_err().code, ErrorCode::Conflict);
+    fs::create_dir(root.join("d.pdf")).unwrap();
+    assert!(write_binary(&root, "d.pdf", b"new", true).is_err());
+    assert_eq!(read_binary(&root, "a.pdf").unwrap(), b"keep");
+    assert!(!root.join(".a.pdf.crystal-tmp").exists());
+    assert!(!root.join(".d.pdf.crystal-tmp").exists());
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn overwrite_does_not_follow_dangling_symlink() {
+    let (_dir, root) = vault();
+    let (_outside_dir, outside) = vault();
+    let target = outside.join("target");
+    std::os::unix::fs::symlink(&target, root.join("x.pdf")).unwrap();
+
+    write_binary(&root, "x.pdf", b"in", true).unwrap();
+    assert!(!target.exists());
+    assert_eq!(read_binary(&root, "x.pdf").unwrap(), b"in");
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn no_overwrite_refuses_symlink_entry() {
+    let (_dir, root) = vault();
+    let (_outside_dir, outside) = vault();
+    let target = outside.join("target");
+    std::os::unix::fs::symlink(&target, root.join("x.pdf")).unwrap();
+
+    assert_eq!(write_binary(&root, "x.pdf", b"in", false).unwrap_err().code, ErrorCode::Conflict);
+    assert!(!target.exists());
+  }
+
+  #[test]
+  fn moves_pdfs_into_new_folders() {
+    let (_dir, root) = vault();
+    write_binary(&root, "a.pdf", b"p", false).unwrap();
+    move_path(&root, "a.pdf", "New/Dir/a.pdf").unwrap();
+    assert_eq!(read_binary(&root, "New/Dir/a.pdf").unwrap(), b"p");
+    assert_eq!(move_path(&root, "New/Dir/a.pdf", "New/Dir/a.md").unwrap_err().code, ErrorCode::InvalidPath);
   }
 
   #[test]

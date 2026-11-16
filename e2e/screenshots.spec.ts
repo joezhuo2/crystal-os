@@ -7,20 +7,57 @@ import * as sample from "./fixtures/sampleData";
 
 test.skip(!process.env.SCREENSHOTS, "Set SCREENSHOTS=1 (and E2E_BASE_URL if the dev server is not on 127.0.0.1:8080) to recapture the README images.");
 
+test.use({ actionTimeout: 20_000 });
+
 const SIZE = { width: 1400, height: 880 };
 const OUT = path.resolve("docs/images");
 
-const PAGES = [
-  ["The Pulse", "home"],
-  ["The Engine", "engine"],
-  ["The Horizon", "horizon"],
-  ["The Orbit", "orbit"],
-  ["The Vault", "vault"],
-  ["The Ledger", "ledger"],
-  ["The Atmosphere", "atmosphere"],
-  ["The Archive", "archive"],
-  ["Settings", "settings"],
-] as const;
+type Shot = { file: string; page: string; then?: (page: Page) => Promise<unknown> };
+
+const settingsSection = (id: string) => (page: Page) =>
+  page.locator(`[data-settings-section="${id}"]`).evaluate((el) => el.scrollIntoView({ block: "start", behavior: "instant" }));
+
+// Observatory shots run in this order, each one starting from the view the previous one left.
+const SHOTS: Shot[] = [
+  { file: "home", page: "The Pulse" },
+  { file: "engine", page: "The Engine" },
+  { file: "horizon", page: "The Horizon" },
+  { file: "orbit", page: "The Orbit" },
+  { file: "vault", page: "The Vault" },
+  { file: "ledger", page: "The Ledger" },
+  { file: "courier", page: "The Courier" },
+  { file: "atmosphere", page: "The Atmosphere" },
+  { file: "observatory", page: "The Observatory" },
+  { file: "deep-sky", page: "The Observatory", then: (p) => p.getByRole("tab", { name: "Deep Sky" }).click() },
+  {
+    file: "observatory-course",
+    page: "The Observatory",
+    then: async (p) => {
+      await p.getByRole("tab", { name: "Courses" }).click();
+      await p.getByRole("button", { name: /MATH201/ }).click();
+      await p.getByRole("tab", { name: "Topics" }).click();
+      await p.getByRole("button", { name: "Taylor Series", exact: true }).click();
+      // Opening the topic scrolls it into view; scroll back so the course header stays in the shot.
+      await p.mouse.wheel(0, -2000);
+    },
+  },
+  {
+    file: "observatory-review",
+    page: "The Observatory",
+    then: async (p) => {
+      await p.locator("header").getByRole("button", { name: "Review", exact: true }).click();
+      await p.getByRole("button", { name: "Start questions" }).click();
+      await p.getByRole("button", { name: "Show answer" }).click();
+    },
+  },
+  { file: "archive", page: "The Archive", then: (p) => p.locator("button.obsidian-note", { hasText: "Website Redesign" }).click() },
+  { file: "portal", page: "The Portal" },
+  { file: "settings", page: "Settings", then: settingsSection("modules") },
+  { file: "settings-ai", page: "Settings", then: settingsSection("ai") },
+];
+
+// The tour: one stop per page, plus the Observatory's course and review views.
+const TOUR = new Set(["home", "engine", "horizon", "orbit", "vault", "ledger", "courier", "atmosphere", "observatory", "observatory-course", "observatory-review", "archive", "portal", "settings"]);
 
 const SUPABASE_HOST = new URL(process.env.VITE_SUPABASE_URL ?? "https://unset.supabase.co").host;
 const PROJECT_REF = SUPABASE_HOST.split(".")[0];
@@ -57,7 +94,10 @@ const session = {
 const storage: Record<string, string> = {
   [`sb-${PROJECT_REF}-auth-token`]: JSON.stringify(session),
   "crystal-os-privacy-mode": "false",
-  "crystal-os-theme": "orbit",
+  "crystal-os-theme": "default",
+  "crystal-os-flux-lines": "1",
+  "crystal-os-modules": JSON.stringify({ uninstalled: [] }),
+  "crystal-os-observatory": JSON.stringify(sample.observatorySettings),
   "crystal-os-weather-city": "on-143",
   "crystal-os-atmosphere-auto-locate": "0",
   "crystal-os-onboarding-dismissed": "1",
@@ -123,6 +163,7 @@ function api(route: Route, url: URL, blocked: string[]) {
     const max = q.get("timeMax") ?? "9999";
     return json(route, { events: sample.calendarEvents.filter((e) => compare(String(e.endISO), min) > 0 && compare(String(e.startISO), max) < 0) });
   }
+  if (get && p === "/api/ai/status") return json(route, sample.aiStatus);
   if (get && p === "/api/mail/status") return json(route, sample.mailStatus);
   if (get && p === "/api/mail/digest") return json(route, sample.mailDigest());
   if (get && p === "/api/obsidian/notes") {
@@ -165,8 +206,8 @@ async function sampleContext(browser: Browser, baseURL: string, video?: string):
   await context.routeWebSocket(/supabase/, (ws) => ws.close());
   // A mid-morning clock, so the greeting, Today views and work-day capacity read like a working day.
   await context.clock.install({ time: sample.NOW });
-  // Still backdrops for the tour: moving backgrounds change every pixel of every frame and balloon the GIF.
-  const entries = video ? { ...storage, "crystal-os-perf-still-backdrops": "1" } : storage;
+  // Still backdrops and no fades for the tour: moving backgrounds and cross-fades change every pixel of a frame and balloon the GIF.
+  const entries = video ? { ...storage, "crystal-os-perf-still-backdrops": "1", "crystal-os-perf-no-transitions": "1" } : storage;
   await context.addInitScript((seed) => {
     for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v);
   }, entries);
@@ -176,22 +217,27 @@ async function sampleContext(browser: Browser, baseURL: string, video?: string):
 async function settle(page: Page, pause = 1500) {
   await expect(page.locator("main")).not.toBeEmpty();
   await expect(page.locator(SKELETONS)).toHaveCount(0, { timeout: 20_000 });
-  await expect(page.getByText(/sign in/i)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^sign in/i })).toHaveCount(0);
   await page.waitForTimeout(pause);
 }
 
-async function openPage(page: Page, label: string, pause?: number) {
-  await page.locator("aside").getByRole("button", { name: label }).click();
-  await page.mouse.move(SIZE.width - 4, SIZE.height - 4);
-  await settle(page, label === "The Archive" || label === "Settings" ? 500 : pause);
-  if (label === "The Archive") {
-    await page.locator("button.obsidian-note", { hasText: "Website Redesign" }).click();
-    await page.mouse.move(SIZE.width - 4, SIZE.height - 4);
-    await settle(page, pause);
+async function shoot(page: Page, shot: Shot, from: string | undefined, pause = 1500) {
+  if (shot.page !== from) {
+    // A dispatched click never hovers the sidebar, so it does not slide open in the shot.
+    await page.locator("aside").getByRole("button", { name: shot.page }).dispatchEvent("click");
+    await settle(page, 300);
   }
-  if (label === "Settings") {
-    await page.locator('[data-settings-section="modules"]').evaluate((el) => el.scrollIntoView({ block: "start", behavior: "instant" }));
-    await page.waitForTimeout(pause ?? 1500);
+  await shot.then?.(page);
+  await page.mouse.move(SIZE.width - 4, SIZE.height - 4);
+  await settle(page, pause);
+}
+
+async function tour(page: Page, shots: Shot[], pause: number, each?: (shot: Shot) => Promise<void>) {
+  let from: string | undefined = "The Pulse";
+  for (const shot of shots) {
+    await shoot(page, shot, from, pause);
+    from = shot.page;
+    await each?.(shot);
   }
 }
 
@@ -214,12 +260,11 @@ test("README screenshots", async ({ browser, baseURL }) => {
   const { context, blocked } = await sampleContext(browser, baseURL!);
   const page = await context.newPage();
   await boot(page);
-  for (const [label, file] of PAGES) {
-    await openPage(page, label);
+  await tour(page, SHOTS, 1500, async ({ file }) => {
     const png = test.info().outputPath(`${file}.png`);
     await page.screenshot({ path: png });
     ffmpeg("-i", png, "-c:v", "libwebp", "-quality", "82", path.join(OUT, "screenshots", `${file}.webp`));
-  }
+  });
   await context.close();
   report(blocked);
 });
@@ -233,11 +278,12 @@ test("README tour GIF", async ({ browser, baseURL }) => {
   const videoStart = Date.now();
   await boot(page);
   // Warm every page first, so the recorded pass shows loaded pages, not lazy-load skeletons.
-  for (const [label] of PAGES) await openPage(page, label, 300);
-  await openPage(page, "The Pulse", 300);
+  const stops = SHOTS.filter((s) => TOUR.has(s.file));
+  await tour(page, stops, 300);
+  await shoot(page, stops[0], stops.at(-1)!.page, 300);
   const trim = (Date.now() - videoStart) / 1000;
   await page.waitForTimeout(2000);
-  for (const [label] of PAGES.slice(1)) await openPage(page, label, 2000);
+  await tour(page, stops.slice(1), 1800);
   const length = (Date.now() - videoStart) / 1000 - trim + 0.5;
   const video = page.video()!;
   await context.close();
@@ -246,7 +292,7 @@ test("README tour GIF", async ({ browser, baseURL }) => {
     "-ss", trim.toFixed(2),
     "-t", length.toFixed(2),
     "-i", await video.path(),
-    "-vf", "fps=10,scale=840:-1:flags=lanczos,mpdecimate=hi=64*24:lo=64*8:frac=0.5,tpad=stop_mode=clone:stop_duration=1,split[a][b];[a]palettegen=max_colors=80:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle",
+    "-vf", "fps=10,scale=840:-1:flags=lanczos,mpdecimate=hi=64*48:lo=64*16:frac=0.5,tpad=stop_mode=clone:stop_duration=1,split[a][b];[a]palettegen=max_colors=72:stats_mode=diff[p];[b][p]paletteuse=dither=none:diff_mode=rectangle",
     "-fps_mode", "vfr",
     "-loop", "0",
     gif,

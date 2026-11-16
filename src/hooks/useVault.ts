@@ -167,7 +167,7 @@ export function useQuickAdd() {
   });
 }
 
-const fetchRawNote = (notePath: string) =>
+export const fetchRawNote = (notePath: string) =>
   isDesktop()
     ? readRawNoteNative(notePath)
     : request<RawNote>(`${API_BASE}/raw?path=${encodeURIComponent(notePath)}`);
@@ -212,19 +212,23 @@ export interface SaveNoteInput {
   expectedMtime: number;
 }
 
+/** The same write outside React, for the Observatory store. */
+export function saveVaultNote(input: SaveNoteInput) {
+  return isDesktop()
+    ? saveNoteNative(input)
+    : request<{ path: string; mtime: number }>(`${API_BASE}/note`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+}
+
 /** Replace a note's file, then refresh every vault query. */
 export function useSaveNote() {
   const queryClient = useQueryClient();
 
   return useMutation<{ path: string; mtime: number }, Error, SaveNoteInput>({
-    mutationFn: (input) =>
-      isDesktop()
-        ? saveNoteNative(input)
-        : request<{ path: string; mtime: number }>(`${API_BASE}/note`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(input),
-          }),
+    mutationFn: saveVaultNote,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vault"] });
     },

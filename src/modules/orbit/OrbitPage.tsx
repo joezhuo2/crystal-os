@@ -33,6 +33,9 @@ import { GlideEffect } from "@/components/crystal/GlideEffect";
 import { FocusBars, FocusMonthBars, MoneyBars, TaskOrbit } from "@/modules/orbit/OrbitCharts";
 import { FocusPie } from "@/modules/orbit/FocusPie";
 import { MoodCard } from "@/modules/orbit/MoodCard";
+import { StudyCard } from "@/modules/orbit/StudyCard";
+import { useStudyMarkdown, withStudy } from "@/modules/orbit/useOrbitStudy";
+import { useIsInstalled } from "@/lib/installedModules";
 import { TodayCard } from "@/modules/orbit/TodayCard";
 import { OrbitHistoryError, useNow, useOrbitReview, type OrbitReviewResult } from "@/hooks/useOrbitReview";
 import { useCreateNote, vaultErrorCode } from "@/hooks/useVault";
@@ -496,13 +499,14 @@ function ReflectionCard({ review, habitNote }: { review: Review; habitNote: stri
   const [note, setNote] = useState("");
   const [confirm, setConfirm] = useState(false);
   const create = useCreateNote();
+  const study = useStudyMarkdown(review.period, useIsInstalled("observatory"));
   const path = exportPath(review.period);
   const kind = review.period.kind;
 
   const write = (overwrite: boolean) => {
     const reflection: Reflection = { prompt, note, habitNote };
     create.mutate(
-      { path, content: toMarkdown(review, reflection), overwrite },
+      { path, content: withStudy(toMarkdown(review, reflection), study.markdown), overwrite },
       {
         onSuccess: (res) => {
           setConfirm(false);
@@ -753,6 +757,7 @@ export default function OrbitPage() {
   // Habit notes, per review, kept while browsing so switching away and back keeps them.
   const [habitNotes, setHabitNotes] = useState<Record<string, string>>({});
   const { review, loading, historyError, vaultUnavailable, calendarConnected } = shown.result;
+  const studyInstalled = useIsInstalled("observatory");
 
   // Seeing the newest review clears its ready badge.
   const latestKey = latest[shown.kind].key;
@@ -848,6 +853,7 @@ export default function OrbitPage() {
               <MoneyCard review={review} />
               <TrendsCard review={review} />
               <MoodCard review={review} />
+              {studyInstalled && <StudyCard review={review} />}
               <VaultCard review={review} unavailable={vaultUnavailable} />
               {review.estimates.length > 0 && <EstimatesCard review={review} />}
               {review.habits.length > 0 && (

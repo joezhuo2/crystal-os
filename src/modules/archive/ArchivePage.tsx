@@ -1,7 +1,5 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { m } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -30,6 +28,7 @@ import {
 import { useShortcut } from "@/hooks/useShortcut";
 import { isDesktop } from "@/lib/platform";
 import { useDebouncedValue } from "@/lib/utils";
+import { Markdown } from "@/components/Markdown";
 import {
   buildLinkTargets,
   noteConnections,
@@ -235,13 +234,6 @@ function NoteList({
     </div>
   );
 }
-
-const REMARK_PLUGINS = [remarkGfm];
-
-/** The rendered body. Memoised so typing in the search box never re-parses it. */
-const NoteMarkdown = memo(function NoteMarkdown({ body }: { body: string }) {
-  return <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>{body}</ReactMarkdown>;
-});
 
 function ConnectionGroup({
   label,
@@ -530,7 +522,7 @@ function NoteReader({
             }
           }}
         >
-          <NoteMarkdown body={body} />
+          <Markdown>{body}</Markdown>
         </div>
 
         <NoteConnectionsPanel
