@@ -15,7 +15,7 @@ import { GlassTip } from "@/components/ui/glass-tooltip";
 import { useHabitActions, useHabitsData } from "@/hooks/useHabits";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { NumberInput } from "@/components/ui/number-input";
-import { HABIT_COLORS, HABIT_NAME_MAX, type Habit } from "@/lib/habits";
+import { HABIT_COLORS, HABIT_NAME_MAX, HABIT_UNIT_MAX, type Habit } from "@/lib/habits";
 import { MAX_HABIT_REMINDERS_PER_DAY, habitReminders, useHabitReminders } from "@/lib/habitReminders";
 
 const WEEKDAY_BUTTONS = [
@@ -97,6 +97,44 @@ function SchedulePicker({ habit }: { habit: Habit }) {
         </label>
       )}
       <p className="text-[11px] text-muted-foreground">Days off do not break the streak.</p>
+      <AmountPicker habit={habit} />
+    </div>
+  );
+}
+
+/** A daily amount to reach (8 glasses, 30 min); empty for a plain tick. */
+function AmountPicker({ habit }: { habit: Habit }) {
+  const { updateHabit } = useHabitActions();
+  const [unit, setUnit] = useState(habit.unit ?? "");
+  useEffect(() => setUnit(habit.unit ?? ""), [habit.unit]);
+  return (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <NumberInput
+        unstyled
+        min={0}
+        max={9999}
+        placeholder="1"
+        value={habit.target ?? ""}
+        onChange={(e) => {
+          const target = Math.min(9999, Math.round(Number(e.target.value)) || 0);
+          void updateHabit(habit.id, { target: target > 0 ? target : null });
+        }}
+        aria-label={`Daily amount for ${habit.name}`}
+        className="orbit-textarea py-1.5 text-xs w-16 text-right"
+      />
+      <input
+        value={unit}
+        onChange={(e) => setUnit(e.target.value)}
+        onBlur={() => unit.trim() !== (habit.unit ?? "") && void updateHabit(habit.id, { unit: unit.trim() || null })}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        }}
+        maxLength={HABIT_UNIT_MAX}
+        placeholder="unit"
+        aria-label={`Unit for ${habit.name}`}
+        className="orbit-textarea py-1.5 text-xs w-24"
+      />
+      a day (empty: a plain tick)
     </div>
   );
 }
@@ -215,7 +253,7 @@ function HabitRow({
           aria-label="Habit name"
           className="orbit-habit-name"
         />
-        <GlassTip label="Schedule" hint={scheduleHint(habit)} tone="orbit">
+        <GlassTip label="Schedule and amount" hint={scheduleHint(habit)} tone="orbit">
           <button
             type="button"
             className="orbit-icon-button"

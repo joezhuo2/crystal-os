@@ -21,13 +21,30 @@ export interface Habit {
   weekdays?: number[] | null;
   /** Times a week instead of fixed days; null when not used. */
   weeklyTarget?: number | null;
+  /** The amount that makes a day done (8 glasses, 30 min); null for a plain tick. */
+  target?: number | null;
+  unit?: string | null;
 }
 
 export interface HabitCheck {
   habitId: string;
   /** Local day it was done. */
   day: string;
+  /** How much was logged, for a habit with a target. */
+  amount?: number;
+  /** Logged, but short of the target: it does not count as done. */
+  partial?: boolean;
 }
+
+/** Longest unit label, e.g. "glasses". */
+export const HABIT_UNIT_MAX = 12;
+
+/** Whether `amount` falls short of the habit's target. */
+export const isPartial = (target: number | null | undefined, amount: number | undefined) =>
+  !!target && amount !== undefined && amount < target;
+
+/** How much one press of + or - adds: 1 for small targets, 5 for large ones. */
+export const amountStep = (target: number) => (target >= 20 ? 5 : 1);
 
 /** Longest habit name, matching the check in 0004_habits.sql. */
 export const HABIT_NAME_MAX = 40;
@@ -69,6 +86,7 @@ export function isActiveOn(habit: Pick<Habit, "createdAt" | "archivedAt">, day: 
 export function indexChecks(checks: HabitCheck[]): Map<string, Set<string>> {
   const index = new Map<string, Set<string>>();
   for (const c of checks) {
+    if (c.partial) continue;
     let days = index.get(c.habitId);
     if (!days) index.set(c.habitId, (days = new Set()));
     days.add(c.day);

@@ -4,6 +4,9 @@ import {
   habitGrid,
   isActiveOn,
   longestRun,
+  amountStep,
+  indexChecks,
+  isPartial,
   overallRate,
   restDays,
   scheduledOn,
@@ -202,5 +205,24 @@ describe("habit schedules", () => {
     expect([weekdays.done, weekdays.active, weekdays.rate]).toEqual([2, 3, 67]);
     const [weekly] = summarizeHabits(period, [{ ...base, weeklyTarget: 2 }], checks, "2026-11-20");
     expect([weekly.done, weekly.active, weekly.rate]).toEqual([2, 2, 100]);
+  });
+});
+
+describe("quantified habits", () => {
+  it("leaves a day short of the target out of the done days", () => {
+    const checks: HabitCheck[] = [
+      { habitId: "w", day: "2026-11-15", amount: 8 },
+      { habitId: "w", day: "2026-11-16", amount: 3, partial: isPartial(8, 3) },
+    ];
+    expect([...(indexChecks(checks).get("w") ?? [])]).toEqual(["2026-11-15"]);
+  });
+
+  it("knows a partial amount, and steps by 1 or 5", () => {
+    expect(isPartial(8, 7)).toBe(true);
+    expect(isPartial(8, 8)).toBe(false);
+    expect(isPartial(null, 1)).toBe(false);
+    expect(isPartial(8, undefined)).toBe(false);
+    expect(amountStep(8)).toBe(1);
+    expect(amountStep(30)).toBe(5);
   });
 });

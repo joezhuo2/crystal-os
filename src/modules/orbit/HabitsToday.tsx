@@ -1,11 +1,12 @@
 import { memo, useState } from "react";
-import { Check, Plus, Settings2 } from "lucide-react";
+import { Check, Minus, Plus, Settings2 } from "lucide-react";
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { HabitManager } from "@/modules/orbit/HabitManager";
 import { HabitsError, useHabitActions, useHabitsData } from "@/hooks/useHabits";
 import {
   TIP_NAMES_SHOWN,
   WEEKDAY_LABELS,
+  amountStep,
   currentStreak,
   dayShare,
   habitGrid,
@@ -75,7 +76,7 @@ const GridCell = memo(function GridCell({ cell, size }: { cell: HabitDay | null;
  */
 export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today: string }) {
   const query = useHabitsData();
-  const { setToday } = useHabitActions();
+  const { setToday, setAmount } = useHabitActions();
   const [managing, setManaging] = useState(false);
 
   const habits = query.data?.habits ?? [];
@@ -140,6 +141,8 @@ export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today
                 const done = days.has(today);
                 const streak = currentStreak(days, today, restDays(h, days, today));
                 const resting = !done && !due.includes(h);
+                const amount = h.target ? (checks.find((c) => c.habitId === h.id && c.day === today)?.amount ?? 0) : 0;
+                const step = amountStep(h.target ?? 0);
                 const status = h.weeklyTarget
                   ? `${weekCount(days, today)}/${h.weeklyTarget} this week`
                   : done
@@ -147,7 +150,7 @@ export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today
                     : resting
                       ? "Rest day"
                       : "Tick for today";
-                return (
+                const chip = (
                   <GlassTip
                     key={h.id}
                     label={h.name}
@@ -157,9 +160,18 @@ export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today
                     <button
                       type="button"
                       aria-pressed={done}
-                      onClick={() => void setToday(h.id, !done)}
+                      onClick={() => void (h.target ? setAmount(h.id, done ? 0 : h.target) : setToday(h.id, !done))}
                       className={`orbit-chip orbit-habit-chip ${done ? "orbit-chip-on" : ""} ${resting ? "opacity-50" : ""}`}
-                      style={{ "--habit": h.color } as React.CSSProperties}
+                      style={
+                        {
+                          "--habit": h.color,
+                          ...(h.target && amount && !done
+                            ? {
+                                backgroundImage: `linear-gradient(90deg, color-mix(in srgb, ${h.color} 28%, transparent) ${(amount / h.target) * 100}%, transparent 0)`,
+                              }
+                            : {}),
+                        } as React.CSSProperties
+                      }
                     >
                       {done ? (
                         <Check className="w-3 h-3 orbit-habit-check" aria-hidden="true" />
@@ -167,8 +179,32 @@ export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today
                         <span className="orbit-habit-dot" style={{ background: h.color }} aria-hidden="true" />
                       )}
                       <span className="truncate">{h.name}</span>
+                      {!!h.target && (
+                        <span className="tabular-nums opacity-80">
+                          {amount}/{h.target}
+                          {h.unit ? ` ${h.unit}` : ""}
+                        </span>
+                      )}
                     </button>
                   </GlassTip>
+                );
+                if (!h.target) return chip;
+                return (
+                  <span key={h.id} className="inline-flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      className="orbit-icon-button"
+                      aria-label={`Less ${h.name}`}
+                      disabled={!amount}
+                      onClick={() => void setAmount(h.id, amount - step)}
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    {chip}
+                    <button type="button" className="orbit-icon-button" aria-label={`More ${h.name}`} onClick={() => void setAmount(h.id, amount + step)}>
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </span>
                 );
               })
             )}

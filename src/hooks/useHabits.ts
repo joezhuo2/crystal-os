@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { db } from "@/lib/localDb";
 import { useAuth } from "@/contexts/AuthContext";
-import { HABIT_NAME_MAX, sortHabits, type Habit, type HabitCheck } from "@/lib/habits";
+import { HABIT_NAME_MAX, HABIT_UNIT_MAX, isPartial, sortHabits, type Habit, type HabitCheck } from "@/lib/habits";
 import { toLocalDateStr } from "@/lib/utils";
 
 /** Under ["app"], so signing out clears it with the tasks and transactions. */
@@ -40,9 +40,11 @@ interface HabitRow {
   archived_at: string | null;
   weekdays?: number[] | null;
   weekly_target?: number | null;
+  target?: number | null;
+  unit?: string | null;
 }
 
-const HABIT_COLUMNS = "id, name, color, position, created_at, archived_at, weekdays, weekly_target";
+const HABIT_COLUMNS = "id, name, color, position, created_at, archived_at, weekdays, weekly_target, target, unit";
 
 const fromRow = (r: HabitRow): Habit => ({
   id: r.id,
@@ -53,19 +55,26 @@ const fromRow = (r: HabitRow): Habit => ({
   archivedAt: r.archived_at,
   weekdays: r.weekdays ?? null,
   weeklyTarget: r.weekly_target ?? null,
+  target: r.target ?? null,
+  unit: r.unit ?? null,
 });
+
+const toCheck = (habitId: string, day: string, amount: unknown, target: number | null | undefined): HabitCheck =>
+  typeof amount === "number" ? { habitId, day, amount, partial: isPartial(target, amount) } : { habitId, day };
 
 async function fetchHabits(): Promise<HabitsData> {
   const [habits, checks] = await Promise.all([
     db.from("habits").select(HABIT_COLUMNS),
     // A few habits a day for years is still well under this.
-    db.from("habit_checks").select("habit_id, day").order("day").limit(50_000),
+    db.from("habit_checks").select("habit_id, day, amount").order("day").limit(50_000),
   ]);
   const error = habits.error ?? checks.error;
   if (error) throw new HabitsError(error.message, isMissingTable(error));
+  const list = sortHabits(((habits.data ?? []) as HabitRow[]).map(fromRow));
+  const targets = new Map(list.map((h) => [h.id, h.target]));
   return {
-    habits: sortHabits(((habits.data ?? []) as HabitRow[]).map(fromRow)),
-    checks: (checks.data ?? []).map((r) => ({ habitId: r.habit_id as string, day: r.day as string })),
+    habits: list,
+    checks: (checks.data ?? []).map((r) => toCheck(r.habit_id as string, r.day as string, r.amount, targets.get(r.habit_id as string))),
   };
 }
 
@@ -129,6 +138,27 @@ export function useHabitActions() {
     [patch],
   );
 
+  /** Logs today's amount for a habit with a target; 0 clears it. */
+  const setAmount = useCallback(
+    async (habitId: string, amount: number) => {
+      const day = toLocalDateStr();
+      const logged = Math.max(0, Math.round(amount));
+      const undo = patch((d) => {
+        const rest = d.checks.filter((c) => !(c.habitId === habitId && c.day === day));
+        const target = d.habits.find((h) => h.id === habitId)?.target;
+        return { ...d, checks: logged ? [...rest, toCheck(habitId, day, logged, target)] : rest };
+      });
+      const { error } = logged
+        ? await db.from("habit_checks").upsert({ habit_id: habitId, day, amount: logged }, { onConflict: "habit_id,day" })
+        : await db.from("habit_checks").delete().eq("habit_id", habitId).eq("day", day);
+      if (error) {
+        undo();
+        fail("log the habit", error);
+      }
+    },
+    [patch],
+  );
+
   const addHabit = useCallback(
     async (name: string, color: string) => {
       const clean = name.trim().slice(0, HABIT_NAME_MAX);
@@ -150,13 +180,31 @@ export function useHabitActions() {
   );
 
   const updateHabit = useCallback(
-    async (id: string, changes: { name?: string; color?: string; weekdays?: number[] | null; weeklyTarget?: number | null }) => {
+    async (
+      id: string,
+      changes: {
+        name?: string;
+        color?: string;
+        weekdays?: number[] | null;
+        weeklyTarget?: number | null;
+        target?: number | null;
+        unit?: string | null;
+      },
+    ) => {
       const next = { ...changes };
       if (next.name !== undefined) {
         next.name = next.name.trim().slice(0, HABIT_NAME_MAX);
         if (!next.name) return;
       }
-      const undo = patch((d) => ({ ...d, habits: d.habits.map((h) => (h.id === id ? { ...h, ...next } : h)) }));
+      if (next.unit != null) next.unit = next.unit.trim().slice(0, HABIT_UNIT_MAX) || null;
+      const undo = patch((d) => ({
+        habits: d.habits.map((h) => (h.id === id ? { ...h, ...next } : h)),
+        // A new target changes which logged days fall short of it.
+        checks:
+          next.target === undefined
+            ? d.checks
+            : d.checks.map((c) => (c.habitId === id ? toCheck(c.habitId, c.day, c.amount, next.target) : c)),
+      }));
       const { weeklyTarget, ...row } = next;
       const { error } = await db
         .from("habits")
@@ -208,7 +256,7 @@ export function useHabitActions() {
   );
 
   return useMemo(
-    () => ({ setToday, addHabit, updateHabit, archiveHabit, reorderHabits }),
-    [setToday, addHabit, updateHabit, archiveHabit, reorderHabits],
+    () => ({ setToday, setAmount, addHabit, updateHabit, archiveHabit, reorderHabits }),
+    [setToday, setAmount, addHabit, updateHabit, archiveHabit, reorderHabits],
   );
 }
