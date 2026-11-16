@@ -56,6 +56,7 @@ import type { TabId } from "@/modules/registry";
 import { MailWidget } from "@/modules/mail/MailWidget";
 import { TradesWidget } from "@/modules/trades/TradesWidget";
 
+const NowCard = lazy(() => import("./NowCard"));
 const ObservatoryWidget = lazy(() => import("@/modules/observatory/ObservatoryWidget").then((m) => ({ default: m.ObservatoryWidget })));
 
 /** The greeting and clock, on the Orbit's black hole, with this week so far. */
@@ -700,6 +701,7 @@ function VaultSticker({ onClick }: { onClick?: () => void }) {
 
 export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   const { uninstalled } = useInstalledModules();
+  const installed = useCallback((tab: string) => !uninstalled.includes(tab as TabId), [uninstalled]);
   const go = (tab: string) => () => onNavigate?.(tab);
   const widgets: (HomeWidget & { module: TabId })[] = [
     { id: "clock", module: "orbit", label: "The Orbit", render: () => <Clock onClick={go("orbit")} /> },
@@ -734,6 +736,9 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
   return (
     <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <OnboardingCard onNavigate={onNavigate} />
+      <Suspense fallback={null}>
+        <NowCard installed={installed} onNavigate={onNavigate} />
+      </Suspense>
       <HomeGrid widgets={widgets.filter((widget) => !uninstalled.includes(widget.module))} />
     </m.div>
   );

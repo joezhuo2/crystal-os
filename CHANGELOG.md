@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Smart "Now" card.** One line at the top of Home picks what matters most right now: an event starting within the hour (with "Leave now" when it has a place and starts within 30 minutes), an overdue task, Observatory cards to review, habits left after 6 PM, or a task due today. Click it to go there.
 - **More on the Home widgets.** The clock shows today's habits (done out of active), a daily journal prompt and, if you pick one under Settings → The Orbit, the time in a second time zone. The Ledger widget draws the month's profit and loss as a sparkline. The Courier widget counts the emails that arrived since you last opened The Courier.
 - **Search filters.** In the search bar, `type:task`, `type:event`, `type:note`, `type:mail`, `type:transaction` or `type:chat` limits the results to one kind; `due:today`, `due:tomorrow`, `due:overdue`, `due:<7d` or `due:<2w` keeps tasks and events due by then; `#school` keeps a task or transaction category, or a note tag. Task search now reads notes and checklists too.
 - **Universal linking.** Link a transaction, a trade order, an email or a calendar event to a vault note with the link button on its row (or in the event form). The note's **Connections** section lists its linked tasks and items; click one to open it.
