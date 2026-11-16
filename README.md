@@ -11,7 +11,7 @@
 
 > A personal productivity dashboard built with React, TypeScript, Supabase, your Google Calendar, and your Obsidian vault. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
-<p align="center"><img src="docs/images/crystal-os-tour.gif" alt="A tour of Crystal OS: The Pulse, The Engine, The Horizon, The Orbit, The Vault, The Ledger, The Atmosphere, The Archive and Settings" width="840"></p>
+<p align="center"><img src="docs/images/crystal-os-tour.gif" alt="A tour of Crystal OS: The Pulse, The Engine, The Horizon, The Orbit, The Vault, The Ledger, The Courier, The Atmosphere, The Observatory (courses, topics and a review card), The Archive, The Portal and Settings" width="840"></p>
 
 Current release: **v0.15.1** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
@@ -32,6 +32,7 @@ Current release: **v0.15.1** — see [CHANGELOG.md](CHANGELOG.md) for release hi
 | **📶 Offline saves** | Task and transaction changes made while Supabase is unreachable are kept on the device and replayed in order once it answers again (on reconnect, every 30 s, and at the next start), instead of failing the save. See [Offline queue](#-offline-queue) |
 | **🌤️ Weather** | Current conditions + 7-day forecast for any of ~840 Canadian locations (searchable city picker, or **Use my location** for the nearest one), the Air Quality Health Index from the nearest station with its 24 h peak, the UV index with advice, and how much daylight is left, over a Living Sky backdrop that follows the time of day and the weather (see [The Atmosphere](#-the-atmosphere-living-sky)) |
 | **📖 The Archive** | Browse, search, read and edit your Obsidian vault in-app — frontmatter, tags, wikilinks, GFM markdown, a **Connections** section under each note (the notes it links to, the notes that link back, and the notes sharing one of its tags or categories, each one click away), and a CodeMirror markdown editor that refuses to overwrite a note changed on disk since you opened it. The browser rail splits into an independently scrolling tag cloud and note list. It sits at the top of the sidebar's bottom group and has its own vault search. Its own amethyst theme: glass crystals lining the screen edges, glowing sparkles, and a cursor light the crystals reflect |
+| **🔭 The Observatory** | Study courses stored as Obsidian vault markdown: one folder per course with a `_course.md`, topic notes and a `progress.md`. Create, edit, archive and rename courses, or import a University of Waterloo course outline to fill in the learning outcomes, the weekly plan as topics, and the assessments with exam weights, or start from a starter course. Review questions with FSRS spaced repetition in short, priority-ordered observations, and track grades with a calculator per course. Drop PDFs to file them automatically, then **Process all** to pull questions from textbooks, question sheets and slides (with on-device OCR) into Review. Its own indigo backdrop, a **Settings** section, **N** for a new course and **R** to review. Phases 1 to 3 of 5: integrations and Claude features are still to come |
 | **🌌 The Nebula** | A coding agent for your project folders (desktop). Three model tiers: Low (OmniRoute), Medium (NVIDIA NIM Kimi K3 → DeepSeek V4 Flash → Nemotron 3 → OmniRoute), and High (Claude Code). Also: Claude-style effort levels and Auto/Manual/Plan modes, your Claude skills and MCP servers, chat history per project, a context-window meter, per-model token counts, a **Save to vault** button that writes the chat to your Obsidian vault, **project instructions** (free text per project from the project menu, sent to the agent at the start of each chat, kept in localStorage as `crystal-os-nebula-project-instructions`, separate from the folder's own CLAUDE.md/AGENTS.md), **saved prompts** per project (the book button beside the composer inserts one, saves the current input, and edits or deletes them; kept in localStorage as `crystal-os-nebula-saved-prompts`), **Ask my data** (the database button beside the composer attaches a read-only snapshot of your open tasks, the next 14 days of calendar, the last 60 days of transactions and up to five matching vault notes to each question, while it is on), a **Changes** pane after each run to review, revert and commit what the agent changed, and a swirling three-colour nebula. Keyboard shortcuts: **N** new chat, **P** new project, **E** cycle effort, **M** cycle mode (rebindable in Settings) |
 | **🌀 The Portal** | Discord, Instagram, and any other https web app as signed-in pages inside Crystal OS: its own app navbar, per-app sessions, unread badges (hidden while a Pomodoro focus phase is running), and a warm black hole behind glass (desktop; the web build opens apps in new tabs) |
 | **📝 Quick Add** | Append a timestamped, tagged capture to any vault note without leaving the dashboard |
@@ -47,7 +48,7 @@ Current release: **v0.15.1** — see [CHANGELOG.md](CHANGELOG.md) for release hi
 
 ### 📸 Screenshots
 
-<sub>Captured from the desktop app with made-up data.</sub>
+<sub>Captured with made-up data in the Default theme with the Flux Lines background. The Nebula needs the desktop app and is from an earlier capture.</sub>
 
 <table>
   <tr>
@@ -63,12 +64,27 @@ Current release: **v0.15.1** — see [CHANGELOG.md](CHANGELOG.md) for release hi
     <td align="center" width="50%"><img src="docs/images/screenshots/ledger.webp" alt="The Ledger"><br><sub><b>The Ledger</b></sub></td>
   </tr>
   <tr>
+    <td align="center" width="50%"><img src="docs/images/screenshots/courier.webp" alt="The Courier"><br><sub><b>The Courier</b></sub></td>
     <td align="center" width="50%"><img src="docs/images/screenshots/atmosphere.webp" alt="The Atmosphere"><br><sub><b>The Atmosphere</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><img src="docs/images/screenshots/observatory.webp" alt="The Observatory → Courses"><br><sub><b>The Observatory → Courses</b></sub></td>
+    <td align="center" width="50%"><img src="docs/images/screenshots/observatory-course.webp" alt="The Observatory → Topics"><br><sub><b>The Observatory → Topics</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><img src="docs/images/screenshots/observatory-review.webp" alt="The Observatory → Review"><br><sub><b>The Observatory → Review</b></sub></td>
+    <td align="center" width="50%"><img src="docs/images/screenshots/deep-sky.webp" alt="The Observatory → Deep Sky"><br><sub><b>The Observatory → Deep Sky</b></sub></td>
+  </tr>
+  <tr>
     <td align="center" width="50%"><img src="docs/images/screenshots/archive.webp" alt="The Archive"><br><sub><b>The Archive</b></sub></td>
+    <td align="center" width="50%"><img src="docs/images/screenshots/portal.webp" alt="The Portal"><br><sub><b>The Portal</b></sub></td>
   </tr>
   <tr>
     <td align="center" width="50%"><img src="docs/images/screenshots/nebula.webp" alt="The Nebula"><br><sub><b>The Nebula</b></sub></td>
     <td align="center" width="50%"><img src="docs/images/screenshots/settings.webp" alt="Settings → Packages"><br><sub><b>Settings → Packages</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><img src="docs/images/screenshots/settings-ai.webp" alt="Settings → AI"><br><sub><b>Settings → AI</b></sub></td>
   </tr>
 </table>
 
