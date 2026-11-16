@@ -550,7 +550,7 @@ export default function TerminalPage() {
             <button
               type="button"
               className="terminal-btn"
-              onClick={() => activeTab && void writeTerminal(activeTab.id, "wsl.exe --shutdown")}
+              onClick={() => activeTab && void writeTerminal(activeTab.id, "wsl.exe --shutdown\r")}
               disabled={!activeTab || activeTab.exited}
             >
               <Power className="w-3.5 h-3.5" />
