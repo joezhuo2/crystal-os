@@ -5,6 +5,50 @@ All notable changes to Crystal OS are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [v0.16.0] - 2026-11-15 - The Observatory.
+
+### Added
+
+- **The Observatory**, a study section whose courses are Obsidian vault markdown: one folder per course with a `_course.md`, topic notes and a `progress.md`.
+- New, Edit, Archive and rename for courses, and starter courses to begin with.
+- Import a University of Waterloo course outline: learning outcomes, the weekly plan as topics, and assessments with exam weights.
+- Its own indigo backdrop, a Settings section for the vault folder, and the **N** shortcut for a new course.
+- Desktop vault commands for PDFs: sandboxed read and write limited to `.pdf` files inside the vault, and moving notes, PDFs and folders.
+- Observatory review (Phase 2): question callouts in topic notes (multiple choice, worked problem, predict the output, spot the bug, flashcard), FSRS spaced repetition, a priority-ordered queue of short observations, streak and daily goal. **R** starts a review, **Space** reveals and **1** to **4** grade.
+- A Grades tab per course: current grade, projected final, what you need on the remaining work, and the 4.0 scale.
+- Math in markdown renders with KaTeX, in the Observatory and the Archive.
+- Observatory resources (Phase 3): drop PDFs anywhere in the Observatory, or on the drop box at the top of the home page, to file them under the right course and type automatically, with a popup when unsure, an `_inbox` for unsorted files, and Undo or Change toasts.
+- A "Processing" popup while each dropped PDF is filed. PDFs whose name is already filed, or repeated in the same drop, are skipped.
+- Processing pulls questions out of textbooks, question sheets and slide decks into a pool per PDF, reads scanned pages with on-device OCR, and marks low-confidence items Unclear. A Resources tab and a textbook reader per course.
+- **Process all** on the Observatory home and in each Resources tab processes every unprocessed PDF and adds the clear questions that match a topic straight to Review.
+- PDF course outlines import locally, with Unclear fields flagged.
+- Observatory integrations (Phase 4): link tasks and calendar events to a topic, link a calendar event to an exam (it sets the date), and create a "Review: topic" task sized to the cards due. Cards come due sooner as an exam nears, and review intervals stop at the exam date.
+- Focus auto start and stop: opening a topic or PDF, or answering the first card, can start the Pomodoro on that topic (asks first by default). It pauses when you leave or go idle, never touching a Pomodoro you started yourself, and study minutes are logged per topic.
+- An Observatory Home widget with cards due, the next topic, the daily goal, streak and next exam, plus a daily review reminder notification (off by default, 7:00 PM).
+- Search bar commands: `115 final`, `115`, `115 need 80`, `grades`, `exams`, `review`, topic names, `process all` and `inbox`.
+- Delete a resource (Undo restores it). Observatory buttons are icon-only with themed tooltips and animate while their task runs. Notifications show a close button on hover.
+- Link a topic from a task or calendar event; a star chip on the task or event opens the topic. Topics appear in the Pomodoro "Focusing on" picker.
+- Drop PDFs on the Observatory Home widget, and review cards inside the widget.
+- **Settings → AI**: one place for the master Claude key and model, NVIDIA NIM key, base URL and model, and OmniRoute key, endpoint and model. Each area that uses AI picks a provider (None, Claude, NVIDIA NIM or OmniRoute) and a model; blank uses the master. The Nebula falls back to these keys when its own are blank.
+- Observatory AI features (Phase 5, provider None by default, nothing is sent until you pick one): AI PDF sorting, re-reading unclear and handwritten pages, slide summaries with suggested course changes, drafting topics, summaries and questions, reading non-UW outlines, **Find questions with AI** per file, per course or for all courses, **Check my work** and **Generate solution** in Review, and **Review my work** on a topic. AI-written content is marked unverified.
+- Every AI result is also saved to the vault under `<course>/_ai/` with its provider, model and status.
+- Questions whose math came out garbled from a PDF are marked Unclear, and accepting one saves the cropped question image into the card.
+- **Deep Sky**, a second Observatory tab for casual learning: add topics, or accept AI suggestions from chosen vault folders and random ideas, reviewed with the same FSRS cards; move a topic into a course.
+- Orbit study stats: reviews per day, streak, daily goal rate, cards mastered and study minutes per course, plus a Study section in Orbit reviews.
+
+### Changed
+
+- The shared ColorPicker moved to `src/components/ui/color-picker.tsx`.
+- The Courier's AI settings are now a provider, a model and an optional key override; its Claude key became the master Claude key. With no model set it uses the master model (Sonnet by default) instead of Haiku.
+- Number fields across the app use the themed number input.
+- README screenshots and the tour show every feature with the Default theme and Flux Lines.
+
+### Fixed
+
+- A visible pause after filing, moving or deleting a file in the Observatory: progress and topic notes are no longer re-parsed on every render.
+
 ## [v0.15.1] - 2026-11-15 - Lighter backdrops.
 
 ### Changed
