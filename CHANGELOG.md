@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.17.0] - 2026-11-16 - Your data moves to your device, plus 25 new features.
+
 ### Changed
 
 - **Your data now lives on your device.** Tasks, transactions, categories, habits and review history are stored as JSON files in the app's data folder instead of Supabase. There is no account and no sign-in screen.
