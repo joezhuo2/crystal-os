@@ -23,6 +23,7 @@ import {
   Unplug,
   X,
 } from "lucide-react";
+import { ItemNoteLink } from "@/components/ItemNoteLink";
 import { toast } from "sonner";
 import { addDays, toLocalDateStr } from "@/lib/utils";
 import { undoToast } from "@/lib/undo";
@@ -1020,6 +1021,18 @@ function EventForm({
         )}
 
         {editingEvent && <TopicLinkControl kind="events" id={editingEvent.id} />}
+
+        {editingEvent && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <ItemNoteLink
+              kind="event"
+              itemId={editingEvent.id}
+              title={editingEvent.summary || "(No title)"}
+              meta={{ calendarId: editingEvent.calendarId, date: editingEvent.startDate }}
+            />
+            Link this event to a vault note
+          </div>
+        )}
 
         {error && (
           // Keep the dialog open on failure so nothing typed is ever lost.

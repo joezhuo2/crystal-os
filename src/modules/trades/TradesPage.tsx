@@ -1,6 +1,7 @@
 import { useCallback, useDeferredValue, useMemo, useRef, useState, type ReactNode } from "react";
 import { m } from "framer-motion";
 import { toast } from "sonner";
+import { ItemNoteLink } from "@/components/ItemNoteLink";
 import { AlertTriangle, ArrowDown, ArrowUp, FileUp, Mail, NotebookPen, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -397,6 +398,7 @@ function OrdersTable({ rows, onEdit, onDelete }: { rows: TradeEvent[]; onEdit: (
             </Td>
             <Td>
               <div className="flex justify-end gap-1">
+                <ItemNoteLink kind="trade" itemId={e.id} title={`${e.side === "buy" ? "Buy" : "Sell"} ${e.symbol} · ${e.time.slice(0, 10)}`} />
                 <button type="button" aria-label={`Edit the ${e.symbol} order`} onClick={() => onEdit(e)} className="p-1 text-muted-foreground hover:text-primary">
                   <Pencil className="w-3.5 h-3.5" />
                 </button>

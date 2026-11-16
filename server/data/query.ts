@@ -9,6 +9,7 @@ export const TABLES = [
   "focus_sessions",
   "habits",
   "habit_checks",
+  "links",
 ] as const;
 
 export type Table = (typeof TABLES)[number];
@@ -41,7 +42,7 @@ export interface Query {
 export const DUPLICATE = "23505";
 
 const MAX_ROWS = 5000;
-const UNIQUE: Partial<Record<Table, string[]>> = { habit_checks: ["habit_id", "day"] };
+const UNIQUE: Partial<Record<Table, string[]>> = { habit_checks: ["habit_id", "day"], links: ["kind", "item_id"] };
 const DEFAULTS: Partial<Record<Table, Row>> = { habits: { position: 0, archived_at: null } };
 
 const REFS: Array<{ parent: Table; table: Table; column: string; onDelete: "null" | "cascade" }> = [
@@ -52,6 +53,7 @@ const REFS: Array<{ parent: Table; table: Table; column: string; onDelete: "null
   { parent: "task_categories", table: "task_completions", column: "category_id", onDelete: "null" },
   { parent: "financial_categories", table: "transactions", column: "category_id", onDelete: "null" },
   { parent: "habits", table: "habit_checks", column: "habit_id", onDelete: "cascade" },
+  { parent: "transactions", table: "links", column: "item_id", onDelete: "cascade" },
 ];
 
 export class DuplicateError extends DataError {

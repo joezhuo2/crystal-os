@@ -9,6 +9,7 @@ import { appUi } from "@/lib/appUi";
 import { m } from "framer-motion";
 import { toLocalDateStr } from "@/lib/utils";
 import { Plus, Trash2, X, Pencil } from "lucide-react";
+import { ItemNoteLink } from "@/components/ItemNoteLink";
 import { CategoryManagerButton } from "@/components/views/CategoryManager";
 import { DateField, ThemedSelect } from "@/components/ui/field-controls";
 import { NumberInput } from "@/components/ui/number-input";
@@ -261,6 +262,7 @@ function TransactionList() {
             <span data-private className={`text-sm font-semibold tabular-nums ${tx.type === "income" ? "text-accent" : "text-foreground"}`}>
               {tx.type === "income" ? "+" : "-"}${tx.amount.toFixed(2)}
             </span>
+            <ItemNoteLink kind="transaction" itemId={tx.id} title={tx.name} />
             <button onClick={() => { setEditingTransaction(tx); setShowTransactionForm(true); }} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary">
               <Pencil className="w-3.5 h-3.5" />
             </button>

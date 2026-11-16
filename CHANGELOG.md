@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Universal linking.** Link a transaction, a trade order, an email or a calendar event to a vault note with the link button on its row (or in the event form). The note's **Connections** section lists its linked tasks and items; click one to open it.
 - **Privacy mode quick toggle.** **Ctrl+Shift+H** (change it under Settings → Keyboard) turns privacy mode on or off; hold it to peek and it blurs again when you let go. The tray menu has **Toggle privacy mode** too.
 - **Command palette actions.** Type `complete <task>`, `snooze <task> to friday`, `focus on <task>`, `add <task>` or `log 25 for Lunch` and press Enter to run it. **Toggle privacy mode**, **Toggle Do Not Disturb** and **Switch theme** are in the palette too.
 - **Palette fuzzy matching.** Tasks, transactions, settings and commands still match with a typo or with the words in another order. The last five `add` and `log` commands are listed under **Recent commands** to run again.

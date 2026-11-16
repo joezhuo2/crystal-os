@@ -33,6 +33,8 @@ vi.mock("@/hooks/useTrades", () => ({
   useSaveTradeJournal: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
+vi.mock("@/components/ItemNoteLink", () => ({ ItemNoteLink: () => null }));
+
 import TradesPage from "./TradesPage";
 
 describe("TradesPage", () => {

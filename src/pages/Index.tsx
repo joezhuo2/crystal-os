@@ -22,6 +22,7 @@ import { hidePortal } from "@/lib/portalNative";
 import QuickAddDialog from "@/components/QuickAddDialog";
 import { useTrayQuickAdd } from "@/hooks/useTrayQuickAdd";
 import { usePrivacyHotkey } from "@/hooks/usePrivacyHotkey";
+import { NoteNavigateContext } from "@/modules/tasks/TaskNoteLink";
 import { useDndHotkey, useHomeHotkey, usePaletteHotkey } from "@/hooks/useGlobalHotkey";
 import { useQuickCommands } from "@/hooks/useQuickCommands";
 import { inTerminal } from "@/lib/hotkey";
@@ -228,7 +229,9 @@ const Index = () => {
     () => (
       <ViewEnter key={viewTab} fade={!still}>
         <Suspense fallback={null}>
-          <View onNavigate={setActiveTab} />
+          <NoteNavigateContext.Provider value={setActiveTab}>
+            <View onNavigate={setActiveTab} />
+          </NoteNavigateContext.Provider>
         </Suspense>
       </ViewEnter>
     ),

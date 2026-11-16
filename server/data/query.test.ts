@@ -105,6 +105,12 @@ describe("runQuery", () => {
     expect(changed.sort()).toEqual(["task_completions", "tasks"]);
   });
 
+  it("deleting a transaction deletes its note link", () => {
+    const db: Db = { transactions: [{ id: "x1" }], links: [{ id: "l1", kind: "transaction", item_id: "x1" }, { id: "l2", kind: "mail", item_id: "m1" }] };
+    run(db, { table: "transactions", op: "delete", filters: [{ column: "id", op: "eq", value: "x1" }] });
+    expect(db.links).toEqual([{ id: "l2", kind: "mail", item_id: "m1" }]);
+  });
+
   it("deleting a habit deletes its check-offs", () => {
     const db: Db = { habits: [{ id: "h1" }], habit_checks: [{ id: "c1", habit_id: "h1" }, { id: "c2", habit_id: "h2" }] };
     run(db, { table: "habits", op: "delete", filters: [{ column: "id", op: "eq", value: "h1" }] });
