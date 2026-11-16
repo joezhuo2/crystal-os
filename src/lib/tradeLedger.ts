@@ -1,4 +1,4 @@
-import type { FxConversion, OptionContract, TradeCurrency, TradeEvent, TradeJournal } from "./trades";
+import type { Dividend, FxConversion, OptionContract, TradeCurrency, TradeEvent, TradeJournal } from "./trades";
 
 export interface Position {
   id: string;
@@ -449,4 +449,25 @@ export function fxSummary(fx: FxConversion[]): {
     return { ...c, rate: c.fromAmount ? c.toAmount / c.fromAmount : 0, estFee };
   });
   return { conversions, totalEstFee };
+}
+
+export function dividendSummary(dividends: Dividend[], year: string) {
+  const totals = (list: Dividend[]) =>
+    CURRENCIES.flatMap((currency) => {
+      const amount = round2(sum(list.filter((d) => d.currency === currency).map((d) => d.amount)));
+      return amount ? [{ currency, amount }] : [];
+    });
+  const groups = new Map<string, { symbol: string; currency: TradeCurrency; amount: number; count: number }>();
+  for (const d of dividends) {
+    const key = `${d.currency}|${d.symbol}`;
+    const g = groups.get(key) ?? { symbol: d.symbol, currency: d.currency, amount: 0, count: 0 };
+    g.amount = round2(g.amount + d.amount);
+    g.count += 1;
+    groups.set(key, g);
+  }
+  return {
+    year: totals(dividends.filter((d) => d.time.slice(0, 4) === year)),
+    allTime: totals(dividends),
+    bySymbol: [...groups.values()].sort((a, b) => b.amount - a.amount),
+  };
 }

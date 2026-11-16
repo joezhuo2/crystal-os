@@ -1,6 +1,6 @@
 import { readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { FxConversion, TradeEvent, TradeJournal, TradesData } from "./types";
+import type { Dividend, FxConversion, TradeEvent, TradeJournal, TradesData } from "./types";
 
 const FILE = "trades.json";
 
@@ -8,21 +8,28 @@ export interface TradesState {
   known: Record<string, string[]>;
   events: TradeEvent[];
   fx: FxConversion[];
+  dividends: Dividend[];
   edits: Record<string, TradeEvent | null>;
   journal: Record<string, TradeJournal>;
   lastSync: string | null;
 }
 
 function emptyState(): TradesState {
-  return { known: {}, events: [], fx: [], edits: {}, journal: {}, lastSync: null };
+  return { known: {}, events: [], fx: [], dividends: [], edits: {}, journal: {}, lastSync: null };
 }
 
-export function toTradesData(state: TradesState): Pick<TradesData, "events" | "fx" | "journal" | "lastSync"> {
+export function toTradesData(state: TradesState): Pick<TradesData, "events" | "fx" | "dividends" | "journal" | "lastSync"> {
   const events = state.events
     .filter((e) => state.edits[e.id] !== null)
     .map((e) => state.edits[e.id] ?? e)
     .sort((a, b) => a.time.localeCompare(b.time));
-  return { events, fx: [...state.fx].sort((a, b) => a.time.localeCompare(b.time)), journal: state.journal, lastSync: state.lastSync };
+  return {
+    events,
+    fx: [...state.fx].sort((a, b) => a.time.localeCompare(b.time)),
+    dividends: [...state.dividends].sort((a, b) => a.time.localeCompare(b.time)),
+    journal: state.journal,
+    lastSync: state.lastSync,
+  };
 }
 
 export function createTradesStore(rootDir: string) {
@@ -43,6 +50,7 @@ export function createTradesStore(rootDir: string) {
         known: p?.known && typeof p.known === "object" ? p.known : {},
         events: Array.isArray(p?.events) ? p.events : [],
         fx: Array.isArray(p?.fx) ? p.fx : [],
+        dividends: Array.isArray(p?.dividends) ? p.dividends : [],
         edits: p?.edits && typeof p.edits === "object" ? p.edits : {},
         journal: p?.journal && typeof p.journal === "object" ? p.journal : {},
         lastSync: typeof p?.lastSync === "string" ? p.lastSync : null,

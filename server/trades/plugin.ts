@@ -9,10 +9,10 @@ import { createMailStore } from "../mail/store";
 import type { FetchedMessage, MailConfig, StoredAccount } from "../mail/types";
 import { parseTradesCsv, parseWealthsimpleEmail } from "./parse";
 import { createTradesStore, toTradesData } from "./store";
-import type { FxConversion, TradeEvent, TradeGrade, TradeJournal, TradesData } from "./types";
+import type { Dividend, FxConversion, TradeEvent, TradeGrade, TradeJournal, TradesData } from "./types";
 
 const ROUTE_PREFIX = "/api/trades";
-const GMAIL_QUERY = 'from:wealthsimple.com subject:("your order has" OR "your funds have been converted")';
+const GMAIL_QUERY = 'from:wealthsimple.com subject:("your order has" OR "your funds have been converted" OR dividend)';
 const SYNC_THROTTLE_MS = 60 * 1000;
 const GMAIL_CONCURRENCY = 2;
 const MAX_TEXT = 5000;
@@ -170,16 +170,20 @@ export function createTradesMiddleware(
     const messages = await fetchAccount(account, known);
     const events: TradeEvent[] = [];
     const fx: FxConversion[] = [];
+    const dividends: Dividend[] = [];
     for (const m of messages) {
       const parsed = parseWealthsimpleEmail(m);
       if (parsed?.kind === "trade") events.push(parsed.event);
       else if (parsed?.kind === "fx") fx.push(parsed.fx);
+      else if (parsed?.kind === "dividend") dividends.push(parsed.dividend);
     }
     await store.update((s) => {
       const ids = new Set(s.events.map((e) => e.id));
       const fxIds = new Set(s.fx.map((f) => f.id));
+      const dividendIds = new Set(s.dividends.map((d) => d.id));
       s.events.push(...events.filter((e) => !ids.has(e.id)));
       s.fx.push(...fx.filter((f) => !fxIds.has(f.id)));
+      s.dividends.push(...dividends.filter((d) => !dividendIds.has(d.id)));
       s.known[account.id] = [...new Set([...(s.known[account.id] ?? []), ...messages.map((m) => m.messageId)])];
     });
   }
@@ -286,13 +290,19 @@ export function createTradesMiddleware(
           const body = asObject(await readJsonBody(req, MAX_CSV_BODY_BYTES), "Body");
           const csv = text(body.csv, "csv", true, MAX_CSV_CHARS) as string;
           const parsed = parseTradesCsv(csv);
-          const { imported, duplicates } = await store.update((s) => {
-            const ids = new Set(s.events.map((e) => e.id));
+          const { imported, paid, duplicates } = await store.update((s) => {
+            const ids = new Set([...s.events, ...s.dividends].map((e) => e.id));
             const fresh = parsed.events.filter((e) => !ids.has(e.id));
+            const freshDividends = parsed.dividends.filter((d) => !ids.has(d.id));
             s.events.push(...fresh);
-            return { imported: fresh.length, duplicates: parsed.events.length - fresh.length };
+            s.dividends.push(...freshDividends);
+            return {
+              imported: fresh.length,
+              paid: freshDividends.length,
+              duplicates: parsed.events.length + parsed.dividends.length - fresh.length - freshDividends.length,
+            };
           });
-          sendJson(res, 200, { ...(await data()), imported, skipped: parsed.skipped + duplicates });
+          sendJson(res, 200, { ...(await data()), imported, dividends_imported: paid, skipped: parsed.skipped + duplicates });
           return;
         }
 

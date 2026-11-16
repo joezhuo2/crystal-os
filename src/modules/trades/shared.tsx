@@ -42,3 +42,30 @@ export function FeedbackButton({ pending, done, doneLabel, children, className, 
     </Button>
   );
 }
+
+export function DataTable({ head, children }: { head: ReactNode; children: ReactNode }) {
+  return (
+    <table className="w-full text-xs">
+      <thead className="sticky top-0 z-10 bg-background/85 backdrop-blur-sm text-left text-muted-foreground">
+        <tr>{head}</tr>
+      </thead>
+      <tbody>{children}</tbody>
+    </table>
+  );
+}
+
+export const HIDE_NARROW = "hidden lg:table-cell";
+
+export const Th = ({ children, right, sr, hide }: { children?: ReactNode; right?: boolean; sr?: string; hide?: boolean }) => (
+  <th scope="col" className={`px-3 py-2.5 font-medium ${right ? "text-right" : ""} ${hide ? HIDE_NARROW : ""}`}>
+    {sr ? <span className="sr-only">{sr}</span> : children}
+  </th>
+);
+
+export const Td = ({ children, right, hide, className = "" }: { children?: ReactNode; right?: boolean; hide?: boolean; className?: string }) => (
+  <td className={`px-3 py-2.5 break-words ${right ? "text-right tabular-nums" : ""} ${hide ? HIDE_NARROW : ""} ${className}`}>{children}</td>
+);
+
+export function Empty({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`p-8 text-center text-sm text-muted-foreground ${className}`}>{children}</div>;
+}

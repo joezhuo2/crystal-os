@@ -40,6 +40,17 @@ export interface FxConversion {
   url?: string;
 }
 
+export interface Dividend {
+  id: string;
+  source: "email" | "csv";
+  account: string;
+  symbol: string;
+  amount: number;
+  currency: TradeCurrency;
+  time: string;
+  url?: string;
+}
+
 export type TradeGrade = "A" | "B" | "C" | "D" | "F";
 
 export interface TradeJournal {
@@ -56,6 +67,7 @@ export interface TradeJournal {
 export interface TradesData {
   events: TradeEvent[];
   fx: FxConversion[];
+  dividends: Dividend[];
   journal: Record<string, TradeJournal>;
   lastSync: string | null;
   syncing?: boolean;
@@ -87,7 +99,7 @@ export const saveTradeJournal = (positionId: string, journal: Omit<TradeJournal,
   request<TradesData>(`/api/trades/journal/${encodeURIComponent(positionId)}`, send("PUT", journal));
 
 export const importTradesCsv = (csv: string) =>
-  request<TradesData & { imported: number; skipped: number }>("/api/trades/import", send("POST", { csv }));
+  request<TradesData & { imported: number; dividends_imported: number; skipped: number }>("/api/trades/import", send("POST", { csv }));
 
 const CURRENCY_PREFIX: Record<TradeCurrency, string> = { USD: "US$", CAD: "C$" };
 
