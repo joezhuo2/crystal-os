@@ -5,6 +5,7 @@ describe("isMathGarbled", () => {
   it("flags equations pdf.js flattened into stray symbols", () => {
     expect(isMathGarbled("show that ∫ b 1 ( ) ∑n n(n + 1) xdx = b2 − a2 . Recall that i = . a 2 2 i=1 ∫ 2")).toBe(true);
     expect(isMathGarbled("Evaluate ∫ 1 0 ( ) dx and simplify")).toBe(true);
+    expect(isMathGarbled("Compute exdx using the definition of the definite integral in terms of a Riemann 0 ∑n r − rn+1 sum. Recall that ri = for r 6= 1.")).toBe(true);
   });
 
   it("leaves prose, plain formulas and clean LaTeX alone", () => {

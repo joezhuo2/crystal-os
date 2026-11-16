@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.18.1] - 2026-11-16 - Flattened equations in extracted questions are caught and rewritten.
+
+### Fixed
+
+- **Garbled math in extracted questions.** A question whose equation lost its integral sign, fraction or "not equal" sign when read from a PDF is now marked unclear, so the AI re-read rewrites it with proper LaTeX math. Reprocess the resource, or re-read the question in its pool, to fix questions extracted earlier.
+
 ## [v0.18.0] - 2026-11-16 - The last 13 starred ideas: job pipeline, package tracking, search by meaning and more.
 
 ### Added

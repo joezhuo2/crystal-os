@@ -41,6 +41,9 @@ export function textConfidence(text: string): TextConfidence {
 const GARBLE_SIGNS: RegExp[] = [
   /[∫∑∏√]\s+\S(?=\s|$)/g,
   /[∫∑∏√]\s*$/gm,
+  /[∫∑∏]\S(?=\s|$)/g,
+  /(?<=\s)6=(?=\s)/g,
+  /=\s+(?:for|where|if|when)\b|=\s*[.,](?=\s|$)/g,
   /\(\s+\)|\[\s+\]/g,
   /(?<=^|\s)(?:[A-Za-z0-9]\s+){2,}[A-Za-z0-9](?=\s|$)/g,
   /(?<=^|\s)[.,]\s+[A-Za-z0-9](?=\s)/g,
