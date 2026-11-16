@@ -5,6 +5,8 @@ import { useNow, useOrbitReview } from "@/hooks/useOrbitReview";
 import { createVaultNote, vaultErrorCode } from "@/hooks/useVault";
 import { REVIEW_KINDS, exportPath, kindLabel, latestReadyPeriod, toMarkdown, type ReviewKind, type ReviewPeriod } from "@/lib/orbitReview";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
+import { useIsInstalled } from "@/lib/installedModules";
+import { useStudyMarkdown, withStudy } from "@/modules/orbit/useOrbitStudy";
 
 /**
  * Writes one kind of review to the vault once, when it becomes ready (or on
@@ -15,16 +17,17 @@ import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 function AutoExportKind({ kind, period }: { kind: ReviewKind; period: ReviewPeriod }) {
   const { autoExported } = useOrbitStore();
   const { review, loading, historyError } = useOrbitReview(period);
+  const study = useStudyMarkdown(period, useIsInstalled("observatory"));
   const queryClient = useQueryClient();
   const running = useRef<string | null>(null);
   const done = autoExported[kind] === period.key;
 
   useEffect(() => {
     // Wait for the full picture; a history error means the numbers would be wrong.
-    if (done || loading || !review || historyError || running.current === period.key) return;
+    if (done || loading || study.loading || !review || historyError || running.current === period.key) return;
     running.current = period.key;
     const path = exportPath(period);
-    createVaultNote({ path, content: toMarkdown(review), overwrite: false })
+    createVaultNote({ path, content: withStudy(toMarkdown(review), study.markdown), overwrite: false })
       .then(() => {
         orbitStore.markAutoExported(kind, period.key);
         queryClient.invalidateQueries({ queryKey: ["vault"] });
@@ -37,7 +40,7 @@ function AutoExportKind({ kind, period }: { kind: ReviewKind; period: ReviewPeri
         }
         console.warn("[crystal-os] Orbit auto-export failed:", err);
       });
-  }, [done, loading, review, historyError, period, kind, queryClient]);
+  }, [done, loading, study.loading, study.markdown, review, historyError, period, kind, queryClient]);
 
   return null;
 }
