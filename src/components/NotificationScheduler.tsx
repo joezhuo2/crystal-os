@@ -11,6 +11,9 @@ import { useInstalledModules } from "@/lib/installedModules";
 import type { TabId } from "@/modules/registry";
 import { usesSidecar } from "@/lib/platform";
 import { useTravelTimes } from "@/lib/pulse";
+import { useWeather, weatherAlerts } from "@/hooks/useWeather";
+import { useAtmosphere } from "@/lib/atmosphereStore";
+import { toLocalDateStr } from "@/lib/utils";
 
 /** How often due times and reminders are checked. */
 const CHECK_MS = 30 * 1000;
@@ -61,6 +64,12 @@ export default function NotificationScheduler() {
     };
   }, [notify, uninstalled]);
   const tasks = useTasks();
+  const { cityId } = useAtmosphere();
+  const weather = useWeather(cityId).data;
+  const alertWeather = notify.weatherAlerts && !uninstalled.includes("weather");
+  useEffect(() => {
+    if (weather && alertWeather) deliver(weatherAlerts(weather, toLocalDateStr()));
+  }, [weather, alertWeather]);
   const hour = useHour();
   const habits = useHabitsData();
   const reminders = useHabitReminders();

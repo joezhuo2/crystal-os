@@ -305,6 +305,17 @@ export function parseWeatherData(feature: Record<string, any>): WeatherData {
   };
 }
 
+export function weatherAlerts(data: Pick<WeatherData, "cityId" | "cityName" | "warnings">, today: string) {
+  return data.warnings.map((w) => {
+    const event = (w.event as { en?: string } | undefined)?.en ?? "Weather warning";
+    return { key: `weather-alert:${data.cityId}:${event}:${today}`, title: event, body: `In effect for ${data.cityName}.` };
+  });
+}
+
+export function precipitationNext(hourly: HourlyForecast[], hours = 12) {
+  return hourly.slice(0, hours).map((h) => ({ timestamp: h.timestamp, chance: Math.max(0, Math.min(100, h.lop)) }));
+}
+
 async function fetchWeather(cityId: string): Promise<WeatherData> {
   const res = await fetch(`${API_BASE}/${cityId}?f=json&lang=en`);
   if (!res.ok) throw new Error(`Weather API error: ${res.status}`);
@@ -317,6 +328,7 @@ export function useWeather(cityId: string) {
     queryKey: ["weather", cityId],
     queryFn: () => fetchWeather(cityId),
     refetchInterval: 10 * 60 * 1000, // refresh every 10 minutes
+    refetchIntervalInBackground: true,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });

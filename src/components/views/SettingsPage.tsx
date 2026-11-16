@@ -1231,6 +1231,9 @@ export default function SettingsPage() {
           >
             <Switch checked={notifications.reviews} onCheckedChange={(on) => notifySettings.setFlag("reviews", on)} />
           </Row>
+          <Row title="Severe weather alerts" description="When Environment Canada issues a warning, watch or advisory for your Atmosphere location. Once a day per alert.">
+            <Switch checked={notifications.weatherAlerts} onCheckedChange={(on) => notifySettings.setFlag("weatherAlerts", on)} />
+          </Row>
           <Row
             title="Habit reminders"
             description="When a habit is not ticked by the reminder time set on it (the bell in The Orbit's habit manager), up to its count a day, an hour apart."

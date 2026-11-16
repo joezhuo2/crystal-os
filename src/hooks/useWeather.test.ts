@@ -5,6 +5,8 @@ import {
   locationErrorMessage,
   nearestCity,
   parseWeatherData,
+  precipitationNext,
+  weatherAlerts,
   resolveSuggestions,
 } from "./useWeather";
 
@@ -105,5 +107,20 @@ describe("parseWeatherData", () => {
     const data = parseWeatherData(feature(null));
     expect(data.lat).toBeNull();
     expect(data.lon).toBeNull();
+  });
+});
+
+describe("weatherAlerts and precipitationNext", () => {
+  it("plans one alert per warning, keyed by city, event and day", () => {
+    const alerts = weatherAlerts({ cityId: "on-85", cityName: "Markham", warnings: [{ event: { en: "Snowfall Warning" } }, {}] }, "2026-11-16");
+    expect(alerts.map((a) => a.key)).toEqual(["weather-alert:on-85:Snowfall Warning:2026-11-16", "weather-alert:on-85:Weather warning:2026-11-16"]);
+    expect(alerts[0].title).toBe("Snowfall Warning");
+  });
+
+  it("keeps the next 12 hours of precipitation chance within 0 to 100", () => {
+    const hourly = Array.from({ length: 24 }, (_, i) => ({ timestamp: String(i), lop: i === 0 ? 140 : 30 }) as never);
+    const hours = precipitationNext(hourly);
+    expect(hours).toHaveLength(12);
+    expect(hours[0].chance).toBe(100);
   });
 });
