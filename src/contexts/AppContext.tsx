@@ -91,7 +91,7 @@ export type TaskChange = { id: string; updates: Partial<Task> };
  * reading it never re-renders a component.
  */
 export type AppActions = {
-  addTask: (task: Omit<Task, "id">) => void;
+  addTask: (task: Omit<Task, "id">) => Promise<string | null>;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   /** Marks a task done today, or moves an "after completion" repeat to its next date. */
@@ -104,7 +104,7 @@ export type AppActions = {
   addTransaction: (tx: Omit<Transaction, "id">) => void;
   updateTransaction: (id: string, updates: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
-  addTaskCategory: (cat: Omit<TaskCategory, "id">) => void;
+  addTaskCategory: (cat: Omit<TaskCategory, "id">) => Promise<string | null>;
   deleteTaskCategory: (id: string) => void;
   addFinancialCategory: (cat: Omit<FinancialCategory, "id">) => void;
   deleteFinancialCategory: (id: string) => void;
@@ -662,7 +662,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user) return;
     pomodoro.setRecorder(({ startedAt, endedAt, seconds, taskId, taskTitle }) => {
       const row = { started_at: startedAt.toISOString(), ended_at: endedAt.toISOString(), seconds };
-      const linked = taskId ? { ...row, task_id: taskId, task_title: taskTitle } : row;
+      // Observatory topics without a task focus under a "topic:" id, which is not a tasks row.
+      const linked = taskId && !taskId.startsWith("topic:") ? { ...row, task_id: taskId, task_title: taskTitle } : row;
       void (async () => {
         let { error } = await supabase.from("focus_sessions").insert(linked);
         // Before 0008_focus_task_title.sql there is no task_title column; the
@@ -748,8 +749,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addTask = useCallback(async (task: Omit<Task, "id">) => {
     const id = crypto.randomUUID();
     const row = { ...mapTaskToDb(task), created_at: new Date().toISOString() };
-    if (!(await saveWrite({ op: "insert", table: "tasks", id, row }, "add the task"))) return;
+    if (!(await saveWrite({ op: "insert", table: "tasks", id, row }, "add the task"))) return null;
     setTasks((prev) => [...prev, mapTaskFromDb({ ...row, id })]);
+    return id;
   }, [saveWrite, setTasks]);
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
@@ -955,8 +957,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ── Task Categories ──
   const addTaskCategory = useCallback(async (cat: Omit<TaskCategory, "id">) => {
     const { data, error } = await supabase.from("task_categories").insert(mapCategoryToDb(cat)).select().single();
-    if (reportError("add the category", error) || !data) return;
-    setTaskCategories((prev) => [...prev, mapCategoryFromDb(data) as TaskCategory]);
+    if (reportError("add the category", error) || !data) return null;
+    const added = mapCategoryFromDb(data) as TaskCategory;
+    setTaskCategories((prev) => [...prev, added]);
+    return added.id;
   }, [setTaskCategories]);
 
   const deleteTaskCategory = useCallback(async (id: string) => {

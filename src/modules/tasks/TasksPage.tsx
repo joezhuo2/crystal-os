@@ -15,6 +15,7 @@ import {
   type RepeatRule,
 } from "@/lib/utils";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
+import { NumberInput } from "@/components/ui/number-input";
 import { GlideEffect } from "@/components/crystal/GlideEffect";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useAppActivity } from "@/lib/appActivity";
@@ -34,6 +35,8 @@ import { CapacityCard } from "./CapacityBar";
 import { clampEstimate, ESTIMATE_PRESETS, formatEstimate, MAX_ESTIMATE } from "@/lib/capacity";
 import { canNest, MAX_NOTES, nestTargets, splitByParent, subtaskProgress, taskDrag, type ChecklistItem } from "@/lib/subtasks";
 import { NoteLinkButton, NoteNavigateContext, NotePicker } from "./TaskNoteLink";
+import { TopicChips, TopicLinkControl } from "@/modules/observatory/TopicLinkControl";
+import { TopicNavigateContext } from "@/modules/observatory/topicLinkIndex";
 import { ChecklistEditor, ChildTaskRow, SubtaskChip } from "./TaskSubtasks";
 import { SnoozeButton, SnoozeChip, UnsnoozeButton } from "./TaskSnooze";
 import { canSnooze, ownSnoozed, snoozedSections, splitSnoozed } from "@/lib/snooze";
@@ -319,6 +322,7 @@ const TaskItem = memo(function TaskItem({
                       <NoteLinkButton path={task.notePath} />
                     </div>
                   )}
+                  <TopicChips kind="tasks" id={task.id} />
                   {(estimate || repeat) && (
                     <div className="flex items-center gap-2 min-w-0">
                       {estimate}
@@ -645,7 +649,7 @@ function EstimatePicker({ value, onChange }: { value: number | undefined; onChan
             </button>
           );
         })}
-        <input type="number" min={1} max={MAX_ESTIMATE} inputMode="numeric" placeholder="min"
+        <NumberInput unstyled min={1} max={MAX_ESTIMATE} inputMode="numeric" placeholder="min"
           aria-label="Estimate in minutes"
           value={value ?? ""}
           onChange={(e) => onChange(clampEstimate(e.target.value))}
@@ -788,7 +792,7 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
           {(repeat.kind === "days" || repeat.kind === "after") && (
             <div className="flex items-center gap-2">
               <label className="text-xs text-muted-foreground">{repeat.kind === "days" ? "Every" : "Due"}</label>
-              <input type="number" min={1} value={repeat.every} aria-label="Days"
+              <NumberInput unstyled min={1} value={repeat.every} aria-label="Days"
                 onChange={(e) => setRepeat((r) => ({ ...r, every: Math.max(1, parseInt(e.target.value) || 1) }))}
                 className="w-16 bg-secondary/50 rounded-lg px-2 py-1.5 text-sm outline-none" />
               <span className="text-xs text-muted-foreground">
@@ -844,6 +848,7 @@ export function TaskForm({ onClose, editingTask }: { onClose: () => void; editin
           <p className="text-xs text-muted-foreground mb-1">Linked note</p>
           <NotePicker value={notePath} onChange={setNotePath} />
         </div>
+        {editingTask && <TopicLinkControl kind="tasks" id={editingTask.id} />}
         <div>
           <p className="text-xs text-muted-foreground mb-1">Checklist</p>
           <ChecklistEditor items={checklist} onChange={setChecklist} />
@@ -1127,6 +1132,7 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
 
   return (
     <NoteNavigateContext.Provider value={onNavigate}>
+    <TopicNavigateContext.Provider value={onNavigate}>
     <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <GlideEffect className="flex glass-card p-0.5 rounded-lg [--cd-glide-bg:hsl(var(--primary))] [--cd-glide-shadow:none] [--cd-glide-radius:0.375rem]">
@@ -1254,6 +1260,7 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
         </div>
       </div>
     </m.div>
+    </TopicNavigateContext.Provider>
     </NoteNavigateContext.Provider>
   );
 }

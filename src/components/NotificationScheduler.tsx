@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useObservatorySettings } from "@/modules/observatory/settings";
 import { useQuery } from "@tanstack/react-query";
 import { useTasks } from "@/contexts/AppContext";
 import { calendarEventsQuery, calendarWasConnected, useCalendarStatus } from "@/hooks/useGoogleCalendar";
@@ -42,7 +43,10 @@ function useHour(): number {
  * Task due-time, habit and calendar notifications (src/lib/notifications.ts).
  * Renders nothing; mounted while signed in, on every tab.
  */
+const ReviewReminder = lazy(() => import("@/modules/observatory/ReviewReminder"));
+
 export default function NotificationScheduler() {
+  const { reminder: reviewReminder } = useObservatorySettings();
   const notify = useNotifySettings();
   const { uninstalled } = useInstalledModules();
   // An uninstalled module's notifications stop as if switched off.
@@ -124,5 +128,9 @@ export default function NotificationScheduler() {
     return () => window.clearInterval(id);
   }, []);
 
-  return null;
+  return reviewReminder && !uninstalled.includes("observatory") ? (
+    <Suspense fallback={null}>
+      <ReviewReminder />
+    </Suspense>
+  ) : null;
 }

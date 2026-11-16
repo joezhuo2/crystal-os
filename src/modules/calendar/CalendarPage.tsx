@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { TopicChips, TopicLinkControl } from "@/modules/observatory/TopicLinkControl";
+import { TopicNavigateContext } from "@/modules/observatory/topicLinkIndex";
+import type { TabId } from "@/modules/registry";
 import { apiRequest } from "@/lib/apiRequest";
 import { openExternal } from "@/lib/platform";
 import { m, AnimatePresence, type Variants } from "framer-motion";
@@ -28,6 +31,7 @@ import { fromMinutes, taskBlockMinutes, toMinutes, weekDates } from "@/lib/timeG
 import { withStartTime } from "@/lib/autoEndTime";
 import TimeGrid from "./TimeGrid";
 import { DateField, ThemedSelect, TimeField } from "@/components/ui/field-controls";
+import { NumberInput } from "@/components/ui/number-input";
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { GlideEffect } from "@/components/crystal/GlideEffect";
 import { appUi, useAppUi } from "@/lib/appUi";
@@ -237,6 +241,7 @@ function EventRow({
             Repeating event
           </p>
         )}
+        <div className="mt-1 empty:hidden"><TopicChips kind="events" id={event.id} /></div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {event.htmlLink && (
@@ -981,8 +986,8 @@ function EventForm({
             {form.freq === "HOURLY" && !form.allDay && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span>every</span>
-                <input
-                  type="number"
+                <NumberInput
+                  unstyled
                   min={1}
                   max={23}
                   value={form.interval}
@@ -1013,6 +1018,8 @@ function EventForm({
             )}
           </div>
         )}
+
+        {editingEvent && <TopicLinkControl kind="events" id={editingEvent.id} />}
 
         {error && (
           // Keep the dialog open on failure so nothing typed is ever lost.
@@ -1120,7 +1127,7 @@ function DeleteEventDialog({
 
 /* ── page ── */
 
-export default function CalendarPage() {
+export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId) => void }) {
   const status = useCalendarStatus();
   const connected = Boolean(status.data?.connected);
   const showEventForm = useAppUi((s) => s.showEventForm);
@@ -1401,6 +1408,7 @@ export default function CalendarPage() {
   }
 
   return (
+    <TopicNavigateContext.Provider value={onNavigate}>
     <m.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -1631,5 +1639,6 @@ export default function CalendarPage() {
         />
       )}
     </m.div>
+    </TopicNavigateContext.Provider>
   );
 }
