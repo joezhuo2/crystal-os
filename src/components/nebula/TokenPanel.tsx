@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { formatTokens, totalOf } from "@/lib/harness/tokenLedger";
+import { useHarness } from "@/hooks/useHarness";
+import { costOf, formatCost, formatTokens, totalOf, usageByDay } from "@/lib/harness/tokenLedger";
 import type { Ledger } from "@/lib/harness/types";
 import { harness } from "@/lib/harness/store";
 import NebulaTip from "./NebulaTip";
@@ -45,6 +46,40 @@ function Table({ ledger, empty }: { ledger: Ledger; empty: string }) {
   );
 }
 
+function Summary({ title, column, rows, empty }: { title: string; column: string; rows: { label: string; ledger: Ledger }[]; empty: string }) {
+  const cell = "whitespace-nowrap px-2 py-1.5 text-right tabular-nums";
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+      {rows.length === 0 ? (
+        <p className="py-3 text-xs text-muted-foreground">{empty}</p>
+      ) : (
+        <table className="w-full text-xs">
+          <thead className="text-muted-foreground">
+            <tr>
+              <th className="px-2 py-1.5 text-left font-medium">{column}</th>
+              <th className={`${cell} font-medium`}>Tokens</th>
+              <th className={`${cell} font-medium`}>Est. cost</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/[0.06]">
+            {rows.map(({ label, ledger }) => {
+              const total = totalOf(ledger);
+              return (
+                <tr key={label}>
+                  <td className="max-w-[20rem] truncate px-2 py-1.5">{label}</td>
+                  <td className={cell}>{(total.estimated ? "≈" : "") + formatTokens(total.input + total.output)}</td>
+                  <td className={`${cell} text-muted-foreground`}>{formatCost(costOf(ledger))}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   chatTokens: Ledger;
   projectTokens: Ledger;
@@ -55,6 +90,9 @@ interface Props {
 /** Token usage per model, for this chat, its project, and all time. */
 export default function TokenPanel({ chatTokens, projectTokens, projectName, allTime }: Props) {
   const [confirm, setConfirm] = useState(false);
+  const { dailyTokens, projects, projectTokens: perProject } = useHarness();
+  const byDay = usageByDay(dailyTokens).map(({ day, ledger }) => ({ label: day, ledger }));
+  const byProject = projects.flatMap((p) => (Object.keys(perProject[p.id] ?? {}).length ? [{ label: p.name, ledger: perProject[p.id] }] : []));
   const estimated = totalOf(chatTokens).estimated || totalOf(projectTokens).estimated || totalOf(allTime).estimated;
   return (
     <div className="space-y-4">
@@ -72,6 +110,9 @@ export default function TokenPanel({ chatTokens, projectTokens, projectName, all
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">All time</p>
         <Table ledger={allTime} empty="Nothing recorded." />
       </div>
+      <Summary title="By day" column="Day" rows={byDay} empty="Nothing recorded since daily totals began." />
+      <Summary title="By project" column="Project" rows={byProject} empty="Nothing recorded." />
+      <p className="text-[11px] text-muted-foreground">Est. cost prices Claude tokens at Anthropic's API list rates. A Claude subscription is not billed this way, and other models show n/a.</p>
       {estimated && <p className="text-[11px] text-muted-foreground">≈ DeepSeek Harness reports context size, not billed tokens, so those counts are estimates. Claude counts are exact.</p>}
       {Object.keys(allTime).length > 0 &&
         (confirm ? (

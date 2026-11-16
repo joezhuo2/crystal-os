@@ -80,6 +80,7 @@ export interface ProjectRecord {
   name: string;
   path: string;
   createdAt: number;
+  defaults?: Partial<Pick<ChatMeta, "tier" | "effort" | "mode">>;
 }
 
 export interface Checkpoint { id: string; head: string; tree: string; indexTree: string }
@@ -117,7 +118,11 @@ export interface StateFile {
   tokens: Ledger;
   /** Totals per project id. Missing in files written before v0.6.0; rebuilt from chat files. */
   projectTokens?: Record<string, Ledger>;
+  dailyTokens?: DailyTokens;
 }
+
+/** Local day (YYYY-MM-DD) to project id to totals. */
+export type DailyTokens = Record<string, Record<string, Ledger>>;
 
 export interface NebulaTheme {
   colors: [string, string, string];

@@ -4,12 +4,14 @@
  * `portalStore.ts`. Engines are driven by `session.ts`; this module only holds
  * and persists state.
  */
-import { addCounts, mergeLedgers } from "./tokenLedger";
+import { toLocalDateStr } from "@/lib/utils";
+import { addCounts, addDaily, mergeLedgers } from "./tokenLedger";
 import type {
   ChatFile,
   ChatMessage,
   ChatMeta,
   ContextUsage,
+  DailyTokens,
   Effort,
   Ledger,
   Mode,
@@ -55,6 +57,7 @@ export interface HarnessState {
   allTime: Ledger;
   /** Totals per project id, kept after its chats are deleted. */
   projectTokens: Record<string, Ledger>;
+  dailyTokens: DailyTokens;
   activeChatId: string | null;
   runtime: Record<string, ChatRuntime>;
   prefs: Prefs;
@@ -127,7 +130,17 @@ function parsePrefs(raw: string | null): Prefs {
   }
 }
 
+export function projectPrefs(project: ProjectRecord | undefined, prefs: Prefs): Prefs {
+  const d = project?.defaults ?? {};
+  return {
+    tier: d.tier && TIER_IDS.includes(d.tier) ? d.tier : prefs.tier,
+    effort: d.effort && EFFORT_IDS.includes(d.effort) ? d.effort : prefs.effort,
+    mode: d.mode && MODE_IDS.includes(d.mode) ? d.mode : prefs.mode,
+  };
+}
+
 export interface ParsedState extends Pick<StateFile, "projects" | "chats" | "tokens"> {
+  dailyTokens: DailyTokens;
   /** null when the file predates per-project totals and they must be rebuilt. */
   projectTokens: Record<string, Ledger> | null;
 }
@@ -135,7 +148,7 @@ export interface ParsedState extends Pick<StateFile, "projects" | "chats" | "tok
 export function parseStateFile(raw: string | null): ParsedState {
   try {
     const doc = raw ? JSON.parse(raw) : null;
-    if (!doc || doc.version !== 1) return { projects: [], chats: [], tokens: {}, projectTokens: {} };
+    if (!doc || doc.version !== 1) return { projects: [], chats: [], tokens: {}, projectTokens: {}, dailyTokens: {} };
     const projects = Array.isArray(doc.projects) ? doc.projects.filter((p: ProjectRecord) => p && typeof p.id === "string" && typeof p.path === "string") : [];
     const chats = Array.isArray(doc.chats)
       ? doc.chats
@@ -149,9 +162,10 @@ export function parseStateFile(raw: string | null): ParsedState {
           }))
       : [];
     const projectTokens = doc.projectTokens && typeof doc.projectTokens === "object" ? doc.projectTokens : null;
-    return { projects, chats, tokens: doc.tokens && typeof doc.tokens === "object" ? doc.tokens : {}, projectTokens };
+    const dailyTokens = doc.dailyTokens && typeof doc.dailyTokens === "object" ? doc.dailyTokens : {};
+    return { projects, chats, tokens: doc.tokens && typeof doc.tokens === "object" ? doc.tokens : {}, projectTokens, dailyTokens };
   } catch {
-    return { projects: [], chats: [], tokens: {}, projectTokens: {} };
+    return { projects: [], chats: [], tokens: {}, projectTokens: {}, dailyTokens: {} };
   }
 }
 
@@ -187,6 +201,7 @@ function initial(): HarnessState {
     chats: [],
     allTime: {},
     projectTokens: {},
+    dailyTokens: {},
     activeChatId: null,
     runtime: {},
     prefs: parsePrefs(read(PREFS_KEY)),
@@ -212,7 +227,7 @@ function patchRuntime(id: string, fn: (rt: ChatRuntime) => ChatRuntime) {
 
 function saveState() {
   if (!persistence || !state.hydrated) return;
-  const doc: StateFile = { version: 1, projects: state.projects, chats: state.chats, tokens: state.allTime, projectTokens: state.projectTokens };
+  const doc: StateFile = { version: 1, projects: state.projects, chats: state.chats, tokens: state.allTime, projectTokens: state.projectTokens, dailyTokens: state.dailyTokens };
   persistence.saveState(JSON.stringify(doc)).catch((err) => console.warn("[nebula] could not save state", err));
 }
 
@@ -241,6 +256,7 @@ export const harness = {
       chats: parsed.chats,
       allTime: parsed.tokens,
       projectTokens: parsed.projectTokens ?? {},
+      dailyTokens: parsed.dailyTokens,
       activeChatId: parsed.chats.some((c) => c.id === active) ? active : null,
     });
     return parsed.projectTokens === null && parsed.chats.length > 0;
@@ -314,7 +330,7 @@ export const harness = {
 
   createChat(projectId: string): ChatMeta {
     const now = Date.now();
-    const chat: ChatMeta = { id: newId(), projectId, title: "New chat", createdAt: now, updatedAt: now, pinned: false, ...state.prefs };
+    const chat: ChatMeta = { id: newId(), projectId, title: "New chat", createdAt: now, updatedAt: now, pinned: false, ...projectPrefs(state.projects.find((p) => p.id === projectId), state.prefs) };
     set({
       ...state,
       chats: [...state.chats, chat],
@@ -382,8 +398,10 @@ export const harness = {
     if (running && (options.tier !== undefined || options.effort !== undefined)) return false;
     const prefs = { ...state.prefs, ...options };
     write(PREFS_KEY, JSON.stringify(prefs));
-    set({ ...state, prefs });
+    const projectId = state.chats.find((c) => c.id === id)?.projectId;
+    set({ ...state, prefs, projects: state.projects.map((p) => (p.id === projectId ? { ...p, defaults: { ...p.defaults, ...options } } : p)) });
     if (id) harness.updateChat(id, options);
+    else saveState();
     return true;
   },
 
@@ -426,7 +444,9 @@ export const harness = {
     patchRuntime(id, (rt) => ({ ...rt, tokens: mergeLedgers(rt.tokens, ledger) }));
     const projectId = state.chats.find((c) => c.id === id)?.projectId;
     const projectTokens = projectId ? { ...state.projectTokens, [projectId]: mergeLedgers(state.projectTokens[projectId] ?? {}, ledger) } : state.projectTokens;
-    set({ ...state, allTime: mergeLedgers(state.allTime, ledger), projectTokens });
+    const day = toLocalDateStr();
+    const dailyTokens = projectId ? addDaily(state.dailyTokens, day, projectId, ledger) : state.dailyTokens;
+    set({ ...state, allTime: mergeLedgers(state.allTime, ledger), projectTokens, dailyTokens });
     saveState();
   },
 
@@ -436,7 +456,7 @@ export const harness = {
   },
 
   resetAllTime() {
-    set({ ...state, allTime: {} });
+    set({ ...state, allTime: {}, dailyTokens: {} });
     saveState();
   },
 
