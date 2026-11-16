@@ -17,6 +17,10 @@ export interface Habit {
   createdAt: string;
   /** ISO timestamp, or null while the habit is in use. It stops counting on this local day. */
   archivedAt: string | null;
+  /** JS weekdays (0 = Sunday) the habit is for; empty or null means every day. */
+  weekdays?: number[] | null;
+  /** Times a week instead of fixed days; null when not used. */
+  weeklyTarget?: number | null;
 }
 
 export interface HabitCheck {
@@ -73,11 +77,59 @@ export function indexChecks(checks: HabitCheck[]): Map<string, Set<string>> {
 }
 
 const NONE = new Set<string>();
+const NO_REST = (_day: string) => false;
 
-/** Consecutive done days ending on `end`, which must be done itself. */
-export function streakEndingAt(days: Set<string>, end: string): number {
+type Schedule = Pick<Habit, "weekdays" | "weeklyTarget">;
+
+/** Done days in the Monday-to-Sunday week holding `day`. */
+export function weekCount(days: Set<string>, day: string): number {
+  const monday = mondayOf(day);
   let n = 0;
-  for (let d = end; days.has(d); d = addDays(d, -1)) n++;
+  for (let i = 0; i < 7; i++) if (days.has(addDays(monday, i))) n++;
+  return n;
+}
+
+/** Whether the habit is expected on `day`: done then, on one of its weekdays, or still short of its weekly target. */
+export function scheduledOn(habit: Schedule, day: string, days: Set<string>): boolean {
+  if (days.has(day)) return true;
+  if (habit.weeklyTarget) return weekCount(days, day) < habit.weeklyTarget;
+  return !habit.weekdays?.length || habit.weekdays.includes(parseDay(day).getDay());
+}
+
+export const isDueOn = (habit: Schedule & Pick<Habit, "createdAt" | "archivedAt">, day: string, days: Set<string>) =>
+  isActiveOn(habit, day) && scheduledOn(habit, day, days);
+
+/** The habits expected today, and how many of them are done. */
+export function dueToday(habits: Habit[], checks: HabitCheck[], today: string): { due: Habit[]; done: number } {
+  const index = indexChecks(checks);
+  const due = habits.filter((h) => isDueOn(h, today, index.get(h.id) ?? NONE));
+  return { due, done: due.filter((h) => index.get(h.id)?.has(today)).length };
+}
+
+/**
+ * The days a habit may be left unticked without breaking its streak: the
+ * weekdays it is not for, or any day of a week that met its weekly target
+ * (and of this week, which is not over).
+ */
+export function restDays(habit: Schedule, days: Set<string>, today: string): (day: string) => boolean {
+  if (habit.weeklyTarget) {
+    const target = habit.weeklyTarget;
+    const thisWeek = mondayOf(today);
+    return (day) => mondayOf(day) === thisWeek || weekCount(days, day) >= target;
+  }
+  const on = habit.weekdays;
+  return on?.length ? (day) => !on.includes(parseDay(day).getDay()) : NO_REST;
+}
+
+/** Done days in a row ending on `end`, skipping rest days. 0 when `end` is a missed day. */
+export function streakEndingAt(days: Set<string>, end: string, rest = NO_REST): number {
+  let first = end;
+  for (const d of days) if (d < first) first = d;
+  let n = 0;
+  for (let d = end; d >= first; d = addDays(d, -1)) {
+    if (days.has(d)) n++;
+    else if (!rest(d)) break;
+  }
   return n;
 }
 
@@ -85,16 +137,17 @@ export function streakEndingAt(days: Set<string>, end: string): number {
  * The streak as of `today`: today is not over yet, so until it is ticked the
  * streak runs up to yesterday instead of dropping to 0.
  */
-export function currentStreak(days: Set<string>, today: string): number {
-  return streakEndingAt(days, days.has(today) ? today : addDays(today, -1));
+export function currentStreak(days: Set<string>, today: string, rest = NO_REST): number {
+  return streakEndingAt(days, days.has(today) ? today : addDays(today, -1), rest);
 }
 
-/** Longest run of done days inside `start`–`end`. */
-export function longestRun(days: Set<string>, start: string, end: string): number {
+/** Longest run of done days inside `start`–`end`; rest days neither add to a run nor end it. */
+export function longestRun(days: Set<string>, start: string, end: string, rest = NO_REST): number {
   let best = 0;
   let run = 0;
   for (let d = start; d <= end; d = addDays(d, 1)) {
-    run = days.has(d) ? run + 1 : 0;
+    if (days.has(d)) run++;
+    else if (!rest(d)) run = 0;
     if (run > best) best = run;
   }
   return best;
@@ -117,7 +170,7 @@ export interface HabitDay {
 /** One day's tally. */
 export function habitDay(day: string, habits: Habit[], index: Map<string, Set<string>>, today: string): HabitDay {
   const future = day > today;
-  const on = (h: Habit) => isActiveOn(h, future ? today : day);
+  const on = (h: Habit) => isActiveOn(h, future ? today : day) && scheduledOn(h, day, index.get(h.id) ?? NONE);
   const active = sortHabits(habits).filter(on);
   return {
     day,
@@ -200,12 +253,29 @@ export function summarizeHabits(
     const days = index.get(h.id) ?? NONE;
     let active = 0;
     let done = 0;
+    const weeks = new Map<string, { days: number; done: number }>();
     for (let d = period.start; d <= last; d = addDays(d, 1)) {
       if (!isActiveOn(h, d)) continue;
+      if (h.weeklyTarget) {
+        const monday = mondayOf(d);
+        const week = weeks.get(monday) ?? { days: 0, done: 0 };
+        weeks.set(monday, week);
+        week.days++;
+        if (days.has(d)) week.done++;
+        continue;
+      }
+      if (!scheduledOn(h, d, days)) continue;
       active++;
       if (days.has(d)) done++;
     }
+    // A weekly target expects that many days of each week (fewer in a part week).
+    for (const week of weeks.values()) {
+      const expected = Math.min(h.weeklyTarget ?? 0, week.days);
+      active += expected;
+      done += Math.min(week.done, expected);
+    }
     if (!active) continue;
+    const rest = restDays(h, days, today);
     out.push({
       id: h.id,
       name: h.name,
@@ -213,8 +283,8 @@ export function summarizeHabits(
       done,
       active,
       rate: Math.round((done / active) * 100),
-      longest: longestRun(days, period.start, last),
-      streakAtEnd: running ? currentStreak(days, today) : streakEndingAt(days, period.end),
+      longest: longestRun(days, period.start, last, rest),
+      streakAtEnd: running ? currentStreak(days, today, rest) : streakEndingAt(days, period.end, rest),
     });
   }
   return out;

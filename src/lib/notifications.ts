@@ -15,7 +15,7 @@
 import type { Task } from "@/contexts/AppContext";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 import type { HabitReminder } from "@/lib/habitReminders";
-import { indexChecks, isActiveOn, sortHabits, type Habit, type HabitCheck } from "@/lib/habits";
+import { indexChecks, isDueOn, sortHabits, type Habit, type HabitCheck } from "@/lib/habits";
 import { isQuiet, notifySettings } from "@/lib/notifySettings";
 import { isDesktop } from "@/lib/platform";
 import { pomodoro, selectFocusMuted, type PomodoroState } from "@/lib/pomodoro";
@@ -194,7 +194,8 @@ export function habitReminderAlerts(
   const alerts: PlannedAlert[] = [];
   for (const habit of sortHabits(habits)) {
     const reminder = reminders[habit.id];
-    if (!reminder || !isActiveOn(habit, today) || done.get(habit.id)?.has(today)) continue;
+    const days = done.get(habit.id) ?? new Set<string>();
+    if (!reminder || !isDueOn(habit, today, days) || days.has(today)) continue;
     const at = new Date(`${today}T${reminder.time}:00`);
     const since = now.getTime() - at.getTime();
     if (since < 0) continue;

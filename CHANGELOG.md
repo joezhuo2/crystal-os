@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Habit schedules.** In **Manage habits**, a habit can be for every day, for chosen weekdays, or for a number of times a week. Days off do not break the streak, are left out of the day counts and review rates, and get no reminder.
 - **Multi-day and all-day drag.** In the week and day views, drag an all-day event along the all-day strip to another day, and drag a timed event that runs past midnight from its first day to another day or time. Both keep their length and offer **Undo**.
 - **Resize events by dragging.** In the week and day views, drag the top or bottom edge of a timed single-day event to change when it starts or ends, snapped to 10 minutes, with the same dashed outline and **Undo** toast as a move.
 - **Duplicate an event.** **Duplicate** in the event form turns it into a copy: change the day or time, then **Add Copy**. The original is left as it was; a copy of one occurrence of a series is a single event.

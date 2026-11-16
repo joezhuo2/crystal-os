@@ -11,6 +11,9 @@ import {
   habitGrid,
   indexChecks,
   isActiveOn,
+  restDays,
+  scheduledOn,
+  weekCount,
   type HabitDay,
 } from "@/lib/habits";
 
@@ -79,7 +82,8 @@ export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today
   const checks = query.data?.checks ?? [];
   const active = habits.filter((h) => isActiveOn(h, today));
   const index = indexChecks(checks);
-  const doneToday = active.filter((h) => index.get(h.id)?.has(today)).length;
+  const due = active.filter((h) => scheduledOn(h, today, index.get(h.id) ?? new Set()));
+  const doneToday = due.filter((h) => index.get(h.id)?.has(today)).length;
   const cells = habitGrid(kind, today, habits, checks);
   const missing = query.error instanceof HabitsError && query.error.missingTables;
 
@@ -90,7 +94,7 @@ export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today
           Habits
           {active.length > 0 && (
             <span className="orbit-habits-count">
-              {doneToday}/{active.length} today
+              {doneToday}/{due.length} today
             </span>
           )}
         </h3>
@@ -134,19 +138,27 @@ export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today
               active.map((h) => {
                 const days = index.get(h.id) ?? new Set<string>();
                 const done = days.has(today);
-                const streak = currentStreak(days, today);
+                const streak = currentStreak(days, today, restDays(h, days, today));
+                const resting = !done && !due.includes(h);
+                const status = h.weeklyTarget
+                  ? `${weekCount(days, today)}/${h.weeklyTarget} this week`
+                  : done
+                    ? "Done today"
+                    : resting
+                      ? "Rest day"
+                      : "Tick for today";
                 return (
                   <GlassTip
                     key={h.id}
                     label={h.name}
-                    hint={`${streak ? `Streak: ${streakLabel(streak)}` : "No streak yet"} · ${done ? "Done today" : "Tick for today"}`}
+                    hint={`${streak ? `Streak: ${streakLabel(streak)}` : "No streak yet"} · ${status}`}
                     tone="orbit"
                   >
                     <button
                       type="button"
                       aria-pressed={done}
                       onClick={() => void setToday(h.id, !done)}
-                      className={`orbit-chip orbit-habit-chip ${done ? "orbit-chip-on" : ""}`}
+                      className={`orbit-chip orbit-habit-chip ${done ? "orbit-chip-on" : ""} ${resting ? "opacity-50" : ""}`}
                       style={{ "--habit": h.color } as React.CSSProperties}
                     >
                       {done ? (

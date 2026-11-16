@@ -4,7 +4,7 @@ import { useTasks } from "@/contexts/AppContext";
 import { calendarWasConnected, useCalendarEvents, useCalendarStatus } from "@/hooks/useGoogleCalendar";
 import { useHabitsData } from "@/hooks/useHabits";
 import { pickedCalendarId } from "@/hooks/useTodayCapacity";
-import { isActiveOn } from "@/lib/habits";
+import { dueToday } from "@/lib/habits";
 import { pickNow, type NowPick } from "@/lib/nowCard";
 import { usesSidecar } from "@/lib/platform";
 import { awakeTasks } from "@/lib/snooze";
@@ -40,9 +40,8 @@ export default function NowCard({ installed, onNavigate }: { installed: (tab: st
   const events = useCalendarEvents(range, calendarOn && connected).data?.events;
 
   const habits = useHabitsData().data;
-  const habitsLeft = installed("orbit")
-    ? (habits?.habits ?? []).filter((h) => isActiveOn(h, today) && !habits?.checks.some((c) => c.habitId === h.id && c.day === today)).length
-    : 0;
+  const habitsToday = dueToday(habits?.habits ?? [], habits?.checks ?? [], today);
+  const habitsLeft = installed("orbit") ? habitsToday.due.length - habitsToday.done : 0;
 
   const study = useStudySummary();
   const reviewDue = installed("observatory") && !study.loading ? study.due : 0;

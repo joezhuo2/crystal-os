@@ -15,7 +15,7 @@ import { m } from "framer-motion";
 import { isTaskOverdue, taskFallsOnDate, toLocalDateStr } from "@/lib/utils";
 import { journalPrompt, useSecondZone, zoneClock } from "@/lib/homeExtras";
 import { useHabitsData } from "@/hooks/useHabits";
-import { isActiveOn } from "@/lib/habits";
+import { dueToday } from "@/lib/habits";
 import { useSkyScene } from "@/hooks/useSkyScene";
 import { useToday } from "@/hooks/useToday";
 import { awakeTasks } from "@/lib/snooze";
@@ -82,8 +82,7 @@ function Clock({ onClick }: { onClick?: () => void }) {
   const second = zoneClock(time, useSecondZone());
   const habitsData = useHabitsData().data;
   const today = toLocalDateStr(time);
-  const activeHabits = (habitsData?.habits ?? []).filter((h) => isActiveOn(h, today));
-  const habitsDone = activeHabits.filter((h) => habitsData?.checks.some((c) => c.habitId === h.id && c.day === today)).length;
+  const { due: activeHabits, done: habitsDone } = dueToday(habitsData?.habits ?? [], habitsData?.checks ?? [], today);
 
   // A ready review opens as usual; otherwise land on this week so far, which
   // is what the teaser below counts.

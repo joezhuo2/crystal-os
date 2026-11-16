@@ -38,7 +38,11 @@ interface HabitRow {
   position: number;
   created_at: string;
   archived_at: string | null;
+  weekdays?: number[] | null;
+  weekly_target?: number | null;
 }
+
+const HABIT_COLUMNS = "id, name, color, position, created_at, archived_at, weekdays, weekly_target";
 
 const fromRow = (r: HabitRow): Habit => ({
   id: r.id,
@@ -47,11 +51,13 @@ const fromRow = (r: HabitRow): Habit => ({
   position: r.position,
   createdAt: r.created_at,
   archivedAt: r.archived_at,
+  weekdays: r.weekdays ?? null,
+  weeklyTarget: r.weekly_target ?? null,
 });
 
 async function fetchHabits(): Promise<HabitsData> {
   const [habits, checks] = await Promise.all([
-    db.from("habits").select("id, name, color, position, created_at, archived_at"),
+    db.from("habits").select(HABIT_COLUMNS),
     // A few habits a day for years is still well under this.
     db.from("habit_checks").select("habit_id, day").order("day").limit(50_000),
   ]);
@@ -132,7 +138,7 @@ export function useHabitActions() {
       const { data: row, error } = await db
         .from("habits")
         .insert({ name: clean, color, position })
-        .select("id, name, color, position, created_at, archived_at")
+        .select(HABIT_COLUMNS)
         .single();
       if (error || !row) {
         if (error) fail("add the habit", error);
@@ -144,14 +150,18 @@ export function useHabitActions() {
   );
 
   const updateHabit = useCallback(
-    async (id: string, changes: { name?: string; color?: string }) => {
+    async (id: string, changes: { name?: string; color?: string; weekdays?: number[] | null; weeklyTarget?: number | null }) => {
       const next = { ...changes };
       if (next.name !== undefined) {
         next.name = next.name.trim().slice(0, HABIT_NAME_MAX);
         if (!next.name) return;
       }
       const undo = patch((d) => ({ ...d, habits: d.habits.map((h) => (h.id === id ? { ...h, ...next } : h)) }));
-      const { error } = await db.from("habits").update(next).eq("id", id);
+      const { weeklyTarget, ...row } = next;
+      const { error } = await db
+        .from("habits")
+        .update({ ...row, ...(weeklyTarget !== undefined ? { weekly_target: weeklyTarget } : {}) })
+        .eq("id", id);
       if (error) {
         undo();
         fail("update the habit", error);
