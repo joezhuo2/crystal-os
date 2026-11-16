@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A **Stop WSL** button in the Terminal header runs `wsl --shutdown` in the active terminal.
+- `CONTRIBUTING.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md`.
+
 ## [v0.16.1] - 2026-11-15 - Release build fix.
 
 ### Fixed
