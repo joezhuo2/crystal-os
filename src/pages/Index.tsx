@@ -37,7 +37,7 @@ import { installedModules, useInstalledModules } from "@/lib/installedModules";
 import { LazyTaskForm, LazyTransactionDrawer, lazyViews as views, preloadViews, recordVisit } from "@/lib/viewLoader";
 
 /** Tabs with a page backdrop of their own. */
-const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["home", "settings", "terminal", "portal", "nebula", "weather", "archive", "calendar", "tasks", "orbit"]);
+const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["home", "settings", "terminal", "portal", "nebula", "weather", "archive", "calendar", "tasks", "orbit", "observatory"]);
 
 /**
  * How many page backdrops stay mounted. Only the current one, so a hidden
@@ -89,6 +89,8 @@ function backdrop(tab: TabId, nebulaTheme: ReturnType<typeof useHarness>["theme"
       return <ImageBackdrop image="engine" />;
     case "orbit":
       return <ImageBackdrop image="orbit" />;
+    case "observatory":
+      return <ImageBackdrop image="observatory" />;
     case "home":
       return <ImageBackdrop image="home" />;
     case "settings":
@@ -249,7 +251,7 @@ const Index = () => {
   }, [activeTab]);
 
   // Popups (dropdowns, pickers) portal to <body>, outside the page root, so
-  // the Portal's, the Horizon's, the Engine's and the Orbit's palettes go on
+  // the Portal's, the Horizon's, the Engine's, the Orbit's and the Observatory's palettes go on
   // <body> too for them to pick up.
   useEffect(() => {
     const orbit = !monochrome;
@@ -257,6 +259,7 @@ const Index = () => {
     document.body.classList.toggle("horizon-theme", orbit && viewTab === "calendar");
     document.body.classList.toggle("engine-theme", orbit && viewTab === "tasks");
     document.body.classList.toggle("orbit-theme", orbit && viewTab === "orbit");
+    document.body.classList.toggle("observatory-theme", orbit && viewTab === "observatory");
     document.body.classList.toggle("obsidian-theme", orbit && viewTab === "archive");
     document.body.classList.toggle("settings-theme", orbit && viewTab === "settings");
   }, [viewTab, monochrome]);
@@ -294,11 +297,13 @@ const Index = () => {
                   ? "engine-root"
                   : viewTab === "orbit"
                     ? "orbit-root"
-                    : viewTab === "home"
-                      ? "home-root"
-                      : viewTab === "settings"
-                        ? "settings-root"
-                      : "mesh-gradient-bg";
+                    : viewTab === "observatory"
+                      ? "observatory-root"
+                      : viewTab === "home"
+                        ? "home-root"
+                        : viewTab === "settings"
+                          ? "settings-root"
+                          : "mesh-gradient-bg";
   // The Nebula page, sidebar, and backdrop read their colours from these.
   const rootStyle =
     viewTab === "nebula"

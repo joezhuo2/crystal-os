@@ -7,6 +7,8 @@ import { obsidianApi } from "./server/obsidian/plugin";
 import { calendarApi } from "./server/calendar/plugin";
 import { mailApi } from "./server/mail/plugin";
 import { tradesApi } from "./server/trades/plugin";
+import { aiApi } from "./server/ai/plugin";
+import { createAiConfig } from "./server/ai/config";
 import {
   createRequireUser,
   createSupabaseVerifier,
@@ -33,9 +35,12 @@ export default defineConfig(({ mode }) => {
     microsoftClientId: env.MICROSOFT_CLIENT_ID,
     microsoftClientSecret: env.MICROSOFT_CLIENT_SECRET,
     redirectUri: env.MAIL_REDIRECT_URI,
-    anthropicApiKey: env.ANTHROPIC_API_KEY,
+    aiProvider: env.MAIL_AI_PROVIDER,
     aiModel: env.MAIL_AI_MODEL,
+    aiApiKey: env.MAIL_AI_API_KEY,
   };
+  // One per server, so a key saved in Settings → AI reaches the Courier at once.
+  const ai = createAiConfig(env);
 
   const { version } = JSON.parse(readFileSync(path.resolve(__dirname, "package.json"), "utf8"));
 
@@ -81,7 +86,8 @@ export default defineConfig(({ mode }) => {
         },
         requireUser,
       ),
-      mailApi(mailConfig, requireUser),
+      aiApi(ai, requireUser),
+      mailApi(mailConfig, requireUser, ai),
       tradesApi(mailConfig, requireUser),
       mode === "development" && componentTagger(),
     ].filter(Boolean),
@@ -93,6 +99,8 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         output: {
+          assetFileNames: (asset) =>
+            asset.names?.includes("eng.traineddata.gz") ? "assets/tesseract/[name][extname]" : "assets/[name]-[hash][extname]",
           // Vendor code in chunks of its own, so their file names (content
           // hashes) only change when the dependency does and an update to the
           // app does not invalidate them. framer-motion is left to Rollup: one

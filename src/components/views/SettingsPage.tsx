@@ -1,13 +1,28 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, Bell, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Images, Keyboard, ListTodo, Mail, Orbit, Package, Palette, PanelLeft, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Bell, Bot, Bug, ChevronDown, ClipboardCopy, CloudSun, Download, EyeOff, FolderOpen, Gauge, ImagePlus, Images, Keyboard, ListTodo, Mail, Orbit, Package, Telescope, Palette, PanelLeft, Power, Search, Settings, Sparkles, Trash2, X } from "lucide-react";
 import { orbitStore, useOrbitStore } from "@/lib/orbitStore";
 import NebulaSettingsSection from "@/components/nebula/NebulaSettingsSection";
+import ObservatoryFolderInput, {
+  ObservatoryAiModel,
+  ObservatoryAiProvider,
+  ObservatoryAiThresholdSlider,
+  ObservatoryDailyGoalInput,
+  ObservatoryDeepSkyFolders,
+  ObservatoryFlagSwitch,
+  ObservatoryIdleInput,
+  ObservatoryKeywordSortSwitch,
+  ObservatoryNewPerDayInput,
+  ObservatoryReminderTime,
+  ObservatoryRetentionSlider,
+} from "@/modules/observatory/ObservatorySettingsSection";
 import InstallerSection from "@/components/views/InstallerSection";
 import { Button } from "@/components/ui/button";
 import { useMailStatus, useSaveMailAi, useSaveMailCache } from "@/hooks/useMail";
-import { MAIL_AI_MODELS } from "@/lib/mail";
+import { CLAUDE_MODELS, useAiStatus, useSaveAiConfig, type AiChoice, type AiConfigPatch, type AiProvider } from "@/lib/ai";
+import { AiModelInput, AiProviderSelect, CommitInput } from "@/components/AiAreaFields";
 import { Input } from "@/components/ui/input";
+import { NumberInput as ThemedNumberInput } from "@/components/ui/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -426,6 +441,7 @@ const BACKDROP_LABELS: Record<BackdropImage, string> = {
   orbit: "The Orbit",
   portal: "The Portal",
   archive: "The Archive (Home box)",
+  observatory: "The Observatory",
 };
 
 function ThemeSettings() {
@@ -530,8 +546,7 @@ function NumberInput({
   };
   return (
     <div className="flex items-center gap-2">
-      <Input
-        type="number"
+      <ThemedNumberInput
         inputMode="numeric"
         min={min}
         max={max}
@@ -569,8 +584,7 @@ function EventLeadInput({
   };
   return (
     <div className="flex items-center gap-2">
-      <Input
-        type="number"
+      <ThemedNumberInput
         inputMode="numeric"
         min={0}
         max={MAX_EVENT_LEAD}
@@ -701,10 +715,107 @@ function KeymapSettings() {
   );
 }
 
+function KeyForm({ label, saved, placeholder, disabled, onSave, onRemove }: { label: string; saved: boolean; placeholder: string; disabled: boolean; onSave: (key: string, clear: () => void) => void; onRemove: () => void }) {
+  const [key, setKey] = useState("");
+  return (
+    <form
+      className="flex items-center gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave(key.trim(), () => setKey(""));
+      }}
+    >
+      <Input type="password" autoComplete="off" className="h-8 w-44" aria-label={label} placeholder={saved ? "Key saved" : placeholder} value={key} onChange={(e) => setKey(e.target.value)} disabled={disabled} />
+      <Button type="submit" size="sm" disabled={disabled || !key.trim()}>
+        Save
+      </Button>
+      {saved && (
+        <Button type="button" size="sm" variant="outline" onClick={onRemove} disabled={disabled}>
+          Remove
+        </Button>
+      )}
+    </form>
+  );
+}
+
+const SAVED_HERE = "Saved to .env.local on this computer and never shown again.";
+
+function AiSettings() {
+  const status = useAiStatus();
+  const save = useSaveAiConfig();
+  const ai = status.data;
+  const disabled = !ai || save.isPending;
+  const submit = (patch: AiConfigPatch, done: string, onDone?: () => void) =>
+    save.mutate(patch, {
+      onSuccess: () => {
+        onDone?.();
+        toast.success(done);
+      },
+      onError: (err) => toast.error("Could not save the AI settings", { description: err.message }),
+    });
+  const keyForm = (provider: AiProvider, label: string, saved: boolean, placeholder: string) => (
+    <KeyForm
+      label={label}
+      saved={saved}
+      placeholder={placeholder}
+      disabled={disabled}
+      onSave={(apiKey, clear) => submit({ [provider]: { apiKey } }, `${label} saved`, clear)}
+      onRemove={() => submit({ [provider]: { apiKey: null } }, `${label} removed`)}
+    />
+  );
+  const textInput = (provider: AiProvider, field: "baseUrl" | "model", label: string, value: string | undefined) => (
+    <CommitInput value={value ?? ""} label={label} disabled={disabled} onCommit={(v) => submit({ [provider]: { [field]: v } }, `${label} saved`)} />
+  );
+  const claudeModel = ai?.claude.model;
+  const claudeModels = claudeModel && !CLAUDE_MODELS.some((m) => m.id === claudeModel) ? [...CLAUDE_MODELS, { id: claudeModel, label: claudeModel }] : CLAUDE_MODELS;
+
+  return (
+    <>
+      <Row
+        title="Claude API key"
+        description={status.isError ? `Could not load settings: ${(status.error as Error).message}` : `The default Claude key, used whenever an area leaves its own key blank. ${SAVED_HERE}`}
+      >
+        {keyForm("claude", "Claude API key", Boolean(ai?.claude.configured), "sk-ant-...")}
+      </Row>
+      <Row title="Claude model" description="The default Claude model, used whenever an area leaves its model blank.">
+        <Select value={claudeModel} onValueChange={(model) => submit({ claude: { model } }, "Claude model saved")} disabled={disabled}>
+          <SelectTrigger className="h-8 w-36" aria-label="Claude model">
+            <SelectValue placeholder="Loading..." />
+          </SelectTrigger>
+          <SelectContent>
+            {claudeModels.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Row>
+      <Row title="NVIDIA NIM API key" description={`The default NVIDIA NIM key, used whenever an area leaves its own key blank. ${SAVED_HERE}`}>
+        {keyForm("nim", "NVIDIA NIM API key", Boolean(ai?.nim.configured), "nvapi-...")}
+      </Row>
+      <Row title="NVIDIA NIM base URL" description="The OpenAI-compatible endpoint NIM requests go to. Clear it to go back to https://integrate.api.nvidia.com/v1.">
+        {textInput("nim", "baseUrl", "NVIDIA NIM base URL", ai?.nim.baseUrl)}
+      </Row>
+      <Row title="NVIDIA NIM model" description="The default NIM model, used whenever an area leaves its model blank. Clear it for the built-in default.">
+        {textInput("nim", "model", "NVIDIA NIM model", ai?.nim.model)}
+      </Row>
+      <Row title="OmniRoute API key" description={`Optional: a local OmniRoute usually needs no key. Used whenever an area leaves its own key blank. ${SAVED_HERE}`}>
+        {keyForm("omniroute", "OmniRoute API key", Boolean(ai?.omniroute.hasKey), "Optional")}
+      </Row>
+      <Row title="OmniRoute endpoint" description="Where OmniRoute listens. Clear it to go back to http://localhost:20128/v1.">
+        {textInput("omniroute", "baseUrl", "OmniRoute endpoint", ai?.omniroute.baseUrl)}
+      </Row>
+      <Row title="OmniRoute model" description="The default OmniRoute model, used whenever an area leaves its model blank. Clear it for auto/coding.">
+        {textInput("omniroute", "model", "OmniRoute model", ai?.omniroute.model)}
+      </Row>
+    </>
+  );
+}
+
 function CourierAiSettings() {
   const status = useMailStatus();
   const save = useSaveMailAi();
-  const [key, setKey] = useState("");
   const ai = status.data?.ai;
   const cache = status.data?.cache;
   const saveCache = useSaveMailCache();
@@ -714,53 +825,36 @@ function CourierAiSettings() {
     saveCache.mutate({ [key]: days }, { onError: (err) => toast.error("Could not save The Courier settings", { description: (err as Error).message }) });
   };
   const disabled = !ai || save.isPending;
-  const models = ai && !MAIL_AI_MODELS.some((m) => m.id === ai.model) ? [...MAIL_AI_MODELS, { id: ai.model, label: ai.model }] : MAIL_AI_MODELS;
-  const submit = (body: { apiKey?: string | null; model?: string }, done: string) =>
+  const submit = (body: { provider?: AiChoice; model?: string; apiKey?: string | null }, done: string, onDone?: () => void) =>
     save.mutate(body, {
       onSuccess: () => {
-        setKey("");
+        onDone?.();
         toast.success(done);
       },
       onError: (err) => toast.error("Could not save The Courier settings", { description: (err as Error).message }),
     });
+  const missingKey = ai && ai.provider !== "none" && !ai.configured ? " No key is set for this provider yet: add one in the AI section or below." : "";
 
   return (
     <>
       <Row
-        title="Claude API key"
-        description={status.isError ? `Could not load settings: ${(status.error as Error).message}` : "Optional. With a key, the sender, subject and preview of emails the keyword rules are unsure about are sent to Anthropic to sort them. Saved to .env.local on this computer and never shown again."}
+        title="AI provider"
+        description={status.isError ? `Could not load settings: ${(status.error as Error).message}` : `Sorts the emails the keyword rules are unsure about by sending their sender, subject and preview to this provider. None keeps keyword sorting only.${missingKey}`}
       >
-        <form
-          className="flex items-center gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit({ apiKey: key.trim() }, "Claude API key saved");
-          }}
-        >
-          <Input type="password" autoComplete="off" className="h-8 w-44" aria-label="Claude API key" placeholder={ai?.configured ? "Key saved" : "sk-ant-..."} value={key} onChange={(e) => setKey(e.target.value)} disabled={disabled} />
-          <Button type="submit" size="sm" disabled={disabled || !key.trim()}>
-            Save
-          </Button>
-          {ai?.configured && (
-            <Button type="button" size="sm" variant="outline" onClick={() => submit({ apiKey: null }, "Claude API key removed")} disabled={disabled}>
-              Remove
-            </Button>
-          )}
-        </form>
+        <AiProviderSelect value={ai?.provider} onChange={(provider) => submit({ provider }, "Courier AI provider saved")} disabled={disabled} label="Courier AI provider" />
       </Row>
-      <Row title="Claude model" description="Which model sorts the unsure emails. Haiku is the cheapest and is enough for this.">
-        <Select value={ai?.model} onValueChange={(model) => submit({ model }, "Claude model saved")} disabled={disabled}>
-          <SelectTrigger className="h-8 w-36" aria-label="Claude model">
-            <SelectValue placeholder="Loading..." />
-          </SelectTrigger>
-          <SelectContent>
-            {models.map((m) => (
-              <SelectItem key={m.id} value={m.id}>
-                {m.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <Row title="Model" description="Blank uses the provider's default model from the AI section. A small, cheap model is enough for sorting mail.">
+        <AiModelInput provider={ai?.provider} value={ai?.model ?? ""} onCommit={(model) => submit({ model }, "Courier model saved")} disabled={disabled} label="Courier AI model" />
+      </Row>
+      <Row title="API key override" description={`Optional. Blank uses the provider's key from the AI section. ${SAVED_HERE}`}>
+        <KeyForm
+          label="Courier API key override"
+          saved={Boolean(ai?.keyOverride)}
+          placeholder="Optional"
+          disabled={disabled || ai?.provider === "none"}
+          onSave={(apiKey, clear) => submit({ apiKey }, "Courier API key saved", clear)}
+          onRemove={() => submit({ apiKey: null }, "Courier API key removed")}
+        />
       </Row>
       {cache && (
         <>
@@ -942,7 +1036,11 @@ export default function SettingsPage() {
           </Section>
         )}
 
-        {desktop && has("archive") && (
+        <Section id="ai" icon={Bot} title="AI">
+          <AiSettings />
+        </Section>
+
+        {desktop && (has("archive") || has("observatory")) && (
           <Section id="vault" icon={FolderOpen} title="Vault">
             <Row
               title="Obsidian vault folder"
@@ -1148,6 +1246,80 @@ export default function SettingsPage() {
               description="Writes each weekly, monthly and yearly review to Reviews/Weekly, Reviews/Monthly and Reviews/Yearly in your vault once it is ready (Sunday, the month's last day and December 31, from 6 PM), or the next time the app opens. Never overwrites a note that is already there, and leaves out the reflection, which you can add by exporting again from The Orbit."
             >
               <Switch checked={orbit.autoExport} onCheckedChange={orbitStore.setAutoExport} />
+            </Row>
+          </Section>
+        )}
+
+        {has("observatory") && (
+          <Section id="observatory" icon={Telescope} title="The Observatory">
+            <Row title="Vault folder" description="The folder in your vault where courses are kept.">
+              <ObservatoryFolderInput />
+            </Row>
+            <Row title="FSRS target retention" description="How likely you should be to remember a card when it comes due. Higher means more frequent reviews. Default 90%.">
+              <ObservatoryRetentionSlider />
+            </Row>
+            <Row title="New cards per day per course" description="How many questions you have not seen before each course adds to the review queue per day. Default 10.">
+              <ObservatoryNewPerDayInput />
+            </Row>
+            <Row title="Daily goal" description="Observations (a topic summary and its questions) to finish each day for the goal ring. Days roll over at 4 AM. Default 3.">
+              <ObservatoryDailyGoalInput />
+            </Row>
+            <Row title="AI provider" description="Which AI the Observatory's AI features use. While None, they stay off and nothing is ever sent anywhere. Default None.">
+              <ObservatoryAiProvider />
+            </Row>
+            <Row title="AI model" description="Blank uses the provider's default model from the AI section.">
+              <ObservatoryAiModel />
+            </Row>
+            <Row title="Sort PDFs with AI" description="Ask the AI which course a dropped PDF belongs to when the keywords cannot tell. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="aiSort" label="Sort PDFs with AI" needsAi />
+            </Row>
+            <Row title="AI confidence threshold" description="How sure the AI must be before a PDF is filed without asking. Below it, the drop asks where it goes. Default 75%.">
+              <ObservatoryAiThresholdSlider />
+            </Row>
+            <Row title="Draft topics and questions with AI" description="Suggest topic summaries and practice questions for you to review. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="aiDraft" label="Draft topics and questions with AI" needsAi />
+            </Row>
+            <Row title="Read slides and unclear pages with AI" description="Send slide decks and pages the local reader cannot make out to the AI. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="aiExtract" label="Read slides and unclear pages with AI" needsAi />
+            </Row>
+            <Row title="Deep Sky: suggest from my projects" description="Suggest things to learn from the projects in the folders below. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="deepSkyProjects" label="Deep Sky: suggest from my projects" needsAi />
+            </Row>
+            <Row title="Deep Sky project folders" description="Vault folders to look at, separated by commas.">
+              <ObservatoryDeepSkyFolders />
+            </Row>
+            <Row title="Deep Sky: random ideas" description="Suggest random topics worth exploring. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="deepSkyRandom" label="Deep Sky: random ideas" needsAi />
+            </Row>
+            <Row title="Deep Sky on Home" description="Fill the Home widget with Deep Sky cards after the course cards. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="deepSkyFillHome" label="Deep Sky cards fill the Home widget" needsAi />
+            </Row>
+            <Row title="Sort PDFs by keywords" description="File a dropped PDF straight into the course whose code or keywords it mentions. When off, every drop asks where it goes. Default on.">
+              <ObservatoryKeywordSortSwitch />
+            </Row>
+            <Row title="Auto start focus: open a topic" description="Start the Pomodoro on a topic when you open it in the priority map. Default on.">
+              <ObservatoryFlagSwitch flag="focusOnTopic" label="Auto start focus when opening a topic" />
+            </Row>
+            <Row title="Auto start focus: open a resource" description="Start the Pomodoro when you open a PDF in the reader. Default on.">
+              <ObservatoryFlagSwitch flag="focusOnResource" label="Auto start focus when opening a resource" />
+            </Row>
+            <Row title="Auto start focus: first answer" description="Start the Pomodoro when you answer the first question of a review. Default on.">
+              <ObservatoryFlagSwitch flag="focusOnAnswer" label="Auto start focus on the first answer" />
+            </Row>
+            <Row title="Ask before starting focus" description={'Show "Start focus on …?" first. When off, focus starts at once with an Undo toast. Default on.'}>
+              <ObservatoryFlagSwitch flag="focusAsk" label="Ask before starting focus" />
+            </Row>
+            <Row title="Auto stop focus" description="Pause focus the Observatory started when you leave, close what started it, or stop studying. A Pomodoro you started yourself is never touched. Default on.">
+              <ObservatoryFlagSwitch flag="focusAutoStop" label="Auto stop focus" />
+            </Row>
+            <Row title="Idle timeout" description="Minutes without study activity before auto stop pauses focus. Default 5.">
+              <ObservatoryIdleInput />
+            </Row>
+            <Row title="Review reminder" description="A notification when cards are due, once a day at the time below. Follows Do Not Disturb. Default off.">
+              <ObservatoryFlagSwitch flag="reminder" label="Review reminder" />
+            </Row>
+            <Row title="Reminder time" description="When the review reminder fires. Default 7:00 PM.">
+              <ObservatoryReminderTime />
             </Row>
           </Section>
         )}

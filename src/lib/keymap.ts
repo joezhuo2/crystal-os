@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { formatAccelerator, isPaletteShortcut, paletteShortcutLabel } from "@/lib/hotkey";
 import { ARCHIVE_KEYS } from "@/lib/keymaps/archive";
+import { OBSERVATORY_KEYS } from "@/lib/keymaps/observatory";
 import { ENGINE_KEYS } from "@/lib/keymaps/engine";
 import { GENERAL_KEYS, SEARCH_ACTION_ID } from "@/lib/keymaps/general";
 import { HORIZON_KEYS } from "@/lib/keymaps/horizon";
@@ -8,7 +9,7 @@ import { NEBULA_KEYS } from "@/lib/keymaps/nebula";
 import { ORBIT_KEYS } from "@/lib/keymaps/orbit";
 import { TERMINAL_KEYS } from "@/lib/keymaps/terminal";
 
-export type KeymapCategory = "general" | "engine" | "horizon" | "archive" | "nebula" | "terminal" | "orbit";
+export type KeymapCategory = "general" | "engine" | "horizon" | "archive" | "nebula" | "terminal" | "orbit" | "observatory";
 
 export interface KeymapAction {
   id: string;
@@ -22,6 +23,7 @@ export const KEYMAP_CATEGORY_LABELS: Record<KeymapCategory, string> = {
   engine: "The Engine",
   horizon: "The Horizon",
   archive: "The Archive",
+  observatory: "The Observatory",
   nebula: "The Nebula",
   terminal: "Terminal",
   orbit: "The Orbit",
@@ -32,6 +34,7 @@ export const KEYMAP: KeymapAction[] = [
   ...ENGINE_KEYS,
   ...HORIZON_KEYS,
   ...ARCHIVE_KEYS,
+  ...OBSERVATORY_KEYS,
   ...NEBULA_KEYS,
   ...TERMINAL_KEYS,
   ...ORBIT_KEYS,

@@ -15,6 +15,7 @@ import engineImage from "@/assets/engine-backdrop.webp";
 import orbitImage from "@/assets/orbit-backdrop.webp";
 import portalImage from "@/assets/portal-backdrop.webp";
 import archiveImage from "@/assets/archive-backdrop.jpg";
+import observatoryImage from "@/assets/observatory-backdrop.svg";
 import { blurImage } from "@/lib/atmosphereImage";
 import { backdropSettings, useBackdropSettings, type BackdropImage } from "@/lib/backdropSettings";
 
@@ -34,6 +35,7 @@ const IMAGES: Record<BackdropImage, string> = {
   portal: portalImage,
   // Home box only; The Archive page keeps its amethyst cave.
   archive: archiveImage,
+  observatory: observatoryImage,
 };
 
 const baked = new Map<string, Promise<string>>();

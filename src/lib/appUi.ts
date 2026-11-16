@@ -30,7 +30,11 @@ export interface AppUiState {
   openEvent: { id: string; calendarId: string; date: string } | null;
   /** Requests that Settings unfold, scroll to and flash this section. */
   settingsSection: string | null;
+  /** Requests that the Observatory open a course tab, topic, Review or the inbox. */
+  observatoryTarget: ObservatoryTarget | null;
 }
+
+export interface ObservatoryTarget { code?: string; tab?: "Overview" | "Topics" | "Resources" | "Grades"; topic?: string; view?: "review" | "inbox" | "deepsky" }
 
 const initialState: AppUiState = {
   showTaskForm: false,
@@ -44,6 +48,7 @@ const initialState: AppUiState = {
   newEventSlot: null,
   openEvent: null,
   settingsSection: null,
+  observatoryTarget: null,
 };
 
 let state: AppUiState = initialState;
@@ -77,6 +82,7 @@ export const appUi = {
   setNewEventSlot: (slot: AppUiState["newEventSlot"]) => set("newEventSlot", slot),
   setOpenEvent: (target: AppUiState["openEvent"]) => set("openEvent", target),
   setSettingsSection: (id: string | null) => set("settingsSection", id),
+  setObservatoryTarget: (target: ObservatoryTarget | null) => set("observatoryTarget", target),
 
   /** Back to nothing open. AppProvider calls it on sign-out. */
   reset() {
