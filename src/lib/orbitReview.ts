@@ -387,6 +387,8 @@ export interface Review {
   habits: HabitSummary[];
   /** Habit completion is only listed when there are habits to measure. */
   trends: Trend[];
+  /** Plain-language findings; empty when the period has too little to go on. */
+  insights: string[];
 }
 
 const TREND_DEFS: Omit<Trend, "value" | "previous" | "average">[] = [
@@ -560,6 +562,81 @@ export function formatEstimateDiff(row: Pick<EstimateRow, "avgDiffMinutes" | "av
   return `${sign}${formatMinutes(Math.abs(row.avgDiffMinutes))} (${sign}${Math.abs(row.avgDiffPercent)}%)`;
 }
 
+const WEEKDAY_PLURALS = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"];
+const weekdayOf = (day: string) => new Date(`${day}T12:00:00`).getDay();
+const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+
+/** Days a habit must be done, and not done, before its focus is compared. */
+export const INSIGHT_MIN_DAYS = 3;
+/** The smallest difference, in percent, worth a line. */
+export const INSIGHT_MIN_PERCENT = 20;
+
+/**
+ * Findings in plain words: the habit whose days carry the most (or least)
+ * focus, the weekday with the deepest focus and the one with the most
+ * completions (from two weeks of days up), and the category furthest off its
+ * estimates. `days` are the period's days so far.
+ */
+export function reviewInsights({
+  days,
+  focusByDay,
+  completionDays,
+  habits,
+  checkIndex,
+  estimates,
+}: {
+  days: string[];
+  focusByDay: { day: string; minutes: number }[];
+  completionDays: string[];
+  habits: Pick<Habit, "id" | "name">[];
+  checkIndex: Map<string, Set<string>>;
+  estimates: Pick<EstimateRow, "label" | "tasks" | "avgDiffPercent">[];
+}): string[] {
+  const out: string[] = [];
+  const focus = new Map(focusByDay.map((d) => [d.day, d.minutes]));
+  const focusOn = (list: string[]) => mean(list.map((d) => focus.get(d) ?? 0));
+
+  let habit: { name: string; pct: number } | null = null;
+  for (const h of habits) {
+    const done = checkIndex.get(h.id);
+    if (!done) continue;
+    const on = days.filter((d) => done.has(d));
+    const off = days.filter((d) => !done.has(d));
+    if (on.length < INSIGHT_MIN_DAYS || off.length < INSIGHT_MIN_DAYS) continue;
+    const base = focusOn(off);
+    if (base <= 0) continue;
+    const pct = Math.round((focusOn(on) / base - 1) * 100);
+    if (Math.abs(pct) >= INSIGHT_MIN_PERCENT && (!habit || Math.abs(pct) > Math.abs(habit.pct))) habit = { name: h.name, pct };
+  }
+  if (habit) out.push(`You focus ${Math.abs(habit.pct)}% ${habit.pct > 0 ? "more" : "less"} on days you do ${habit.name}.`);
+
+  if (days.length >= 14) {
+    const byWeekday = WEEKDAY_PLURALS.map((_, w) => focusOn(days.filter((d) => weekdayOf(d) === w)));
+    const top = byWeekday.indexOf(Math.max(...byWeekday));
+    const overall = focusOn(days);
+    if (overall > 0 && byWeekday[top] >= overall * (1 + INSIGHT_MIN_PERCENT / 100)) {
+      out.push(`${WEEKDAY_PLURALS[top]} are your deepest focus days: ${formatMinutes(byWeekday[top])} on average.`);
+    }
+    if (completionDays.length >= 10) {
+      const counts = WEEKDAY_PLURALS.map((_, w) => completionDays.filter((d) => weekdayOf(d) === w).length);
+      const busiest = counts.indexOf(Math.max(...counts));
+      if (counts[busiest] / completionDays.length >= 0.25) {
+        out.push(`You finish the most tasks on ${WEEKDAY_PLURALS[busiest]}: ${counts[busiest]} of ${completionDays.length}.`);
+      }
+    }
+  }
+
+  const off = estimates
+    .filter((e) => e.tasks >= 2 && Math.abs(e.avgDiffPercent) >= INSIGHT_MIN_PERCENT)
+    .sort((a, b) => Math.abs(b.avgDiffPercent) - Math.abs(a.avgDiffPercent))[0];
+  if (off) {
+    out.push(
+      `${off.label} tasks ${off.avgDiffPercent > 0 ? "overrun" : "come in under"} their estimates by ${Math.abs(off.avgDiffPercent)}% on average.`,
+    );
+  }
+  return out;
+}
+
 /** The first day a review needs data from: the start of its trend window. */
 export function dataStart(period: ReviewPeriod): string {
   return shiftPeriod(period, -TREND_WINDOW[period.kind]).start;
@@ -598,6 +675,15 @@ export function buildReview(period: ReviewPeriod, data: ReviewData): Review {
   const habitsByDay = days
     .filter((day) => day <= reviewDay)
     .map((day) => ({ day, done: habitDay(day, data.habits ?? [], checkIndex, reviewDay).done.length }));
+  const estimates = estimateAccuracy(period, data);
+  const insights = reviewInsights({
+    days: days.filter((day) => day <= reviewDay),
+    focusByDay,
+    completionDays: sortedCompletions.map((c) => dayOfInstant(c.completedAt)),
+    habits: data.habits ?? [],
+    checkIndex,
+    estimates,
+  });
   const trends = TREND_DEFS.filter((def) => def.id !== "habitRate" || habits.length > 0).map((def) => ({
     ...def,
     value: stats[def.id],
@@ -621,11 +707,12 @@ export function buildReview(period: ReviewPeriod, data: ReviewData): Review {
     focusPerWeek: Math.round((stats.focusMinutes / days.length) * 7),
     focusPerMonth: Math.round(stats.focusMinutes / focusByMonth.length),
     focusByTask: focusByTask(period, data.focus, data.tasks),
-    estimates: estimateAccuracy(period, data),
+    estimates,
     agenda: buildAgenda(next, data),
     next,
     habits,
     trends,
+    insights,
   };
 }
 
@@ -787,6 +874,7 @@ export function toMarkdown(review: Review, reflection?: Reflection, now: Date = 
         ]
       : []),
     "",
+    ...(review.insights.length > 0 ? ["## Insights", "", ...review.insights.map((line) => `- ${line}`), ""] : []),
     ...(review.estimates.length > 0
       ? [
           "## Estimates vs actual",
