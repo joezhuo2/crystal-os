@@ -1,5 +1,6 @@
 export type MailProvider = "google" | "microsoft";
 export type MailCategory = "bill" | "job" | "order" | "security";
+export type OrderStatus = "ordered" | "shipped" | "out" | "delivered";
 export type JobStatus = "applied" | "interview" | "offer" | "rejected" | "update";
 
 export interface MailAccount {
@@ -41,6 +42,8 @@ export interface MailExtras {
   dueDate?: string;
   company?: string;
   jobStatus?: JobStatus;
+  deliveryDate?: string;
+  orderStatus?: OrderStatus;
 }
 
 export interface MailItem extends MailExtras {

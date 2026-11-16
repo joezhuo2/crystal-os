@@ -1,3 +1,4 @@
+import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 import type { AiChoice } from "@/lib/ai";
 import { apiRequest } from "@/lib/apiRequest";
 import { addDays, toLocalDateStr } from "@/lib/utils";
@@ -5,6 +6,7 @@ import { addDays, toLocalDateStr } from "@/lib/utils";
 export type MailProvider = "google" | "microsoft";
 export type MailCategory = "bill" | "job" | "order" | "security";
 export type JobStatus = "applied" | "interview" | "offer" | "rejected" | "update";
+export type OrderStatus = "ordered" | "shipped" | "out" | "delivered";
 
 export interface MailAccount {
   id: string;
@@ -57,6 +59,8 @@ export interface MailItem {
   dueDate?: string;
   company?: string;
   jobStatus?: JobStatus;
+  deliveryDate?: string;
+  orderStatus?: OrderStatus;
   details?: { label: string; value: string }[];
 }
 
@@ -136,7 +140,42 @@ export function latestJobs(items: MailItem[]): MailItem[] {
   return [...latest.values()];
 }
 
-export const JOB_STAGES = ["applied", "interview", "offer", "rejected"] as const;
+export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = { ordered: "Ordered", shipped: "Shipped", out: "Out for delivery", delivered: "Delivered" };
+
+export const isDelivery = (event: Pick<CalendarEvent, "id">) => event.id.startsWith("delivery:");
+
+// shortcut: one sender's emails for the same arrival day count as one package; match on order numbers if two parcels collide
+export function deliveries(items: MailItem[]): MailItem[] {
+  const seen = new Set<string>();
+  return newestFirst(items, "order").filter((i) => {
+    const key = `${i.fromAddress}|${i.deliveryDate}`;
+    if (!i.deliveryDate || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function deliveryEvents(items: MailItem[]): CalendarEvent[] {
+  return deliveries(items).map((i) => ({
+    id: `delivery:${i.id}`,
+    calendarId: "",
+    summary: `Delivery: ${i.from}`,
+    description: i.subject,
+    location: "",
+    allDay: true,
+    startDate: i.deliveryDate!,
+    startTime: "",
+    endDate: i.deliveryDate!,
+    endTime: "",
+    startISO: `${i.deliveryDate}T00:00:00`,
+    endISO: `${i.deliveryDate}T23:59:59`,
+    recurrence: null,
+    recurringEventId: null,
+    htmlLink: i.url,
+  }));
+}
+
+export const JOB_STAGES =["applied", "interview", "offer", "rejected"] as const;
 export type JobStage = (typeof JOB_STAGES)[number];
 export const FOLLOW_UP_DAYS = 7;
 

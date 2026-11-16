@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueLabel, jobFollowUpAlerts, jobPipeline, latestJobs, mailRecap, mailTask, mailSummary, newestFirst, relativeDate, sortBills, type MailItem } from "./mail";
+import { deliveryEvents, dueLabel, jobFollowUpAlerts, jobPipeline, latestJobs, mailRecap, mailTask, mailSummary, newestFirst, relativeDate, sortBills, type MailItem } from "./mail";
 
 let n = 0;
 const item = (over: Partial<MailItem>): MailItem => ({
@@ -64,6 +64,17 @@ describe("jobPipeline", () => {
 
   it("asks for a follow-up after a week of silence, never for a rejection", () => {
     expect(jobFollowUpAlerts(items, new Date("2026-11-09T00:00:00Z")).map((a) => a.key)).toEqual(["job-follow-up:beta"]);
+  });
+});
+
+describe("deliveryEvents", () => {
+  it("makes one all-day event per sender and arrival day, from the newest email", () => {
+    const events = deliveryEvents([
+      item({ id: "old", category: "order", from: "Shop", deliveryDate: "2026-11-14", receivedAt: "2026-11-09T00:00:00Z" }),
+      item({ id: "new", category: "order", from: "Shop", deliveryDate: "2026-11-14", receivedAt: "2026-11-10T00:00:00Z" }),
+      item({ id: "undated", category: "order" }),
+    ]);
+    expect(events.map((e) => [e.id, e.startDate, e.allDay, e.summary])).toEqual([["delivery:new", "2026-11-14", true, "Delivery: Shop"]]);
   });
 });
 

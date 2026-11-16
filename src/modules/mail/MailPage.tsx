@@ -27,6 +27,8 @@ import { toLocalDateStr } from "@/lib/utils";
 import {
   JOB_STAGES,
   JOB_STATUS_LABEL,
+  ORDER_STATUS_LABEL,
+  formatDay,
   PROVIDER_LABEL,
   dueLabel,
   isOverdue,
@@ -390,7 +392,17 @@ function Dashboard({ status }: { status: MailStatus }) {
             )}
           </Card>
           <Card title="Orders & deliveries" icon={Package} days={days} empty={orders.length === 0}>
-            {orders.map((o) => row(o))}
+            {orders.map((o) =>
+              row(
+                o,
+                o.orderStatus && (
+                  <div className="shrink-0 text-right text-xs text-muted-foreground">
+                    <p>{ORDER_STATUS_LABEL[o.orderStatus]}</p>
+                    {o.deliveryDate && <p>Arrives {formatDay(o.deliveryDate)}</p>}
+                  </div>
+                ),
+              ),
+            )}
           </Card>
           <Card title="Security alerts" icon={ShieldAlert} days={days} empty={security.length === 0}>
             {security.map((s) => row(s))}

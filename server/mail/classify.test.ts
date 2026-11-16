@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classify, extractCompany, extractDueDate } from "./classify";
+import { classify, extractCompany, extractDeliveryDate, extractDueDate } from "./classify";
 
 const ref = new Date("2026-11-10T12:00:00Z");
 const mail = (from: string, fromAddress: string, subject: string, snippet = "") => ({
@@ -24,7 +24,7 @@ describe("classify", () => {
     [
       "order",
       mail("Amazon.ca", "shipment-tracking@amazon.ca", "Your order has shipped", "Track your package"),
-      { category: "order", confident: true },
+      { category: "order", confident: true, orderStatus: "shipped" },
     ],
     [
       "security",
@@ -85,6 +85,28 @@ describe("extractDueDate", () => {
     ["due on Feb 30", undefined],
   ])("%s -> %s", (text, expected) => {
     expect(extractDueDate(text, ref)).toBe(expected);
+  });
+});
+
+describe("order tracking", () => {
+  it.each([
+    ["Arriving Thursday", "2026-11-12"],
+    ["Your package arrives tomorrow", "2026-11-11"],
+    ["Estimated delivery: November 20", "2026-11-20"],
+    ["Expected by 2026-12-01", "2026-12-01"],
+    ["Thanks for your order", undefined],
+  ])("%s -> %s", (text, expected) => {
+    expect(extractDeliveryDate(text, ref)).toBe(expected);
+  });
+
+  it("reads the status and the arrival date of an order email", () => {
+    const shipped = classify(mail("Amazon.ca", "shipment-tracking@amazon.ca", "Shipped: your order", "Arriving November 14"), ref);
+    expect(shipped).toMatchObject({ category: "order", orderStatus: "shipped", deliveryDate: "2026-11-14" });
+    const out = classify(mail("Canada Post", "tracking@canadapost.ca", "Your package is out for delivery"), ref);
+    expect(out).toMatchObject({ orderStatus: "out", deliveryDate: "2026-11-10" });
+    const done = classify(mail("Amazon.ca", "order-update@amazon.ca", "Delivered: your order", "Your package was delivered today"), ref);
+    expect(done.orderStatus).toBe("delivered");
+    expect(done.deliveryDate).toBeUndefined();
   });
 });
 
