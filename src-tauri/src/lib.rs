@@ -2,6 +2,7 @@ use tauri::{Manager, RunEvent, WindowEvent};
 
 mod autostart;
 mod command_box;
+mod convert;
 mod diagnostics;
 mod harness;
 mod hotkey;
@@ -92,6 +93,7 @@ pub fn run() {
       vault::trash_vault_path,
       vault::restore_vault_path,
       vault::watch_vault,
+      convert::convert_to_pdf,
       terminal::terminal_list,
       terminal::terminal_open,
       terminal::terminal_attach,

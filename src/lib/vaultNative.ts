@@ -315,6 +315,14 @@ export function writeVaultBinary(
   return invoke("write_vault_binary", { path, data: btoa(binary), overwrite });
 }
 
+export function convertToPdf(name: string, bytes: Uint8Array): Promise<ArrayBuffer> {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return invoke<ArrayBuffer>("convert_to_pdf", { name, data: btoa(binary) });
+}
+
 export function moveVaultPath(from: string, to: string): Promise<{ path: string }> {
   return invoke("move_vault_path", { from, to });
 }

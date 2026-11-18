@@ -29,9 +29,9 @@ const CALENDAR_STORAGE_KEY = "crystal-os-google-calendar";
 
 function calendarId(): string {
   try {
-    return localStorage.getItem(CALENDAR_STORAGE_KEY) ?? "primary";
+    return localStorage.getItem(CALENDAR_STORAGE_KEY) ?? "all";
   } catch {
-    return "primary";
+    return "all";
   }
 }
 

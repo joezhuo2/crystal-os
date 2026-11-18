@@ -23,6 +23,7 @@ import {
   Repeat,
   Trash2,
   Unplug,
+  UserPlus,
   X,
   Copy,
 } from "lucide-react";
@@ -60,6 +61,7 @@ import {
   localTimeZone,
   parseRecurrence,
   useCalendarEvents,
+  ALL_CALENDARS,
   useCalendarList,
   useCalendarStatus,
   useCreateEvent,
@@ -559,7 +561,7 @@ function AgendaList({
               <EventRow
                 key={event.id}
                 event={event}
-                color={color}
+                color={event.color ?? color}
                 onEdit={() => onEdit(event)}
                 onDelete={() => onDelete(event)}
               />
@@ -650,7 +652,7 @@ function DayPanel({
               <EventRow
                 key={event.id}
                 event={event}
-                color={color}
+                color={event.color ?? color}
                 onEdit={() => onEdit(event)}
                 onDelete={() => onDelete(event)}
               />
@@ -1197,9 +1199,9 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
 
   const [calendarId, setCalendarId] = useState(() => {
     try {
-      return localStorage.getItem(CALENDAR_STORAGE_KEY) ?? "primary";
+      return localStorage.getItem(CALENDAR_STORAGE_KEY) ?? ALL_CALENDARS;
     } catch {
-      return "primary";
+      return ALL_CALENDARS;
     }
   });
 
@@ -1315,7 +1317,7 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
       else window.open(event.htmlLink, "_blank", "noreferrer");
       return;
     }
-    recordRecent({ kind: "event", id: event.id, title: event.summary, calendarId, date: event.startDate });
+    recordRecent({ kind: "event", id: event.id, title: event.summary, calendarId: event.calendarId, date: event.startDate });
     setFormState({ open: true, event, date: event.startDate });
   };
   const closeForm = () => setFormState((s) => ({ ...s, open: false }));
@@ -1350,7 +1352,7 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
     const before = eventInputOf(event, undefined);
     if (!before || isDelivery(event)) return;
     const target = {
-      calendarId,
+      calendarId: event.calendarId,
       eventId: event.id,
       scope: "single" as const,
       recurringEventId: event.recurringEventId,
@@ -1393,7 +1395,7 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
       appUi.setOpenEvent(null);
       return;
     }
-    if (openEventRequest.calendarId !== calendarId) selectCalendar(openEventRequest.calendarId);
+    if (calendarId !== ALL_CALENDARS && openEventRequest.calendarId !== calendarId) selectCalendar(openEventRequest.calendarId);
     setFocusDate(openEventRequest.date);
     setViewState("day");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1401,7 +1403,7 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
 
   useEffect(() => {
     const target = openEventRequest;
-    if (!target || view !== "day" || focusDate !== target.date || calendarId !== target.calendarId) return;
+    if (!target || view !== "day" || focusDate !== target.date || (calendarId !== ALL_CALENDARS && calendarId !== target.calendarId)) return;
     if (eventsQuery.isPending) return;
     appUi.setOpenEvent(null);
     if (eventsQuery.isError) return;
@@ -1426,13 +1428,20 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
   useShortcut("horizon.viewAgenda", () => setView("agenda"), connected);
   useShortcut("horizon.cycleView", () => setView(VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]), connected);
   useShortcut("horizon.newEvent", () => openCreate(toLocalDateStr()), connected);
-  const disconnectCalendar = () => {
+  const accounts = status.data?.accounts ?? (status.data?.account ? [status.data.account] : []);
+  const disconnectCalendar = (account?: string) => {
     if (disconnect.isPending) return;
-    disconnect.mutate(undefined, {
-      onSuccess: () => toast.success("Google Calendar disconnected"),
+    disconnect.mutate(account, {
+      onSuccess: () => toast.success(account ? `${account} disconnected` : "Google Calendar disconnected"),
     });
   };
-  useShortcut("horizon.signOut", disconnectCalendar, connected);
+  const addAccount = () => {
+    apiRequest<{ url: string }>("/api/calendar/auth/start", undefined, "Calendar API error")
+      .then(({ url }) => openExternal(url))
+      .then(() => toast("Finish signing in in your browser", { description: "The new calendars appear here afterwards." }))
+      .catch((err: Error) => toast.error("Could not start Google sign-in", { description: err.message }));
+  };
+  useShortcut("horizon.signOut", () => disconnectCalendar(), connected);
   useShortcut("horizon.openToday", () => {
     const now = toLocalDateStr();
     setFocusDate(now);
@@ -1500,10 +1509,13 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
             value={calendarId}
             aria-label="Calendar"
             onChange={selectCalendar}
-            options={(calendars.data?.calendars ?? []).map((c) => ({
-              value: c.id,
-              label: c.summary,
-            }))}
+            options={[
+              { value: ALL_CALENDARS, label: "All calendars" },
+              ...(calendars.data?.calendars ?? []).map((c) => ({
+                value: c.id,
+                label: accounts.length > 1 && c.account ? `${c.summary} (${c.account})` : c.summary,
+              })),
+            ]}
             className="glass-card w-auto max-w-[14rem] bg-transparent px-3 py-1.5 text-xs font-medium hover:bg-white/5"
           />
         )}
@@ -1520,14 +1532,33 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
           {eventsQuery.isFetching && (
             <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
           )}
-          {status.data?.account && (
-            <span className="text-[10px] text-muted-foreground hidden sm:inline">
-              {status.data.account}
+          {accounts.map((account) => (
+            <span key={account} className="text-[10px] text-muted-foreground hidden sm:inline-flex items-center gap-1">
+              {account}
+              {accounts.length > 1 && (
+                <button
+                  onClick={() => disconnectCalendar(account)}
+                  disabled={disconnect.isPending}
+                  aria-label={`Disconnect ${account}`}
+                  className="hover:text-destructive transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </span>
-          )}
+          ))}
+          <GlassTip label="Add another Google account" side="bottom" colors={HORIZON_TIP}>
+            <button
+              onClick={addAccount}
+              aria-label="Add another Google account"
+              className="glass-card-hover px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+            </button>
+          </GlassTip>
           <GlassTip label="Disconnect Google Calendar" side="bottom" colors={HORIZON_TIP}>
             <button
-              onClick={disconnectCalendar}
+              onClick={() => disconnectCalendar()}
               disabled={disconnect.isPending}
               aria-label="Disconnect Google Calendar"
               className="glass-card-hover px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-colors"
@@ -1675,7 +1706,7 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
           <EventForm
             // Remount on target change so the form state re-initialises.
             key={formState.event?.id ?? `new-${formState.date}-${formState.time ?? ""}-${formState.endTime ?? ""}`}
-            calendarId={calendarId}
+            calendarId={formState.event?.calendarId ?? calendarId}
             editingEvent={formState.event}
             defaultDate={formState.date}
             defaultTime={formState.time}
@@ -1687,7 +1718,7 @@ export default function CalendarPage({ onNavigate }: { onNavigate?: (tab: TabId)
 
       {deleteTarget && (
         <DeleteEventDialog
-          calendarId={calendarId}
+          calendarId={deleteTarget.calendarId}
           event={deleteTarget}
           onClose={() => setDeleteTarget(null)}
         />

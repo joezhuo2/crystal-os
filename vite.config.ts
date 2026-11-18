@@ -79,6 +79,7 @@ export default defineConfig(({ mode }) => {
           // Written back into .env.local by the OAuth callback, so a restart
           // picks the connection straight back up.
           refreshToken: env.GOOGLE_REFRESH_TOKEN,
+          extraRefreshTokens: env.GOOGLE_REFRESH_TOKENS_EXTRA,
         },
         requireUser,
       ),

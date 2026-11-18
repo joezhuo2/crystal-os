@@ -9,10 +9,13 @@ import {
 } from "./oauth";
 import {
   type EventInput,
+  ALL_CALENDARS,
   createEvent,
   deleteEvent,
-  listCalendars,
+  listAllCalendars,
+  listAllEvents,
   listEvents,
+  splitCalendarId,
   updateEvent,
 } from "./events";
 
@@ -175,10 +178,7 @@ async function handleAuthCallback(
   if (!code) throw new CalendarError("Missing authorization code");
 
   // 1. In-memory first, so this process is connected the moment we reply.
-  const refreshToken = await auth.exchangeCode(
-    code,
-    url.searchParams.get("state"),
-  );
+  await auth.exchangeCode(code, url.searchParams.get("state"));
 
   // 2. Respond before touching disk.
   sendCallbackPage(
@@ -194,7 +194,7 @@ async function handleAuthCallback(
   // 3. Mirror to .env.local detached. Vite restarts the dev server when an env
   //    file changes, so a blocking write here would race the response above.
   setImmediate(() => {
-    void auth.persistRefreshToken(refreshToken).catch((err) => {
+    void auth.persistTokens().catch((err) => {
       console.error(
         "[calendar] failed to persist refresh token:",
         err instanceof Error ? err.message : String(err),
@@ -234,7 +234,8 @@ export function createCalendarMiddleware(
         const url = new URL(rawUrl, "http://localhost");
         const route = url.pathname.slice(ROUTE_PREFIX.length);
         const method = (req.method ?? "GET").toUpperCase();
-        const calendarId = url.searchParams.get("calendarId") || "primary";
+        const picked = url.searchParams.get("calendarId") || "primary";
+        const { account, calendarId } = splitCalendarId(picked);
         const scope = url.searchParams.get("scope") === "all" ? "all" : "single";
 
         // /auth/callback is the one exemption, and it has to be: it is a
@@ -275,7 +276,7 @@ export function createCalendarMiddleware(
 
         if (route === "/auth/disconnect") {
           if (method !== "POST") throw new CalendarError("Use POST", 405);
-          await auth.disconnect();
+          await auth.disconnect(url.searchParams.get("account") || undefined);
           sendJson(res, 200, { ok: true });
           return;
         }
@@ -283,7 +284,9 @@ export function createCalendarMiddleware(
         if (route === "/calendars") {
           if (method !== "GET") throw new CalendarError("Use GET", 405);
           sendJson(res, 200, {
-            calendars: await listCalendars(auth.getClient()),
+            calendars: (await listAllCalendars(await auth.getSources())).map(
+              ({ client: _client, googleId: _googleId, ...calendar }) => calendar,
+            ),
           });
           return;
         }
@@ -296,19 +299,22 @@ export function createCalendarMiddleware(
               throw new CalendarError("timeMin and timeMax are required");
             }
             sendJson(res, 200, {
-              events: await listEvents(
-                auth.getClient(),
-                calendarId,
-                timeMin,
-                timeMax,
-              ),
+              events:
+                picked === ALL_CALENDARS
+                  ? await listAllEvents(await auth.getSources(), timeMin, timeMax)
+                  : await listEvents(
+                      await auth.getClient(account),
+                      calendarId,
+                      timeMin,
+                      timeMax,
+                    ),
             });
             return;
           }
           if (method === "POST") {
             const input = parseEventInput(await readJsonBody(req));
             sendJson(res, 201, {
-              event: await createEvent(auth.getClient(), calendarId, input),
+              event: await createEvent(await auth.getClient(account), calendarId, input),
             });
             return;
           }
@@ -329,7 +335,7 @@ export function createCalendarMiddleware(
                 : null;
             sendJson(res, 200, {
               event: await updateEvent(
-                auth.getClient(),
+                await auth.getClient(account),
                 calendarId,
                 targetEventId(eventId, scope, recurringEventId),
                 parseEventInput(body),
@@ -340,7 +346,7 @@ export function createCalendarMiddleware(
 
           if (method === "DELETE") {
             await deleteEvent(
-              auth.getClient(),
+              await auth.getClient(account),
               calendarId,
               targetEventId(
                 eventId,

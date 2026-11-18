@@ -29,6 +29,7 @@
     "allow-trash-vault-path",
     "allow-restore-vault-path",
     "allow-watch-vault",
+    "allow-convert-to-pdf",
     "allow-terminal-list",
     "allow-terminal-open",
     "allow-terminal-attach",

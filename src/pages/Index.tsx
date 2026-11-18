@@ -40,7 +40,7 @@ import { installedModules, useInstalledModules } from "@/lib/installedModules";
 import { LazyTaskForm, LazyTransactionDrawer, lazyViews as views, preloadViews, recordVisit } from "@/lib/viewLoader";
 
 /** Tabs with a page backdrop of their own. */
-const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["home", "settings", "terminal", "portal", "nebula", "weather", "archive", "calendar", "tasks", "orbit", "observatory"]);
+const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["home", "settings", "terminal", "portal", "fun", "nebula", "weather", "archive", "calendar", "tasks", "orbit", "observatory"]);
 
 /**
  * How many page backdrops stay mounted. Only the current one, so a hidden
@@ -79,6 +79,7 @@ function backdrop(tab: TabId, nebulaTheme: ReturnType<typeof useHarness>["theme"
     case "terminal":
       return <TerminalStatic />;
     case "portal":
+    case "fun":
       return <ImageBackdrop image="portal" />;
     case "nebula":
       return <NebulaBackdrop theme={nebulaTheme} />;
@@ -262,7 +263,7 @@ const Index = () => {
   // <body> too for them to pick up.
   useEffect(() => {
     const orbit = !monochrome;
-    document.body.classList.toggle("portal-theme", orbit && viewTab === "portal");
+    document.body.classList.toggle("portal-theme", orbit && (viewTab === "portal" || viewTab === "fun"));
     document.body.classList.toggle("horizon-theme", orbit && viewTab === "calendar");
     document.body.classList.toggle("engine-theme", orbit && viewTab === "tasks");
     document.body.classList.toggle("orbit-theme", orbit && viewTab === "orbit");
@@ -276,7 +277,7 @@ const Index = () => {
   // over everything until then.
   const portalOpened = useRef(false);
   useEffect(() => {
-    if (activeTab === "portal") portalOpened.current = true;
+    if (activeTab === "portal" || activeTab === "fun") portalOpened.current = true;
     else if (portalOpened.current && isDesktop()) hidePortal().catch(() => undefined);
   }, [activeTab]);
 
@@ -290,7 +291,7 @@ const Index = () => {
     ? "default-root"
     : viewTab === "terminal"
       ? "terminal-root bg-black"
-      : viewTab === "portal"
+      : viewTab === "portal" || viewTab === "fun"
         ? "portal-root"
         : viewTab === "nebula"
           ? "nebula-root"

@@ -47,15 +47,15 @@ export function DropZone({ courseHint, typeHint, box }: { courseHint?: string; t
             <FileUp className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
           )}
           <span>
-            <span className="block font-medium">{reading ? `Reading ${reading} PDF${reading === 1 ? "" : "s"}…` : "Drop PDFs here or click to choose"}</span>
+            <span className="block font-medium">{reading ? `Reading ${reading} file${reading === 1 ? "" : "s"}…` : "Drop PDFs, slides or web pages here or click to choose"}</span>
             <span className="block text-xs text-muted-foreground">
-              {desktop ? "Slides, textbooks and question sheets are sorted into the right course and type automatically." : "Filing PDFs needs the desktop app."}
+              {desktop ? "Slides, textbooks and question sheets are sorted into the right course and type automatically. PowerPoint and HTML files are saved as PDFs." : "Filing PDFs needs the desktop app."}
             </span>
           </span>
           <input
             ref={picker}
             type="file"
-            accept=".pdf,application/pdf"
+            accept=".pdf,.pptx,.ppt,.html,.htm,application/pdf"
             multiple
             className="hidden"
             data-testid="observatory-dropbox-input"

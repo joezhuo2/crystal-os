@@ -32,6 +32,7 @@ export interface CalendarEvent {
   /** Set on an instance of a series; points at the master. */
   recurringEventId: string | null;
   htmlLink: string;
+  color?: string;
 }
 
 export interface CalendarSummary {
@@ -41,6 +42,7 @@ export interface CalendarSummary {
   backgroundColor: string;
   accessRole: string;
   timeZone: string;
+  account?: string;
 }
 
 export interface CalendarStatus {
@@ -49,6 +51,7 @@ export interface CalendarStatus {
   /** A refresh token is present and Google accepted it. */
   connected: boolean;
   account?: string;
+  accounts?: string[];
   error?: string;
 }
 
@@ -124,6 +127,8 @@ export function parseRecurrence(recurrence: string[] | null): {
 }
 
 /* ── Queries ── */
+
+export const ALL_CALENDARS = "all";
 
 const CONNECTED_KEY = "crystal-os:calendar-connected";
 
@@ -334,9 +339,12 @@ export function useDeferredDeleteEvent() {
 export function useDisconnectCalendar() {
   const queryClient = useQueryClient();
 
-  return useMutation<{ ok: true }, Error, void>({
-    mutationFn: () =>
-      request<{ ok: true }>(`${API_BASE}/auth/disconnect`, { method: "POST" }),
+  return useMutation<{ ok: true }, Error, string | undefined>({
+    mutationFn: (account) =>
+      request<{ ok: true }>(
+        `${API_BASE}/auth/disconnect${account ? `?account=${encodeURIComponent(account)}` : ""}`,
+        { method: "POST" },
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gcal"] });
     },

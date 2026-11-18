@@ -11,7 +11,7 @@ describe("parseNavSettings", () => {
     expect(parseNavSettings(null)).toEqual(DEFAULT_NAV_SETTINGS);
     expect(navLayout(DEFAULT_NAV_SETTINGS)).toEqual({
       top: ["home", "orbit", "tasks", "calendar", "mail", "financials", "trades", "weather", "observatory"],
-      bottom: ["archive", "nebula", "portal", "terminal", "settings"],
+      bottom: ["archive", "nebula", "portal", "fun", "terminal", "settings"],
     });
   });
 
@@ -19,7 +19,7 @@ describe("parseNavSettings", () => {
     const s = parseNavSettings(JSON.stringify({ order: ["weather", "home", "bogus", "home"], hidden: ["orbit", "settings"], bottom: ["home"] }));
     expect(s.order.slice(0, 4)).toEqual(["weather", "archive", "observatory", "nebula"]);
     expect(s.order).toContain("orbit");
-    expect(s.order).toHaveLength(14);
+    expect(s.order).toHaveLength(15);
     expect(s.hidden).toEqual(["orbit"]);
     expect(s.bottom).toEqual(["home"]);
     expect(parseNavSettings("not json")).toEqual(DEFAULT_NAV_SETTINGS);
@@ -30,7 +30,7 @@ describe("navLayout", () => {
   it("leaves out hidden and unavailable pages", () => {
     const layout = navLayout({ ...DEFAULT_NAV_SETTINGS, hidden: ["weather"] }, (id) => id !== "terminal");
     expect(layout.top).not.toContain("weather");
-    expect(layout.bottom).toEqual(["archive", "nebula", "portal", "settings"]);
+    expect(layout.bottom).toEqual(["archive", "nebula", "portal", "fun", "settings"]);
   });
 });
 
@@ -50,7 +50,7 @@ describe("navSettings store", () => {
     navSettings.setBottom("weather", true);
     expect(navLayout(navSettings.getState()).bottom[0]).toBe("weather");
     navSettings.move("weather", 1);
-    expect(navLayout(navSettings.getState()).bottom).toEqual(["archive", "weather", "nebula", "portal", "terminal", "settings"]);
+    expect(navLayout(navSettings.getState()).bottom).toEqual(["archive", "weather", "nebula", "portal", "fun", "terminal", "settings"]);
     expect(navSettings.getState().hidden).toEqual(["financials"]);
     expect(parseNavSettings(localStorage.getItem(NAV_SETTINGS_KEY))).toEqual(navSettings.getState());
     navSettings.reset();

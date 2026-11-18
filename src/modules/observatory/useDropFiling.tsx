@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { UNDO_MS } from "@/lib/undo";
 import { fileDrop, filedTitle, fileTo, moveResource, undoFile, useFiledNames, type Analysis, type Filed } from "./resources/ingest";
 import { markAi } from "./resources/aiRecord";
-import { pdfStem } from "./resources/paths";
+import { convertToPdf } from "@/lib/vaultNative";
+import { ACCEPTED, CONVERTIBLE, pdfStem } from "./resources/paths";
 import type { ResourceType } from "./resources/types";
 import { SortPopup } from "./SortPopup";
 import { errorText } from "./errorText";
@@ -46,12 +47,12 @@ export function useDropFiling({ courseHint, typeHint }: { courseHint?: string; t
   };
 
   const handle = async (files: File[]) => {
-    const rejected = files.filter((f) => !/\.pdf$/i.test(f.name));
-    if (rejected.length) toast.error("Only PDFs can be filed", { description: rejected.map((f) => f.name).join(", ") });
+    const rejected = files.filter((f) => !ACCEPTED.test(f.name));
+    if (rejected.length) toast.error("Only PDF, PowerPoint and HTML files can be filed", { description: rejected.map((f) => f.name).join(", ") });
     const seen = new Set(filedNames);
     const skipped: string[] = [];
     const fresh = files.filter((f) => {
-      if (!/\.pdf$/i.test(f.name)) return false;
+      if (!ACCEPTED.test(f.name)) return false;
       const name = `${pdfStem(f.name)}.pdf`;
       if (seen.has(name)) {
         skipped.push(f.name);
@@ -66,7 +67,10 @@ export function useDropFiling({ courseHint, typeHint }: { courseHint?: string; t
     for (const f of fresh) {
       setReading((n) => n + 1);
       try {
-        const { analysis, filed } = await fileDrop({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) }, courses.map((e) => e.course), { courseHint, typeHint });
+        const original = new Uint8Array(await f.arrayBuffer());
+        const convert = CONVERTIBLE.test(f.name);
+        const bytes = convert ? new Uint8Array(await convertToPdf(f.name, original)) : original;
+        const { analysis, filed } = await fileDrop({ name: convert ? `${f.name.replace(CONVERTIBLE, "")}.pdf` : f.name, bytes }, courses.map((e) => e.course), { courseHint, typeHint });
         if (filed) showFiled(filed, analysis);
         else setQueue((q) => [...q, { id: ++nextId, analysis }]);
       } catch (err) {
