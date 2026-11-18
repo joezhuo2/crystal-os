@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.2] - 2026-11-18 - GitHub review requests and assigned issues in the search bar, updates that install on the first try, and smoother tab changes.
+
+### Added
+
+- **GitHub in the search bar (desktop).** **My review requests** and **My assigned issues** list your open pull requests and issues. Pick one to create a task that carries its link, start a Pomodoro on that task, open the Nebula project whose folder is named after the repository, or open it on GitHub. It reads through the GitHub CLI (`gh`) you are already signed in to, so the app stores no token; `gh` must be installed.
+- **Numbers that count.** Totals and counts that change while you look at them now count up or down to the new value: Home, The Vault, The Ledger, The Courier, The Orbit, The Observatory, the capacity bar, The Arcade streak and the Nebula token counter. Off with **Reduce transitions** or the system reduced-motion setting.
+
+### Changed
+
+- **Deep Sky actions are icons.** Suggest from my projects, Random ideas, Review and Add topic are icon buttons with a themed tooltip. A suggestion button pulses while it works and shows a tick when it is done.
+- **Arcade actions are icons.** Log clipboard and Remove are icon buttons with themed tooltips. Log clipboard ticks when the result is saved; Remove turns red and asks for a second click.
+
+### Fixed
+
+- **Restart to update.** The installer could stop at "Failed to kill Crystal OS" and stay open, because it started while the app was still closing and never ended the local API process. It now ends both first and waits for them to go. This takes effect from the update after this one, since the fix ships inside the new installer.
+- **Sidebar highlight.** The highlight stuttered when changing tabs because it was animated by script while the next page was being built. It now slides on the graphics thread and stays smooth.
+- **Slow page opens.** Home, The Engine, The Vault, The Ledger and The Courier ran a second, scripted fade over the whole page as they opened. That fade is gone (the shared page fade stays), and The Courier skips drawing rows that are scrolled out of view.
+
 ## [v0.19.1] - 2026-11-18 - The Arcade for daily games, every Google calendar in The Horizon, and PowerPoint and HTML files in The Observatory.
 
 ### Added
