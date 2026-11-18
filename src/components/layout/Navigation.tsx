@@ -1,5 +1,5 @@
 import { useThemeSettings } from "@/lib/themeSettings";
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useLayoutEffect, useRef } from "react";
 import { m } from "framer-motion";
 import { isDesktop } from "@/lib/platform";
 import { usePortal } from "@/hooks/usePortal";
@@ -136,16 +136,9 @@ const SidebarButton = memo(function SidebarButton({
   return (
     <button
       onClick={() => onSelect(tab.id)}
+      data-active={active || undefined}
       className={`relative flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors whitespace-nowrap overflow-hidden ${radius} ${textClass}`}
     >
-      {active && (
-        <m.div
-          layoutId="sidebar-active"
-          className={`absolute inset-0 ${radius}`}
-          style={activePillStyle[mode]}
-          transition={{ type: "spring", bounce: 0.2, duration: 0.3 }}
-        />
-      )}
       <span className="relative z-10 shrink-0">
         <tab.icon className="w-4 h-4" />
         {badge != null && (
@@ -179,6 +172,9 @@ const SidebarButton = memo(function SidebarButton({
  */
 export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const shellRef = useRef<HTMLDivElement>(null);
+  const asideRef = useRef<HTMLElement>(null);
+  const pillRef = useRef<HTMLDivElement>(null);
+  const pillPlaced = useRef(false);
   const releaseHover = useRef<(() => void) | null>(null);
   const hovering = useRef(false);
   const portalState = usePortal();
@@ -278,6 +274,33 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
                         ? "home-title"
                         : "text-gradient-indigo";
 
+  // The highlight is one element moved with a CSS transform, so the slide runs
+  // on the compositor and stays smooth while the next page mounts.
+  const order = [...layout.top, ...layout.bottom].join();
+  useLayoutEffect(() => {
+    const aside = asideRef.current;
+    const pill = pillRef.current;
+    if (!aside || !pill) return;
+    const place = () => {
+      const active = aside.querySelector<HTMLElement>("[data-active]");
+      pill.style.opacity = active ? "1" : "0";
+      if (!active) return;
+      if (!pillPlaced.current) pill.style.transition = "none";
+      pill.style.height = `${active.offsetHeight}px`;
+      pill.style.transform = `translateY(${active.offsetTop}px)`;
+      if (!pillPlaced.current) {
+        void pill.offsetHeight;
+        pill.style.transition = "";
+        pillPlaced.current = true;
+      }
+    };
+    place();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(place);
+    observer.observe(aside);
+    return () => observer.disconnect();
+  }, [activeTab, order]);
+
   const button = (tab: Tab, badge?: PortalBadge | null, badgeTitle?: string) => (
     <SidebarButton
       key={tab.id}
@@ -299,10 +322,12 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   return (
     <div ref={shellRef} className="sidebar-shell hidden md:block">
       <aside
+        ref={asideRef}
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
         className={`sidebar-panel flex flex-col glass-card border-r border-t-0 border-b-0 border-l-0 rounded-none pl-3 pr-[11px] pb-4 pt-8 gap-2 overflow-hidden ${sidebarClass}`}
       >
+        <div ref={pillRef} aria-hidden className={`sidebar-pill ${terminal ? "rounded-sm" : "rounded-lg"}`} style={activePillStyle[mode]} />
         <button
           type="button"
           onClick={() => onTabChange("home")}
