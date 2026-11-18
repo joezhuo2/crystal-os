@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Cloud, Sun, Moon, CloudRain, CloudSun, CloudSnow, CloudLightning, CloudDrizzle, MoonStar } from "lucide-react";
 import {
   useAppActions,
@@ -423,7 +424,7 @@ function TodayHorizon({ onClick }: { onClick?: () => void }) {
         ) : (
           <>
             <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-3xl font-bold tabular-nums">{todayEvents.length}</span>
+              <AnimatedNumber className="text-3xl font-bold" value={todayEvents.length} />
               <span className="text-sm text-muted-foreground">
                 event{todayEvents.length !== 1 ? "s" : ""} today
               </span>
@@ -562,7 +563,7 @@ function EngineWidget({ onClick }: { onClick?: () => void }) {
         ) : (
           <>
             <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-3xl font-bold tabular-nums">{showingUpcoming ? upcoming.length : openTasks.length}</span>
+              <AnimatedNumber className="text-3xl font-bold" value={showingUpcoming ? upcoming.length : openTasks.length} />
               <span className="text-sm text-muted-foreground">
                 {showingUpcoming
                   ? `upcoming task${upcoming.length !== 1 ? "s" : ""} · today is clear`
@@ -675,13 +676,12 @@ function VaultSticker({ onClick }: { onClick?: () => void }) {
         <>
           <div className="flex items-baseline gap-2 mb-2">
             <span data-private className={`text-3xl font-bold tabular-nums ${summary.net >= 0 ? "text-accent" : "text-red-400"}`}>
-              {summary.net >= 0 ? "+" : "−"}
-              {money(summary.net)}
+              <AnimatedNumber value={summary.net} format={(n) => `${n >= 0 ? "+" : "−"}${money(n)}`} />
             </span>
             <span className="text-sm text-muted-foreground">net in {monthName}</span>
           </div>
           <p data-private className="text-xs text-muted-foreground tabular-nums">
-            {money(summary.income)} in · {money(summary.spent)} out
+            <AnimatedNumber value={summary.income} format={money} /> in · <AnimatedNumber value={summary.spent} format={money} /> out
           </p>
           {summary.top && (
             <p className="text-xs text-muted-foreground mt-1 truncate">
@@ -733,12 +733,12 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
   ];
 
   return (
-    <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+    <div>
       <OnboardingCard onNavigate={onNavigate} />
       <Suspense fallback={null}>
         <NowCard installed={installed} onNavigate={onNavigate} />
       </Suspense>
       <HomeGrid widgets={widgets.filter((widget) => !uninstalled.includes(widget.module))} />
-    </m.div>
+    </div>
   );
 }

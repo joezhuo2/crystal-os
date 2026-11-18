@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Check, Minus, Plus, Settings2 } from "lucide-react";
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { HabitManager } from "@/modules/orbit/HabitManager";
@@ -181,7 +182,7 @@ export function HabitsToday({ kind, today }: { kind: "weekly" | "monthly"; today
                       <span className="truncate">{h.name}</span>
                       {!!h.target && (
                         <span className="tabular-nums opacity-80">
-                          {amount}/{h.target}
+                          <AnimatedNumber value={amount} format={(n) => String(+n.toFixed(2))} />/{h.target}
                           {h.unit ? ` ${h.unit}` : ""}
                         </span>
                       )}

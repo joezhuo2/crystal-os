@@ -1128,7 +1128,7 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
   return (
     <NoteNavigateContext.Provider value={onNavigate}>
     <TopicNavigateContext.Provider value={onNavigate}>
-    <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+    <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <GlideEffect className="flex glass-card p-0.5 rounded-lg [--cd-glide-bg:hsl(var(--primary))] [--cd-glide-shadow:none] [--cd-glide-radius:0.375rem]">
           {VIEWS.map(({ id, label, Icon }) => (
@@ -1260,7 +1260,7 @@ export default function TasksPage({ onNavigate }: { onNavigate?: (tab: TabId) =>
           <PomodoroTimer />
         </div>
       </div>
-    </m.div>
+    </div>
     </TopicNavigateContext.Provider>
     </NoteNavigateContext.Provider>
   );

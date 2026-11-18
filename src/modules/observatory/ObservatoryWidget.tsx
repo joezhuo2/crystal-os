@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type DragEvent } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { CalendarClock, FileUp, Flame, GraduationCap, Telescope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SkeletonLines } from "@/components/ui/dashboard-skeletons";
@@ -93,7 +94,7 @@ export function ObservatoryWidget({ onClick, onDeepSky }: { onClick?: () => void
       ) : (
         <div className="space-y-2">
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold tabular-nums">{due}</span>
+            <AnimatedNumber className="text-3xl font-bold" value={due} />
             <span className="text-sm text-muted-foreground">card{due === 1 ? "" : "s"} to review</span>
           </div>
           {s.next ? (

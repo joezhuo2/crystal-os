@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { AlertTriangle, ClipboardPaste, Flame, Gamepad2, Plus, RotateCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import AddPortalAppDialog from "@/components/portal/AddPortalAppDialog";
@@ -11,6 +12,8 @@ import { GAME_PRESETS, averageScore, recentDays, scoreLabel, streak } from "@/li
 import { fun } from "@/lib/funStore";
 import { isDesktop } from "@/lib/platform";
 import type { PortalApp } from "@/lib/portalApps";
+import { PhaseIcon } from "@/modules/observatory/IconAction";
+import { useActionPhase } from "@/modules/observatory/useActionPhase";
 import { GAME_PREFIX, hidePortal, navigatePortalApp, onPortalShare, removePortalApp, showPortalApp } from "@/lib/portalNative";
 import { toLocalDateStr } from "@/lib/utils";
 
@@ -44,6 +47,7 @@ export default function FunPage() {
   const hostRef = useRef<HTMLDivElement>(null);
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const logging = useActionPhase();
   const [error, setError] = useState<{ id: string; message: string } | null>(null);
   const [attempt, setAttempt] = useState(0);
   usePortalOcclusion(adding);
@@ -114,6 +118,7 @@ export default function FunPage() {
 
   const remove = (game: PortalApp) => {
     fun.remove(game.id);
+    toast.success(`${game.name} removed`);
     if (desktop) {
       removePortalApp(webviewOf(game).id).catch((err) =>
         toast.error(`Could not delete ${game.name}'s data`, { description: errorText(err) }),
@@ -121,16 +126,19 @@ export default function FunPage() {
     }
   };
 
-  const logClipboard = (game: PortalApp) => {
+  const logClipboard = (game: PortalApp) =>
     navigator.clipboard
       .readText()
       .then((text) => {
         if (!text.trim()) throw new Error("The clipboard has no text.");
         fun.record(game.id, text, toLocalDateStr());
         toast.success(`${game.name} result saved`);
+        return true;
       })
-      .catch((err) => toast.error("Could not read the clipboard", { description: errorText(err) }));
-  };
+      .catch((err) => {
+        toast.error("Could not read the clipboard", { description: errorText(err) });
+        return false;
+      });
 
   const week = active ? recentDays(results, active.id, today, 7) : [];
   const lastWeek = active ? recentDays(results, active.id, week[0].date, 8).slice(0, 7) : [];
@@ -236,7 +244,7 @@ export default function FunPage() {
 
       {active && (
         <section aria-label={`${active.name} scores`} className="flex flex-wrap items-center gap-y-2 px-2">
-          <Stat label="Streak" value={streak(results, active.id, today)} />
+          <Stat label="Streak" value={<AnimatedNumber value={streak(results, active.id, today)} />} />
           <Stat label="Today" value={scoreLabel(week[6].result)} />
           <Stat label="Yesterday" value={scoreLabel(week[5].result)} />
           <Stat label="7-day avg" value={formatAverage(averageScore(week.map((d) => d.result)))} />
@@ -275,20 +283,25 @@ export default function FunPage() {
             <GlassTip tone="portal" label="Log clipboard" hint="Saves the result you copied">
             <button
               type="button"
-              className="portal-icon-btn w-auto gap-2 px-3 text-xs font-medium"
-              onClick={() => logClipboard(active)}
+              aria-label="Log clipboard"
+              aria-live="polite"
+              className="portal-icon-btn"
+              disabled={logging.phase === "pending"}
+              onClick={() => void logging.run(() => logClipboard(active))}
             >
-              <ClipboardPaste className="w-4 h-4" /> Log clipboard
+              <PhaseIcon phase={logging.phase} icon={ClipboardPaste} />
             </button>
             </GlassTip>
-            <GlassTip tone="portal" label={`Remove ${active.name}`} hint="Also removes its sign-in and scores">
+            <GlassTip tone="portal" label={removing ? "Click again to remove" : `Remove ${active.name}`} hint="Also removes its sign-in and scores">
             <button
               type="button"
-              className="portal-icon-btn w-auto gap-2 px-3 text-xs font-medium"
+              aria-label={removing ? `Click again to remove ${active.name}` : `Remove ${active.name}`}
+              aria-live="polite"
+              className={`portal-icon-btn ${removing ? "text-red-400 motion-safe:animate-pulse" : ""}`}
               onClick={() => (removing ? remove(active) : setRemoving(true))}
               onBlur={() => setRemoving(false)}
             >
-              <Trash2 className="w-4 h-4" /> {removing ? "Click again to remove" : "Remove"}
+              <Trash2 className="w-4 h-4" />
             </button>
             </GlassTip>
           </div>

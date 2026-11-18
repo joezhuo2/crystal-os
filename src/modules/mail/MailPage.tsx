@@ -1,4 +1,5 @@
 import { useEffect, useState, type ElementType, type ReactNode } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { AnimatePresence, m } from "framer-motion";
 import { toast } from "sonner";
 import { ItemNoteLink } from "@/components/ItemNoteLink";
@@ -164,7 +165,7 @@ function ItemRow({ item, now, showAccount, children }: { item: MailItem; now: Da
     { label: "Received", value: new Date(item.receivedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) },
   ];
   return (
-    <li>
+    <li className="[content-visibility:auto] [contain-intrinsic-size:auto_3.25rem]">
       <button
         type="button"
         aria-expanded={open}
@@ -338,7 +339,7 @@ function Dashboard({ status }: { status: MailStatus }) {
           ["Security alerts this week", summary.security],
         ].map(([label, count]) => (
           <div key={label} className="glass-card p-4">
-            <p className="text-2xl font-bold tabular-nums">{count}</p>
+            <p className="text-2xl font-bold"><AnimatedNumber value={Number(count)} /></p>
             <p className="text-xs text-muted-foreground">{label}</p>
           </div>
         ))}
@@ -378,7 +379,7 @@ function Dashboard({ status }: { status: MailStatus }) {
                     onClick={() => setStage(s)}
                     className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${stage === s ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-primary/5"}`}
                   >
-                    {JOB_STATUS_LABEL[s]} <span className="tabular-nums opacity-70">{board[s].length}</span>
+                    {JOB_STATUS_LABEL[s]} <AnimatedNumber className="opacity-70" value={board[s].length} />
                   </button>
                 ))}
               </div>
@@ -426,7 +427,7 @@ export default function MailPage() {
   }, [refetch]);
 
   return (
-    <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+    <div className="space-y-4">
       {status.isLoading ? (
         <div className="glass-card p-6">
           <SkeletonLines count={3} />
@@ -455,6 +456,6 @@ export default function MailPage() {
           <Accounts status={status.data} />
         </>
       )}
-    </m.div>
+    </div>
   );
 }

@@ -1,4 +1,5 @@
 import { GlideEffect } from "@/components/crystal/GlideEffect";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Coins, Download, Folder, Gauge, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -46,7 +47,7 @@ function ContextMeter({ context }: { context: ContextUsage | null }) {
           <span className={`absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ${tone}`} style={{ width: `${pct ?? 0}%` }} />
         </span>
         <span className="tabular-nums">
-          {context ? formatTokens(context.used) : "—"}
+          {context ? <AnimatedNumber value={context.used} format={(n) => formatTokens(Math.round(n))} /> : "—"}
           {context?.size ? <span className="text-white/50"> / {formatTokens(context.size)}</span> : null}
         </span>
       </span>
@@ -153,7 +154,7 @@ export default function NebulaToolbar({ chat, messages, projectPath, projectName
               <span className="text-white/50">{showProject ? "Project" : "Chat"}</span>
               <span className="tabular-nums">
                 {total.estimated ? "≈" : ""}
-                {formatTokens(total.input + total.output)}
+                <AnimatedNumber value={total.input + total.output} format={(n) => formatTokens(Math.round(n))} />
               </span>
             </PopoverTrigger>
           </NebulaTip>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { useAppActions, useFinancialCategories, useTransactions } from "@/contexts/AppContext";
 import { useFinance, useFinanceActions } from "@/hooks/useFinance";
@@ -177,7 +178,7 @@ export function AccountsCard() {
     <div className="glass-card-hover p-5 space-y-3">
       <p className={CARD_TITLE}>Accounts</p>
       <p className="text-2xl font-semibold tabular-nums" data-private>
-        {money(netWorth(balances))}
+        <AnimatedNumber value={netWorth(balances)} format={money} />
       </p>
       {accounts.length > 0 && (
         <ChartFrame height={120}>
@@ -199,7 +200,7 @@ export function AccountsCard() {
           <li key={a.id} className="flex items-center gap-2 text-sm">
             <span className="flex-1 truncate font-medium">{a.name}</span>
             <span data-private className="tabular-nums font-semibold">
-              {money(balances.get(a.id) ?? 0)}
+              <AnimatedNumber value={balances.get(a.id) ?? 0} format={money} />
             </span>
             <button
               type="button"

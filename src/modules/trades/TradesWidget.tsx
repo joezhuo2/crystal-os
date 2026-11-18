@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { CandlestickChart, ChevronRight } from "lucide-react";
 import { SkeletonLines } from "@/components/ui/dashboard-skeletons";
 import { useTrades } from "@/hooks/useTrades";
@@ -60,7 +61,7 @@ export function TradesWidget({ onClick }: { onClick?: () => void }) {
               <div key={s.currency} className="mb-2">
                 <div className="flex items-baseline gap-2">
                   <span data-private className={`text-3xl font-bold tabular-nums ${pnlTone(s.totalPnl)}`}>
-                    {formatMoney(s.totalPnl, s.currency, true)}
+                    <AnimatedNumber value={s.totalPnl} format={(n) => formatMoney(n, s.currency, true)} />
                   </span>
                   <span className="text-sm text-muted-foreground">in {monthName}</span>
                   {summary.trend(s.currency).length > 1 && (

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-github-inbox"
+description = "Enables the github_inbox command without any pre-configured scope."
+commands.allow = ["github_inbox"]
+
+[[permission]]
+identifier = "deny-github-inbox"
+description = "Denies the github_inbox command without any pre-configured scope."
+commands.deny = ["github_inbox"]

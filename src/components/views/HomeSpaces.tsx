@@ -5,6 +5,7 @@
  * its black hole.
  */
 import { useQuery } from "@tanstack/react-query";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { ChevronRight, Orbit, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { AppIcon } from "@/components/portal/PortalNavbar";
@@ -62,7 +63,7 @@ export function NebulaSpace({ onClick }: { onClick?: () => void }) {
         ) : (
           <>
             <div className="flex items-baseline gap-2 mb-3">
-              <span className="text-3xl font-bold tabular-nums">{index.chats.length}</span>
+              <AnimatedNumber className="text-3xl font-bold" value={index.chats.length} />
               <span className="text-sm text-white/60">
                 {index.chats.length !== 1 ? "chats" : "chat"} across {plural(index.projects.length, "project")}
               </span>
@@ -122,7 +123,7 @@ export function PortalSpace({ onClick }: { onClick?: () => void }) {
         ) : (
           <>
             <div className="flex items-baseline gap-2 mb-3">
-              <span className="text-3xl font-bold tabular-nums text-white">{apps.length}</span>
+              <AnimatedNumber className="text-3xl font-bold text-white" value={apps.length} />
               <span className="text-sm text-white/60">
                 {apps.length !== 1 ? "apps" : "app"} connected
                 {unread != null && (unread === "dot" ? " · new activity" : ` · ${unread} unread`)}

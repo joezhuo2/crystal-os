@@ -69,6 +69,8 @@ import {
   Timer,
   Zap,
   Gamepad2,
+  GitPullRequest,
+  CircleDot,
 } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
 import { isDesktop, openExternal } from "@/lib/platform";
@@ -89,6 +91,8 @@ import { searchChats } from "@/lib/harness/chatSearch";
 import { useInstalledModules } from "@/lib/installedModules";
 import { useMailDigest, useMailStatus } from "@/hooks/useMail";
 import { mailWasConnected } from "@/lib/mail";
+import { GITHUB_LISTS, type GitHubList } from "@/lib/github";
+import { GitHubCommands } from "@/components/GitHubCommands";
 import { PALETTE_EVENT_DAYS_AHEAD, PALETTE_EVENT_DAYS_BACK, parseSearchFilters, searchEvents, searchMail, taskPasses, upcomingEvents, wantsType } from "@/lib/paletteSearch";
 
 const RECENT_MODULE: Record<RecentItem["kind"], TabId> = {
@@ -166,6 +170,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   // "Snooze…": the task being snoozed while the bar lists the snooze picks.
   const [snoozePick, setSnoozeTask] = useState<Task | null>(null);
   const snoozeTask = tasksOn ? snoozePick : null;
+  const [githubList, setGithubList] = useState<GitHubList | null>(null);
   const transactions = useTransactions();
   const taskCategories = useTaskCategories();
   const financialCategories = useFinancialCategories();
@@ -329,6 +334,11 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const handleOpenMail = (url: string) => {
     openExternal(url).catch(() => toast.error("Could not open the email"));
     close();
+  };
+
+  const clearSearch = () => {
+    setSearch("");
+    inputRef.current?.focus();
   };
 
   const startNesting = (task: Task) => {
@@ -592,7 +602,9 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                 ? `Make "${nestChild.name}" a subtask of…`
                 : snoozeTask
                   ? `Snooze "${snoozeTask.name}" until…`
-                  : "Search anything, 'add …' or 'log …'"
+                  : githubList
+                    ? `Filter ${GITHUB_LISTS[githubList].label.toLowerCase()}…`
+                    : "Search anything, 'add …' or 'log …'"
             }
             wrapperClassName="border-0 px-0 flex-1 min-w-0"
             className="h-8 text-base bg-transparent border-0 outline-none placeholder:text-muted-foreground/40 focus:ring-0"
@@ -604,7 +616,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
 
               <CommandList className="max-h-[min(420px,60vh)] overflow-y-auto scrollbar-thin px-2 py-2">
                 <CommandEmpty className="py-6 text-center text-sm text-muted-foreground/70">
-                  {nestChild ? "No task to nest it under." : snoozeTask ? "No matching snooze." : 'No results found. Try "add Buy milk" or "log 25 for Lunch".'}
+                  {nestChild ? "No task to nest it under." : snoozeTask ? "No matching snooze." : githubList ? "Nothing matches." : 'No results found. Try "add Buy milk" or "log 25 for Lunch".'}
                 </CommandEmpty>
 
                 {nestChild ? (
@@ -680,6 +692,20 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                       <p className="text-sm font-medium">Cancel</p>
                     </CommandItem>
                   </CommandGroup>
+                ) : githubList ? (
+                  <GitHubCommands
+                    list={githubList}
+                    itemClass={ITEM}
+                    tasksOn={tasksOn}
+                    nebulaOn={nebulaOn}
+                    onNavigate={onNavigate}
+                    onClose={close}
+                    onStep={clearSearch}
+                    onBack={() => {
+                      setGithubList(null);
+                      clearSearch();
+                    }}
+                  />
                 ) : (
                 <>
 
@@ -1139,6 +1165,34 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                         <span className="ml-auto text-xs text-muted-foreground/50">just start typing</span>
                       </CommandItem>
                       )}
+                    </CommandGroup>
+                  </>
+                )}
+
+                {isDesktop() && !addPrefix && !logPrefix && !filters.active && (
+                  <>
+                    <CommandSeparator className="my-1" />
+                    <CommandGroup heading="GitHub">
+                      {(Object.keys(GITHUB_LISTS) as GitHubList[]).map((list) => {
+                        const Icon = list === "reviews" ? GitPullRequest : CircleDot;
+                        return (
+                          <CommandItem
+                            key={list}
+                            value={`github ${GITHUB_LISTS[list].label} ${list === "reviews" ? "pull requests prs" : "bugs tickets"}`}
+                            onSelect={() => {
+                              setGithubList(list);
+                              clearSearch();
+                            }}
+                            className={ITEM}
+                          >
+                            <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <span className="text-sm font-medium">{GITHUB_LISTS[list].label}</span>
+                            <span className="ml-auto text-xs text-muted-foreground/50">{GITHUB_LISTS[list].hint}</span>
+                          </CommandItem>
+                        );
+                      })}
                     </CommandGroup>
                   </>
                 )}
