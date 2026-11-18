@@ -168,6 +168,10 @@ const SHARE_HOOK: &str = "(() => { if (window.top !== window) return; \
   if (cb && cb.writeText) { const w = cb.writeText.bind(cb); cb.writeText = (text) => { send(text); return w(text); }; } \
   if (cb && cb.write) { const w = cb.write.bind(cb); cb.write = (items) => { \
   try { items[0].getType('text/plain').then((b) => b.text()).then(send, () => {}); } catch (e) {} return w(items); }; } \
+  const exec = document.execCommand.bind(document); document.execCommand = (command, ...rest) => { \
+  try { if (String(command).toLowerCase() === 'copy') { const el = document.activeElement; \
+  send(el && typeof el.value === 'string' ? el.value.substring(el.selectionStart || 0, el.selectionEnd || el.value.length) : String(getSelection())); } } catch (e) {} \
+  return exec(command, ...rest); }; \
   if (navigator.share) { const s = navigator.share.bind(navigator); \
   navigator.share = (data) => { send(data && data.text); return s(data); }; } })();";
 

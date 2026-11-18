@@ -25,8 +25,24 @@ describe("parseShare", () => {
     expect(parseShare("I played contexto.me #123 and got it in 45 guesses.")).toEqual({ score: 45, max: null });
   });
 
-  it("ignores dates and text with no score", () => {
-    expect(parseShare("Played on 11/18/2026")).toEqual({ score: null, max: null });
+  it("reads a bare score, skipping the puzzle number and any link", () => {
+    expect(parseShare("Krillion #212 🦐 3,412m  🟦🟩⬛  https://krillion.io/2")).toEqual({ score: 3412, max: null });
+  });
+
+  it("reads the results Krillion and Wordle copy", () => {
+    expect(parseShare(`Krillion #126 🦐
+385
+
+🏮🏮🐟🌟🏮⬛⬛`)).toEqual({ score: 385, max: null });
+    expect(parseShare("You got Wordle in 2!")).toEqual({ score: 2, max: null });
+  });
+
+  it("scores a result that was saved before its format was known", () => {
+    const stored = [{ game: "krillion", date: "2026-11-18", score: null, max: null, text: "Krillion #212 🦐 3,412m" }];
+    expect(parseStoredResults(JSON.stringify(stored))[0].score).toBe(3412);
+  });
+
+  it("ignores text with no score", () => {
     expect(parseShare("Connections\nPuzzle #500\n🟨🟨🟨🟨")).toEqual({ score: null, max: null });
   });
 });

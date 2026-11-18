@@ -5,6 +5,7 @@ export const GAME_PRESETS: PortalPreset[] = [
   { id: "wordle", name: "Wordle", url: "https://www.nytimes.com/games/wordle/index.html", color: "#6AAA64" },
   { id: "connections", name: "Connections", url: "https://www.nytimes.com/games/connections", color: "#B4A8FF" },
   { id: "contexto", name: "Contexto", url: "https://contexto.me/", color: "#22C55E" },
+  { id: "krillion", name: "Krillion", url: "https://krillion.io/", color: "#22D3EE" },
 ];
 
 export interface FunResult {
@@ -24,7 +25,9 @@ export function parseShare(text: string): { score: number | null; max: number | 
     return { score: /x/i.test(outOf[1]) ? max + 1 : Number(outOf[1]), max };
   }
   const counted = /(\d+)\s+(?:guess|tries|try|attempt|move|mistake)/i.exec(text);
-  return { score: counted ? Number(counted[1]) : null, max: null };
+  if (counted) return { score: Number(counted[1]), max: null };
+  const plain = /\d[\d,]*(?:\.\d+)?/.exec(text.replace(/#\s*[\d,]+/g, "").replace(/https?:\S+/g, ""));
+  return { score: plain ? Number(plain[0].replace(/,/g, "")) : null, max: null };
 }
 
 export function makeResult(game: string, text: string, date: string): FunResult {
@@ -92,12 +95,12 @@ export function parseStoredResults(raw: string | null): FunResult[] {
     if (!item || typeof item !== "object") continue;
     const { game, date, score, max, text } = item as Record<string, unknown>;
     if (typeof game !== "string" || typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const kept = typeof text === "string" ? text.slice(0, MAX_TEXT) : "";
     results.push({
       game,
       date,
-      score: typeof score === "number" ? score : null,
-      max: typeof max === "number" ? max : null,
-      text: typeof text === "string" ? text.slice(0, MAX_TEXT) : "",
+      ...(typeof score === "number" ? { score, max: typeof max === "number" ? max : null } : parseShare(kept)),
+      text: kept,
     });
   }
   return results;
