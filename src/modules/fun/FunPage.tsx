@@ -3,6 +3,7 @@ import { AlertTriangle, ClipboardPaste, Flame, Gamepad2, Plus, RotateCw, Trash2 
 import { toast } from "sonner";
 import AddPortalAppDialog from "@/components/portal/AddPortalAppDialog";
 import { AppIcon } from "@/components/portal/PortalNavbar";
+import { GlassTip } from "@/components/ui/glass-tooltip";
 import PortalSkeleton from "@/components/portal/PortalSkeleton";
 import { usePortal, usePortalOcclusion } from "@/hooks/usePortal";
 import { useToday } from "@/hooks/useToday";
@@ -142,7 +143,7 @@ export default function FunPage() {
           <h3 className="text-lg font-semibold">Pick a daily game</h3>
           <p className="text-sm text-white/55">Play it here. Clicking the game's Share button saves your result.</p>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {GAME_PRESETS.map((preset) => (
             <button
               key={preset.id}
@@ -197,7 +198,7 @@ export default function FunPage() {
         <Gamepad2 className="w-6 h-6 portal-accent" />
         <div className="min-w-0 flex-1">
           <h2 className="text-2xl font-bold tracking-tight">
-            <span className="portal-gradient-text">Fun</span>
+            <span className="portal-gradient-text">The Arcade</span>
           </h2>
           <p className="text-xs text-white/50 truncate">Daily games, streaks and scores.</p>
         </div>
@@ -207,8 +208,8 @@ export default function FunPage() {
         {games.map((game) => {
           const run = streak(results, game.id, today);
           return (
+            <GlassTip key={game.id} tone="portal" label={game.name} hint={run > 0 ? `${run} day streak` : "No streak yet"}>
             <button
-              key={game.id}
               type="button"
               aria-pressed={game.id === activeId}
               onClick={() => select(game)}
@@ -223,11 +224,14 @@ export default function FunPage() {
                 </span>
               )}
             </button>
+            </GlassTip>
           );
         })}
-        <button type="button" onClick={() => setAdding(true)} aria-label="Add a game" className="portal-icon-btn">
-          <Plus className="w-4 h-4" />
-        </button>
+        <GlassTip tone="portal" label="Add a game">
+          <button type="button" onClick={() => setAdding(true)} aria-label="Add a game" className="portal-icon-btn">
+            <Plus className="w-4 h-4" />
+          </button>
+        </GlassTip>
       </nav>
 
       {active && (
@@ -239,9 +243,8 @@ export default function FunPage() {
           <Stat label="Week before" value={formatAverage(averageScore(lastWeek.map((d) => d.result)))} />
           <ol className="ml-2 flex gap-1" aria-label="Last 7 days">
             {week.map(({ date, result }) => (
+              <GlassTip key={date} tone="portal" label={date} hint={result?.text || "Not played"}>
               <li
-                key={date}
-                title={result?.text ? `${date}\n${result.text}` : date}
                 className={`flex h-9 w-9 flex-col items-center justify-center rounded-md border text-[11px] tabular-nums ${
                   result ? "border-white/25 bg-white/10" : "border-white/10 text-white/35"
                 }`}
@@ -249,14 +252,15 @@ export default function FunPage() {
                 <span>{scoreLabel(result)}</span>
                 <span className="text-[8px] text-white/40">{date.slice(8)}</span>
               </li>
+              </GlassTip>
             ))}
           </ol>
           <div className="ml-auto flex items-center gap-1">
             {desktop && (
+              <GlassTip tone="portal" label={`Reload ${active.name}`}>
               <button
                 type="button"
                 aria-label={`Reload ${active.name}`}
-                title="Reload"
                 className="portal-icon-btn"
                 onClick={() =>
                   navigatePortalApp(webviewOf(active), "reload").catch((err) =>
@@ -266,24 +270,27 @@ export default function FunPage() {
               >
                 <RotateCw className="w-4 h-4" />
               </button>
+              </GlassTip>
             )}
+            <GlassTip tone="portal" label="Log clipboard" hint="Saves the result you copied">
             <button
               type="button"
-              title="Save the result you copied"
               className="portal-icon-btn w-auto gap-2 px-3 text-xs font-medium"
               onClick={() => logClipboard(active)}
             >
               <ClipboardPaste className="w-4 h-4" /> Log clipboard
             </button>
+            </GlassTip>
+            <GlassTip tone="portal" label={`Remove ${active.name}`} hint="Also removes its sign-in and scores">
             <button
               type="button"
-              title="Removes the game, its sign-in and its scores"
               className="portal-icon-btn w-auto gap-2 px-3 text-xs font-medium"
               onClick={() => (removing ? remove(active) : setRemoving(true))}
               onBlur={() => setRemoving(false)}
             >
               <Trash2 className="w-4 h-4" /> {removing ? "Click again to remove" : "Remove"}
             </button>
+            </GlassTip>
           </div>
         </section>
       )}

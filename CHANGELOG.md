@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [v0.19.1] - 2026-11-18 - A Fun tab for daily games, every Google calendar in The Horizon, and PowerPoint and HTML files in The Observatory.
+## [v0.19.1] - 2026-11-18 - The Arcade for daily games, every Google calendar in The Horizon, and PowerPoint and HTML files in The Observatory.
 
 ### Added
 
-- **Fun.** A new tab for daily games such as Wordle, Connections and Contexto, each as its own page inside Crystal OS (desktop; the web build opens them in new tabs). **Add a game** takes any https address. Clicking a game's **Share** button saves that day's result by itself, and **Log clipboard** saves a result you copied. Each game shows its streak, today's and yesterday's score, the 7-day average next to the week before, and the last 7 days. Removing a game also removes its sign-in and its scores. Install or uninstall it under **Settings → Packages**.
+- **The Arcade.** A new tab for daily games such as Wordle, Connections, Contexto and Krillion, each as its own page inside Crystal OS (desktop; the web build opens them in new tabs). **Add a game** takes any https address. Clicking a game's **Share** button saves that day's result by itself, and **Log clipboard** saves a result you copied. Each game shows its streak, today's and yesterday's score, the 7-day average next to the week before, and the last 7 days. Removing a game also removes its sign-in and its scores. Install or uninstall it under **Settings → Packages**.
 - **All calendars in The Horizon.** The calendar picker has an **All calendars** entry, now the default, that shows every calendar together, each event in its calendar's colour. Home, the Now card, reminders, the capacity bar and search follow the same choice. Edits and deletes go to the calendar the event belongs to; new events made in this view go to your primary calendar.
 - **More than one Google account.** The person-plus button next to the account name signs in another Google account, and its calendars join the list. Each account can be disconnected by itself. The extra sign-ins are kept in `.env.local` as `GOOGLE_REFRESH_TOKENS_EXTRA`.
 - **PowerPoint and HTML files in The Observatory.** Drop a `.pptx`, `.ppt`, `.html` or `.htm` file and it is saved as a PDF, then sorted, read and processed like any other PDF. Slides need PowerPoint or LibreOffice installed; web pages use Microsoft Edge or Google Chrome. The original file is not kept.

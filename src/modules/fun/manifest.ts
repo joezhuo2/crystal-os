@@ -3,7 +3,7 @@ import type { ModuleManifest } from "../types";
 
 export default {
   id: "fun",
-  label: "Fun",
+  label: "The Arcade",
   icon: Gamepad2,
   description: "Daily games with streaks and scores.",
   bottom: true,
