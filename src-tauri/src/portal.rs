@@ -250,6 +250,13 @@ fn same_site(home: &Url, target: &Url) -> bool {
   }
 }
 
+/// A link clicked on a page asks for a new tab with no size, even when it goes
+/// through the site's own redirect (`google.com/url?q=`); only `window.open`
+/// with a size is a popup the site needs back.
+fn stays_in_app(home: &Url, target: &Url, sized: bool) -> bool {
+  sized && same_site(home, target)
+}
+
 /* ------------------------------------------------------------------ *
  * Helpers
  * ------------------------------------------------------------------ */
@@ -479,10 +486,11 @@ fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds, k
       let payload = TitlePayload { id: title_id.clone(), title };
       let _ = title_app.emit_to(EventTarget::webview(MAIN), TITLE_EVENT, payload);
     })
-    .on_new_window(move |url, _features| {
-      // The site's own popups (sign-in flows) stay in-app; links to other
-      // sites open in the default browser.
-      if same_site(&popup_home, &url) {
+    .disable_drag_drop_handler()
+    .on_new_window(move |url, features| {
+      // The site's own sized popups (sign-in flows) stay in-app; everything
+      // else is a link and opens in the default browser.
+      if stays_in_app(&popup_home, &url, features.size().is_some()) {
         return NewWindowResponse::Allow;
       }
       if matches!(url.scheme(), "http" | "https") {
@@ -904,5 +912,14 @@ mod tests {
     assert!(!same_site(&home, &Url::parse("https://discord.gg/abc").unwrap()));
     assert!(!same_site(&home, &Url::parse("https://evil-discord.com").unwrap()));
     assert!(!same_site(&home, &Url::parse("about:blank").unwrap()));
+  }
+
+  #[test]
+  fn only_sized_same_site_popups_stay_in_app() {
+    let home = Url::parse("https://mail.google.com/mail").unwrap();
+    let redirect = Url::parse("https://www.google.com/url?q=https://example.com").unwrap();
+    assert!(stays_in_app(&home, &redirect, true));
+    assert!(!stays_in_app(&home, &redirect, false));
+    assert!(!stays_in_app(&home, &Url::parse("https://example.com").unwrap(), true));
   }
 }
