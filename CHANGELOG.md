@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.0] - 2026-11-18 - The Vault gains budgets, recurring items, accounts, bank CSV import and purchases from your mail.
+
 ### Added
 
 - **Purchases from your mail.** Order emails in The Courier that state a total are logged in The Vault as expenses by themselves, once per order, with a mail icon on the row. Investment emails (Wealthsimple and other brokers, order fills, dividends) are left to The Ledger. Delete one and it is not added again. Adding transactions by hand works as before.
