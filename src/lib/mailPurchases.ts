@@ -64,7 +64,7 @@ export function billAlerts(bills: MailBill[], today: string, tomorrow: string) {
   return bills
     .filter((b) => b.dueDate === today || b.dueDate === tomorrow)
     .map((b) => ({
-      key: `bill-due:${b.sourceId}`,
+      key: `bill-due:${b.sourceId}:${b.dueDate === today ? "today" : "tomorrow"}`,
       title: `${b.name} bill due ${b.dueDate === today ? "today" : "tomorrow"}`,
       body: b.amount === null ? "Open The Vault to log it once it is paid." : `$${b.amount.toFixed(2)} is due. Log it in The Vault once it is paid.`,
     }));

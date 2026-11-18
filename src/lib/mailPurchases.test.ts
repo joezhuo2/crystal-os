@@ -71,6 +71,7 @@ describe("bills", () => {
     const bills = upcomingBills(items, new Set(["mail:paid"]));
     expect(bills.map((b) => [b.name, b.amount, b.dueDate])).toEqual([["Phone", null, "2026-11-19"], ["Hydro", 80.1, "2026-11-20"]]);
     expect(billAlerts(bills, "2026-11-18", "2026-11-19").map((a) => a.title)).toEqual(["Phone bill due tomorrow"]);
-    expect(billAlerts(bills, "2026-11-20", "2026-11-21").map((a) => a.key)).toEqual(["bill-due:mail:hydro"]);
+    expect(billAlerts(bills, "2026-11-20", "2026-11-21").map((a) => a.key)).toEqual(["bill-due:mail:hydro:today"]);
+    expect(billAlerts(bills, "2026-11-19", "2026-11-20").map((a) => a.key)).toEqual(["bill-due:mail:phone:today", "bill-due:mail:hydro:tomorrow"]);
   });
 });

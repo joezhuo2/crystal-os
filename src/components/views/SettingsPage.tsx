@@ -1241,6 +1241,12 @@ export default function SettingsPage() {
           <Row title="Severe weather alerts" description="When Environment Canada issues a warning, watch or advisory for your Atmosphere location. Once a day per alert.">
             <Switch checked={notifications.weatherAlerts} onCheckedChange={(on) => notifySettings.setFlag("weatherAlerts", on)} />
           </Row>
+          <Row title="Budget alerts" description="When a category reaches 80% of its monthly budget in The Vault, and again when it is used up. Once each per month.">
+            <Switch checked={notifications.budgetAlerts} onCheckedChange={(on) => notifySettings.setFlag("budgetAlerts", on)} />
+          </Row>
+          <Row title="Bill reminders" description="The day before and on the day a bill found in your mail is due, until you log or dismiss it in The Vault.">
+            <Switch checked={notifications.billReminders} onCheckedChange={(on) => notifySettings.setFlag("billReminders", on)} />
+          </Row>
           <Row
             title="Habit reminders"
             description="When a habit is not ticked by the reminder time set on it (the bell in The Orbit's habit manager), up to its count a day, an hour apart."
