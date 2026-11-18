@@ -3,6 +3,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { Task } from "@/contexts/AppContext";
 import { appUi } from "@/lib/appUi";
 import { installedModules } from "@/lib/installedModules";
+import { fun } from "@/lib/funStore";
+import { KEYMAP, KEYMAP_CATEGORY_LABELS } from "@/lib/keymap";
 import { recordRecent, setRecentsOwner } from "@/lib/recents";
 import { ACTIVE_KEY } from "@/lib/harness/store";
 import type { ChatMessage, ChatMeta } from "@/lib/harness/types";
@@ -23,6 +25,7 @@ vi.mock("@/hooks/useFinance", () => ({
 }));
 vi.mock("@/hooks/useVault", () => ({ useVaultNotes: () => ({ data: undefined }) }));
 vi.mock("@/hooks/usePortal", () => ({ usePortalOcclusion: () => {} }));
+vi.mock("@/hooks/useTrades", () => ({ useTrades: () => ({ data: undefined }) }));
 let mailItems: unknown[] = [];
 vi.mock("@/hooks/useMail", () => ({
   useMailStatus: () => ({ data: { accounts: [] } }),
@@ -299,6 +302,51 @@ describe("Command palette with uninstalled modules", () => {
     renderPalette();
     search("engine");
     expect(screen.getByText("Settings → The Engine")).toBeInTheDocument();
+  });
+});
+
+describe("Command palette jumps", () => {
+  const type = (value: string) => fireEvent.change(screen.getByRole("combobox"), { target: { value } });
+
+  it("opens a matched task in its form instead of only switching tabs", () => {
+    tasks = [task({ id: "t1", name: "Write report" })];
+    renderPalette();
+    type("report");
+    fireEvent.click(screen.getByText("Write report"));
+    expect(appUi.getState().editingTask?.id).toBe("t1");
+    expect(appUi.getState().showTaskForm).toBe(true);
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it("opens a matched transaction in its form", () => {
+    transactions = [{ id: "x1", name: "Ramen", amount: 18, type: "expense", categoryId: "f1", date: "2026-10-09" }];
+    renderPalette();
+    type("ramen");
+    fireEvent.click(screen.getByText("Ramen"));
+    expect(appUi.getState().editingTransaction?.id).toBe("x1");
+    expect(appUi.getState().showTransactionForm).toBe(true);
+  });
+
+  it("jumps to a module that had no row, and to one game", () => {
+    fun.add({ id: "wordle", name: "Wordle", url: "https://www.nytimes.com/games/wordle/index.html" });
+    renderPalette();
+    type("horizon");
+    fireEvent.click(screen.getByText("Open The Horizon"));
+    expect(onNavigate).toHaveBeenCalledWith("calendar");
+    type("wordle");
+    fireEvent.click(screen.getByText("Wordle"));
+    expect(fun.getState().activeId).toBe("wordle");
+    expect(onNavigate).toHaveBeenCalledWith("fun");
+    fun.remove("wordle");
+  });
+
+  it("lists a Nebula project and an in-app shortcut", () => {
+    renderPalette();
+    type("crystal");
+    fireEvent.click(screen.getByText("C:/code/crystal-os"));
+    expect(onNavigate).toHaveBeenCalledWith("nebula");
+    type(KEYMAP[0].title);
+    expect(screen.getByText(`${KEYMAP_CATEGORY_LABELS[KEYMAP[0].category]} shortcut`)).toBeInTheDocument();
   });
 });
 

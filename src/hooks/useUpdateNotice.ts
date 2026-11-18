@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { isDesktop } from "@/lib/platform";
-import { TRAY_CHECK_UPDATE_EVENT } from "@/lib/tray";
+import { TRAY_CHECK_UPDATE_EVENT, TRAY_INSTALL_UPDATE_EVENT } from "@/lib/tray";
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
@@ -15,10 +15,18 @@ export function useUpdateNotice() {
     if (!isDesktop()) return;
     let cancelled = false;
 
-    let unlisten: (() => void) | undefined;
+    const unlisten: (() => void)[] = [];
+    let downloaded = false;
+
+    const install = () => {
+      toast.loading(downloaded ? "Installing update. Crystal OS will restart." : "Downloading update. Crystal OS will restart.");
+      import("@/lib/installerNative")
+        .then(({ installUpdate }) => installUpdate())
+        .catch((err) => toast.error("Update failed", { description: errorText(err) }));
+    };
 
     const check = async (manual: boolean) => {
-      const { checkForUpdate, downloadUpdate, installUpdate } = await import("@/lib/installerNative");
+      const { checkForUpdate, downloadUpdate } = await import("@/lib/installerNative");
       const update = await checkForUpdate();
       if (cancelled) return;
       if (!update) {
@@ -29,6 +37,7 @@ export function useUpdateNotice() {
         () => true,
         () => false,
       );
+      downloaded = ready;
       if (cancelled) return;
       toast(ready ? `Crystal OS ${update.version} is ready to install` : `Crystal OS ${update.version} is available`, {
         id: "update-available",
@@ -38,29 +47,26 @@ export function useUpdateNotice() {
         duration: Infinity,
         action: {
           label: ready ? "Restart to update" : "Update now",
-          onClick: () => {
-            toast.loading(ready ? "Installing update. Crystal OS will restart." : "Downloading update. Crystal OS will restart.");
-            installUpdate().catch((err) =>
-              toast.error("Update failed", { description: errorText(err) }),
-            );
-          },
+          onClick: install,
         },
       });
     };
 
     check(false).catch(() => {});
-    import("@tauri-apps/api/event").then(({ listen }) =>
+    import("@tauri-apps/api/event").then(({ listen }) => {
+      const keep = (fn: () => void) => {
+        if (cancelled) fn();
+        else unlisten.push(fn);
+      };
       listen(TRAY_CHECK_UPDATE_EVENT, () => {
         check(true).catch((err) => toast.error("Could not check for updates", { description: errorText(err) }));
-      }).then((fn) => {
-        if (cancelled) fn();
-        else unlisten = fn;
-      }),
-    );
+      }).then(keep);
+      listen(TRAY_INSTALL_UPDATE_EVENT, install).then(keep);
+    });
 
     return () => {
       cancelled = true;
-      unlisten?.();
+      unlisten.forEach((fn) => fn());
     };
   }, []);
 }

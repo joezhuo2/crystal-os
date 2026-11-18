@@ -1,8 +1,8 @@
 import type { MailItem } from "@/lib/mail";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 
-export const PALETTE_EVENT_DAYS_BACK = 30;
-export const PALETTE_EVENT_DAYS_AHEAD = 90;
+export const PALETTE_EVENT_DAYS_BACK = 365;
+export const PALETTE_EVENT_DAYS_AHEAD = 365;
 const LIMIT = 5;
 
 const has = (query: string, ...fields: (string | undefined)[]) =>

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.3] - 2026-11-18 - A search bar that reaches every part of the app, Portal links that open in your browser, and updates from the tray.
+
+### Added
+
+- **More in the search bar.** It now finds every tab by name, each Portal app and Arcade game, Nebula projects, Ledger positions, running Terminal shells (desktop) and in-app keyboard shortcuts. Picking an app, game or shell opens that one; picking a shortcut opens its Settings section.
+- **The Arcade on Home.** A Home card shows how many games you have played today and your best streak, with a button for each game.
+- **Install from the tray.** When an update is found, the tray row reads **Install update** and clicking it installs it. ([#150](https://github.com/joezhuo2/crystal-os/issues/150))
+
+### Changed
+
+- **Search results open the item.** Picking a task or a transaction opens its form instead of only switching tabs.
+- **Calendar search looks further.** Events are searched a year back and a year ahead, up from 30 and 90 days.
+- The **Search tasks & transactions** row, which did nothing, is gone from the empty search bar.
+
+### Fixed
+
+- **Links in Portal apps.** A clicked link now opens in your default browser. Links that go through the site's own redirect, as in Gmail, YouTube, LinkedIn and Instagram, used to open in a window inside the app. A site's own sized pop-up, such as a sign-in window, still stays in the app.
+- **Dropping files on Portal apps.** Files dragged onto a Portal page, such as a Discord chat, now reach the page. ([#149](https://github.com/joezhuo2/crystal-os/issues/149))
+
 ## [v0.19.2] - 2026-11-18 - GitHub review requests and assigned issues in the search bar, updates that install on the first try, and smoother tab changes.
 
 ### Added

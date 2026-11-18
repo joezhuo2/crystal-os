@@ -16,6 +16,7 @@ export const TRAY_POMODORO_EVENT = "tray://pomodoro";
 /** Emitted by Rust after showing the window from "Quick Add…". */
 export const TRAY_QUICK_ADD_EVENT = "tray://quick-add";
 export const TRAY_CHECK_UPDATE_EVENT = "tray://check-update";
+export const TRAY_INSTALL_UPDATE_EVENT = "tray://install-update";
 export const TRAY_PRIVACY_EVENT = "tray://privacy";
 
 /** Mirrors `PomodoroView` in src-tauri/src/tray.rs. */

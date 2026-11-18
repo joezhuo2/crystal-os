@@ -32,6 +32,8 @@ export interface AppUiState {
   settingsSection: string | null;
   /** Requests that the Observatory open a course tab, topic, Review or the inbox. */
   observatoryTarget: ObservatoryTarget | null;
+  /** Requests that the Terminal focus the shell with this session id. */
+  terminalTarget: number | null;
 }
 
 export interface ObservatoryTarget { code?: string; tab?: "Overview" | "Topics" | "Resources" | "Grades"; topic?: string; view?: "review" | "inbox" | "deepsky" }
@@ -49,6 +51,7 @@ const initialState: AppUiState = {
   openEvent: null,
   settingsSection: null,
   observatoryTarget: null,
+  terminalTarget: null,
 };
 
 let state: AppUiState = initialState;
@@ -83,6 +86,7 @@ export const appUi = {
   setOpenEvent: (target: AppUiState["openEvent"]) => set("openEvent", target),
   setSettingsSection: (id: string | null) => set("settingsSection", id),
   setObservatoryTarget: (target: ObservatoryTarget | null) => set("observatoryTarget", target),
+  setTerminalTarget: (id: number | null) => set("terminalTarget", id),
 
   /** Back to nothing open. AppProvider calls it on sign-out. */
   reset() {

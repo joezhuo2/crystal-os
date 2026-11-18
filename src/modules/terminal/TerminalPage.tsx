@@ -5,6 +5,7 @@ import type { Terminal } from "@xterm/xterm";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { isDesktop } from "@/lib/platform";
+import { appUi, useAppUi } from "@/lib/appUi";
 import { useShortcut } from "@/hooks/useShortcut";
 import {
   MAX_TERMINALS,
@@ -325,6 +326,14 @@ export default function TerminalPage() {
   }, []);
 
   const select = useCallback((key: string) => setLayout((current) => selectPane(current, key)), []);
+
+  const target = useAppUi((s) => s.terminalTarget);
+  useEffect(() => {
+    const tab = target === null ? undefined : tabs.find((t) => t.id === target);
+    if (!tab) return;
+    select(tab.key);
+    appUi.setTerminalTarget(null);
+  }, [target, tabs, select]);
 
   const focusPane = useCallback((key: string) => {
     setLayout((current) => (current.focused === key ? current : { ...current, focused: key }));
