@@ -27,6 +27,7 @@ export interface ApiEnv extends AiEnv {
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_REDIRECT_URI?: string;
   GOOGLE_REFRESH_TOKEN?: string;
+  GOOGLE_REFRESH_TOKENS_EXTRA?: string;
   MAIL_REDIRECT_URI?: string;
   MICROSOFT_CLIENT_ID?: string;
   MICROSOFT_CLIENT_SECRET?: string;
@@ -80,6 +81,7 @@ export function createApiHandler({ env, requireUser, rootDir }: ApiHandlerOption
         clientSecret: env.GOOGLE_CLIENT_SECRET,
         redirectUri: env.GOOGLE_REDIRECT_URI,
         refreshToken: env.GOOGLE_REFRESH_TOKEN,
+        extraRefreshTokens: env.GOOGLE_REFRESH_TOKENS_EXTRA,
         rootDir,
       },
       requireUser,

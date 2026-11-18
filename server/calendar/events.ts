@@ -68,6 +68,7 @@ export interface AppEvent {
   /** Set on an instance of a series; points at the master. */
   recurringEventId: string | null;
   htmlLink: string;
+  color?: string;
 }
 
 export interface AppCalendar {
@@ -77,6 +78,7 @@ export interface AppCalendar {
   backgroundColor: string;
   accessRole: string;
   timeZone: string;
+  account?: string;
 }
 
 export interface EventInput {
@@ -335,6 +337,62 @@ export async function listEvents(
   return (data.items ?? [])
     .filter((e) => e.status !== "cancelled")
     .map((e) => toAppEvent(e, calendarId));
+}
+
+export const ALL_CALENDARS = "all";
+const ACCOUNT_SEPARATOR = "|";
+
+export interface CalendarSource {
+  account: string;
+  client: OAuth2Client;
+}
+
+export interface SourcedCalendar extends AppCalendar {
+  account: string;
+  googleId: string;
+  client: OAuth2Client;
+}
+
+export function splitCalendarId(id: string): { account?: string; calendarId: string } {
+  const cut = id.indexOf(ACCOUNT_SEPARATOR);
+  if (cut === -1) return { calendarId: id === ALL_CALENDARS ? "primary" : id };
+  return { account: id.slice(0, cut), calendarId: id.slice(cut + 1) };
+}
+
+export async function listAllCalendars(sources: CalendarSource[]): Promise<SourcedCalendar[]> {
+  const lists = await Promise.all(
+    sources.map(async ({ account, client }, index) =>
+      (await listCalendars(client)).map((calendar) => ({
+        ...calendar,
+        id: index === 0 ? calendar.id : `${account}${ACCOUNT_SEPARATOR}${calendar.id}`,
+        account,
+        googleId: calendar.id,
+        client,
+      })),
+    ),
+  );
+  const seen = new Set<string>();
+  return lists.flat().filter((calendar) => !seen.has(calendar.googleId) && seen.add(calendar.googleId));
+}
+
+export async function listAllEvents(
+  sources: CalendarSource[],
+  timeMin: string,
+  timeMax: string,
+): Promise<AppEvent[]> {
+  const calendars = await listAllCalendars(sources);
+  const settled = await Promise.allSettled(
+    calendars.map(async (calendar) =>
+      (await listEvents(calendar.client, calendar.googleId, timeMin, timeMax)).map((event) => ({
+        ...event,
+        calendarId: calendar.id,
+        color: calendar.backgroundColor,
+      })),
+    ),
+  );
+  const loaded = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+  if (calendars.length > 0 && loaded.length === 0) throw (settled[0] as PromiseRejectedResult).reason;
+  return loaded.flat().sort((a, b) => a.startISO.localeCompare(b.startISO));
 }
 
 export async function getEvent(

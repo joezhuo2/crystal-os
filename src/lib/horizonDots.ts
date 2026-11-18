@@ -38,7 +38,7 @@ export function dotsForDate(
   for (const e of events) {
     if (e.startDate > dateStr || e.endDate < dateStr) continue;
     const time = e.allDay || e.startDate < dateStr ? "" : e.startTime;
-    dots.push({ key: `e-${e.id}`, time, color: eventColor });
+    dots.push({ key: `e-${e.id}`, time, color: e.color ?? eventColor });
   }
   for (const t of tasks) {
     if (t.completed || !taskFallsOnDate(t, dateStr)) continue;

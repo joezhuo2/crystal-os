@@ -364,7 +364,7 @@ export default function TimeGrid({
                       setAllDayOver(null);
                     }}
                     className="w-full text-left text-[11px] px-1.5 py-0.5 rounded truncate"
-                    style={{ background: `color-mix(in srgb, ${color} 30%, transparent)` }}
+                    style={{ background: `color-mix(in srgb, ${event.color ?? color} 30%, transparent)` }}
                   >
                     {event.summary}
                   </button>
@@ -526,8 +526,8 @@ export default function TimeGrid({
                         height: Math.max(height - 1, 14),
                         left: `calc(${(column / lanes) * 100}% + 1px)`,
                         width: `calc(${100 / lanes}% - 2px)`,
-                        background: `color-mix(in srgb, ${color} 28%, transparent)`,
-                        borderColor: `color-mix(in srgb, ${color} 55%, transparent)`,
+                        background: `color-mix(in srgb, ${event.color ?? color} 28%, transparent)`,
+                        borderColor: `color-mix(in srgb, ${event.color ?? color} 55%, transparent)`,
                       }}
                     >
                       {resizable && <span data-resize="start" aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5 cursor-ns-resize" />}

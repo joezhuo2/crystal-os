@@ -2,9 +2,10 @@ import { randomBytes } from "node:crypto";
 import { OAuth2Client } from "google-auth-library";
 import { CalendarError } from "./errors";
 import { removeEnvValue, upsertEnvValue } from "./envFile";
-import { getPrimaryCalendarId } from "./events";
+import { type CalendarSource, getPrimaryCalendarId } from "./events";
 
 export const REFRESH_TOKEN_KEY = "GOOGLE_REFRESH_TOKEN";
+export const EXTRA_TOKENS_KEY = "GOOGLE_REFRESH_TOKENS_EXTRA";
 
 /**
  * `calendar.events` alone cannot call calendarList.list, so `calendar.readonly`
@@ -24,6 +25,7 @@ export interface CalendarConfig {
   clientSecret?: string;
   redirectUri?: string;
   refreshToken?: string;
+  extraRefreshTokens?: string;
   /** Project root, i.e. where .env.local lives. Defaults to process.cwd(). */
   rootDir?: string;
 }
@@ -32,22 +34,25 @@ export interface CalendarStatus {
   configured: boolean;
   connected: boolean;
   account?: string;
+  accounts?: string[];
   error?: string;
 }
 
 /**
- * Holds the refresh token for the life of the process and mirrors it into
- * .env.local. The access token stays inside the OAuth2Client's memory — it
- * lives an hour, OAuth2Client refreshes it automatically, and neither token is
+ * Holds the refresh tokens for the life of the process and mirrors them into
+ * .env.local. The access tokens stay inside each OAuth2Client's memory — they
+ * live an hour, OAuth2Client refreshes them automatically, and no token is
  * ever sent to the browser.
  */
 export function createCalendarAuth(config: CalendarConfig) {
   const rootDir = config.rootDir ?? process.cwd();
   const redirectUri = config.redirectUri || DEFAULT_REDIRECT_URI;
 
-  let refreshToken = config.refreshToken || null;
-  let client: OAuth2Client | null = null;
-  let accountCache: string | null = null;
+  let tokens = [config.refreshToken, ...(config.extraRefreshTokens ?? "").split(",")]
+    .map((t) => (t ?? "").trim())
+    .filter(Boolean);
+  const clients = new Map<string, OAuth2Client>();
+  const accounts = new Map<string, string>();
 
   /** Pending CSRF nonces from /auth/start, consumed by /auth/callback. */
   const pendingStates = new Map<string, number>();
@@ -72,33 +77,62 @@ export function createCalendarAuth(config: CalendarConfig) {
     });
   }
 
-  /** An authorized client, or a 401 telling the UI to run the connect flow. */
-  function getClient(): OAuth2Client {
-    requireConfigured();
-    if (!refreshToken) {
-      throw new CalendarError("Google Calendar is not connected", 401);
-    }
+  function clientFor(token: string): OAuth2Client {
+    let client = clients.get(token);
     if (!client) {
       client = newClient();
-      client.setCredentials({ refresh_token: refreshToken });
+      client.setCredentials({ refresh_token: token });
+      clients.set(token, client);
     }
     return client;
   }
 
-  function setRefreshToken(token: string): void {
-    refreshToken = token;
-    accountCache = null;
-    // Force a fresh client so the next call uses the new grant.
-    client = null;
+  function requireConnected(): void {
+    requireConfigured();
+    if (tokens.length === 0) {
+      throw new CalendarError("Google Calendar is not connected", 401);
+    }
+  }
+
+  async function accountOf(token: string): Promise<string> {
+    let account = accounts.get(token);
+    if (!account) {
+      account = (await getPrimaryCalendarId(clientFor(token))) ?? "connected";
+      accounts.set(token, account);
+    }
+    return account;
+  }
+
+  async function getSources(): Promise<CalendarSource[]> {
+    requireConnected();
+    const settled = await Promise.allSettled(
+      tokens.map(async (token) => ({ account: await accountOf(token), client: clientFor(token) })),
+    );
+    const sources = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+    if (sources.length === 0) throw (settled[0] as PromiseRejectedResult).reason;
+    return sources;
+  }
+
+  /** An authorized client for `account`, or for the first account when omitted. */
+  async function getClient(account?: string): Promise<OAuth2Client> {
+    requireConnected();
+    if (!account) return clientFor(tokens[0]);
+    const source = (await getSources()).find((s) => s.account === account);
+    if (!source) throw new CalendarError(`${account} is not connected`, 401);
+    return source.client;
   }
 
   /**
-   * Mirror the token into .env.local. Callers schedule this *after* responding:
+   * Mirror the tokens into .env.local. Callers schedule this *after* responding:
    * Vite watches .env files and restarts on change, so a blocking write here
    * would race the callback's own HTTP response.
    */
-  async function persistRefreshToken(token: string): Promise<void> {
-    await upsertEnvValue(rootDir, REFRESH_TOKEN_KEY, token);
+  async function persistTokens(): Promise<void> {
+    const [first, ...extra] = tokens;
+    if (first) await upsertEnvValue(rootDir, REFRESH_TOKEN_KEY, first);
+    else await removeEnvValue(rootDir, REFRESH_TOKEN_KEY);
+    if (extra.length) await upsertEnvValue(rootDir, EXTRA_TOKENS_KEY, extra.join(","));
+    else await removeEnvValue(rootDir, EXTRA_TOKENS_KEY);
   }
 
   function buildConsentUrl(): string {
@@ -129,44 +163,44 @@ export function createCalendarAuth(config: CalendarConfig) {
     }
   }
 
-  /** Exchange the callback code. Returns the token; persisting is the caller's. */
+  /** Exchange the callback code. Persisting the tokens is the caller's. */
   async function exchangeCode(
     code: string,
     state: string | null,
-  ): Promise<string> {
+  ): Promise<void> {
     consumeState(state);
-    const { tokens } = await newClient().getToken(code);
-    if (!tokens.refresh_token) {
+    const { tokens: granted } = await newClient().getToken(code);
+    const token = granted.refresh_token;
+    if (!token) {
       throw new CalendarError(
         "Google did not return a refresh token. Revoke the app's access at " +
           "https://myaccount.google.com/permissions and connect again.",
         400,
       );
     }
-    setRefreshToken(tokens.refresh_token);
-    return tokens.refresh_token;
+    const account = await accountOf(token);
+    const replaced = tokens.filter((t) => t !== token && accounts.get(t) === account);
+    for (const old of replaced) forget(old);
+    tokens = [...tokens.filter((t) => !replaced.includes(t) && t !== token), token];
   }
 
-  async function disconnect(): Promise<void> {
-    const token = refreshToken;
-    refreshToken = null;
-    client = null;
-    accountCache = null;
-    if (token) {
+  function forget(token: string): void {
+    clients.delete(token);
+    accounts.delete(token);
+  }
+
+  async function disconnect(account?: string): Promise<void> {
+    const leaving = account ? tokens.filter((t) => accounts.get(t) === account) : tokens;
+    tokens = tokens.filter((t) => !leaving.includes(t));
+    for (const token of leaving) {
+      forget(token);
       try {
         await newClient().revokeToken(token);
       } catch {
         // Already revoked or offline — clearing local state is what matters.
       }
     }
-    await removeEnvValue(rootDir, REFRESH_TOKEN_KEY);
-  }
-
-  /** The connected account's address, shown as the connection label. */
-  async function getAccount(): Promise<string> {
-    if (accountCache) return accountCache;
-    accountCache = (await getPrimaryCalendarId(getClient())) ?? "connected";
-    return accountCache;
+    await persistTokens();
   }
 
   async function getStatus(): Promise<CalendarStatus> {
@@ -178,10 +212,11 @@ export function createCalendarAuth(config: CalendarConfig) {
           "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not set in .env.local",
       };
     }
-    if (!refreshToken) return { configured: true, connected: false };
+    if (tokens.length === 0) return { configured: true, connected: false };
 
     try {
-      return { configured: true, connected: true, account: await getAccount() };
+      const list = (await getSources()).map((s) => s.account);
+      return { configured: true, connected: true, account: list[0], accounts: list };
     } catch (err) {
       // A revoked or expired grant looks like a live token until it is used.
       const message = err instanceof Error ? err.message : String(err);
@@ -192,10 +227,11 @@ export function createCalendarAuth(config: CalendarConfig) {
   return {
     isConfigured,
     getClient,
+    getSources,
     getStatus,
     buildConsentUrl,
     exchangeCode,
-    persistRefreshToken,
+    persistTokens,
     disconnect,
   };
 }

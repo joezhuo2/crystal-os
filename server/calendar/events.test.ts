@@ -4,6 +4,9 @@ import {
   buildRecurrence,
   deleteEvent,
   getPrimaryCalendarId,
+  listAllCalendars,
+  listAllEvents,
+  splitCalendarId,
   listCalendars,
   listEvents,
   parseRecurrence,
@@ -355,5 +358,62 @@ describe("recurrence", () => {
 
   it("falls back to NONE on a frequency it cannot render", () => {
     expect(parseRecurrence(["RRULE:FREQ=HOURLY"]).freq).toBe("NONE");
+  });
+});
+
+describe("all calendars", () => {
+  function account(calendars: { id: string; primary?: boolean; backgroundColor?: string }[], events: Record<string, unknown[]>) {
+    const request = vi.fn(async ({ url }: { url: string }) => {
+      if (url.endsWith("/users/me/calendarList")) return { data: { items: calendars } };
+      const id = decodeURIComponent(url.split("/calendars/")[1].split("/events")[0]);
+      if (!(id in events)) throw new Error(`no access to ${id}`);
+      return { data: { items: events[id] } };
+    });
+    return { request } as unknown as OAuth2Client;
+  }
+  const timed = (id: string, hour: string) => ({
+    id,
+    start: { dateTime: `2026-11-18T${hour}:00:00Z` },
+    end: { dateTime: `2026-11-18T${hour}:30:00Z` },
+  });
+
+  it("merges every calendar of every account, tagging later accounts' calendars", async () => {
+    const sources = [
+      {
+        account: "me@a.com",
+        client: account(
+          [{ id: "me@a.com", primary: true, backgroundColor: "#111111" }, { id: "shared" }, { id: "broken" }],
+          { "me@a.com": [timed("late", "15")], shared: [timed("team", "09")] },
+        ),
+      },
+      {
+        account: "me@b.com",
+        client: account([{ id: "me@b.com", primary: true }, { id: "shared" }], { "me@b.com": [timed("work", "12")], shared: [] }),
+      },
+    ];
+
+    expect((await listAllCalendars(sources)).map((c) => c.id)).toEqual(["me@a.com", "broken", "shared", "me@b.com|me@b.com"]);
+
+    const events = await listAllEvents(sources, "2026-11-18T00:00:00Z", "2026-11-19T00:00:00Z");
+    expect(events.map((e) => [e.id, e.calendarId])).toEqual([
+      ["team", "shared"],
+      ["work", "me@b.com|me@b.com"],
+      ["late", "me@a.com"],
+    ]);
+    expect(events[2].color).toBe("#111111");
+  });
+
+  it("fails when no calendar can be read", async () => {
+    const sources = [{ account: "me@a.com", client: account([{ id: "broken" }], {}) }];
+    await expect(listAllEvents(sources, "a", "b")).rejects.toThrow("no access to broken");
+  });
+
+  it("splits an account-tagged calendar id", () => {
+    expect(splitCalendarId("me@b.com|team@group.calendar.google.com")).toEqual({
+      account: "me@b.com",
+      calendarId: "team@group.calendar.google.com",
+    });
+    expect(splitCalendarId("primary")).toEqual({ calendarId: "primary" });
+    expect(splitCalendarId("all")).toEqual({ calendarId: "primary" });
   });
 });
