@@ -8,6 +8,7 @@ import { orbitStore } from "@/lib/orbitStore";
 
 const now = new Date("2026-10-14T12:00:00");
 let still = false;
+let budgets: { name: string; budget: number; spent: number }[] | undefined;
 const status: Record<ReviewKind, "loading" | "ready"> = { weekly: "ready", monthly: "ready", yearly: "ready" };
 
 const result = (period: ReviewPeriod): OrbitReviewResult => {
@@ -15,7 +16,7 @@ const result = (period: ReviewPeriod): OrbitReviewResult => {
   return {
     review: loading
       ? null
-      : buildReview(period, { completions: [], focus: [], tasks: [], transactions: [], notes: [], events: [], today: "2026-10-14" }),
+      : buildReview(period, { completions: [], focus: [], tasks: [], transactions: [], notes: [], events: [], today: "2026-10-14", budgets }),
     loading,
     historyError: null,
     vaultUnavailable: false,
@@ -51,6 +52,24 @@ const render = (ui: ReactElement) => {
 
 const skeleton = () => screen.queryByRole("status", { name: "Loading the review" });
 const tasksCard = () => screen.queryByRole("region", { name: "Tasks" });
+
+describe("The Orbit money card budgets", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    orbitStore._reload();
+    still = false;
+    status.weekly = status.monthly = status.yearly = "ready";
+    budgets = [{ name: "Dining", budget: 100, spent: 120 }];
+  });
+  afterEach(() => {
+    budgets = undefined;
+  });
+
+  it("lists each budget with its spending and percentage", () => {
+    render(<OrbitPage />);
+    expect(screen.getByRole("list", { name: "Budgets" })).toHaveTextContent("Dining$120.00 of $100.00 · 120%");
+  });
+});
 
 describe("The Orbit loading skeleton", () => {
   beforeEach(() => {

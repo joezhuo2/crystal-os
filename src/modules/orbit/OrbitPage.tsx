@@ -51,6 +51,7 @@ import {
   formatClockTime,
   formatEstimateDiff,
   formatMinutes,
+  budgetUsed,
   formatMoney,
   formatTrendValue,
   inProgressPeriod,
@@ -235,6 +236,21 @@ function MoneyCard({ review }: { review: Review }) {
         <span><i className="orbit-swatch orbit-swatch-prev" /> last {unit}</span>
         <span><i className="orbit-swatch" /> this {unit}</span>
       </div>
+      {review.budgets && review.budgets.length > 0 && (
+        <ul aria-label="Budgets" className="mt-3 space-y-1 text-xs tabular-nums">
+          {review.budgets.map((b) => {
+            const pct = budgetUsed(b);
+            return (
+              <li key={b.name} className={`flex items-baseline justify-between gap-2 ${pct >= 100 ? "orbit-text-rust" : "text-muted-foreground"}`}>
+                <span className="truncate">{b.name}</span>
+                <span data-private>
+                  {formatMoney(b.spent)} of {formatMoney(b.budget)} · {pct}%
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }
