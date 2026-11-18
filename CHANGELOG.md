@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Purchases from your mail.** Order emails in The Courier that state a total are logged in The Vault as expenses by themselves, once per order, with a mail icon on the row. Investment emails (Wealthsimple and other brokers, order fills, dividends) are left to The Ledger. Delete one and it is not added again. Adding transactions by hand works as before.
+- **Bills from your mail.** Bill emails with a due date are listed under **Upcoming** in The Vault. **Log** records the bill as paid today, **Dismiss** hides it. A reminder shows the day before and on the day it is due (Settings → Notifications → Bill reminders).
+- **Recurring transactions.** Rent, salary and subscriptions: set an amount, a date and how often (weekly, every 2 weeks, monthly, yearly) under **Recurring**, and each one is logged on its date, including any missed while the app was closed. **Upcoming** lists the next dates and what they add up to per month.
+- **Budgets.** Give a category a monthly budget in **Categories**. The Vault shows a bar per budget, a notification is sent at 80% and again when it is used up (Settings → Notifications → Budget alerts), and the monthly review in The Orbit lists each budget.
+- **Category rules.** Under **Rules**, a keyword such as `uber` files matching transactions under a category. With no matching rule, a transaction takes the category last used for the same description. This applies to the `log` command, CSV imports, purchases from mail and the transaction form.
+- **Bank CSV import.** **Import CSV** reads a bank or card export with a date, a description and an amount (or debit and credit) column, shows what is new, and leaves out rows already logged. **Flip signs** is for card statements that list purchases as positive.
+- **Accounts, transfers and net worth.** Add accounts with an opening balance and pick an account on a transaction. A **Transfer** moves money between two accounts and counts as neither income nor spending. The Vault shows each balance, your net worth and its last 12 months.
+- **Savings goals.** A goal has a target and an optional deadline, and follows an account's balance or an amount you type in. It shows how much to put aside per month to stay on track.
+- **Receipts.** Attach an image or PDF to a transaction from its form; it is saved under `Receipts/attachments` in your vault and opens from the paperclip on the row (desktop app).
+- **Period, search and filter in The Vault.** One control switches the charts, totals and list between this month, the last 3 months, year to date and all time. The list can be searched and filtered by category, and the page now shows income, spending, net and savings rate for the period.
+
+### Changed
+
+- Financial categories can be renamed and recoloured in place.
+- Deleting a transaction shows **Undo** for 5 seconds, as deleting a task does.
+- The transaction form no longer accepts a zero or negative amount.
+
+### Fixed
+
+- **Spending with no category showed as "null".** After a category was deleted, its transactions appeared in the Spending Breakdown under the name `null`. They are now grouped as **Uncategorised**.
+- **The `log` command filed every expense under the first category in the alphabet.** It now uses your rules and past transactions, and leaves the transaction uncategorised when neither matches.
+- **The Vault slowed down with a long history.** The list drew and animated every transaction ever logged. It now draws 100 at a time with **Show more**.
+
 ## [v0.18.1] - 2026-11-16 - Flattened equations in extracted questions are caught and rewritten.
 
 ### Fixed

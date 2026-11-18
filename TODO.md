@@ -3,11 +3,7 @@
     - [ ]  use plaid to connect to banks (store api keys and tokens in secure .env variables)
     - [ ] themed glassmorphism UI 
     - [ ] **Data export / backup.** One button in Settings that exports tasks, transactions, categories and settings to JSON/CSV, and an import to restore them. Useful before schema changes like Plaid.
-    - [ ] **Vault: budgets.** Monthly budget per category with progress bars and a warning at 80%. Send the 80% warning as a native notification too (src/lib/notifications.ts), with its own switch in Settings → Notifications.
-    - [ ] **Vault: subscriptions and bills.** Recurring charges with their next dates, shown in the Horizon and the Engine.
-    - [ ] **Vault: CSV import.** Import bank CSV exports as a fallback if Plaid doesn't cover the bank.
-    - [ ] **Vault: savings goals.** Goals with a target, deadline and progress.
-    - [ ] **Vault: net worth.** Net worth over time.
+    - [ ] **Vault: recurring items and bills in the Horizon and the Engine.** They are listed under Upcoming in The Vault since v0.19.0, but not yet on the calendar or as tasks.
 
 ### Docs
 
