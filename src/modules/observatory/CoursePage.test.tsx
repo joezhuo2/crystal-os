@@ -151,7 +151,9 @@ describe("CoursePage grades", () => {
     expect(screen.getByTestId("current-grade").textContent).toBe("No grades yet");
     const input = screen.getByLabelText("Midterm score 1");
     fireEvent.change(input, { target: { value: "80" } });
-    expect(screen.getByTestId("current-grade").textContent).toBe("80% (3.7 GPA)");
+    const grade = screen.getByTestId("current-grade").cloneNode(true) as HTMLElement;
+    grade.querySelectorAll(".sr-only").forEach((n) => n.remove());
+    expect(grade.textContent).toBe("80% (3.7 GPA)");
     expect(screen.getByText("Secured").nextSibling?.textContent).toBe("32%");
     fireEvent.blur(input);
     expect(parseCourse(files.get(coursePath)!.content).exams[0]!.scores).toBeUndefined();

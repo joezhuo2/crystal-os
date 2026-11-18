@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { toast } from "sonner";
 import {
   useAppActions,
@@ -132,10 +133,10 @@ function SummaryTiles({ start }: { start: string | null }) {
   const select = useCallback((txs: Transaction[]) => totals(since(txs, start)), [start]);
   const t = useTransactions(select);
   const tiles = [
-    { label: "Income", value: money(t.income), tone: "text-accent" },
-    { label: "Spent", value: money(t.spent), tone: "" },
-    { label: "Net", value: money(t.net), tone: t.net < 0 ? "text-destructive" : "text-accent" },
-    { label: "Savings rate", value: t.savingsRate === null ? "-" : `${t.savingsRate}%`, tone: "" },
+    { label: "Income", value: t.income, format: money, tone: "text-accent" },
+    { label: "Spent", value: t.spent, format: money, tone: "" },
+    { label: "Net", value: t.net, format: money, tone: t.net < 0 ? "text-destructive" : "text-accent" },
+    { label: "Savings rate", value: t.savingsRate, format: (n: number) => `${Math.round(n)}%`, tone: "" },
   ];
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -143,7 +144,7 @@ function SummaryTiles({ start }: { start: string | null }) {
         <div key={tile.label} className="glass-card-hover p-4">
           <p className={CARD_TITLE}>{tile.label}</p>
           <p data-private className={`text-xl font-semibold tabular-nums mt-1 ${tile.tone}`}>
-            {tile.value}
+            {tile.value === null ? "-" : <AnimatedNumber value={tile.value} format={tile.format} />}
           </p>
         </div>
       ))}

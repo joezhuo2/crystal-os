@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { AlertTriangle, ClipboardPaste, Flame, Gamepad2, Plus, RotateCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import AddPortalAppDialog from "@/components/portal/AddPortalAppDialog";
@@ -243,7 +244,7 @@ export default function FunPage() {
 
       {active && (
         <section aria-label={`${active.name} scores`} className="flex flex-wrap items-center gap-y-2 px-2">
-          <Stat label="Streak" value={streak(results, active.id, today)} />
+          <Stat label="Streak" value={<AnimatedNumber value={streak(results, active.id, today)} />} />
           <Stat label="Today" value={scoreLabel(week[6].result)} />
           <Stat label="Yesterday" value={scoreLabel(week[5].result)} />
           <Stat label="7-day avg" value={formatAverage(averageScore(week.map((d) => d.result)))} />

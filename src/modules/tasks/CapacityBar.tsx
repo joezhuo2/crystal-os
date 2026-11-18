@@ -1,4 +1,5 @@
 import { CalendarPlus, Gauge } from "lucide-react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { toast } from "sonner";
 import { useTasks, type Task } from "@/contexts/AppContext";
 import { localTimeZone, useCreateEvent } from "@/hooks/useGoogleCalendar";
@@ -144,17 +145,17 @@ export function CapacityCard() {
       <Track capacity={capacity} />
       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
         <span>
-          <span className="text-foreground tabular-nums">{formatEstimate(capacity.plannedMinutes)}</span> planned
+          <span className="text-foreground tabular-nums"><AnimatedNumber value={capacity.plannedMinutes} format={formatEstimate} /></span> planned
         </span>
         <span>
-          <span className="text-foreground tabular-nums">{formatEstimate(capacity.freeMinutes)}</span> free
+          <span className="text-foreground tabular-nums"><AnimatedNumber value={capacity.freeMinutes} format={formatEstimate} /></span> free
           {capacity.windowOver
             ? ` · work window (${windowLabel}) is over`
             : ` of ${formatEstimate(capacity.remainingWindowMinutes)} left in ${windowLabel}`}
         </span>
         {capacity.busyMinutes > 0 && (
           <span>
-            <span className="text-foreground tabular-nums">{formatEstimate(capacity.busyMinutes)}</span> in events
+            <span className="text-foreground tabular-nums"><AnimatedNumber value={capacity.busyMinutes} format={formatEstimate} /></span> in events
           </span>
         )}
       </div>
@@ -239,13 +240,13 @@ export function CapacityStrip({
           "Work day's over"
         ) : (
           <>
-            <span className="tabular-nums text-foreground/90">{formatEstimate(capacity.freeMinutes)}</span> free
+            <span className="tabular-nums text-foreground/90"><AnimatedNumber value={capacity.freeMinutes} format={formatEstimate} /></span> free
           </>
         )}
         {capacity.plannedMinutes > 0 && (
           <>
             {" · "}
-            <span className="tabular-nums">{formatEstimate(capacity.plannedMinutes)}</span> planned ·{" "}
+            <span className="tabular-nums"><AnimatedNumber value={capacity.plannedMinutes} format={formatEstimate} /></span> planned ·{" "}
             <span className={TEXT[tone]}>{verdict(capacity)}</span>
           </>
         )}

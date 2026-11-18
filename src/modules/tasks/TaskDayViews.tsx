@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { AnimatePresence } from "framer-motion";
 import type { Task } from "@/contexts/AppContext";
 import { upcomingByDate } from "@/lib/homeTasks";
@@ -39,7 +40,7 @@ export function TodayView({ tasks, today, card }: { tasks: Task[]; today: string
                 {d === today ? "Today" : weekdayOf(d)}
               </span>
               <span className="block text-sm font-semibold tabular-nums">{Number(d.slice(8))}</span>
-              <span className={`block text-[10px] tabular-nums ${count ? "text-primary" : "text-muted-foreground/50"}`}>{count}</span>
+              <span className={`block text-[10px] tabular-nums ${count ? "text-primary" : "text-muted-foreground/50"}`}><AnimatedNumber value={count} /></span>
             </button>
           );
         })}

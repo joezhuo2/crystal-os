@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { m } from "framer-motion";
 import { Flame, GraduationCap, Inbox, Plus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -97,7 +98,7 @@ function GoalRing({ today, goal }: { today: number; goal: number }) {
         />
       </svg>
       <span className="text-sm tabular-nums">
-        {Math.min(today, goal)}/{goal}
+        <AnimatedNumber value={Math.min(today, goal)} />/{goal}
       </span>
     </div>
   );
@@ -214,7 +215,7 @@ export default function ObservatoryPage() {
               label={`_inbox, ${unsorted.length} unsorted`}
               hint="PDFs that still need a course"
               action={() => setInbox(true)}
-              badge={<span className="absolute -right-1 -top-1 rounded-full bg-primary px-1 text-[10px] font-semibold leading-4 text-primary-foreground tabular-nums">{unsorted.length}</span>}
+              badge={<span className="absolute -right-1 -top-1 rounded-full bg-primary px-1 text-[10px] font-semibold leading-4 text-primary-foreground tabular-nums"><AnimatedNumber value={unsorted.length} /></span>}
             />
           )}
           {!open && !reviewing && !inbox && tab === "courses" && <ProcessAllButton codes={courses.filter((e) => !e.course.archived).map((e) => e.course.code)} />}

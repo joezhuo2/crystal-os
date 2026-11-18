@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -273,7 +274,7 @@ function TrendsCard({ review }: { review: Review }) {
           <li key={t.id}>
             <span className="min-w-0">
               <span className="block text-xs text-muted-foreground truncate">{t.label}</span>
-              <span className="block text-sm font-semibold tabular-nums">{formatTrendValue(t, t.value)}</span>
+              <AnimatedNumber className="block text-sm font-semibold" value={t.value} format={(n) => formatTrendValue(t, Number.isInteger(t.value) ? Math.round(n) : n)} />
             </span>
             <Delta trend={t} against={t.previous} unit={`last ${unit}`} />
             <Delta trend={t} against={t.average} unit={`${TREND_WINDOW[kind]}-${unit} average`} />
@@ -382,7 +383,7 @@ function HabitsCard({
               </GlassTip>
             </span>
             <span className="text-sm tabular-nums text-foreground/90">
-              {h.done}/{h.active}
+              <AnimatedNumber value={h.done} />/{h.active}
               <span className="sr-only"> days</span>
             </span>
             <GlassTip label={`${h.rate}%`} hint={`${h.done} of ${h.active} ${h.active === 1 ? "day" : "days"} this ${unit}`} tone="orbit">

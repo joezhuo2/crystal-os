@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Switch } from "@/components/ui/switch";
 import { ActionButton } from "./ActionButton";
-import { AnimatedNumber } from "./AnimatedNumber";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { bestOf, computeGrades, neededFor, TARGETS, toGpa, type ItemGrade, type Needed } from "./grades";
 import type { Course, Graded, Score } from "./model";
 import { useObservatorySettings } from "./settings";

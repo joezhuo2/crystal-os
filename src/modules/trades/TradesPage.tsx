@@ -1,4 +1,5 @@
 import { useCallback, useDeferredValue, useMemo, useRef, useState, type ReactNode } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { m } from "framer-motion";
 import { toast } from "sonner";
 import { ItemNoteLink } from "@/components/ItemNoteLink";
@@ -72,8 +73,8 @@ const daysUntil = (expiry: string, today: string) => Math.round((new Date(`${exp
 function StatsStrip({ stats, title }: { stats: TradeStats; title?: string }) {
   const c = stats.currency;
   const items: { label: string; value?: ReactNode; pair?: [ReactNode, ReactNode]; tone?: string }[] = [
-    { label: "Realized P/L", value: formatMoney(stats.totalPnl, c, true), tone: pnlClass(stats.totalPnl) },
-    { label: "Win rate", value: `${Math.round(stats.winRate)}%`, tone: undefined },
+    { label: "Realized P/L", value: <AnimatedNumber value={stats.totalPnl} format={(n) => formatMoney(n, c, true)} />, tone: pnlClass(stats.totalPnl) },
+    { label: "Win rate", value: <AnimatedNumber value={stats.winRate} format={(n) => `${Math.round(n)}%`} />, tone: undefined },
     { label: "Profit factor", value: stats.profitFactor === null ? "-" : stats.profitFactor.toFixed(2) },
     {
       label: "Avg win / loss",

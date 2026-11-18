@@ -1,4 +1,5 @@
 import { ChevronRight, Mail } from "lucide-react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { SkeletonLines } from "@/components/ui/dashboard-skeletons";
 import { useMailDigest, useMailStatus } from "@/hooks/useMail";
 import { usesSidecar } from "@/lib/platform";
@@ -20,7 +21,7 @@ export function MailWidget({ onClick }: { onClick?: () => void }) {
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs uppercase tracking-widest text-primary">The Courier</p>
         <span className="flex items-center gap-2">
-          {fresh > 0 && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary tabular-nums">{fresh} new</span>}
+          {fresh > 0 && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary tabular-nums"><AnimatedNumber value={fresh} /> new</span>}
           <Mail className="w-4 h-4 text-primary" aria-hidden />
         </span>
       </div>
