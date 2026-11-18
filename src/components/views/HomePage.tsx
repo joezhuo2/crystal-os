@@ -733,12 +733,12 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
   ];
 
   return (
-    <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+    <div>
       <OnboardingCard onNavigate={onNavigate} />
       <Suspense fallback={null}>
         <NowCard installed={installed} onNavigate={onNavigate} />
       </Suspense>
       <HomeGrid widgets={widgets.filter((widget) => !uninstalled.includes(widget.module))} />
-    </m.div>
+    </div>
   );
 }

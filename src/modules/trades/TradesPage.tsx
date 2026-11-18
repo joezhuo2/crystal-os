@@ -828,7 +828,7 @@ export default function TradesPage({ onNavigate }: { onNavigate?: (tab: TabId) =
 
   return (
     <TooltipProvider delayDuration={150}>
-      <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="space-y-4">
         {trades.isLoading ? (
           <>
             <div className="glass-card p-6">
@@ -849,7 +849,7 @@ export default function TradesPage({ onNavigate }: { onNavigate?: (tab: TabId) =
         ) : (
           <Ledger data={trades.data} sync={sync} onNavigate={onNavigate} />
         )}
-      </m.div>
+      </div>
     </TooltipProvider>
   );
 }

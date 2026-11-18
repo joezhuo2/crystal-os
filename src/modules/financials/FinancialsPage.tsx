@@ -428,7 +428,7 @@ export default function FinancialsPage() {
   const close = () => setDialog(null);
 
   return (
-    <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <ThemedSelect
           aria-label="Period"
@@ -465,6 +465,6 @@ export default function FinancialsPage() {
       <RulesDialog open={dialog === "rules"} onClose={close} />
       <RecurringDialog open={dialog === "recurring"} onClose={close} />
       <CsvImportDialog open={dialog === "csv"} onClose={close} />
-    </m.div>
+    </div>
   );
 }
