@@ -20,6 +20,7 @@ const POMODORO_EVENT: &str = "tray://pomodoro";
 const QUICK_ADD_EVENT: &str = "tray://quick-add";
 const CHECK_UPDATE_EVENT: &str = "tray://check-update";
 const PRIVACY_EVENT: &str = "tray://privacy";
+const INSTALL_UPDATE_EVENT: &str = "tray://install-update";
 
 const ID_SHOW_HIDE: &str = "show-hide";
 const ID_POMODORO_TOGGLE: &str = "pomodoro-toggle";
@@ -27,6 +28,7 @@ const ID_POMODORO_RESET: &str = "pomodoro-reset";
 const ID_QUICK_ADD: &str = "quick-add";
 const ID_PRIVACY: &str = "privacy";
 const ID_CHECK_UPDATE: &str = "check-update";
+const ID_INSTALL_UPDATE: &str = "update-status";
 const ID_QUIT: &str = "quit";
 
 /// macOS menu-bar icons are monochrome templates the system tints for light
@@ -65,7 +67,7 @@ pub fn init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
   let quick_add = MenuItem::with_id(app, ID_QUICK_ADD, "Quick Add…", true, None::<&str>)?;
   let privacy = MenuItem::with_id(app, ID_PRIVACY, "Toggle privacy mode", true, None::<&str>)?;
   let version = app.package_info().version.to_string();
-  let update = MenuItem::with_id(app, "update-status", update_label(None, &version), false, None::<&str>)?;
+  let update = MenuItem::with_id(app, ID_INSTALL_UPDATE,update_label(None, &version), false, None::<&str>)?;
   let check_update = MenuItem::with_id(app, ID_CHECK_UPDATE, "Check for updates", true, None::<&str>)?;
   let quit = MenuItem::with_id(app, ID_QUIT, "Quit Crystal OS", true, None::<&str>)?;
 
@@ -142,6 +144,10 @@ fn handle_menu<R: Runtime>(app: &AppHandle<R>, id: &str) {
       window::show(app);
       let _ = app.emit(CHECK_UPDATE_EVENT, ());
     }
+    ID_INSTALL_UPDATE => {
+      window::show(app);
+      let _ = app.emit(INSTALL_UPDATE_EVENT, ());
+    }
     // RunEvent::Exit in lib.rs still kills the sidecar.
     ID_QUIT => app.exit(0),
     _ => {}
@@ -150,7 +156,7 @@ fn handle_menu<R: Runtime>(app: &AppHandle<R>, id: &str) {
 
 fn update_label(found: Option<&str>, current: &str) -> String {
   match found {
-    Some(version) => format!("Update found (v{version})"),
+    Some(version) => format!("Install update (v{version})"),
     None => format!("Up to date (v{current})"),
   }
 }
@@ -158,6 +164,7 @@ fn update_label(found: Option<&str>, current: &str) -> String {
 pub fn set_update(app: &AppHandle, found: Option<&str>) {
   if let Some(state) = app.try_state::<TrayState<tauri::Wry>>() {
     let _ = state.update.set_text(update_label(found, &app.package_info().version.to_string()));
+    let _ = state.update.set_enabled(found.is_some());
   }
 }
 
@@ -168,7 +175,7 @@ mod tests {
   #[test]
   fn update_label_follows_state() {
     assert_eq!(update_label(None, "1.2.3"), "Up to date (v1.2.3)");
-    assert_eq!(update_label(Some("1.3.0"), "1.2.3"), "Update found (v1.3.0)");
+    assert_eq!(update_label(Some("1.3.0"), "1.2.3"), "Install update (v1.3.0)");
   }
 }
 
