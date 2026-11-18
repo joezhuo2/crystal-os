@@ -39,10 +39,13 @@ export function smoothScroll({ ease = 0.08, target: element }: SmoothScrollOptio
     if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return
     // a nested scroller (or its own smoothScroll) owns this wheel; let it scroll natively
     if (event.defaultPrevented || inner(event.target)) return
-    event.preventDefault()
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport() : 1
     if (!frame) target = current = read()
-    target = Math.max(0, Math.min(limit(), target + event.deltaY * unit))
+    const next = Math.max(0, Math.min(limit(), target + event.deltaY * unit))
+    // at the end already: leave the wheel to an outer scroller instead of trapping it here
+    if (!frame && Math.abs(next - current) < 1) return
+    event.preventDefault()
+    target = next
     if (!frame) frame = requestAnimationFrame(tick)
   }
 
