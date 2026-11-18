@@ -1,4 +1,9 @@
-import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useRef, useEffect, useMemo, useSyncExternalStore, lazy, Suspense } from "react";
+import { TerminalCommands, TradeCommands } from "@/components/PaletteCommands";
+import { fun } from "@/lib/funStore";
+import { portal } from "@/lib/portalStore";
+import { KEYMAP, KEYMAP_CATEGORY_LABELS, bindingFor, formatBinding } from "@/lib/keymap";
+import { moduleById } from "@/modules/registry";
 import { useAppActions, useFinancialCategories, useTaskCategories, useTasks, useTransactions, type Task } from "@/contexts/AppContext";
 import { nestTargets } from "@/lib/subtasks";
 import { fuzzyRank, fuzzyScore } from "@/lib/fuzzy";
@@ -102,6 +107,16 @@ const RECENT_MODULE: Record<RecentItem["kind"], TabId> = {
 };
 
 const ITEM = "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer";
+
+const MORE_MODULES: { id: TabId; keywords: string; hint: string }[] = [
+  { id: "home", keywords: "pulse home dashboard overview", hint: "dashboard" },
+  { id: "orbit", keywords: "orbit habits mood focus pomodoro", hint: "habits, focus" },
+  { id: "tasks", keywords: "engine tasks todo list", hint: "tasks" },
+  { id: "calendar", keywords: "horizon calendar events schedule agenda", hint: "calendar" },
+  { id: "financials", keywords: "vault money finance budget transactions accounts", hint: "money, budgets" },
+  { id: "weather", keywords: "atmosphere weather forecast rain temperature air quality", hint: "forecast" },
+  { id: "archive", keywords: "archive notes obsidian markdown", hint: "notes" },
+];
 const ObservatoryCommands = lazy(() => import("@/modules/observatory/ObservatoryCommands").then((m) => ({ default: m.ObservatoryCommands })));
 
 /** Icons for the Settings sections, matching their headers on the Settings page. */
@@ -293,6 +308,13 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const nebulaIndex = useNebulaSearchIndex(chatQuery !== "");
   const matchedChats = nebulaOn ? searchChats(nebulaIndex.chats, nebulaIndex.messagesOf, chatQuery) : [];
   const projectName = (id: string) => nebulaIndex.projects.find((p) => p.id === id)?.name ?? "Project";
+  const matchedProjects = chatQuery ? fuzzyRank(chatQuery, nebulaIndex.projects, (p) => `${p.name} ${p.path}`).slice(0, 3) : [];
+
+  const portalApps = useSyncExternalStore(portal.subscribe, portal.getState).apps;
+  const games = useSyncExternalStore(fun.subscribe, fun.getState).games;
+  const plain = !addPrefix && !logPrefix && !filters.active && text.length >= 2;
+  const shortcutLabel = (a: (typeof KEYMAP)[number]) => `${a.title} ${KEYMAP_CATEGORY_LABELS[a.category]}`;
+  const matchedShortcuts = plain ? fuzzyRank(text, KEYMAP, shortcutLabel).slice(0, 3) : [];
 
   const activeProjectId = selectActiveChat(harness.getState())?.projectId;
   useSavedPrompts();
@@ -314,6 +336,24 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const handleOpenChat = (chatId: string) => {
     harness.setActiveChat(chatId);
     handleNavigate("nebula");
+  };
+
+  const handleOpenProject = (projectId: string) => {
+    const latest = nebulaIndex.chats.filter((c) => c.projectId === projectId).sort((a, b) => b.updatedAt - a.updatedAt)[0];
+    if (latest) handleOpenChat(latest.id);
+    else handleNavigate("nebula");
+  };
+
+  const handleOpenTask = (task: Task) => {
+    close();
+    appUi.setEditingTask(task);
+    setShowTaskForm(true);
+  };
+
+  const handleOpenTransaction = (tx: (typeof transactions)[number]) => {
+    close();
+    appUi.setEditingTransaction(tx);
+    setShowTransactionForm(true);
   };
 
   const handleInsertPrompt = (body: string) => {
@@ -825,7 +865,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                           <CommandItem
                             key={task.id}
                             value={`task-${task.name}-${cat?.name ?? ""}`}
-                            onSelect={() => handleNavigate("tasks")}
+                            onSelect={() => handleOpenTask(task)}
                             className={ITEM}
                           >
                             <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
@@ -918,7 +958,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                           <CommandItem
                             key={tx.id}
                             value={`tx-${tx.name}-${cat?.name ?? ""}`}
-                            onSelect={() => handleNavigate("financials")}
+                            onSelect={() => handleOpenTransaction(tx)}
                             className={ITEM}
                           >
                             <div className="search-overlay-icon-alt flex items-center justify-center w-8 h-8 rounded-lg">
@@ -1052,6 +1092,67 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                   </>
                 )}
 
+                {matchedProjects.length > 0 && (
+                  <CommandGroup heading="Nebula Projects">
+                    {matchedProjects.map((p) => (
+                      <CommandItem key={p.id} value={`nebula-project-${p.id} ${p.name} ${p.path}`} onSelect={() => handleOpenProject(p.id)} className={ITEM}>
+                        <div className="search-overlay-icon-alt flex items-center justify-center w-8 h-8 rounded-lg shrink-0">
+                          <Sparkles className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0" data-private>
+                          <p className="text-sm font-medium truncate">{p.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{p.path}</p>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+
+                {plain && on("trades") && <TradeCommands text={text} itemClass={ITEM} onNavigate={() => handleNavigate("trades")} />}
+
+                {plain && isDesktop() && on("terminal") && <TerminalCommands text={text} itemClass={ITEM} onNavigate={() => handleNavigate("terminal")} />}
+
+                {plain && (on("portal") || on("fun")) && (portalApps.length > 0 || games.length > 0) && (
+                  <CommandGroup heading="Apps and games">
+                    {on("portal") &&
+                      portalApps.map((app) => (
+                        <CommandItem
+                          key={app.id}
+                          value={`portal app ${app.id} ${app.name}`}
+                          onSelect={() => {
+                            portal.setActive(app.id);
+                            handleNavigate("portal");
+                          }}
+                          className={ITEM}
+                        >
+                          <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                            <AppWindow className="w-4 h-4" />
+                          </div>
+                          <span className="text-sm font-medium">{app.name}</span>
+                          <span className="ml-auto text-xs text-muted-foreground/50">The Portal</span>
+                        </CommandItem>
+                      ))}
+                    {on("fun") &&
+                      games.map((game) => (
+                        <CommandItem
+                          key={game.id}
+                          value={`arcade game ${game.id} ${game.name}`}
+                          onSelect={() => {
+                            fun.setActive(game.id);
+                            handleNavigate("fun");
+                          }}
+                          className={ITEM}
+                        >
+                          <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                            <Gamepad2 className="w-4 h-4" />
+                          </div>
+                          <span className="text-sm font-medium">{game.name}</span>
+                          <span className="ml-auto text-xs text-muted-foreground/50">The Arcade</span>
+                        </CommandItem>
+                      ))}
+                  </CommandGroup>
+                )}
+
                 {/* ── Saved prompts for the active Nebula project ── */}
                 {projectPrompts.length > 0 && (
                   <>
@@ -1152,19 +1253,6 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                         <span className="ml-auto text-xs text-muted-foreground/50">The Horizon</span>
                       </CommandItem>
                       )}
-                      {(tasksOn || financialsOn) && (
-                      <CommandItem
-                        value="search-tasks-transactions"
-                        onSelect={() => {}}
-                        className={ITEM}
-                      >
-                        <div className="search-overlay-icon-alt flex items-center justify-center w-8 h-8 rounded-lg">
-                          <Search className="w-4 h-4" />
-                        </div>
-                        <span className="text-sm font-medium">Search tasks & transactions</span>
-                        <span className="ml-auto text-xs text-muted-foreground/50">just start typing</span>
-                      </CommandItem>
-                      )}
                     </CommandGroup>
                   </>
                 )}
@@ -1250,6 +1338,31 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                                 <p className="text-xs text-muted-foreground truncate">{section.hint}</p>
                               </div>
                               <ArrowRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+                            </CommandItem>
+                          );
+                        })}
+                      {matchedShortcuts.map((a) => (
+                        <CommandItem key={a.id} value={`shortcut ${a.id} ${shortcutLabel(a)}`} onSelect={() => handleOpenSettingsSection("keymap")} className={ITEM}>
+                          <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg shrink-0">
+                            <Keyboard className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{a.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">{KEYMAP_CATEGORY_LABELS[a.category]} shortcut</p>
+                          </div>
+                          <kbd className="rounded-md border px-2 py-0.5 text-[10px] text-muted-foreground font-medium tracking-wider">{formatBinding(bindingFor(a.id) ?? a.defaultKey)}</kbd>
+                        </CommandItem>
+                      ))}
+                      {search &&
+                        MORE_MODULES.filter((entry) => on(entry.id)).map(({ id, keywords, hint }) => {
+                          const Icon = moduleById[id].icon;
+                          return (
+                            <CommandItem key={id} value={`open ${moduleById[id].label} ${keywords}`} onSelect={() => handleNavigate(id)} className={ITEM}>
+                              <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <span className="text-sm font-medium">Open {moduleById[id].label}</span>
+                              <span className="ml-auto text-xs text-muted-foreground/50">{hint}</span>
                             </CommandItem>
                           );
                         })}
