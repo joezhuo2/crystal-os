@@ -16,6 +16,7 @@ import { useAiBodies, useAiNotes } from "../aiNotes";
 import { markAi, recordAi } from "../resources/aiRecord";
 import { draftsMarkdown } from "../draft";
 import { errorText } from "../errorText";
+import { IconAction } from "../IconAction";
 import type { Course, Topic } from "../model";
 import { parseQuestions } from "../questions";
 import { ReviewView } from "../ReviewView";
@@ -164,12 +165,14 @@ export function DeepSkyView({ courses }: { courses: Course[] }) {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["vault"] });
   const run = async (failure: string, work: () => Promise<void>) => {
-    if (busy) return;
+    if (busy) return false;
     setBusy(true);
     try {
       await work();
+      return true;
     } catch (err) {
       toast.error(failure, { description: errorText(err) });
+      return false;
     } finally {
       setBusy(false);
       void refresh();
@@ -242,22 +245,10 @@ export function DeepSkyView({ courses }: { courses: Course[] }) {
         <p className="mr-auto text-sm text-muted-foreground">
           Casual learning outside your courses. {queue.due} card{queue.due === 1 ? "" : "s"} to review.
         </p>
-        {canProjects && (
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => void suggest("projects")}>
-            <FolderSearch className="h-3.5 w-3.5 mr-1" /> Suggest from my projects
-          </Button>
-        )}
-        {canRandom && (
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => void suggest("random")}>
-            <Dices className="h-3.5 w-3.5 mr-1" /> Random ideas
-          </Button>
-        )}
-        <Button size="sm" variant="outline" disabled={!queue.due} onClick={() => setReviewing(true)}>
-          <GraduationCap className="h-3.5 w-3.5 mr-1" /> Review
-        </Button>
-        <Button size="sm" onClick={() => setAdding(true)} disabled={adding}>
-          <Plus className="h-3.5 w-3.5 mr-1" /> Add topic
-        </Button>
+        {canProjects && <IconAction icon={FolderSearch} label="Suggest from my projects" hint="Ideas drawn from your project notes" disabled={busy} action={() => suggest("projects")} />}
+        {canRandom && <IconAction icon={Dices} label="Random ideas" hint="Topics worth exploring" disabled={busy} action={() => suggest("random")} />}
+        <IconAction icon={GraduationCap} label="Review" hint={queue.due ? `${queue.due} card${queue.due === 1 ? "" : "s"} due` : "Nothing due"} disabled={!queue.due} action={() => setReviewing(true)} />
+        <IconAction icon={Plus} label="Add topic" hint="Something you are curious about" variant="default" disabled={adding} action={() => setAdding(true)} />
       </div>
 
       {adding && <AddTopicForm canDraft={canDraft} busy={busy} onAdd={(t, n, d) => void add(t, n, d)} onCancel={() => setAdding(false)} />}
