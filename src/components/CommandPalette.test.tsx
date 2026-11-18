@@ -8,13 +8,18 @@ import { ACTIVE_KEY } from "@/lib/harness/store";
 import type { ChatMessage, ChatMeta } from "@/lib/harness/types";
 
 let tasks: Task[] = [];
+let transactions: unknown[] = [];
+const addTransaction = vi.fn();
 
 vi.mock("@/contexts/AppContext", () => ({
-  useAppActions: () => ({ updateTask: vi.fn(), rescheduleTasks: vi.fn() }),
+  useAppActions: () => ({ updateTask: vi.fn(), rescheduleTasks: vi.fn(), addTransaction }),
   useTasks: () => tasks,
-  useTransactions: () => [],
+  useTransactions: () => transactions,
   useTaskCategories: () => [{ id: "c1", name: "Work", color: "hsl(0 0% 50%)" }],
-  useFinancialCategories: () => [],
+  useFinancialCategories: () => [{ id: "f1", name: "Dining", color: "hsl(0 0% 50%)" }],
+}));
+vi.mock("@/hooks/useFinance", () => ({
+  useFinance: () => ({ accounts: [], recurring: [], rules: [{ id: "r1", keyword: "lunch", categoryId: "f1" }], goals: [], skips: [] }),
 }));
 vi.mock("@/hooks/useVault", () => ({ useVaultNotes: () => ({ data: undefined }) }));
 vi.mock("@/hooks/usePortal", () => ({ usePortalOcclusion: () => {} }));
@@ -74,6 +79,8 @@ beforeEach(() => {
   onNavigate.mockClear();
   onClose.mockClear();
   tasks = [];
+  transactions = [];
+  addTransaction.mockClear();
 });
 
 afterEach(() => {
@@ -237,6 +244,20 @@ describe("Command palette with uninstalled modules", () => {
     search("report");
     expect(screen.getByText("Tasks")).toBeInTheDocument();
     expect(screen.getByText("Write report")).toBeInTheDocument();
+  });
+
+  it("files a logged expense under the category its rule matches", () => {
+    renderPalette();
+    search("log 25 for Lunch");
+    fireEvent.click(screen.getByText("ENTER"));
+    expect(addTransaction).toHaveBeenCalledWith(expect.objectContaining({ name: "Lunch", amount: 25, categoryId: "f1" }));
+  });
+
+  it("leaves a logged expense uncategorised when nothing matches", () => {
+    renderPalette();
+    search("log 9 for Gadget");
+    fireEvent.click(screen.getByText("ENTER"));
+    expect(addTransaction).toHaveBeenCalledWith(expect.objectContaining({ name: "Gadget", categoryId: "" }));
   });
 
   it("leaves out task results and task actions without Tasks", () => {
