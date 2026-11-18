@@ -183,7 +183,7 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const hovering = useRef(false);
   const portalState = usePortal();
   const { onScreen } = portalState;
-  const overPortal = activeTab === "portal" && isDesktop();
+  const overPortal = (activeTab === "portal" || activeTab === "fun") && isDesktop();
   // Over the Portal the app's native webview would cover the expanded panel,
   // so it is swapped for a snapshot while the pointer is on the sidebar.
   const setExpanded = (on: boolean) => {
@@ -209,7 +209,7 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const pageMode: SidebarMode =
     activeTab === "terminal"
       ? "terminal"
-      : activeTab === "portal"
+      : activeTab === "portal" || activeTab === "fun"
         ? "portal"
         : activeTab === "nebula"
           ? "nebula"

@@ -50,6 +50,9 @@ const ICON_EVENT: &str = "portal://icon";
 /// A tab shortcut pressed inside an app page. Payload: `next`, `previous`,
 /// `close` or `reload` (`PortalShortcut` in src/lib/portalNative.ts).
 const SHORTCUT_EVENT: &str = "portal://shortcut";
+const SHARE_EVENT: &str = "portal://share";
+const GAME_PREFIX: &str = "fun--";
+const MAX_SHARE_TEXT: usize = 2000;
 const LABEL_PREFIX: &str = "portal-";
 const MAIN: &str = "main";
 
@@ -149,6 +152,30 @@ struct TitlePayload {
 struct IconPayload {
   id: String,
   icon: String,
+}
+
+#[derive(Serialize, Clone)]
+struct SharePayload {
+  id: String,
+  text: String,
+}
+
+const SHARE_HOOK: &str = "(() => { if (window.top !== window) return; \
+  const send = (text) => { if (typeof text !== 'string' || !text) return; \
+  window.__crystalShare = text.slice(0, 2000); const t = document.title; document.title = t + '\\u200b'; \
+  setTimeout(() => { if (document.title === t + '\\u200b') document.title = t; }, 100); }; \
+  const cb = navigator.clipboard; \
+  if (cb && cb.writeText) { const w = cb.writeText.bind(cb); cb.writeText = (text) => { send(text); return w(text); }; } \
+  if (cb && cb.write) { const w = cb.write.bind(cb); cb.write = (items) => { \
+  try { items[0].getType('text/plain').then((b) => b.text()).then(send, () => {}); } catch (e) {} return w(items); }; } \
+  if (navigator.share) { const s = navigator.share.bind(navigator); \
+  navigator.share = (data) => { send(data && data.text); return s(data); }; } })();";
+
+const TAKE_SHARE: &str = "(() => { const t = window.__crystalShare; window.__crystalShare = null; return typeof t === 'string' ? t : null; })()";
+
+fn share_text(json: &str) -> Option<String> {
+  let text: String = serde_json::from_str::<Option<String>>(json).ok()??;
+  (!text.trim().is_empty() && text.len() <= MAX_SHARE_TEXT * 4).then_some(text)
 }
 
 const MAX_ICON_URL: usize = 2048;
@@ -406,7 +433,9 @@ fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds, k
   let popup_app = app.clone();
   let popup_home = home.clone();
 
-  let builder = WebviewBuilder::new(label_of(id), WebviewUrl::External(home))
+  let capture = id.starts_with(GAME_PREFIX);
+
+  let mut builder = WebviewBuilder::new(label_of(id), WebviewUrl::External(home))
     .data_directory(dir)
     .additional_browser_args(BROWSER_ARGS)
     .background_color(BACKGROUND)
@@ -434,7 +463,15 @@ fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds, k
         }
       }
     })
-    .on_document_title_changed(move |_, title| {
+    .on_document_title_changed(move |webview, title| {
+      if capture {
+        let (app, id) = (title_app.clone(), title_id.clone());
+        let _ = webview.eval_with_callback(TAKE_SHARE, move |json| {
+          if let Some(text) = share_text(&json) {
+            let _ = app.emit_to(EventTarget::webview(MAIN), SHARE_EVENT, SharePayload { id: id.clone(), text });
+          }
+        });
+      }
       let payload = TitlePayload { id: title_id.clone(), title };
       let _ = title_app.emit_to(EventTarget::webview(MAIN), TITLE_EVENT, payload);
     })
@@ -451,6 +488,9 @@ fn create<R: Runtime>(app: &AppHandle<R>, id: &str, home: Url, bounds: Bounds, k
       }
       NewWindowResponse::Deny
     });
+  if capture {
+    builder = builder.initialization_script(SHARE_HOOK);
+  }
 
   let r = rect(bounds);
   let webview = window.add_child(builder, r.position, r.size).map_err(|e| e.to_string())?;
@@ -770,7 +810,7 @@ pub async fn portal_prune<R: Runtime>(app: AppHandle<R>, keep: Vec<String>) -> R
   let Ok(entries) = std::fs::read_dir(&base) else { return Ok(()) };
   for entry in entries.flatten() {
     let name = entry.file_name().to_string_lossy().to_string();
-    let stale = valid_id(&name) && !keep.contains(&name) && app.get_webview(&label_of(&name)).is_none();
+    let stale = valid_id(&name) && !name.starts_with(GAME_PREFIX) && !keep.contains(&name) && app.get_webview(&label_of(&name)).is_none();
     if stale && entry.path().is_dir() {
       if let Err(err) = remove_dir(&entry.path()) {
         log::warn!("[portal] {err}");
@@ -813,6 +853,15 @@ mod tests {
     assert_eq!(icon_url("\"javascript:alert(1)\""), None);
     assert_eq!(icon_url("not json"), None);
     assert_eq!(icon_url(&format!("\"https://a.com/{}\"", "a".repeat(2048))), None);
+  }
+
+  #[test]
+  fn share_must_be_short_text() {
+    assert_eq!(share_text("\"Wordle 1,234 4/6\""), Some("Wordle 1,234 4/6".into()));
+    assert_eq!(share_text("null"), None);
+    assert_eq!(share_text("\"  \""), None);
+    assert_eq!(share_text("42"), None);
+    assert_eq!(share_text(&format!("\"{}\"", "a".repeat(MAX_SHARE_TEXT * 4 + 1))), None);
   }
 
   #[test]

@@ -4,17 +4,19 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AppIcon } from "@/components/portal/PortalNavbar";
-import { PRESETS, createCustomApp, type PortalApp } from "@/lib/portalApps";
+import { PRESETS, createCustomApp, type PortalApp, type PortalPreset } from "@/lib/portalApps";
 
 interface AddPortalAppDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   apps: PortalApp[];
   onAdd: (app: PortalApp) => void;
+  presets?: PortalPreset[];
+  title?: string;
 }
 
 /** Connect a preset app, or any https site by name and address. */
-export default function AddPortalAppDialog({ open, onOpenChange, apps, onAdd }: AddPortalAppDialogProps) {
+export default function AddPortalAppDialog({ open, onOpenChange, apps, onAdd, presets = PRESETS, title = "Connect an app" }: AddPortalAppDialogProps) {
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -46,14 +48,14 @@ export default function AddPortalAppDialog({ open, onOpenChange, apps, onAdd }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Connect an app</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             Each app opens as its own signed-in web page and stays separate from the others.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {PRESETS.map((preset) => {
+          {presets.map((preset) => {
             const added = connected.has(preset.id);
             return (
               <button

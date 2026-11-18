@@ -38,6 +38,15 @@ export type PortalShortcut = "next" | "previous" | "close" | "reload";
 
 export const PORTAL_SHORTCUT_EVENT = "portal://shortcut";
 
+export const GAME_PREFIX = "fun--";
+
+export interface PortalShareEvent {
+  id: string;
+  text: string;
+}
+
+export const PORTAL_SHARE_EVENT = "portal://share";
+
 let tauriCore: Promise<typeof import("@tauri-apps/api/core")> | undefined;
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -195,6 +204,10 @@ export function onPortalIcon(cb: (event: PortalIconEvent) => void): () => void {
 /** Subscribes to tab shortcuts pressed inside app pages (Windows). */
 export function onPortalShortcut(cb: (shortcut: PortalShortcut) => void): () => void {
   return listenTo(PORTAL_SHORTCUT_EVENT, cb);
+}
+
+export function onPortalShare(cb: (event: PortalShareEvent) => void): () => void {
+  return listenTo(PORTAL_SHARE_EVENT, cb);
 }
 
 function listenTo<T>(event: string, cb: (payload: T) => void): () => void {

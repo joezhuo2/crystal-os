@@ -68,6 +68,7 @@ import {
   Palette,
   Timer,
   Zap,
+  Gamepad2,
 } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
 import { isDesktop, openExternal } from "@/lib/platform";
@@ -1209,6 +1210,19 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                         </div>
                         <span className="text-sm font-medium">Open The Portal</span>
                         <span className="ml-auto text-xs text-muted-foreground/50">Discord, Instagram, web apps</span>
+                      </CommandItem>
+                      )}
+                      {on("fun") && (
+                      <CommandItem
+                        value="fun-daily-games-wordle-connections-contexto-streak-scores"
+                        onSelect={() => handleNavigate("fun")}
+                        className={ITEM}
+                      >
+                        <div className="search-overlay-icon flex items-center justify-center w-8 h-8 rounded-lg">
+                          <Gamepad2 className="w-4 h-4" />
+                        </div>
+                        <span className="text-sm font-medium">Open Fun</span>
+                        <span className="ml-auto text-xs text-muted-foreground/50">Daily games, streaks</span>
                       </CommandItem>
                       )}
                       {nebulaOn && isDesktop() && (
