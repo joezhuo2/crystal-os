@@ -15,9 +15,12 @@ export const INBOX = "_inbox";
 export const resourceDir = (folder: string, code: string, type: ResourceType) => `${folder}/${code}/resources/${RESOURCE_DIRS[type]}`;
 export const inboxDir = (folder: string) => `${folder}/${INBOX}`;
 
+export const CONVERTIBLE = /\.(pptx?|html?)$/i;
+export const ACCEPTED = /\.(pdf|pptx?|html?)$/i;
+
 export const pdfStem = (fileName: string) =>
   fileName
-    .replace(/\.pdf$/i, "")
+    .replace(ACCEPTED, "")
     .toLowerCase()
     .replace(/[^a-z0-9.]+/g, "-")
     .replace(/^-+|-+$/g, "") || "document";

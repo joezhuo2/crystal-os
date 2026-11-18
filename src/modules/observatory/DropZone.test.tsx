@@ -23,6 +23,8 @@ vi.mock("@/lib/platform", async (orig) => ({ ...(await orig<typeof import("@/lib
 vi.mock("@/lib/appActivity", async (orig) => ({ ...(await orig<typeof import("@/lib/appActivity")>()), useAppActivity: () => ({ visible: true, still: true }) }));
 vi.mock("./useObservatory", () => ({ useCourses: () => ({ courses: [course("ECE150"), course("MATH117")].map((c) => ({ course: c, path: "" })), loading: false, error: null }) }));
 vi.mock("./CourseDialog", () => ({ CourseDialog: ({ onClose }: { onClose: () => void }) => <button onClick={onClose}>course dialog</button> }));
+const convertToPdf = vi.fn(async (..._a: unknown[]) => new Uint8Array([9]).buffer);
+vi.mock("@/lib/vaultNative", async (orig) => ({ ...(await orig<typeof import("@/lib/vaultNative")>()), convertToPdf: (...a: unknown[]) => convertToPdf(...a) }));
 vi.mock("./resources/ingest", async (orig) => ({
   ...(await orig<typeof import("./resources/ingest")>()),
   fileDrop: (...a: unknown[]) => fileDrop(...(a as [])),
@@ -92,8 +94,17 @@ describe("DropZone", () => {
     renderZone("MATH117");
     drop(pdf("a.pdf"), pdf("notes.docx"), pdf("b.PDF"));
     await waitFor(() => expect(fileDrop).toHaveBeenCalledTimes(2));
-    expect(toast.error).toHaveBeenCalledWith("Only PDFs can be filed", { description: "notes.docx" });
+    expect(toast.error).toHaveBeenCalledWith("Only PDF, PowerPoint and HTML files can be filed", { description: "notes.docx" });
     expect(fileDrop).toHaveBeenCalledWith(expect.objectContaining({ name: "a.pdf" }), expect.any(Array), { courseHint: "MATH117", typeHint: undefined });
+  });
+
+  it("converts slides and web pages to PDF before filing them", async () => {
+    renderZone();
+    drop(pdf("Week 1.pptx"), pdf("outline.html"));
+    await waitFor(() => expect(fileDrop).toHaveBeenCalledTimes(2));
+    expect(convertToPdf).toHaveBeenCalledWith("Week 1.pptx", expect.any(Uint8Array));
+    expect(fileDrop).toHaveBeenCalledWith({ name: "Week 1.pdf", bytes: new Uint8Array([9]) }, expect.any(Array), expect.anything());
+    expect(fileDrop).toHaveBeenCalledWith(expect.objectContaining({ name: "outline.pdf" }), expect.any(Array), expect.anything());
   });
 
   it("skips PDFs whose name is already filed or repeated in the drop", async () => {

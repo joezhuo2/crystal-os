@@ -21,6 +21,7 @@ fn main() {
     "trash_vault_path",
     "restore_vault_path",
     "watch_vault",
+    "convert_to_pdf",
     "terminal_list",
     "terminal_open",
     "terminal_attach",
