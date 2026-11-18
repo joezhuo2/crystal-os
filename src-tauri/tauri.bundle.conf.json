@@ -2,7 +2,8 @@
   "bundle": {
     "externalBin": ["binaries/crystal-api"],
     "windows": {
-      "signCommand": { "cmd": "node", "args": ["../scripts/sign-windows.mjs", "%1"] }
+      "signCommand": { "cmd": "node", "args": ["../scripts/sign-windows.mjs", "%1"] },
+      "nsis": { "installerHooks": "./windows/hooks.nsh" }
     }
   }
 }
