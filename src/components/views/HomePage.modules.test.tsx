@@ -15,6 +15,7 @@ vi.mock("./HomeSpaces", () => ({
   NebulaSpace: () => null,
   PortalSpace: () => null,
   TerminalSpace: () => null,
+  ArcadeSpace: () => null,
 }));
 
 const mappings: [string, TabId][] = [
@@ -29,6 +30,7 @@ const mappings: [string, TabId][] = [
   ["nebula", "nebula"],
   ["portal", "portal"],
   ["terminal", "terminal"],
+  ["arcade", "fun"],
 ];
 
 beforeEach(() => {

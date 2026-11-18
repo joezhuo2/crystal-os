@@ -45,7 +45,7 @@ import { GlassTip } from "@/components/ui/glass-tooltip";
 import { PRIORITY_RANK, upcomingTasks } from "@/lib/homeTasks";
 import { splitByParent, subtaskProgress } from "@/lib/subtasks";
 import { SubtaskChip } from "@/modules/tasks/TaskSubtasks";
-import { NebulaSpace, PortalSpace, TerminalSpace } from "./HomeSpaces";
+import { ArcadeSpace, NebulaSpace, PortalSpace, TerminalSpace } from "./HomeSpaces";
 import HomeGrid, { type HomeWidget } from "./HomeGrid";
 import OnboardingCard from "@/components/OnboardingCard";
 import { CapacityStrip } from "@/modules/tasks/CapacityBar";
@@ -730,6 +730,7 @@ export default function HomePage({ onNavigate }: { onNavigate?: (tab: string) =>
     { id: "nebula", module: "nebula", label: "The Nebula", render: () => <NebulaSpace onClick={go("nebula")} /> },
     { id: "portal", module: "portal", label: "The Portal", render: () => <PortalSpace onClick={go("portal")} /> },
     { id: "terminal", module: "terminal", label: "Terminal", render: () => <TerminalSpace onClick={go("terminal")} /> },
+    { id: "arcade", module: "fun", label: "The Arcade", render: () => <ArcadeSpace onClick={go("fun")} /> },
   ];
 
   return (

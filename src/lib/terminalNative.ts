@@ -45,6 +45,12 @@ export interface TerminalSummary {
   exited: boolean;
 }
 
+/** `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe` → `powershell`. */
+export function shellName(path: string): string {
+  const base = path.split(/[\\/]/).pop() ?? path;
+  return base.replace(/\.exe$/i, "");
+}
+
 /** The running shells in tab order. */
 export function listTerminals() {
   return invoke<TerminalSummary[]>("terminal_list");

@@ -4,12 +4,12 @@
  * "Home spaces"), following the user's Nebula palette; the Portal box sits over
  * its black hole.
  */
+import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatedNumber } from "@/components/ui/animated-number";
-import { ChevronRight, Orbit, Sparkles } from "lucide-react";
+import { ChevronRight, Gamepad2, Orbit, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { AppIcon } from "@/components/portal/PortalNavbar";
-import { GlassTip } from "@/components/ui/glass-tooltip";
+import { AppIcon } from "@/components/portal/PortalNavbar";import { GlassTip } from "@/components/ui/glass-tooltip";
 import { SkeletonLines } from "@/components/ui/dashboard-skeletons";
 import { useHarness } from "@/hooks/useHarness";
 import { usePortal } from "@/hooks/usePortal";
@@ -20,7 +20,10 @@ import { isDesktop } from "@/lib/platform";
 import { badgeLabel } from "@/lib/portalApps";
 import { useImageBackdrop } from "@/lib/imageBackdrop";
 import { portal, selectBadgeTotal } from "@/lib/portalStore";
-import { listTerminals } from "@/lib/terminalNative";
+import { listTerminals, shellName } from "@/lib/terminalNative";
+import { streak } from "@/lib/funGames";
+import { fun } from "@/lib/funStore";
+import { toLocalDateStr } from "@/lib/utils";
 
 const plural = (n: number, word: string) => `${n} ${word}${n !== 1 ? "s" : ""}`;
 
@@ -165,10 +168,59 @@ export function PortalSpace({ onClick }: { onClick?: () => void }) {
   );
 }
 
-/** `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe` → `powershell`. */
-function shellName(path: string): string {
-  const base = path.split(/[\\/]/).pop() ?? path;
-  return base.replace(/\.exe$/i, "");
+export function ArcadeSpace({ onClick }: { onClick?: () => void }) {
+  const { games, results } = useSyncExternalStore(fun.subscribe, fun.getState);
+  const today = toLocalDateStr();
+  const played = games.filter((g) => results.some((r) => r.game === g.id && r.date === today)).length;
+  const best = Math.max(0, ...games.map((g) => streak(results, g.id, today)));
+  const shown = games.slice(0, 6);
+
+  const openGame = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    fun.setActive(id);
+    onClick?.();
+  };
+
+  return (
+    <div className="home-space home-space-portal">
+      <div onClick={onClick} className="home-card-portal h-full p-6 cursor-pointer group">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs uppercase tracking-widest font-semibold portal-gradient-text">The Arcade</p>
+          <Gamepad2 className="w-4 h-4 portal-accent" />
+        </div>
+
+        {games.length === 0 ? (
+          <p className="text-sm text-white/60">No games yet. Open the Arcade to add one.</p>
+        ) : (
+          <>
+            <div className="flex items-baseline gap-2 mb-3">
+              <AnimatedNumber className="text-3xl font-bold text-white" value={played} />
+              <span className="text-sm text-white/60">
+                of {games.length} played today
+                {best > 0 && ` · ${best} day streak`}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {shown.map((game) => (
+                <GlassTip key={game.id} label={game.name} hint="Play in the Arcade" tone="portal">
+                  <button onClick={(e) => openGame(e, game.id)} className="home-portal-app" aria-label={`Play ${game.name}`}>
+                    <AppIcon app={game} size={18} />
+                  </button>
+                </GlassTip>
+              ))}
+              {games.length > shown.length && (
+                <span className="home-portal-app text-[11px] text-white/60">+{games.length - shown.length}</span>
+              )}
+            </div>
+          </>
+        )}
+
+        <p className="flex items-center gap-1 text-xs text-white/45 group-hover:text-white transition-colors mt-3">
+          Enter the Arcade <ChevronRight className="w-3.5 h-3.5" />
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export function TerminalSpace({ onClick }: { onClick?: () => void }) {
