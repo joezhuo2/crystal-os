@@ -3,6 +3,7 @@ use tauri::{Manager, RunEvent, WindowEvent};
 mod autostart;
 mod command_box;
 mod convert;
+mod github;
 mod diagnostics;
 mod harness;
 mod hotkey;
@@ -94,6 +95,7 @@ pub fn run() {
       vault::restore_vault_path,
       vault::watch_vault,
       convert::convert_to_pdf,
+      github::github_inbox,
       terminal::terminal_list,
       terminal::terminal_open,
       terminal::terminal_attach,

@@ -22,6 +22,7 @@ fn main() {
     "restore_vault_path",
     "watch_vault",
     "convert_to_pdf",
+    "github_inbox",
     "terminal_list",
     "terminal_open",
     "terminal_attach",

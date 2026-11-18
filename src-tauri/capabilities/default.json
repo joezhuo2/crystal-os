@@ -30,6 +30,7 @@
     "allow-restore-vault-path",
     "allow-watch-vault",
     "allow-convert-to-pdf",
+    "allow-github-inbox",
     "allow-terminal-list",
     "allow-terminal-open",
     "allow-terminal-attach",
