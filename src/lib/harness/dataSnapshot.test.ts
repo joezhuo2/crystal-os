@@ -66,8 +66,14 @@ describe("buildDataSnapshot", () => {
       }),
     );
     expect(text).toContain("(income 1000.00, spending 12.50)");
-    expect(text).toContain("- 2026-11-10: -12.50 Lunch (Food)");
+    expect(text).toContain("- 2026-11-10: -$12.50 Lunch (Food)");
     expect(text).not.toContain("Old");
+  });
+
+  it("prints a transfer as a transfer and leaves it out of the totals", () => {
+    const text = buildDataSnapshot(input({ transactions: [txn({ name: "Move", amount: 300, type: "transfer" })] }));
+    expect(text).toContain("(income 0.00, spending 0.00)");
+    expect(text).toContain("- 2026-11-10: ⇄ $300.00 Move (Food)");
   });
 
   it("flattens newlines so data cannot add its own headings", () => {

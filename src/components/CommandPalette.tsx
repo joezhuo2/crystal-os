@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { appUi } from "@/lib/appUi";
 import { toLocalDateStr, useDebouncedValue } from "@/lib/utils";
 import { useVaultNotes } from "@/hooks/useVault";
+import { useFinance } from "@/hooks/useFinance";
+import { amountLabel, categorise } from "@/lib/finance";
 import type { TabId } from "@/components/layout/Navigation";
 import {
   Command,
@@ -166,6 +168,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
   const transactions = useTransactions();
   const taskCategories = useTaskCategories();
   const financialCategories = useFinancialCategories();
+  const { rules } = useFinance();
   const { setShowTaskForm, setShowTransactionForm, setSelectedNotePath, setShowQuickAdd, setQuickAddDraft, setShowEventForm } = appUi;
 
   // The Portal's native webview draws over all page content.
@@ -369,7 +372,7 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
       });
       recordRecentCommand(text);
     } else if (c.kind === "log") {
-      addTransaction({ name: c.name, amount: c.amount, type: "expense", categoryId: financialCategories[0]?.id ?? "", date: today });
+      addTransaction({ name: c.name, amount: c.amount, type: "expense", categoryId: categorise(c.name, rules, transactions), date: today });
       toast.success(`Logged ${c.amount.toFixed(2)} for ${c.name}`);
       recordRecentCommand(text);
     } else if (c.kind === "complete") {
@@ -898,8 +901,8 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                               <p className="text-sm font-medium truncate">{tx.name}</p>
                               <p className="text-xs text-muted-foreground">
                                 {cat?.name ?? "Uncategorized"} ·{" "}
-                                <span data-private className={tx.type === "income" ? "text-emerald-400" : "text-red-400"}>
-                                  {tx.type === "income" ? "+" : "-"}${tx.amount.toFixed(2)}
+                                <span data-private className={tx.type === "income" ? "text-emerald-400" : tx.type === "expense" ? "text-red-400" : "text-muted-foreground"}>
+                                  {amountLabel(tx)}
                                 </span>
                               </p>
                             </div>

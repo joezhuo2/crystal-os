@@ -31,6 +31,7 @@ import { useVaultLiveUpdates } from "@/hooks/useVault";
 import { useAppActivity } from "@/lib/appActivity";
 import { useOrbitStore } from "@/lib/orbitStore";
 import OrbitAutoExport from "@/modules/orbit/OrbitAutoExport";
+import VaultAutomation from "@/modules/financials/VaultAutomation";
 import OrbitReadyNotifier from "@/modules/orbit/OrbitReadyNotifier";
 import NotificationScheduler from "@/components/NotificationScheduler";
 import { useShortcut } from "@/hooks/useShortcut";
@@ -159,6 +160,7 @@ const GlobalOverlays = memo(function GlobalOverlays() {
       {has("archive") && <VaultLiveUpdates />}
       <QuickCommands />
       {autoExport && has("orbit") && <OrbitAutoExport />}
+      {has("financials") && <VaultAutomation />}
       <NotificationScheduler />
       <Suspense fallback={null}>
         <TaskFormOverlay />

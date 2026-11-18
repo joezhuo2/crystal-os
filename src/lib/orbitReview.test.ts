@@ -232,6 +232,17 @@ describe("focus by task", () => {
   });
 });
 
+describe("budgets", () => {
+  const month = periodContaining("monthly", "2026-10-01");
+
+  it("export a Budgets table only when budgets are given", () => {
+    expect(toMarkdown(buildReview(month, empty))).not.toContain("### Budgets");
+    const md = toMarkdown(buildReview(month, { ...empty, budgets: [{ name: "Dining", budget: 200, spent: 250 }] }));
+    expect(md).toContain("### Budgets");
+    expect(md).toContain("| Dining | $250.00 | $200.00 | 125% |");
+  });
+});
+
 describe("estimates vs actual", () => {
   const week = periodContaining("weekly", "2026-10-01");
   const categories = [

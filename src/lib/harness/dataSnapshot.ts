@@ -1,5 +1,6 @@
 import type { FinancialCategory, Task, TaskCategory, Transaction } from "@/contexts/AppContext";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
+import { amountLabel } from "@/lib/finance";
 
 export const SNAPSHOT_EVENT_DAYS = 14;
 export const SNAPSHOT_TRANSACTION_DAYS = 60;
@@ -71,7 +72,7 @@ export function buildDataSnapshot(input: SnapshotInput): string {
   const sum = (type: Transaction["type"]) => recent.filter((t) => t.type === type).reduce((total, t) => total + t.amount, 0);
   const moneyLines = recent
     .slice(0, MAX_TRANSACTIONS)
-    .map((t) => `- ${t.date}: ${t.type === "income" ? "+" : "-"}${t.amount.toFixed(2)} ${oneLine(t.name)} (${name(input.financialCategories, t.categoryId)})`);
+    .map((t) => `- ${t.date}: ${amountLabel(t)} ${oneLine(t.name)} (${name(input.financialCategories, t.categoryId)})`);
 
   const noteLines = input.notes
     .slice(0, MAX_NOTES)

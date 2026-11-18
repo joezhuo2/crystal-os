@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { db } from "@/lib/localDb";
-import { useAppLoading, useTaskCategories, useTasks, useTransactions } from "@/contexts/AppContext";
+import { useAppLoading, useFinancialCategories, useTaskCategories, useTasks, useTransactions } from "@/contexts/AppContext";
+import { budgetLines } from "@/lib/finance";
 import { useHabitsData } from "@/hooks/useHabits";
 import { useVaultNotes } from "@/hooks/useVault";
 import { useCalendarEvents, useCalendarStatus } from "@/hooks/useGoogleCalendar";
@@ -145,6 +146,7 @@ export function useOrbitReview(period: ReviewPeriod, enabled = true): OrbitRevie
   const tasks = useTasks();
   const transactions = useTransactions();
   const categories = useTaskCategories();
+  const financialCategories = useFinancialCategories();
   const appLoading = useAppLoading();
   const history = useHistory(dataStart(period), period.end, enabled);
   const notes = useAllNotes();
@@ -174,12 +176,13 @@ export function useOrbitReview(period: ReviewPeriod, enabled = true): OrbitRevie
       habitChecks: habits.data?.checks ?? [],
       today: toLocalDateStr(),
       categories,
+      budgets: period.kind === "monthly" ? budgetLines(transactions, financialCategories, period.start.slice(0, 7)) : undefined,
     };
     return buildReview(period, data);
     // A period is a value: its key names it, so a fresh object with the same
     // key must not rebuild the review.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history.data, history.error, tasks, transactions, categories, notes.data, events.data, habits.data, period.kind, period.key]);
+  }, [history.data, history.error, tasks, transactions, categories, financialCategories, notes.data, events.data, habits.data, period.kind, period.key]);
 
   return {
     review,

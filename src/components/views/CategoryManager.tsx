@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { useAppActions, useFinancialCategories, useTaskCategories } from "@/contexts/AppContext";
+import { useEffect, useState, type KeyboardEvent } from "react";
+import { useAppActions, useFinancialCategories, useTaskCategories, type FinancialCategory } from "@/contexts/AppContext";
+import { NumberInput } from "@/components/ui/number-input";
+import { useDebouncedValue } from "@/lib/utils";
 import { m, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, Settings } from "lucide-react";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
@@ -17,6 +19,76 @@ const presetColors = [
   "hsl(45 93% 47%)", "hsl(25 95% 53%)", "hsl(200 80% 50%)",
   "hsl(280 70% 60%)", "hsl(30 60% 40%)", "hsl(10 80% 55%)",
 ];
+
+const budgetText = (budget: number | null | undefined) => (budget == null ? "" : String(budget));
+
+function FinancialRow({ cat, onRemove }: { cat: FinancialCategory; onRemove: () => void }) {
+  const { updateFinancialCategory } = useAppActions();
+  const [nameDraft, setNameDraft] = useState(cat.name);
+  const [budgetDraft, setBudgetDraft] = useState(budgetText(cat.budget));
+  useEffect(() => setNameDraft(cat.name), [cat.name]);
+  useEffect(() => setBudgetDraft(budgetText(cat.budget)), [cat.budget]);
+  const [colorDraft, setColorDraft] = useState(cat.color);
+  const settledColor = useDebouncedValue(colorDraft, 300);
+  useEffect(() => {
+    if (settledColor !== cat.color) updateFinancialCategory(cat.id, { color: settledColor });
+  }, [settledColor, cat.color, cat.id, updateFinancialCategory]);
+
+  const commitName = () => {
+    const next = nameDraft.trim();
+    if (!next) return setNameDraft(cat.name);
+    if (next !== cat.name) updateFinancialCategory(cat.id, { name: next });
+  };
+  const commitBudget = () => {
+    const next = budgetDraft.trim() === "" ? null : Number(budgetDraft);
+    if (next !== null && !(next >= 0)) return setBudgetDraft(budgetText(cat.budget));
+    if (next !== (cat.budget ?? null)) updateFinancialCategory(cat.id, { budget: next });
+  };
+  const enterBlurs = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") e.currentTarget.blur();
+  };
+
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 group">
+      <label className="relative shrink-0">
+        <input
+          type="color"
+          aria-label={`Colour for ${cat.name}`}
+          value={colorDraft.startsWith("#") ? colorDraft : "#6366f1"}
+          onChange={(e) => setColorDraft(e.target.value)}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        />
+        <div className="w-3 h-3 rounded-full cursor-pointer" style={{ background: colorDraft }} />
+      </label>
+      <input
+        value={nameDraft}
+        aria-label={`Name of ${cat.name}`}
+        onChange={(e) => setNameDraft(e.target.value)}
+        onBlur={commitName}
+        onKeyDown={enterBlurs}
+        className="flex-1 min-w-0 bg-transparent text-sm font-medium outline-none focus:ring-1 focus:ring-primary/50 rounded px-1"
+      />
+      <NumberInput
+        unstyled
+        min={0}
+        value={budgetDraft}
+        placeholder="Budget/mo"
+        onChange={(e) => setBudgetDraft(e.target.value)}
+        onBlur={commitBudget}
+        onKeyDown={enterBlurs}
+        aria-label={`Monthly budget for ${cat.name}`}
+        data-private
+        className="w-24 bg-secondary/50 rounded-lg px-2 py-1 text-xs text-right outline-none focus:ring-1 focus:ring-primary/50"
+      />
+      <button
+        onClick={onRemove}
+        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
 
 export default function CategoryManager({ mode, onClose }: CategoryManagerProps) {
   const taskCategories = useTaskCategories();
@@ -76,7 +148,9 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
             <p className="text-lg font-semibold">
               {mode === "task" ? "Task" : "Financial"} Categories
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5">Add or remove categories</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {mode === "financial" ? "Add, remove, rename, recolour or budget categories" : "Add or remove categories"}
+            </p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />
@@ -85,7 +159,9 @@ export default function CategoryManager({ mode, onClose }: CategoryManagerProps)
 
         {/* Existing categories */}
         <div className="space-y-2 mb-5">
-          {categories.map((cat) => (
+          {mode === "financial"
+            ? financialCategories.map((cat) => <FinancialRow key={cat.id} cat={cat} onRemove={() => remove(cat.id)} />)
+            : taskCategories.map((cat) => (
             <div key={cat.id} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 group">
               <div className="w-3 h-3 rounded-full shrink-0" style={{ background: cat.color }} />
               <span className="text-sm font-medium flex-1">{cat.name}</span>

@@ -15,7 +15,7 @@ export const MAX_EVENT_LEAD = 1440;
 /** Minutes before a task's end time that its "Due soon" reminder shows, by default. */
 export const DEFAULT_TASK_LEAD = 30;
 
-type Flag = "sounds" | "doNotDisturb" | "dndSchedule" | "tasks" | "calendar" | "pomodoro" | "portal" | "reviews" | "taskReminders" | "habitReminders" | "habitReminderStartup" | "pulse" | "weatherAlerts";
+type Flag = "sounds" | "doNotDisturb" | "dndSchedule" | "tasks" | "calendar" | "pomodoro" | "portal" | "reviews" | "taskReminders" | "habitReminders" | "habitReminderStartup" | "pulse" | "weatherAlerts" | "budgetAlerts" | "billReminders";
 
 export interface NotifySettings {
   sounds: boolean;
@@ -54,6 +54,10 @@ export interface NotifySettings {
   /** Also a habit reminder on each launch, for habits past their time and not ticked, beyond the daily count. */
   habitReminderStartup: boolean;
   weatherAlerts: boolean;
+  /** A toast when a category in The Vault reaches 80% of its monthly budget, and again when it is used up. */
+  budgetAlerts: boolean;
+  /** A toast the day before and on the day a bill found in mail is due, until it is logged or dismissed. */
+  billReminders: boolean;
 }
 
 export const DEFAULT_NOTIFY_SETTINGS: NotifySettings = {
@@ -77,6 +81,8 @@ export const DEFAULT_NOTIFY_SETTINGS: NotifySettings = {
   habitReminders: true,
   habitReminderStartup: false,
   weatherAlerts: true,
+  budgetAlerts: true,
+  billReminders: true,
 };
 
 /** Whole minutes within range. Anything unreadable falls back to the default. */
@@ -139,6 +145,8 @@ export function parseNotifySettings(raw: string | null): NotifySettings {
     habitReminders: flag("habitReminders"),
     habitReminderStartup: flag("habitReminderStartup"),
     weatherAlerts: flag("weatherAlerts"),
+    budgetAlerts: flag("budgetAlerts"),
+    billReminders: flag("billReminders"),
   };
 }
 

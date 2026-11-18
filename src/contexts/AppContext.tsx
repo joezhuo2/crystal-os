@@ -71,15 +71,20 @@ export type Transaction = {
   id: string;
   name: string;
   amount: number;
-  type: "income" | "expense";
+  type: "income" | "expense" | "transfer";
   categoryId: string;
   date: string;
+  accountId?: string | null;
+  toAccountId?: string | null;
+  sourceId?: string | null;
+  receiptPath?: string | null;
 };
 
 export type FinancialCategory = {
   id: string;
   name: string;
   color: string;
+  budget?: number | null;
 };
 
 /** One task and the fields to change on it. */
@@ -101,12 +106,13 @@ export type AppActions = {
    * Undo toast that puts every changed field back.
    */
   rescheduleTasks: (changes: TaskChange[], title: string, description?: string) => void;
-  addTransaction: (tx: Omit<Transaction, "id">) => void;
+  addTransaction: (tx: Omit<Transaction, "id">) => Promise<void>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
   addTaskCategory: (cat: Omit<TaskCategory, "id">) => Promise<string | null>;
   deleteTaskCategory: (id: string) => void;
   addFinancialCategory: (cat: Omit<FinancialCategory, "id">) => void;
+  updateFinancialCategory: (id: string, updates: Partial<Omit<FinancialCategory, "id">>) => void;
   deleteFinancialCategory: (id: string) => void;
   /** Loads tasks, transactions and categories again, keeping what is already on screen. */
   reloadData: () => void;
@@ -327,8 +333,12 @@ function mapTransactionFromDb(row: TransactionRow): Transaction {
     name: row.name,
     amount: row.amount,
     type: row.type,
-    categoryId: row.category_id,
+    categoryId: row.category_id ?? "",
     date: row.date,
+    accountId: row.account_id ?? null,
+    toAccountId: row.to_account_id ?? null,
+    sourceId: row.source_id ?? null,
+    receiptPath: row.receipt_path ?? null,
   };
 }
 
@@ -337,13 +347,17 @@ function mapTransactionToDb(tx: Omit<Transaction, "id">) {
     name: tx.name,
     amount: tx.amount,
     type: tx.type,
-    category_id: tx.categoryId,
+    category_id: tx.categoryId || null,
     date: tx.date,
+    account_id: tx.accountId ?? null,
+    to_account_id: tx.toAccountId ?? null,
+    source_id: tx.sourceId ?? null,
+    receipt_path: tx.receiptPath ?? null,
   };
 }
 
-function mapCategoryFromDb(row: CategoryRow): TaskCategory | FinancialCategory {
-  return { id: row.id, name: row.name, color: row.color };
+function mapCategoryFromDb(row: CategoryRow & { budget?: number | null }): TaskCategory | FinancialCategory {
+  return { id: row.id, name: row.name, color: row.color, ...(row.budget != null ? { budget: row.budget } : {}) };
 }
 
 function mapCategoryToDb(cat: Omit<TaskCategory, "id">) {
@@ -936,8 +950,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 
   // ── Transactions ──
-  const addTransaction = useCallback(async (tx: Omit<Transaction, "id">) => {
-    const id = crypto.randomUUID();
+  const addTransaction = useCallback(async (tx: Omit<Transaction, "id"> & { id?: string }) => {
+    const id = tx.id ?? crypto.randomUUID();
     const row = mapTransactionToDb(tx);
     if (!(await saveWrite({ op: "insert", table: "transactions", id, row }, "add the transaction"))) return;
     setTransactions((prev) => [...prev, mapTransactionFromDb({ ...row, id })]);
@@ -948,8 +962,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
     if (updates.type !== undefined) dbUpdates.type = updates.type;
-    if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
+    if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId || null;
     if (updates.date !== undefined) dbUpdates.date = updates.date;
+    if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
+    if (updates.toAccountId !== undefined) dbUpdates.to_account_id = updates.toAccountId;
+    if (updates.receiptPath !== undefined) dbUpdates.receipt_path = updates.receiptPath;
 
     const saved = await saveWrite(
       { op: "update", table: "transactions", id, row: dbUpdates },
@@ -960,9 +977,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [saveWrite, setTransactions]);
 
   const deleteTransaction = useCallback(async (id: string) => {
+    const gone = queryClient.getQueryData<Transaction[]>(APP_DATA_KEYS.transactions)?.find((t) => t.id === id);
     if (!(await saveWrite({ op: "delete", table: "transactions", id }, "delete the transaction"))) return;
     setTransactions((prev) => prev.filter((t) => t.id !== id));
-  }, [saveWrite, setTransactions]);
+    if (gone) undoToast(`${gone.name} deleted`, () => void addTransaction(gone));
+  }, [saveWrite, setTransactions, addTransaction, queryClient]);
 
   // ── Task Categories ──
   const addTaskCategory = useCallback(async (cat: Omit<TaskCategory, "id">) => {
@@ -986,6 +1005,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setFinancialCategories((prev) => [...prev, mapCategoryFromDb(data) as FinancialCategory]);
   }, [setFinancialCategories]);
 
+  const updateFinancialCategory = useCallback(async (id: string, updates: Partial<Omit<FinancialCategory, "id">>) => {
+    const { error } = await db.from("financial_categories").update(updates).eq("id", id);
+    if (reportError("update the category", error)) return;
+    setFinancialCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
+  }, [setFinancialCategories]);
+
   const deleteFinancialCategory = useCallback(async (id: string) => {
     const { error } = await db.from("financial_categories").delete().eq("id", id);
     if (reportError("delete the category", error)) return;
@@ -995,10 +1020,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const actions = useMemo<AppActions>(
     () => ({
       addTask, updateTask, deleteTask, completeTask, rescheduleTasks, addTransaction, updateTransaction, deleteTransaction,
-      addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory, reloadData,
+      addTaskCategory, deleteTaskCategory, addFinancialCategory, updateFinancialCategory, deleteFinancialCategory, reloadData,
     }),
     [addTask, updateTask, deleteTask, completeTask, rescheduleTasks, addTransaction, updateTransaction, deleteTransaction,
-     addTaskCategory, deleteTaskCategory, addFinancialCategory, deleteFinancialCategory, reloadData]
+     addTaskCategory, deleteTaskCategory, addFinancialCategory, updateFinancialCategory, deleteFinancialCategory, reloadData]
   );
 
   return <AppActionsContext.Provider value={actions}>{children}</AppActionsContext.Provider>;

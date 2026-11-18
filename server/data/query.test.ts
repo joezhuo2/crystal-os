@@ -116,4 +116,23 @@ describe("runQuery", () => {
     run(db, { table: "habits", op: "delete", filters: [{ column: "id", op: "eq", value: "h1" }] });
     expect(db.habit_checks).toEqual([{ id: "c2", habit_id: "h2" }]);
   });
+
+  it("deleting an account clears it from transactions, transfers and goals", () => {
+    const db: Db = {
+      accounts: [{ id: "a1" }, { id: "a2" }],
+      transactions: [{ id: "x1", account_id: "a1", to_account_id: "a2" }, { id: "x2", account_id: "a2", to_account_id: "a1" }],
+      savings_goals: [{ id: "g1", account_id: "a1" }],
+    };
+    run(db, { table: "accounts", op: "delete", filters: [{ column: "id", op: "eq", value: "a1" }] });
+    expect(db.transactions).toEqual([{ id: "x1", account_id: null, to_account_id: "a2" }, { id: "x2", account_id: "a2", to_account_id: null }]);
+    expect(db.savings_goals).toEqual([{ id: "g1", account_id: null }]);
+  });
+
+  it("deleting a category deletes its rules and keeps a skipped import unique", () => {
+    const db: Db = { financial_categories: [{ id: "c1" }], category_rules: [{ id: "r1", category_id: "c1" }, { id: "r2", category_id: "c2" }] };
+    run(db, { table: "financial_categories", op: "delete", filters: [{ column: "id", op: "eq", value: "c1" }] });
+    expect(db.category_rules).toEqual([{ id: "r2", category_id: "c2" }]);
+    run(db, { table: "import_skips", op: "insert", rows: [{ source_id: "mail:1" }] });
+    expect(() => run(db, { table: "import_skips", op: "insert", rows: [{ source_id: "mail:1" }] })).toThrow(DuplicateError);
+  });
 });

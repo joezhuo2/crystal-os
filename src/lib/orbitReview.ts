@@ -7,6 +7,7 @@
  * "YYYY-MM-DD" strings throughout, compared as strings.
  */
 
+import type { BudgetLine } from "@/lib/finance";
 import { habitDay, indexChecks, overallRate, summarizeHabits, type Habit, type HabitCheck, type HabitSummary } from "@/lib/habits";
 import { addDays, cleanRepeat, taskFallsOnDate, toLocalDateStr, type RepeatRule } from "@/lib/utils";
 
@@ -231,10 +232,14 @@ export interface ReviewCategory {
 
 export interface ReviewTransaction {
   amount: number;
-  type: "income" | "expense";
+  type: "income" | "expense" | "transfer";
   /** "YYYY-MM-DD". */
   date: string;
 }
+
+export type ReviewBudget = Pick<BudgetLine, "name" | "budget" | "spent">;
+
+export const budgetUsed = (b: ReviewBudget) => (b.budget > 0 ? Math.round((b.spent / b.budget) * 100) : b.spent > 0 ? 100 : 0);
 
 export interface ReviewNote {
   title: string;
@@ -265,6 +270,7 @@ export interface ReviewData {
   today?: string;
   /** Task categories, to name the estimate rows. */
   categories?: ReviewCategory[];
+  budgets?: ReviewBudget[];
 }
 
 /* ------------------------------------------------------------------ *
@@ -294,7 +300,7 @@ export function periodStats(period: { start: string; end: string }, data: Review
   for (const tx of data.transactions) {
     if (!inPeriod(tx.date, period)) continue;
     if (tx.type === "income") income += tx.amount;
-    else expenses += tx.amount;
+    else if (tx.type === "expense") expenses += tx.amount;
   }
   const seconds = data.focus
     .filter((f) => inPeriod(dayOfInstant(f.endedAt), period))
@@ -383,6 +389,7 @@ export interface Review {
   estimates: EstimateRow[];
   agenda: AgendaItem[];
   next: ReviewPeriod;
+  budgets?: ReviewBudget[];
   /** Habits active in the period, in manager order. */
   habits: HabitSummary[];
   /** Habit completion is only listed when there are habits to measure. */
@@ -710,6 +717,7 @@ export function buildReview(period: ReviewPeriod, data: ReviewData): Review {
     estimates,
     agenda: buildAgenda(next, data),
     next,
+    budgets: data.budgets,
     habits,
     trends,
     insights,
@@ -895,6 +903,16 @@ export function toMarkdown(review: Review, reflection?: Reflection, now: Date = 
     `| Spending | ${formatMoney(stats.expenses)} | ${formatMoney(previous.expenses)} |`,
     `| Net | ${formatMoney(stats.income - stats.expenses)} | ${formatMoney(previous.income - previous.expenses)} |`,
     "",
+    ...(review.budgets?.length
+      ? [
+          "### Budgets",
+          "",
+          "| Category | Spent | Budget | Used |",
+          "| --- | ---: | ---: | ---: |",
+          ...review.budgets.map((b) => `| ${cell(b.name)} | ${formatMoney(b.spent)} | ${formatMoney(b.budget)} | ${budgetUsed(b)}% |`),
+          "",
+        ]
+      : []),
     ...habitLines(review, reflection?.habitNote?.trim()),
     `## Next ${unit}`,
     "",
