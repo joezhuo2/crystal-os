@@ -231,7 +231,7 @@ export interface ReviewCategory {
 
 export interface ReviewTransaction {
   amount: number;
-  type: "income" | "expense";
+  type: "income" | "expense" | "transfer";
   /** "YYYY-MM-DD". */
   date: string;
 }
@@ -294,7 +294,7 @@ export function periodStats(period: { start: string; end: string }, data: Review
   for (const tx of data.transactions) {
     if (!inPeriod(tx.date, period)) continue;
     if (tx.type === "income") income += tx.amount;
-    else expenses += tx.amount;
+    else if (tx.type === "expense") expenses += tx.amount;
   }
   const seconds = data.focus
     .filter((f) => inPeriod(dayOfInstant(f.endedAt), period))

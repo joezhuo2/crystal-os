@@ -11,6 +11,11 @@ export const TABLES = [
   "habit_checks",
   "links",
   "contributions",
+  "accounts",
+  "recurring_transactions",
+  "category_rules",
+  "savings_goals",
+  "import_skips",
 ] as const;
 
 export type Table = (typeof TABLES)[number];
@@ -43,7 +48,11 @@ export interface Query {
 export const DUPLICATE = "23505";
 
 const MAX_ROWS = 5000;
-const UNIQUE: Partial<Record<Table, string[]>> = { habit_checks: ["habit_id", "day"], links: ["kind", "item_id"] };
+const UNIQUE: Partial<Record<Table, string[]>> = {
+  habit_checks: ["habit_id", "day"],
+  links: ["kind", "item_id"],
+  import_skips: ["source_id"],
+};
 const DEFAULTS: Partial<Record<Table, Row>> = { habits: { position: 0, archived_at: null } };
 
 const REFS: Array<{ parent: Table; table: Table; column: string; onDelete: "null" | "cascade" }> = [
@@ -55,6 +64,12 @@ const REFS: Array<{ parent: Table; table: Table; column: string; onDelete: "null
   { parent: "financial_categories", table: "transactions", column: "category_id", onDelete: "null" },
   { parent: "habits", table: "habit_checks", column: "habit_id", onDelete: "cascade" },
   { parent: "transactions", table: "links", column: "item_id", onDelete: "cascade" },
+  { parent: "financial_categories", table: "recurring_transactions", column: "category_id", onDelete: "null" },
+  { parent: "financial_categories", table: "category_rules", column: "category_id", onDelete: "cascade" },
+  { parent: "accounts", table: "transactions", column: "account_id", onDelete: "null" },
+  { parent: "accounts", table: "transactions", column: "to_account_id", onDelete: "null" },
+  { parent: "accounts", table: "recurring_transactions", column: "account_id", onDelete: "null" },
+  { parent: "accounts", table: "savings_goals", column: "account_id", onDelete: "null" },
 ];
 
 export class DuplicateError extends DataError {
