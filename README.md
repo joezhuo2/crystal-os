@@ -5,14 +5,14 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-1830%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.19.3-6366F1)
+![Version](https://img.shields.io/badge/version-0.19.4-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 > A personal productivity dashboard built with React, TypeScript, your Google Calendar, and your Obsidian vault. Your data stays on your device. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
 <p align="center"><img src="docs/images/crystal-os-tour.gif" alt="A tour of Crystal OS: The Pulse, The Engine, The Horizon, The Orbit, The Vault, The Ledger, The Courier, The Atmosphere, The Observatory (courses, topics and a review card), The Archive, The Portal and Settings" width="840"></p>
 
-Current release: **v0.19.3** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.19.4** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 [Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
@@ -533,6 +533,7 @@ Crystal OS shows native toasts (Windows notifications on desktop through `tauri-
 - **Orbit reviews.** When a weekly, monthly or yearly review becomes ready (6 PM on Sunday, the month's last day or December 31), or the next time the app opens if it was closed then and the review has not been opened. Each review is announced once, as an in-app toast ("Weekly review ready", with the period) whose **Open** goes to The Orbit on that review, plus a native notification while Crystal OS is not focused. Reviews ready together, such as a week and a month ending the same Sunday, share one toast ("Weekly and monthly reviews ready"). While the switch or Do Not Disturb is off, nothing is announced or recorded, so a review still unopened is announced once they allow it again. Announced periods are kept in `localStorage` (`crystal-os-orbit-notified`).
 - **Budget alerts.** When a category reaches 80% of its monthly budget in The Vault, and again when it is used up, once each per month.
 - **Bill reminders.** The day before and on the day a bill found in your mail is due, until it is logged or dismissed in The Vault.
+- **Job follow-up reminders.** When a job application or interview found in your mail has had no reply for a week ("Follow up with Acme"), shown when you open The Courier.
 - **Habit reminders.** Set a time on a habit with the bell in The Orbit's habit manager ("Habit: Read", "Not ticked yet today · reminder set for 8:00 PM"). From that time it reminds once an hour while the habit is not ticked today, up to its **times a day** (1 by default, 0 for no limit until midnight). **Remind habits on every startup** also reminds once on each launch for every habit past its time and not ticked, even after its count for the day. Reminder times are kept on this device in `localStorage` (`crystal-os-habit-reminders`); archived habits stay quiet.
 
 What to say and when lives in `src/lib/notifications.ts` (pure, tested); `src/components/NotificationScheduler.tsx` checks tasks and events every 30 s while signed in, and the Pomodoro and Portal stores are watched from `main.tsx`. Each task and event reminder is shown once: its key is kept in `localStorage` (`crystal-os-notified`, two days), so a restart does not repeat it. Settings are saved in `crystal-os-notifications`.

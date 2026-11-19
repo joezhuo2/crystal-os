@@ -1247,6 +1247,9 @@ export default function SettingsPage() {
           <Row title="Bill reminders" description="The day before and on the day a bill found in your mail is due, until you log or dismiss it in The Vault.">
             <Switch checked={notifications.billReminders} onCheckedChange={(on) => notifySettings.setFlag("billReminders", on)} />
           </Row>
+          <Row title="Job follow-up reminders" description="When a job application or interview found in your mail has had no reply for a week, shown when you open The Courier.">
+            <Switch checked={notifications.jobFollowUps} onCheckedChange={(on) => notifySettings.setFlag("jobFollowUps", on)} />
+          </Row>
           <Row
             title="Habit reminders"
             description="When a habit is not ticked by the reminder time set on it (the bell in The Orbit's habit manager), up to its count a day, an hour apart."
