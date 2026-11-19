@@ -315,7 +315,9 @@ const Index = () => {
   // The Nebula page, sidebar, and backdrop read their colours from these.
   const rootStyle =
     viewTab === "nebula"
-      ? ({ "--nebula-a": nebulaTheme.colors[0], "--nebula-b": nebulaTheme.colors[1], "--nebula-c": nebulaTheme.colors[2] } as React.CSSProperties)
+      ? ((monochrome
+          ? { "--nebula-a": "#a3a3a3", "--nebula-b": "#737373", "--nebula-c": "#e5e5e5" }
+          : { "--nebula-a": nebulaTheme.colors[0], "--nebula-b": nebulaTheme.colors[1], "--nebula-c": nebulaTheme.colors[2] }) as React.CSSProperties)
       : undefined;
 
   return (

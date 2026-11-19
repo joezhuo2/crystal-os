@@ -4948,3 +4948,31 @@ html.perf-still .horizon-dot-cascade {
     background-color: rgb(255 255 255 / 0.1);
   }
 }
+
+@layer utilities {
+  html[data-theme="default"] .nebula-panel {
+    background: rgb(255 255 255 / 0.05);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+  }
+
+  html[data-theme="default"] .nebula-user-bubble {
+    background: rgb(255 255 255 / 0.12);
+  }
+
+  html[data-theme="default"] .nebula-send {
+    color: #0a0a0a;
+    background: #fafafa;
+  }
+
+  html[data-theme="default"] .orbit-dialog {
+    background: hsl(0 0% 7%);
+    border-color: hsl(0 0% 100% / 0.12);
+    box-shadow: 0 24px 60px rgb(0 0 0 / 0.7);
+  }
+
+  html[data-theme="default"] .orbit-button-danger {
+    color: hsl(0 0% 6%);
+    background: hsl(0 0% 98%);
+    box-shadow: none;
+  }
+}
