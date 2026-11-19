@@ -1,4 +1,5 @@
 import { Play, RefreshCw } from "lucide-react";
+import { useShortcut } from "@/hooks/useShortcut";
 import { isDesktop } from "@/lib/platform";
 import { IconAction } from "./IconAction";
 import { useCourseResources } from "./resources/ingest";
@@ -12,6 +13,8 @@ export function ProcessAllButton({ codes }: { codes: string[] }) {
   const jobs = redo ? all : pending;
   const { topics, loading } = useCoursesTopics(codes);
   const { run, running } = useProcessAll();
+  const start = () => void run(jobs.map((r) => ({ resource: r, code: r.code, topics: topics.filter((t) => t.course === r.code) })));
+  useShortcut("observatory.processAll", start, isDesktop() && !loading && !running && jobs.length > 0);
   if (!isDesktop()) return null;
   return (
     <IconAction
@@ -21,7 +24,7 @@ export function ProcessAllButton({ codes }: { codes: string[] }) {
       disabled={loading || !jobs.length}
       busy={running}
       action={() => {
-        void run(jobs.map((r) => ({ resource: r, code: r.code, topics: topics.filter((t) => t.course === r.code) })));
+        start();
         return false;
       }}
     />

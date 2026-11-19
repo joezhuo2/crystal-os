@@ -47,4 +47,23 @@ describe("ReaderView", () => {
     expect(screen.getByRole("button", { name: "Full screen" })).toBeInTheDocument();
     expect(container.firstElementChild).not.toHaveClass("fixed");
   });
+
+  it("zooms the pages on Ctrl + scroll and toggles full screen on F", async () => {
+    Element.prototype.scrollIntoView ??= () => {};
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ReaderView resource={resource} code="MATH117" topics={[]} onBack={() => {}} />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(screen.getAllByRole("img", { name: /^page \d$/i })).toHaveLength(2));
+    const page = container.querySelector("[data-page]")!;
+    fireEvent.wheel(page, { deltaY: -100 });
+    expect(screen.queryByRole("button", { name: "Reset zoom" })).toBeNull();
+    fireEvent.wheel(page, { deltaY: -100, ctrlKey: true });
+    expect(screen.getByRole("button", { name: "Reset zoom" })).toHaveTextContent("110%");
+    fireEvent.click(screen.getByRole("button", { name: "Reset zoom" }));
+    expect(screen.queryByRole("button", { name: "Reset zoom" })).toBeNull();
+    fireEvent.keyDown(document, { code: "KeyF" });
+    expect(container.firstElementChild).toHaveClass("fixed");
+  });
 });
