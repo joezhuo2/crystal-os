@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { releaseFocus, requestFocus } from "./focus";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { SkeletonLines } from "@/components/ui/dashboard-skeletons";
@@ -112,6 +112,25 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
     };
   }, [resource.pdf]);
 
+  const [full, setFull] = useState(false);
+  const keepPage = useRef<Element | null>(null);
+  const toggleFull = () => {
+    const top = pagesRef.current?.getBoundingClientRect().top ?? 0;
+    keepPage.current = Array.from(pagesRef.current?.querySelectorAll("[data-page]") ?? []).find((p) => p.getBoundingClientRect().bottom > top) ?? null;
+    setFull((f) => !f);
+  };
+  useEffect(() => {
+    keepPage.current?.scrollIntoView({ block: "start" });
+    keepPage.current = null;
+    if (!full) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !e.defaultPrevented) toggleFull();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [full]);
+  const paneHeight = full ? "max-h-[calc(100vh-5rem)]" : "max-h-[75vh]";
+
   const current = chapters.find((c) => c.number === chapter) ?? chapters[0];
   const jump = (value: string) => {
     setChapter(value);
@@ -127,13 +146,17 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
         : null;
 
   return (
-    <div className="space-y-3">
+    <div className={full ? "fixed inset-0 z-50 space-y-3 bg-background p-4" : "space-y-3"}>
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Resources
         </Button>
         <h3 className="font-medium truncate">{resource.title || resource.name}</h3>
         <FindQuestionsButton jobs={[{ resource, code, topics }]} label={`Find questions in ${resource.name} with AI`} />
+        <Button variant="ghost" size="sm" onClick={toggleFull} aria-pressed={full}>
+          {full ? <Minimize2 className="h-4 w-4 mr-1" /> : <Maximize2 className="h-4 w-4 mr-1" />}
+          {full ? "Exit full screen" : "Full screen"}
+        </Button>
         {chapters.length > 0 && (
           <ThemedSelect
             aria-label="Chapter"
@@ -145,13 +168,13 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
         )}
       </div>
       <div className={poolPath ? "grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" : undefined}>
-        <div ref={pagesRef} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+        <div ref={pagesRef} className={`space-y-4 ${paneHeight} overflow-y-auto pr-1`}>
           {error && <p className="text-sm text-destructive">Could not open the PDF: {error}</p>}
           {!doc && !error && <SkeletonLines count={6} />}
           {doc && Array.from({ length: doc.numPages }, (_, i) => <PageView key={i + 1} doc={doc} n={i + 1} scanned={scanned.has(i + 1)} />)}
         </div>
         {poolPath && (
-          <aside aria-label="Questions" className="space-y-2 max-h-[75vh] overflow-y-auto">
+          <aside aria-label="Questions" className={`space-y-2 ${paneHeight} overflow-y-auto`}>
             <h4 className="text-sm font-medium">Questions{current ? `: ${current.title || `Chapter ${current.number}`}` : ""}</h4>
             <PoolView key={poolPath} path={poolPath} code={code} topics={topics} doc={doc} type={resource.type === "slides" ? "card" : "worked"} />
           </aside>

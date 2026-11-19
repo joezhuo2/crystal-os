@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.5] - 2026-11-19 - Full-screen reading for imported PDFs in The Observatory.
+
+### Added
+
+- **Full screen for imported PDFs.** The reader for a course resource in The Observatory has a **Full screen** button that fills the window with the PDF and its questions. **Exit full screen** or Esc goes back, and you stay on the page you were reading. ([#152](https://github.com/joezhuo2/crystal-os/issues/152))
+
 ## [v0.19.4] - 2026-11-19 - A switch for job follow-up reminders, and a tray update check that stays in the tray.
 
 ### Added

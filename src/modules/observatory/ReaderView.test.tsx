@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Resource } from "./resources/ingest";
 
@@ -31,5 +31,20 @@ describe("ReaderView", () => {
     await waitFor(() => expect(screen.getAllByRole("img", { name: /^page \d$/i })).toHaveLength(2));
     expect(await screen.findByText("F = ma scribble")).toBeInTheDocument();
     expect(screen.getByText("Unclear")).toBeInTheDocument();
+  });
+
+  it("fills the window on Full screen and leaves it on Escape", async () => {
+    Element.prototype.scrollIntoView ??= () => {};
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ReaderView resource={resource} code="MATH117" topics={[]} onBack={() => {}} />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(screen.getAllByRole("img", { name: /^page \d$/i })).toHaveLength(2));
+    fireEvent.click(screen.getByRole("button", { name: "Full screen" }));
+    expect(container.firstElementChild).toHaveClass("fixed");
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.getByRole("button", { name: "Full screen" })).toBeInTheDocument();
+    expect(container.firstElementChild).not.toHaveClass("fixed");
   });
 });
