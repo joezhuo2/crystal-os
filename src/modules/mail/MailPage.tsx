@@ -24,6 +24,7 @@ import { useDisconnectMail, useMailDigest, useMailStatus, useRefreshMailDigest }
 import { AI_PROVIDER_LABELS } from "@/lib/ai";
 import { isDesktop, openExternal } from "@/lib/platform";
 import { deliver } from "@/lib/notifications";
+import { useNotifySettings } from "@/lib/notifySettings";
 import { toLocalDateStr } from "@/lib/utils";
 import {
   JOB_STAGES,
@@ -244,9 +245,10 @@ function Dashboard({ status }: { status: MailStatus }) {
   const digest = useMailDigest(status.accounts);
   const [stage, setStage] = useState<JobStage>("applied");
   const items = digest.data?.items;
+  const { jobFollowUps } = useNotifySettings();
   useEffect(() => {
-    if (items) deliver(jobFollowUpAlerts(items, new Date()));
-  }, [items]);
+    if (items && jobFollowUps) deliver(jobFollowUpAlerts(items, new Date()));
+  }, [items, jobFollowUps]);
   const refresh = useRefreshMailDigest(status.accounts);
   const now = new Date();
   const today = toLocalDateStr(now);
