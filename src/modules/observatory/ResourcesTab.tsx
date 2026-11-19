@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BookOpen, Check, FileQuestion, FolderInput, Library, Play, Presentation, RefreshCw, Trash2, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -137,13 +137,19 @@ function Suggestions({ code, resource, onDone }: { code: string; resource: Resou
   );
 }
 
-export function ResourcesTab({ course, topics }: { course: Course; topics: Topic[] }) {
+export function ResourcesTab({ course, topics, onReading }: { course: Course; topics: Topic[]; onReading?: (open: boolean) => void }) {
   const { resources, loading } = useResources(course.code);
   const { courses } = useCourses();
   const queryClient = useQueryClient();
   const [progress, setProgress] = useState<Record<string, ProcessProgress>>({});
   const [reading, setReading] = useState<Resource | null>(null);
   const [moving, setMoving] = useState<Resource | null>(null);
+  const isReading = !!reading;
+  useEffect(() => {
+    onReading?.(isReading);
+    return () => onReading?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReading]);
   const desktop = isDesktop();
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["vault"] });
 

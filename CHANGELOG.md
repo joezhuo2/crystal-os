@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.7] - 2026-11-19 - PDF zoom and more shortcuts in The Observatory, and saves that no longer fail with "changed on disk".
+
+### Added
+
+- **Zoom in the PDF reader.** Hold Ctrl and scroll over the pages of a course resource to zoom from 50% to 300%. The zoom level shows beside the title; click it to go back to 100%.
+- **More Observatory shortcuts.** **Backspace** goes back (from a course, the reader, Review or the inbox), **V** cycles Overview, Topics, Resources and Grades, **E** edits the course, **A** archives or unarchives it, **Delete** opens the delete confirmation, **P** processes or reprocesses all PDFs, and **F** enters or leaves full screen in the reader. All can be rebound in **Settings → Keyboard shortcuts**.
+
+### Changed
+
+- **Full screen is an icon button.** The reader's **Full screen** button shows only its icon, with the themed hover tip the other Observatory buttons use.
+- **"Start focus on …?" stays for 30 seconds** instead of 4, so it is not gone before you see it.
+
+### Fixed
+
+- **"… changed on disk. Try again."** (desktop) Accepting questions, **Confirm and accept**, and processing or reprocessing PDFs failed every time for some notes, because the note's modified time lost a fraction of a microsecond on its way back to the app. Saves now allow for that; a real edit made elsewhere is still detected.
+- **Auto start focus after a finished Pomodoro.** With a break waiting, the Observatory started the break instead of focus. It now skips the break and starts focus.
+- **Auto stop while reading.** Scrolling and moving the mouse count as study activity, so focus is no longer paused as idle while you read a PDF.
+
 ## [v0.19.6] - 2026-11-19 - A Codex CLI tab in The Nebula, and a default scheme that reaches The Nebula and Orbit's remove-habit dialog.
 
 ### Added

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { GlideEffect } from "@/components/crystal/GlideEffect";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useShortcut } from "@/hooks/useShortcut";
 import { useAppActivity } from "@/lib/appActivity";
 import { isDesktop } from "@/lib/platform";
 import { undoToast } from "@/lib/undo";
@@ -50,6 +51,7 @@ export function CoursePage({ entry, onBack, initialTab, initialTopic }: { entry:
   const [confirmDelete, setConfirmDelete] = useState(false);
   const grades = useRef<GradesHandle>(null);
   const [leave, setLeave] = useState<(() => void) | null>(null);
+  const [reading, setReading] = useState(false);
   const guard = (go: () => void) => (grades.current?.dirty() ? setLeave(() => go) : go());
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["vault"] });
   const fail = (title: string, err: unknown) => toast.error(title, { description: err instanceof Error ? err.message : String(err) });
@@ -78,6 +80,13 @@ export function CoursePage({ entry, onBack, initialTab, initialTopic }: { entry:
       fail("Could not delete the course", err);
     }
   };
+
+  const keys = !reading && !editing && !outline;
+  useShortcut("observatory.back", () => guard(onBack), keys);
+  useShortcut("observatory.cycleTab", () => guard(() => setTab(TABS[(TABS.indexOf(tab) + 1) % TABS.length]!)), keys);
+  useShortcut("observatory.editCourse", () => guard(() => setEditing(true)), keys);
+  useShortcut("observatory.archiveCourse", () => void toggleArchive(), keys);
+  useShortcut("observatory.deleteCourse", () => setConfirmDelete(true), keys && isDesktop());
 
   return (
     <div className="space-y-5">
@@ -199,7 +208,7 @@ export function CoursePage({ entry, onBack, initialTab, initialTopic }: { entry:
               <PriorityMap code={course.code} courseName={course.name} topics={topics} initialOpen={initialTopic} />
             </>
           )}
-          {tab === "Resources" && <ResourcesTab course={course} topics={topics} />}
+          {tab === "Resources" && <ResourcesTab course={course} topics={topics} onReading={setReading} />}
           {tab === "Grades" && <GradesTab ref={grades} key={course.code} course={course} onEdit={() => guard(() => setEditing(true))} />}
         </m.div>
       </AnimatePresence>

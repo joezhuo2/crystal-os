@@ -61,6 +61,16 @@ describe("Observatory focus", () => {
     expect(pomodoro.getState().running).toBe(false);
   });
 
+  it("skips a waiting break so focus really starts", () => {
+    vi.useFakeTimers({ now: Date.now() });
+    pomodoro.start();
+    vi.advanceTimersByTime(26 * 60_000);
+    vi.useRealTimers();
+    expect(pomodoro.getState()).toMatchObject({ phase: "break", running: false });
+    requestFocus("topic", chain);
+    expect(pomodoro.getState()).toMatchObject({ phase: "focus", running: true });
+  });
+
   it("does nothing when the trigger is switched off", () => {
     settings.setObservatoryFlag("focusOnTopic", false);
     requestFocus("topic", chain);

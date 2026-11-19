@@ -163,6 +163,11 @@ export default function ObservatoryPage() {
   const openNewCourse = () => setDialog({ initial: { color: nextColor() } });
   useShortcut("observatory.newCourse", openNewCourse, !dialog && !reviewing);
   useShortcut("observatory.review", () => setReviewing(true), !dialog && !merge && !reviewing);
+  useShortcut("observatory.back", () => {
+    setReviewing(false);
+    setReviewCode(undefined);
+    setInbox(false);
+  }, reviewing || inbox);
 
   const importOutline = (outline: ParsedOutline) => {
     const existing = courses.find((e) => e.course.code === outline.code);
@@ -193,7 +198,7 @@ export default function ObservatoryPage() {
   const visible = courses.filter((e) => showArchived || !e.course.archived);
 
   return (
-    <div className="observatory-page space-y-5" onPointerDownCapture={studyActivity} onKeyDownCapture={studyActivity}>
+    <div className="observatory-page space-y-5" onPointerDownCapture={studyActivity} onPointerMoveCapture={studyActivity} onWheelCapture={studyActivity} onKeyDownCapture={studyActivity}>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">

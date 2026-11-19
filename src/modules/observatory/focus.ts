@@ -29,6 +29,7 @@ export const studyActivity = () => void (lastActivity = Date.now());
 function begin(target: FocusTarget, trigger: FocusTrigger) {
   const task = focusTask(target);
   focusTopic(target);
+  if (pomodoro.getState().phase === "break") pomodoro.reset();
   pomodoro.start();
   owned = { task, target, trigger };
   studyActivity();
@@ -55,6 +56,7 @@ export function requestFocus(trigger: FocusTrigger, target: FocusTarget) {
   if (s.focusAsk) {
     toast(`Start focus on ${target.title}?`, {
       id: TOAST,
+      duration: 30_000,
       action: { label: "Start", onClick: () => begin(target, trigger) },
       cancel: { label: "Not now", onClick: () => declined.add(key) },
     });

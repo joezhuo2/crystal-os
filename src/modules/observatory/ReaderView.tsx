@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { releaseFocus, requestFocus } from "./focus";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { ArrowLeft, Maximize2, Minimize2 } from "lucide-react";
@@ -6,10 +6,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { SkeletonLines } from "@/components/ui/dashboard-skeletons";
 import { ThemedSelect } from "@/components/ui/field-controls";
+import { useShortcut } from "@/hooks/useShortcut";
 import { fetchRawNote } from "@/hooks/useVault";
 import { parseFrontmatter, readVaultBinary } from "@/lib/vaultNative";
 import type { Topic } from "./model";
 import { FindQuestionsButton } from "./FindQuestions";
+import { IconAction } from "./IconAction";
 import { PoolView } from "./PoolView";
 import type { Resource } from "./resources/ingest";
 import { ocrPage } from "./resources/ocr";
@@ -25,10 +27,11 @@ const chaptersOf = (v: unknown): BookChapter[] =>
         c?.number != null && Number(c.start) > 0 ? [{ number: String(c.number), title: String(c.title ?? ""), start: Number(c.start), end: Number(c.end ?? c.start) }] : [])
     : [];
 
-function PageView({ doc, n, scanned }: { doc: PDFDocumentProxy; n: number; scanned: boolean }) {
+function PageView({ doc, n, scanned, scale }: { doc: PDFDocumentProxy; n: number; scanned: boolean; scale: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(typeof IntersectionObserver === "undefined");
   const [ocr, setOcr] = useState<{ text: string; confidence: number } | null>(null);
+  const ocrStarted = useRef(false);
 
   useEffect(() => {
     if (visible || !ref.current) return;
@@ -40,13 +43,14 @@ function PageView({ doc, n, scanned }: { doc: PDFDocumentProxy; n: number; scann
   useEffect(() => {
     if (!visible) return;
     let live = true;
-    renderPage(doc, n, 1.5).then(
+    renderPage(doc, n, scale).then(
       async (canvas) => {
         if (!live || !ref.current) return;
         canvas.style.width = "100%";
         canvas.style.height = "auto";
         ref.current.querySelector("[data-canvas]")?.replaceChildren(canvas);
-        if (!scanned) return;
+        if (!scanned || ocrStarted.current) return;
+        ocrStarted.current = true;
         const r = await ocrPage(canvas);
         if (live) setOcr({ text: r.text.trim(), confidence: r.confidence });
       },
@@ -55,7 +59,7 @@ function PageView({ doc, n, scanned }: { doc: PDFDocumentProxy; n: number; scann
     return () => {
       live = false;
     };
-  }, [visible, doc, n, scanned]);
+  }, [visible, doc, n, scanned, scale]);
 
   return (
     <div ref={ref} data-page={n} className="space-y-2">
@@ -74,6 +78,8 @@ function PageView({ doc, n, scanned }: { doc: PDFDocumentProxy; n: number; scann
     </div>
   );
 }
+
+const nextZoom = (zoom: number, deltaY: number) => Math.min(3, Math.max(0.5, +(zoom * (deltaY < 0 ? 1.1 : 1 / 1.1)).toFixed(2)));
 
 interface Props { resource: Resource; code: string; topics: Topic[]; onBack: () => void }
 
@@ -129,6 +135,29 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [full]);
+  const [zoom, setZoom] = useState(1);
+  const lastZoom = useRef(1);
+  useEffect(() => {
+    const el = pagesRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      setZoom((z) => nextZoom(z, e.deltaY));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+  useLayoutEffect(() => {
+    const el = pagesRef.current;
+    const k = zoom / lastZoom.current;
+    lastZoom.current = zoom;
+    if (!el || k === 1) return;
+    el.scrollTop *= k;
+    el.scrollLeft *= k;
+  }, [zoom]);
+  useShortcut("observatory.back", onBack);
+  useShortcut("observatory.fullScreen", toggleFull);
   const paneHeight = full ? "max-h-[calc(100vh-5rem)]" : "max-h-[75vh]";
 
   const current = chapters.find((c) => c.number === chapter) ?? chapters[0];
@@ -153,10 +182,21 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
         </Button>
         <h3 className="font-medium truncate">{resource.title || resource.name}</h3>
         <FindQuestionsButton jobs={[{ resource, code, topics }]} label={`Find questions in ${resource.name} with AI`} />
-        <Button variant="ghost" size="sm" onClick={toggleFull} aria-pressed={full}>
-          {full ? <Minimize2 className="h-4 w-4 mr-1" /> : <Maximize2 className="h-4 w-4 mr-1" />}
-          {full ? "Exit full screen" : "Full screen"}
-        </Button>
+        <IconAction
+          icon={full ? Minimize2 : Maximize2}
+          label={full ? "Exit full screen" : "Full screen"}
+          hint="F. Ctrl + scroll zooms the pages"
+          aria-pressed={full}
+          action={() => {
+            toggleFull();
+            return false;
+          }}
+        />
+        {zoom !== 1 && (
+          <Button variant="ghost" size="sm" className="tabular-nums" aria-label="Reset zoom" onClick={() => setZoom(1)}>
+            {Math.round(zoom * 100)}%
+          </Button>
+        )}
         {chapters.length > 0 && (
           <ThemedSelect
             aria-label="Chapter"
@@ -168,10 +208,12 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
         )}
       </div>
       <div className={poolPath ? "grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" : undefined}>
-        <div ref={pagesRef} className={`space-y-4 ${paneHeight} overflow-y-auto pr-1`}>
-          {error && <p className="text-sm text-destructive">Could not open the PDF: {error}</p>}
-          {!doc && !error && <SkeletonLines count={6} />}
-          {doc && Array.from({ length: doc.numPages }, (_, i) => <PageView key={i + 1} doc={doc} n={i + 1} scanned={scanned.has(i + 1)} />)}
+        <div ref={pagesRef} className={`${paneHeight} overflow-auto pr-1`}>
+          <div className="mx-auto space-y-4" style={{ width: `${zoom * 100}%` }}>
+            {error && <p className="text-sm text-destructive">Could not open the PDF: {error}</p>}
+            {!doc && !error && <SkeletonLines count={6} />}
+            {doc && Array.from({ length: doc.numPages }, (_, i) => <PageView key={i + 1} doc={doc} n={i + 1} scanned={scanned.has(i + 1)} scale={zoom > 1.5 ? 3 : 1.5} />)}
+          </div>
         </div>
         {poolPath && (
           <aside aria-label="Questions" className={`space-y-2 ${paneHeight} overflow-y-auto`}>

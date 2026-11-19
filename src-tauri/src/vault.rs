@@ -352,7 +352,8 @@ pub fn write_note(
   };
 
   if let Some(expected) = expected_mtime {
-    if existing.as_ref().map(mtime_ms) != Some(expected) {
+    let unchanged = existing.as_ref().is_some_and(|meta| (mtime_ms(meta) - expected).abs() < 0.001);
+    if !unchanged {
       return Err(VaultError::new(
         ErrorCode::Conflict,
         format!("{rel} changed on disk. Try again."),
@@ -1030,6 +1031,16 @@ mod tests {
     let err = write_note(&root, "Inbox.md", "two", Some(1.0)).unwrap_err();
     assert_eq!(err.code, ErrorCode::Conflict);
     let err = write_note(&root, "New.md", "two", Some(1.0)).unwrap_err();
+    assert_eq!(err.code, ErrorCode::Conflict);
+  }
+
+  #[test]
+  fn accepts_an_mtime_one_ulp_off() {
+    let (_dir, root) = vault();
+    let made = write_note(&root, "Inbox.md", "one", None).unwrap();
+    let nudged = f64::from_bits(made.mtime.to_bits() + 1);
+    let next = write_note(&root, "Inbox.md", "two", Some(nudged)).unwrap();
+    let err = write_note(&root, "Inbox.md", "three", Some(next.mtime + 1.0)).unwrap_err();
     assert_eq!(err.code, ErrorCode::Conflict);
   }
 
