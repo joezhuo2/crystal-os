@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.6] - 2026-11-19 - A Codex CLI tab in The Nebula, and a default scheme that reaches The Nebula and Orbit's remove-habit dialog.
+
+### Added
+
+- **Codex CLI in The Nebula** (desktop). A **Codex CLI** tab sits beside **Chat** and **Claude CLI**. Pick a folder and Codex starts there in a real terminal. It keeps its own folder and session, separate from Claude CLI. The `codex` command must be installed.
+
+### Fixed
+
+- **The Nebula in the default scheme.** Borders, icons, the active chat, the model badge and the send button are black and white instead of the Nebula's purple.
+- **Removing a habit in the default scheme.** The Orbit's **Remove** confirmation and its button are black and white instead of navy and orange.
+
 ## [v0.19.5] - 2026-11-19 - Full-screen reading for imported PDFs in The Observatory.
 
 ### Added
