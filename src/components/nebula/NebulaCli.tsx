@@ -6,16 +6,21 @@ import { harnessNative } from "@/lib/harness/native";
 import { TerminalHub, closeTerminal, listTerminals, onTerminalEvent, openTerminal, writeTerminal } from "@/lib/terminalNative";
 import { TerminalPane } from "@/modules/terminal/TerminalPage";
 
-const FOLDER_KEY = "crystal-os-nebula-cli-folder";
+export type CliKind = "claude" | "codex";
+
+const CLIS: Record<CliKind, { label: string; product: string; folderKey: string }> = {
+  claude: { label: "Claude CLI", product: "Claude Code", folderKey: "crystal-os-nebula-cli-folder" },
+  codex: { label: "Codex CLI", product: "Codex", folderKey: "crystal-os-nebula-codex-folder" },
+};
 
 // Outlives the view, so leaving The Nebula and coming back shows the same session.
-let lastSession: number | null = null;
+const lastSessions: Record<CliKind, number | null> = { claude: null, codex: null };
 
 const noop = () => {};
 
-function readFolder(): string | null {
+function readFolder(key: string): string | null {
   try {
-    return localStorage.getItem(FOLDER_KEY);
+    return localStorage.getItem(key);
   } catch {
     return null;
   }
@@ -31,9 +36,10 @@ interface Session {
   exited: boolean;
 }
 
-export default function NebulaCli({ projects }: { projects: { id: string; name: string; path: string }[] }) {
+export default function NebulaCli({ cli, projects }: { cli: CliKind; projects: { id: string; name: string; path: string }[] }) {
+  const { label, product, folderKey } = CLIS[cli];
   const [hub] = useState(() => new TerminalHub());
-  const [folder, setFolder] = useState(readFolder);
+  const [folder, setFolder] = useState(() => readFolder(folderKey));
   const [session, setSession] = useState<Session | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -41,42 +47,43 @@ export default function NebulaCli({ projects }: { projects: { id: string; name: 
     let disposed = false;
     const unlisten = onTerminalEvent((event) => hub.push(event));
     listTerminals().then((sessions) => {
-      const found = sessions.find((s) => s.id === lastSession);
+      const found = sessions.find((s) => s.id === lastSessions[cli]);
       if (!disposed && found) setSession(found);
     }, noop);
     return () => {
       disposed = true;
       unlisten();
     };
-  }, [hub]);
+  }, [hub, cli]);
 
   const start = useCallback(
     async (path: string) => {
       setBusy(true);
       try {
-        if (lastSession !== null) {
-          hub.forget(lastSession);
-          await closeTerminal(lastSession).catch(noop);
-          lastSession = null;
+        const last = lastSessions[cli];
+        if (last !== null) {
+          hub.forget(last);
+          await closeTerminal(last).catch(noop);
+          lastSessions[cli] = null;
         }
         const info = await openTerminal(80, 24, path);
-        lastSession = info.id;
-        await writeTerminal(info.id, "claude\r");
+        lastSessions[cli] = info.id;
+        await writeTerminal(info.id, `${cli}\r`);
         setFolder(path);
         try {
-          localStorage.setItem(FOLDER_KEY, path);
+          localStorage.setItem(folderKey, path);
         } catch {
           // Storage blocked: the folder still applies for this session.
         }
         setSession({ id: info.id, shell: info.shell, exited: info.exited });
       } catch (err) {
         setSession(null);
-        toast.error("Could not start Claude CLI", { description: err instanceof Error ? err.message : String(err) });
+        toast.error(`Could not start ${label}`, { description: err instanceof Error ? err.message : String(err) });
       } finally {
         setBusy(false);
       }
     },
-    [hub],
+    [hub, cli, label, folderKey],
   );
 
   const pick = async () => {
@@ -135,8 +142,8 @@ export default function NebulaCli({ projects }: { projects: { id: string; name: 
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
             <SquareTerminal className="h-8 w-8 text-white/40" />
-            <p className="nebula-title text-xl font-semibold">Claude CLI</p>
-            <p className="max-w-sm text-sm text-white/55">Pick a folder and Claude Code starts there in a real terminal.</p>
+            <p className="nebula-title text-xl font-semibold">{label}</p>
+            <p className="max-w-sm text-sm text-white/55">Pick a folder and {product} starts there in a real terminal.</p>
             {folder && (
               <Button onClick={() => void start(folder)} disabled={busy}>
                 Start in {folderName(folder)}

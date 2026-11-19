@@ -16,11 +16,12 @@ import { candidates } from "@/lib/harness/modelRouter";
 import { harness, selectActiveChat, selectProjectTokens } from "@/lib/harness/store";
 
 const VIEW_KEY = "crystal-os-nebula-view";
-type NebulaView = "chat" | "cli";
+type NebulaView = "chat" | "cli" | "codex";
 
 function readView(): NebulaView {
   try {
-    return localStorage.getItem(VIEW_KEY) === "cli" ? "cli" : "chat";
+    const saved = localStorage.getItem(VIEW_KEY);
+    return saved === "cli" || saved === "codex" ? saved : "chat";
   } catch {
     return "chat";
   }
@@ -84,11 +85,14 @@ export default function NebulaPage() {
           <button type="button" data-active={view === "cli" || undefined} aria-pressed={view === "cli"} onClick={() => pickView("cli")}>
             Claude CLI
           </button>
+          <button type="button" data-active={view === "codex" || undefined} aria-pressed={view === "codex"} onClick={() => pickView("codex")}>
+            Codex CLI
+          </button>
         </GlideEffect>
       </header>
 
-      {view === "cli" ? (
-        <NebulaCli projects={state.projects} />
+      {view !== "chat" ? (
+        <NebulaCli key={view} cli={view === "codex" ? "codex" : "claude"} projects={state.projects} />
       ) : !ready ? (
         <NebulaSetupCard />
       ) : (
