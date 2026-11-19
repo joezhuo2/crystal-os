@@ -5,14 +5,14 @@
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-1830%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.19.4-6366F1)
+![Version](https://img.shields.io/badge/version-0.19.5-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 > A personal productivity dashboard built with React, TypeScript, your Google Calendar, and your Obsidian vault. Your data stays on your device. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
 <p align="center"><img src="docs/images/crystal-os-tour.gif" alt="A tour of Crystal OS: The Pulse, The Engine, The Horizon, The Orbit, The Vault, The Ledger, The Courier, The Atmosphere, The Observatory (courses, topics and a review card), The Archive, The Portal and Settings" width="840"></p>
 
-Current release: **v0.19.4** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.19.5** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 [Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
