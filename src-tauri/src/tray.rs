@@ -141,7 +141,6 @@ fn handle_menu<R: Runtime>(app: &AppHandle<R>, id: &str) {
       let _ = app.emit(PRIVACY_EVENT, ());
     }
     ID_CHECK_UPDATE => {
-      window::show(app);
       let _ = app.emit(CHECK_UPDATE_EVENT, ());
     }
     ID_INSTALL_UPDATE => {
