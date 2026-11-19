@@ -662,7 +662,7 @@ dependencies = [
 
 [[package]]
 name = "crystal-os"
-version = "0.19.4"
+version = "0.19.5"
 dependencies = [
  "base64 0.22.1",
  "log",
