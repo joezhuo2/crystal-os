@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.4] - 2026-11-19 - A switch for job follow-up reminders, and a tray update check that stays in the tray.
+
+### Added
+
+- **Job follow-up reminders switch.** **Settings → Notifications → Job follow-up reminders** turns off the "No reply in 7 days since…" notifications The Courier shows for job applications and interviews. The **Follow up** tag in The Courier stays.
+
+### Fixed
+
+- **Check for updates in the tray** (desktop) no longer opens the Crystal OS window. It only refreshes the **Up to date** / **Install update** row above it.
+
 ## [v0.19.3] - 2026-11-18 - A search bar that reaches every part of the app, Portal links that open in your browser, and updates from the tray.
 
 ### Added
