@@ -35,6 +35,14 @@ export async function apiRequest<T>(
   init?: RequestInit,
   errorPrefix = "API error",
 ): Promise<T> {
+  return (await apiResponse(url, init, errorPrefix)).json() as Promise<T>;
+}
+
+export async function apiResponse(
+  url: string,
+  init?: RequestInit,
+  errorPrefix = "API error",
+): Promise<Response> {
   const sidecar = usesSidecar();
   const headers = new Headers(init?.headers);
   try {
@@ -66,5 +74,5 @@ export async function apiRequest<T>(
     throw new ApiError(message, res.status);
   }
 
-  return res.json() as Promise<T>;
+  return res;
 }

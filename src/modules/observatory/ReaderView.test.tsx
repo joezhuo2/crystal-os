@@ -97,6 +97,14 @@ describe("ReaderView", () => {
     fireEvent.mouseMove(window, { clientX: 90, clientY: 70 });
     fireEvent.mouseUp(window);
     expect(drawSpy(ctx)).toBeGreaterThan(0);
+    expect(screen.queryByRole("group", { name: "Chats" })).toBeNull();
+    fireEvent.mouseDown(page, { button: 0, clientX: 20, clientY: 20 });
+    fireEvent.mouseMove(window, { clientX: 90, clientY: 90 });
+    fireEvent.mouseUp(window);
+    expect(screen.getByRole("button", { name: "Chat 2" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Chat 1" }));
+    expect(screen.getByRole("button", { name: "Chat 1" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Chat 2" })).toHaveAttribute("aria-pressed", "false");
     const ai = screen.getByRole("button", { name: "AI" });
     expect(ai).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(ai);

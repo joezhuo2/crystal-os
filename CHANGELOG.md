@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.10] - 2026-11-21 - The reader's AI writes its answer as it goes, shows its thinking, and keeps a chat per capture.
+
+### Added
+
+- **Answers appear as they are written.** The reader's **AI** panel streams the reply word by word instead of waiting for the whole answer.
+- **See the AI's thinking.** While the AI reasons, a **Thinking…** section shows its steps live. It folds away once the answer starts; click it to open it again. Claude shows a summary of its reasoning; NVIDIA NIM and OmniRoute models show theirs when they send it.
+- **A chat for each capture.** Every box you drag opens a new chat. Earlier chats stay as thumbnails above the panel; click one to switch back. A reply keeps writing while you look at another chat. The **✕** on a capture closes that chat.
+
+### Fixed
+
+- **Answers no longer stop mid-sentence.** Claude's thinking used up the AI panel's small length limit, so replies were cut off. The limit is much higher now, and if a reply still hits it the panel says so.
+
 ## [v0.19.9] - 2026-11-21 - Remove a captured region, trackpad pinch zoom that works, and a capture box you can see on white pages.
 
 ### Added

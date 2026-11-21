@@ -2,7 +2,7 @@ import type { ServerResponse } from "node:http";
 import type { Connect, Plugin } from "vite";
 import type { RequireUser } from "../auth/requireUser";
 import { readJsonBody, sendJson } from "../calendar/plugin";
-import { chat, parseChatInput } from "./chat";
+import { chat, chatStream, parseChatInput } from "./chat";
 import { AiError, type AiConfig } from "./config";
 
 const ROUTE_PREFIX = "/api/ai";
@@ -47,6 +47,29 @@ export function createAiMiddleware(ai: AiConfig, requireUser?: RequireUser): Con
         if (route === "/chat") {
           if (method !== "POST") throw new AiError("Use POST", 405);
           sendJson(res, 200, await chat(ai, parseChatInput(await readJsonBody(req, MAX_CHAT_BYTES))));
+          return;
+        }
+
+        if (route === "/chat/stream") {
+          if (method !== "POST") throw new AiError("Use POST", 405);
+          const input = parseChatInput(await readJsonBody(req, MAX_CHAT_BYTES));
+          const stop = new AbortController();
+          res.on("close", () => stop.abort());
+          const write = (e: unknown) => {
+            if (!res.headersSent) {
+              res.statusCode = 200;
+              res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
+              res.setHeader("Cache-Control", "no-store");
+            }
+            res.write(`${JSON.stringify(e)}\n`);
+          };
+          try {
+            await chatStream(ai, input, write, stop.signal);
+          } catch (err) {
+            if (!res.headersSent) throw err;
+            if (!stop.signal.aborted) write({ type: "error", error: err instanceof Error ? err.message : String(err) });
+          }
+          res.end();
           return;
         }
 
