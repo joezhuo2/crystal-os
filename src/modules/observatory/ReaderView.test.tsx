@@ -71,6 +71,8 @@ describe("ReaderView", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Reset zoom" })).toHaveTextContent("125%"), { timeout: 10000 });
     fireEvent.keyDown(document, { code: "Minus" });
     await waitFor(() => expect(screen.queryByRole("button", { name: "Reset zoom" })).toBeNull(), { timeout: 10000 });
+    fireEvent.wheel(page, { deltaY: -3, ctrlKey: true });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Reset zoom" })).toHaveTextContent("103%"), { timeout: 10000 });
     vi.unstubAllGlobals();
     fireEvent.keyDown(document, { code: "KeyF" });
     expect(container.firstElementChild).toHaveClass("fixed");

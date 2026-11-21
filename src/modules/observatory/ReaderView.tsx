@@ -226,7 +226,7 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
-      zoomBy(Math.exp(-e.deltaY * 0.001), { x: e.clientX, y: e.clientY });
+      zoomBy(Math.exp(-Math.max(-10, Math.min(10, e.deltaY)) * 0.01), { x: e.clientX, y: e.clientY });
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => {
@@ -346,14 +346,14 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
             {!doc && !error && <SkeletonLines count={6} />}
             {doc && Array.from({ length: doc.numPages }, (_, i) => <PageView key={i + 1} doc={doc} n={i + 1} scanned={scanned.has(i + 1)} scale={sharp} ratio={ratio ?? 1.3} onRatio={onRatio} />)}
           </div>
-          {box && <div className="pointer-events-none absolute rounded-sm border border-primary bg-primary/15" style={boxStyle(box)} />}
+          {box && <div className="pointer-events-none absolute rounded-sm border-2 border-sky-500 bg-sky-500/15" style={boxStyle(box)} />}
         </div>
         <aside
           className={`grid ${paneHeight} transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none`}
           style={{ gridTemplateRows: `auto ${aiOpen ? 3 : 0}fr${poolPath ? ` auto ${poolOpen ? 2 : 0}fr` : ""}` }}
         >
           <Fold title="AI" label="AI" open={aiOpen} onToggle={() => setAiOpen((o) => !o)}>
-            <ReaderAi key={capture?.id ?? 0} image={capture?.image ?? null} />
+            <ReaderAi key={capture?.id ?? 0} image={capture?.image ?? null} onClear={() => setCapture(null)} />
           </Fold>
           {poolPath && (
             <Fold title={`Questions${current ? `: ${current.title || `Chapter ${current.number}`}` : ""}`} label="Questions" open={poolOpen} onToggle={() => setPoolOpen((o) => !o)}>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { useObservatoryAi, useObservatorySettings } from "./settings";
 
 const DEFAULT_ASK = "Help me with what I highlighted.";
 
-export function ReaderAi({ image }: { image: AiImage | null }) {
+export function ReaderAi({ image, onClear }: { image: AiImage | null; onClear: () => void }) {
   const ai = useObservatoryAi();
   const { aiCaptureAsk } = useObservatorySettings();
   const [turns, setTurns] = useState<CaptureTurn[]>([]);
@@ -49,8 +49,13 @@ export function ReaderAi({ image }: { image: AiImage | null }) {
   if (!image) return <p className="text-sm text-muted-foreground">Drag a box over the page to ask the AI about that question or topic.</p>;
 
   return (
-    <div className="space-y-3 pr-1">
-      <img src={imageUrl(image)} alt="Captured region" className="max-h-40 rounded-md border border-border/60 bg-white object-contain" />
+    <div className="space-y-3 p-1">
+      <div className="relative w-fit">
+        <img src={imageUrl(image)} alt="Captured region" className="max-h-40 rounded-md border border-border/60 bg-white object-contain" />
+        <Button type="button" variant="secondary" size="icon" className="absolute right-1 top-1 h-6 w-6" aria-label="Remove captured region" onClick={onClear}>
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
       {turns.map((t, i) =>
         t.role === "user" ? (
           <p key={i} className="ml-6 whitespace-pre-wrap rounded-lg bg-primary/10 px-3 py-2 text-sm">{t.text}</p>
