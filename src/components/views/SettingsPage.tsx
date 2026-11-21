@@ -1325,6 +1325,9 @@ export default function SettingsPage() {
             <Row title="Read slides and unclear pages with AI" description="Send slide decks and pages the local reader cannot make out to the AI. Needs a provider. Default off.">
               <ObservatoryFlagSwitch flag="aiExtract" label="Read slides and unclear pages with AI" needsAi />
             </Row>
+            <Row title="Ask the AI as soon as I box a region" description="In the reader, dragging a box over a page sends it to the AI at once. While off, the AI panel waits for your question. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="aiCaptureAsk" label="Ask the AI as soon as I box a region" needsAi />
+            </Row>
             <Row title="Deep Sky: suggest from my projects" description="Suggest things to learn from the projects in the folders below. Needs a provider. Default off.">
               <ObservatoryFlagSwitch flag="deepSkyProjects" label="Deep Sky: suggest from my projects" needsAi />
             </Row>

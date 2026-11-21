@@ -57,7 +57,7 @@ describe("observatory settings", () => {
       folder: "Study", retention: 0.8, newPerDay: 10, dailyGoal: 5, keywordSort: true,
       focusOnTopic: true, focusOnResource: true, focusOnAnswer: true, focusAsk: false, focusAutoStop: true, idleMinutes: 1,
       reminder: false, reminderTime: "19:00",
-      aiProvider: "none", aiModel: "", aiSort: false, aiThreshold: 0.75, aiDraft: false, aiExtract: false,
+      aiProvider: "none", aiModel: "", aiSort: false, aiThreshold: 0.75, aiDraft: false, aiExtract: false, aiCaptureAsk: false,
       deepSkyProjects: false, deepSkyFolders: [], deepSkyRandom: false, deepSkyFillHome: false,
     });
   });

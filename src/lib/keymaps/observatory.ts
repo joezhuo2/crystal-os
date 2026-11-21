@@ -10,6 +10,8 @@ export const OBSERVATORY_KEYS: KeymapAction[] = [
   { id: "observatory.deleteCourse", category: "observatory", title: "Delete course", defaultKey: "Delete" },
   { id: "observatory.processAll", category: "observatory", title: "Process or reprocess all PDFs", defaultKey: "KeyP" },
   { id: "observatory.fullScreen", category: "observatory", title: "Full screen or exit full screen in the reader", defaultKey: "KeyF" },
+  { id: "observatory.zoomIn", category: "observatory", title: "Zoom in in the reader", defaultKey: "Equal" },
+  { id: "observatory.zoomOut", category: "observatory", title: "Zoom out in the reader", defaultKey: "Minus" },
   { id: "observatory.reveal", category: "observatory", title: "Reveal the answer or next step, or continue", defaultKey: "Space" },
   { id: "observatory.grade1", category: "observatory", title: "Grade Again", defaultKey: "Digit1" },
   { id: "observatory.grade2", category: "observatory", title: "Grade Hard", defaultKey: "Digit2" },

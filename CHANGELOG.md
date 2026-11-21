@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.8] - 2026-11-21 - Box a region of a PDF to ask the AI about it, and a smooth zoom that stays where you are.
+
+### Added
+
+- **Ask the AI about a region of the page.** In the Observatory reader, left-click and drag a box over a page. The box is captured and shown in a new **AI** panel beside the pages, where you ask about that question or topic and follow up. It uses the Observatory's AI provider and model.
+- **Ask as soon as you box a region.** **Settings → The Observatory → Ask the AI as soon as I box a region** sends the capture at once. While off (the default), the panel waits for your question.
+- **Zoom buttons and keys.** **Zoom out** and **Zoom in** buttons sit beside **Full screen**, and **−** and **=** do the same. Both keys can be rebound in **Settings → Keyboard shortcuts**. Ctrl + scroll and pinch still zoom.
+
+### Changed
+
+- **AI and Questions panels share the side of the reader.** The AI panel sits on top and **Questions** below it, smaller. Click either heading to collapse or expand it; the panels slide open and closed.
+- **Zoom is smooth.** The pages ease to the new size instead of jumping in 10% steps, and a pinch zooms continuously.
+
+### Fixed
+
+- **Zoom no longer moves you to another part of a long PDF.** The point under the cursor (or the middle of the view, for the buttons and keys) stays in place.
+- **Zoom lag.** Crossing 150% redrew every page you had scrolled past. Only the pages near the view are redrawn now, once the zoom settles.
+
 ## [v0.19.7] - 2026-11-19 - PDF zoom and more shortcuts in The Observatory, and saves that no longer fail with "changed on disk".
 
 ### Added
