@@ -9,7 +9,7 @@ import { ThemedSelect } from "@/components/ui/field-controls";
 import { useShortcut } from "@/hooks/useShortcut";
 import { fetchRawNote } from "@/hooks/useVault";
 import { parseFrontmatter, readVaultBinary } from "@/lib/vaultNative";
-import { canvasImage, type AiImage } from "./aiImages";
+import { canvasImage, imageUrl, type AiImage } from "./aiImages";
 import type { Topic } from "./model";
 import { FindQuestionsButton } from "./FindQuestions";
 import { IconAction } from "./IconAction";
@@ -249,7 +249,14 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
     return () => window.clearTimeout(t);
   }, [zoom]);
 
-  const [capture, setCapture] = useState<{ id: number; image: AiImage } | null>(null);
+  const [chats, setChats] = useState<{ id: number; image: AiImage }[]>([]);
+  const [activeChat, setActiveChat] = useState(0);
+  const nextChat = useRef(1);
+  const closeChat = (id: number) => {
+    const rest = chats.filter((c) => c.id !== id);
+    setChats(rest);
+    if (id === activeChat) setActiveChat(rest[rest.length - 1]?.id ?? 0);
+  };
   const [box, setBox] = useState<Box | null>(null);
   const [aiOpen, setAiOpen] = useState(true);
   const [poolOpen, setPoolOpen] = useState(true);
@@ -277,7 +284,9 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
       if (!drawn || Math.abs(drawn.x1 - drawn.x0) < 8 || Math.abs(drawn.y1 - drawn.y0) < 8) return;
       const image = captureBox(el, drawn, resource.name);
       if (!image) return;
-      setCapture((c) => ({ id: (c?.id ?? 0) + 1, image }));
+      const id = nextChat.current++;
+      setChats((c) => [...c, { id, image }]);
+      setActiveChat(id);
       setAiOpen(true);
     };
     window.addEventListener("mousemove", move);
@@ -353,7 +362,28 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
           style={{ gridTemplateRows: `auto ${aiOpen ? 3 : 0}fr${poolPath ? ` auto ${poolOpen ? 2 : 0}fr` : ""}` }}
         >
           <Fold title="AI" label="AI" open={aiOpen} onToggle={() => setAiOpen((o) => !o)}>
-            <ReaderAi key={capture?.id ?? 0} image={capture?.image ?? null} onClear={() => setCapture(null)} />
+            {chats.length > 1 && (
+              <div role="group" aria-label="Chats" className="sticky top-0 z-10 flex gap-1.5 overflow-x-auto bg-background p-1">
+                {chats.map((c, i) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    aria-label={`Chat ${i + 1}`}
+                    aria-pressed={c.id === activeChat}
+                    onClick={() => setActiveChat(c.id)}
+                    className={`h-10 w-14 shrink-0 overflow-hidden rounded border bg-white transition-opacity ${c.id === activeChat ? "border-sky-500 ring-1 ring-sky-500" : "border-border/60 opacity-60 hover:opacity-100"}`}
+                  >
+                    <img src={imageUrl(c.image)} alt="" className="h-full w-full object-cover object-left-top" />
+                  </button>
+                ))}
+              </div>
+            )}
+            {chats.length === 0 && <ReaderAi image={null} onClear={() => {}} />}
+            {chats.map((c) => (
+              <div key={c.id} hidden={c.id !== activeChat}>
+                <ReaderAi image={c.image} onClear={() => closeChat(c.id)} />
+              </div>
+            ))}
           </Fold>
           {poolPath && (
             <Fold title={`Questions${current ? `: ${current.title || `Chapter ${current.number}`}` : ""}`} label="Questions" open={poolOpen} onToggle={() => setPoolOpen((o) => !o)}>

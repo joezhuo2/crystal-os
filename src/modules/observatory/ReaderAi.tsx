@@ -1,40 +1,86 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { imageUrl, type AiImage } from "./aiImages";
-import { askCapture, type CaptureTurn } from "./aiStudy";
+import { streamCapture, type CaptureTurn } from "./aiStudy";
 import { errorText } from "./errorText";
 import { PROSE } from "./QuestionEditor";
 import { useObservatoryAi, useObservatorySettings } from "./settings";
 
 const DEFAULT_ASK = "Help me with what I highlighted.";
 
+function Reply({ turn, live }: { turn: CaptureTurn; live: boolean }) {
+  const thinkingNow = live && !turn.text;
+  return (
+    <div className="space-y-2">
+      {turn.thinking ? (
+        <details open={thinkingNow} className="rounded-md border border-border/60 px-3 py-2 text-xs text-muted-foreground">
+          <summary className={`cursor-pointer select-none ${thinkingNow ? "motion-safe:animate-pulse" : ""}`}>{thinkingNow ? "Thinking…" : "Thinking"}</summary>
+          <p className="mt-2 whitespace-pre-wrap">{turn.thinking}</p>
+        </details>
+      ) : (
+        thinkingNow && <p className="text-xs text-muted-foreground motion-safe:animate-pulse" role="status">Thinking…</p>
+      )}
+      {turn.text && (
+        <div className={PROSE}>
+          <Markdown>{turn.text}</Markdown>
+          {live && <span aria-hidden="true" className="inline-block h-4 w-1.5 rounded-sm bg-foreground/70 motion-safe:animate-pulse" />}
+        </div>
+      )}
+      {turn.truncated && <p className="text-xs text-amber-300">The reply hit the length limit and was cut off.</p>}
+    </div>
+  );
+}
+
 export function ReaderAi({ image, onClear }: { image: AiImage | null; onClear: () => void }) {
   const ai = useObservatoryAi();
   const { aiCaptureAsk } = useObservatorySettings();
   const [turns, setTurns] = useState<CaptureTurn[]>([]);
+  const [live, setLive] = useState<CaptureTurn | null>(null);
   const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
   const started = useRef(false);
+  const stop = useRef<AbortController | null>(null);
+  const end = useRef<HTMLDivElement>(null);
+
+  useEffect(() => () => stop.current?.abort(), []);
+
+  useLayoutEffect(() => {
+    const box = end.current?.offsetParent ? end.current.closest("section") : null;
+    if (live && box && box.scrollHeight - box.scrollTop - box.clientHeight < 160) box.scrollTop = box.scrollHeight;
+  }, [live]);
 
   const send = async (text: string) => {
-    if (!image || busy) return;
+    if (!image || live) return;
     const next: CaptureTurn[] = [...turns, { role: "user", text }];
+    const reply: CaptureTurn = { role: "assistant", text: "" };
+    const ctl = new AbortController();
+    stop.current = ctl;
     setTurns(next);
     setDraft("");
-    setBusy(true);
+    setLive(reply);
     try {
-      const reply = await askCapture(image, next);
-      setTurns([...next, { role: "assistant", text: reply }]);
+      await streamCapture(
+        image,
+        next,
+        (e) => {
+          if (e.type === "done") reply.truncated = e.truncated;
+          else reply[e.type] = (reply[e.type] ?? "") + e.text;
+          setLive({ ...reply });
+        },
+        ctl.signal,
+      );
+      if (!reply.text.trim()) throw new Error("The AI reply was empty");
+      setTurns([...next, { ...reply, text: reply.text.trim() }]);
     } catch (err) {
+      if (ctl.signal.aborted) return;
       setTurns(turns);
       setDraft(text);
       toast.error("Could not ask the AI", { description: errorText(err) });
     } finally {
-      setBusy(false);
+      if (!ctl.signal.aborted) setLive(null);
     }
   };
 
@@ -60,12 +106,10 @@ export function ReaderAi({ image, onClear }: { image: AiImage | null; onClear: (
         t.role === "user" ? (
           <p key={i} className="ml-6 whitespace-pre-wrap rounded-lg bg-primary/10 px-3 py-2 text-sm">{t.text}</p>
         ) : (
-          <div key={i} className={PROSE}>
-            <Markdown>{t.text}</Markdown>
-          </div>
+          <Reply key={i} turn={t} live={false} />
         ),
       )}
-      {busy && <p className="text-xs text-muted-foreground motion-safe:animate-pulse" role="status">Thinking…</p>}
+      {live && <Reply turn={live} live />}
       <form
         className="flex items-end gap-2"
         onSubmit={(e) => {
@@ -87,10 +131,11 @@ export function ReaderAi({ image, onClear }: { image: AiImage | null; onClear: (
             }
           }}
         />
-        <Button type="submit" size="icon" className="h-8 w-8 shrink-0" disabled={busy} aria-label="Ask the AI">
+        <Button type="submit" size="icon" className="h-8 w-8 shrink-0" disabled={!!live} aria-label="Ask the AI">
           <Send className="h-4 w-4" />
         </Button>
       </form>
+      <div ref={end} />
     </div>
   );
 }
