@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.9] - 2026-11-21 - Remove a captured region, trackpad pinch zoom that works, and a capture box you can see on white pages.
+
+### Added
+
+- **Remove a captured region.** The capture in the reader's **AI** panel has an **✕** button. Click it to drop an accidental capture and its conversation.
+
+### Fixed
+
+- **Pinch to zoom on a trackpad.** A pinch zoomed about a tenth as much as it should, so it seemed to do nothing. It now follows your fingers; a Ctrl + scroll notch still zooms about 10%.
+- **The box you drag is visible on white pages.** It was drawn in the theme's accent colour, which is white in dark themes. It is now a blue outline.
+- **The AI panel's question box is no longer cut off.** Its focus outline was clipped on the left and bottom.
+
 ## [v0.19.8] - 2026-11-21 - Box a region of a PDF to ask the AI about it, and a smooth zoom that stays where you are.
 
 ### Added
