@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/apiRequest";
+import { apiRequest, apiResponse } from "@/lib/apiRequest";
 
 export type AiProvider = "claude" | "nim" | "omniroute";
 export type AiChoice = AiProvider | "none";
@@ -72,6 +72,33 @@ export function useSaveAiConfig() {
 export async function askAi(input: AskAiInput): Promise<string> {
   const { text } = await post<{ text: string }>("/api/ai/chat", input);
   return text;
+}
+
+export type AiStreamEvent = { type: "thinking" | "text"; text: string } | { type: "done"; truncated: boolean };
+
+export async function streamAi(input: AskAiInput, onEvent: (e: AiStreamEvent) => void, signal?: AbortSignal): Promise<void> {
+  const res = await apiResponse(
+    "/api/ai/chat/stream",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), signal },
+    "AI API error",
+  );
+  if (!res.body) throw new Error("The AI reply was empty");
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const lines = buffer.split("\n");
+    buffer = done ? "" : lines.pop()!;
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const e = JSON.parse(line) as AiStreamEvent | { type: "error"; error: string };
+      if (e.type === "error") throw new Error(e.error);
+      onEvent(e);
+    }
+    if (done) return;
+  }
 }
 
 function closingIndex(text: string, start: number): number {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chat, parseChatInput } from "./chat";
+import { chat, chatStream, parseChatInput, type StreamEvent } from "./chat";
 import { createAiConfig } from "./config";
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -25,7 +25,7 @@ describe("chat", () => {
     expect(init.headers).toMatchObject({ "x-api-key": "sk-ant-master-key", "anthropic-version": "2023-06-01" });
     expect(JSON.parse(init.body)).toEqual({
       model: "claude-sonnet-5-5",
-      max_tokens: 8192,
+      max_tokens: 32000,
       system: "Be brief",
       messages: [
         {
@@ -84,6 +84,63 @@ describe("chat", () => {
       status: 502,
       message: "Claude request failed (401): bad key",
     });
+  });
+});
+
+const sse = (...chunks: string[]) =>
+  new Response(new ReadableStream({ start: (c) => (chunks.forEach((s) => c.enqueue(new TextEncoder().encode(s))), c.close()) }));
+const collect = async (run: (emit: (e: StreamEvent) => void) => Promise<void>) => {
+  const events: StreamEvent[] = [];
+  await run((e) => events.push(e));
+  return events;
+};
+
+describe("chatStream", () => {
+  it("streams Claude thinking and text with adaptive thinking on, and flags a max_tokens stop", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      sse(
+        'event: content_block_delta\ndata: {"type":"content_block_delta","delta":{"type":"thinking_delta","thinking":"Hmm"}}\n\n',
+        'event: content_block_delta\ndata: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hi"}}\n\nevent: content_block_delta\ndata: {"type":"content_bl',
+        'ock_delta","delta":{"type":"text_delta","text":" there"}}\n\nevent: message_delta\ndata: {"type":"message_delta","delta":{"stop_reason":"max_tokens"}}\n\n',
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const ai = createAiConfig({ ANTHROPIC_API_KEY: "sk-ant-master-key" });
+    const events = await collect((emit) => chatStream(ai, { provider: "claude", messages: [{ role: "user", content: "hi" }] }, emit));
+    expect(events).toEqual([
+      { type: "thinking", text: "Hmm" },
+      { type: "text", text: "Hi" },
+      { type: "text", text: " there" },
+      { type: "done", truncated: true },
+    ]);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ stream: true, thinking: { type: "adaptive", display: "summarized" } });
+  });
+
+  it("streams OpenAI-compatible reasoning and splits <think> tags out of the text", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        sse(
+          'data: {"choices":[{"delta":{"reasoning_content":"plan"}}]}\n',
+          'data: {"choices":[{"delta":{"content":"<think>more</think>Answer"}}]}\n',
+          'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\ndata: [DONE]\n',
+        ),
+      ),
+    );
+    const events = await collect((emit) => chatStream(createAiConfig({ NVIDIA_API_KEY: "k" }), { provider: "nim", messages: [{ role: "user", content: "hi" }] }, emit));
+    expect(events).toEqual([
+      { type: "thinking", text: "plan" },
+      { type: "thinking", text: "more" },
+      { type: "text", text: "Answer" },
+      { type: "done", truncated: false },
+    ]);
+  });
+
+  it("throws on an error event in the stream", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sse('event: error\ndata: {"type":"error","error":{"message":"Overloaded"}}\n\n')));
+    await expect(collect((emit) => chatStream(createAiConfig({ ANTHROPIC_API_KEY: "k" }), { provider: "claude", messages: [{ role: "user", content: "hi" }] }, emit))).rejects.toThrow(
+      "Claude stopped: Overloaded",
+    );
   });
 });
 

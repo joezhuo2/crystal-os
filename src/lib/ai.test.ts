@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { askAi, parseJsonReply } from "./ai";
+import { askAi, parseJsonReply, streamAi } from "./ai";
 
 vi.mock("./apiToken", () => ({ apiToken: async () => "tok", forgetApiToken: () => undefined }));
 
@@ -35,5 +35,21 @@ describe("askAi", () => {
   it("surfaces the server's error message", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: "No Claude API key is set." }), { status: 400 })));
     await expect(askAi({ provider: "claude", messages: [{ role: "user", content: "hi" }] })).rejects.toThrow("No Claude API key is set.");
+  });
+});
+
+describe("streamAi", () => {
+  it("reads NDJSON events split across chunks and throws on an error line", async () => {
+    const body = (...chunks: string[]) =>
+      new Response(new ReadableStream({ start: (c) => (chunks.forEach((s) => c.enqueue(new TextEncoder().encode(s))), c.close()) }));
+    const fetchMock = vi.fn().mockResolvedValue(body('{"type":"thinking","text":"a"}\n{"type":"te', 'xt","text":"b"}\n{"type":"done","truncated":false}\n'));
+    vi.stubGlobal("fetch", fetchMock);
+    const events: unknown[] = [];
+    await streamAi({ provider: "claude", messages: [{ role: "user", content: "hi" }] }, (e) => events.push(e));
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/api\/ai\/chat\/stream$/);
+    expect(events).toEqual([{ type: "thinking", text: "a" }, { type: "text", text: "b" }, { type: "done", truncated: false }]);
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(body('{"type":"text","text":"x"}\n{"type":"error","error":"Overloaded"}\n')));
+    await expect(streamAi({ provider: "claude", messages: [{ role: "user", content: "hi" }] }, () => {})).rejects.toThrow("Overloaded");
   });
 });
