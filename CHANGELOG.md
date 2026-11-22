@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.11] - 2026-11-22 - The Today card becomes a journal, and Google Calendar and the Courier stop signing you out.
+
+### Added
+
+- **Habit notes.** The Orbit's Today card has a small note box for each of today's habits, saved to the daily note as `**Habit note — <habit>:**` lines.
+- **Trading notes.** With The Ledger installed, the Today card has a free-form **Trading notes** box, saved at the end of the Today block in the daily note.
+- **Your own moods and tags.** The gear on the Today card opens **Moods and tags**: rename the five moods (lowest to highest) and add or remove the tags offered. Eight more default tags: rested, overwhelmed, focused, motivated, grateful, hopeful, irritable and lonely.
+- **Nothing you type is lost.** Unsaved Today entries are kept on this device and come back after closing the app or restarting.
+- **Auto-save daily note.** **Settings → The Orbit → Auto-save daily note** writes a day's unsaved Today entry to its note at midnight, or the next time the app opens.
+- **Reconnect an email account.** The Courier has a **Reconnect** button for each account, and beside any account it could not read.
+
+### Fixed
+
+- **Disconnecting one Google feature no longer signs out the other.** The Horizon and the Courier share one Google sign-in, and disconnecting either revoked Google's access for both. Disconnect now only forgets the account on this device; remove the app's access at myaccount.google.com if you want it gone entirely.
+- **The Horizon no longer looks signed out after a network hiccup.** Being offline after sleep or a Google outage showed the connect screen. Only a revoked or expired sign-in does now.
+
 ## [v0.19.10] - 2026-11-21 - The reader's AI writes its answer as it goes, shows its thinking, and keeps a chat per capture.
 
 ### Added

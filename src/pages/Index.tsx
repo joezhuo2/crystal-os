@@ -31,6 +31,7 @@ import { useVaultLiveUpdates } from "@/hooks/useVault";
 import { useAppActivity } from "@/lib/appActivity";
 import { useOrbitStore } from "@/lib/orbitStore";
 import OrbitAutoExport from "@/modules/orbit/OrbitAutoExport";
+import OrbitDailyAutoSave from "@/modules/orbit/OrbitDailyAutoSave";
 import VaultAutomation from "@/modules/financials/VaultAutomation";
 import OrbitReadyNotifier from "@/modules/orbit/OrbitReadyNotifier";
 import NotificationScheduler from "@/components/NotificationScheduler";
@@ -155,12 +156,13 @@ const GlobalOverlays = memo(function GlobalOverlays() {
   });
   const { uninstalled } = useInstalledModules();
   const has = (id: TabId) => !uninstalled.includes(id);
-  const { autoExport } = useOrbitStore();
+  const { autoExport, autoSaveDaily } = useOrbitStore();
   return (
     <>
       {has("archive") && <VaultLiveUpdates />}
       <QuickCommands />
       {autoExport && has("orbit") && <OrbitAutoExport />}
+      {autoSaveDaily && has("orbit") && <OrbitDailyAutoSave />}
       {has("financials") && <VaultAutomation />}
       <NotificationScheduler />
       <Suspense fallback={null}>

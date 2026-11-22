@@ -5,12 +5,14 @@ import { useRawNotes, useVaultNotes } from "@/hooks/useVault";
 import { dailyNotePath, parseToday, pickDailyFolder, type TodayEntry } from "@/lib/dailyNote";
 import { correlate, moodScore, pairDays, type Correlation } from "@/lib/moodCorrelation";
 import { type Review } from "@/lib/orbitReview";
+import { useOrbitStore } from "@/lib/orbitStore";
 
 const dayLabel = (day: string) =>
   new Date(`${day}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
 /** The period's days, Monday first, each lit by its mood (1 to 5). */
 function MoodGrid({ days, entries, wide }: { days: string[]; entries: Map<string, TodayEntry>; wide: boolean }) {
+  const { moodLabels } = useOrbitStore();
   if (!days.length) return null;
   const pad = (new Date(`${days[0]}T12:00:00`).getDay() + 6) % 7;
   return (
@@ -23,7 +25,7 @@ function MoodGrid({ days, entries, wide }: { days: string[]; entries: Map<string
           const entry = entries.get(day);
           const score = entry?.mood ? moodScore(entry.mood) : 0;
           const tags = entry?.moodTags?.join(", ");
-          const label = `${dayLabel(day)}${entry?.mood ? ` · ${entry.mood}` : ""}`;
+          const label = `${dayLabel(day)}${entry?.mood ? ` · ${moodLabels[entry.mood]}` : ""}`;
           return (
             <GlassTip key={day} label={label} hint={entry?.mood ? tags : "No mood logged"} detail={entry?.moodNote} tone="orbit">
               <li

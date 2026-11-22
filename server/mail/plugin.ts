@@ -8,7 +8,7 @@ import { cleanApiKey, cleanModel, createAiConfig, saveEnv, type AiChoice, type A
 import { createMailAi } from "./ai";
 import { createMailCache } from "./cache";
 import { createDigest } from "./digest";
-import { googleAuthUrl, googleClient, googleExchange, listGmail, revokeGoogle } from "./google";
+import { googleAuthUrl, googleClient, googleExchange, listGmail } from "./google";
 import { createPkce, listOutlook, microsoftAuthUrl, microsoftExchange } from "./microsoft";
 import { createMailStore } from "./store";
 import type { MailConfig, MailProvider, MailStatus } from "./types";
@@ -181,9 +181,7 @@ export function createMailMiddleware(
           const id = decodeURIComponent(route.slice(ACCOUNTS_ROUTE.length));
           const account = (await store.list()).find((a) => a.id === id);
           if (!account) throw new MailError("Unknown account", 404);
-          if (account.provider === "google" && configured.google) {
-            await revokeGoogle(config, account.refreshToken);
-          }
+          // Not revoked: Google revokes the whole grant for this client, which would sign the calendar out too.
           await store.remove(id);
           digest.clear();
           sendJson(res, 200, { ok: true });

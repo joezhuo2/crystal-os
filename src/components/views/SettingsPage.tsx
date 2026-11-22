@@ -1279,6 +1279,12 @@ export default function SettingsPage() {
             >
               <Switch checked={orbit.autoExport} onCheckedChange={orbitStore.setAutoExport} />
             </Row>
+            <Row
+              title="Auto-save daily note"
+              description="Anything left unsaved in the Today card is written to that day's note at midnight, or the next time the app opens. Unsaved entries are kept on this device either way."
+            >
+              <Switch checked={orbit.autoSaveDaily} onCheckedChange={orbitStore.setAutoSaveDaily} />
+            </Row>
             <Row title="Second time zone" description="Shows the time in another city next to the date on the Home clock.">
               <ThemedCombobox
                 aria-label="Second time zone"

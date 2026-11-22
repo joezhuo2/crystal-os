@@ -94,3 +94,21 @@ describe("mood tags and note", () => {
     expect(parsed.mood).toBeNull();
   });
 });
+
+describe("journal notes", () => {
+  it("round-trips habit notes and multi-line trading notes", () => {
+    const full: TodayEntry = {
+      ...entry,
+      reflection: "Fine",
+      habitNotes: { Run: "5k, felt slow", Read: "" },
+      tradingNotes: "Long ES at open\n**Focus:** not a field\n\nStopped out",
+    };
+    const out = mergeToday(null, full);
+    expect(out).toContain("**Habit note — Run:** 5k, felt slow");
+    expect(out).not.toContain("Habit note — Read");
+    const parsed = parseToday(out);
+    expect(parsed.focus).toBe("Ship the Orbit");
+    expect(parsed.habitNotes).toEqual({ Run: "5k, felt slow" });
+    expect(parsed.tradingNotes).toBe("Long ES at open\n**Focus:** not a field\n\nStopped out");
+  });
+});
