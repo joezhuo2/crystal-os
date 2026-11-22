@@ -95,14 +95,6 @@ export async function googleExchange(
   return { email: profile.emailAddress, refreshToken: tokens.refresh_token };
 }
 
-export async function revokeGoogle(config: MailConfig, refreshToken: string): Promise<void> {
-  try {
-    await googleClient(config).revokeToken(refreshToken);
-  } catch {
-    return;
-  }
-}
-
 export function parseFrom(header: string): { from: string; fromAddress: string } {
   const match = /^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/.exec(header);
   if (match) return { from: match[1].trim() || match[2].trim(), fromAddress: match[2].trim() };

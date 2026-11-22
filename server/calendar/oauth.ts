@@ -20,6 +20,8 @@ export const SCOPES = [
 const DEFAULT_REDIRECT_URI = "http://localhost:8080/api/calendar/auth/callback";
 const STATE_TTL_MS = 10 * 60 * 1000;
 
+const isRevoked = (err: unknown) => /invalid_grant/.test(err instanceof Error ? err.message : String(err));
+
 export interface CalendarConfig {
   clientId?: string;
   clientSecret?: string;
@@ -192,14 +194,8 @@ export function createCalendarAuth(config: CalendarConfig) {
   async function disconnect(account?: string): Promise<void> {
     const leaving = account ? tokens.filter((t) => accounts.get(t) === account) : tokens;
     tokens = tokens.filter((t) => !leaving.includes(t));
-    for (const token of leaving) {
-      forget(token);
-      try {
-        await newClient().revokeToken(token);
-      } catch {
-        // Already revoked or offline — clearing local state is what matters.
-      }
-    }
+    // Not revoked: Google revokes the whole grant for this client, which would sign Courier out too.
+    for (const token of leaving) forget(token);
     await persistTokens();
   }
 
@@ -219,8 +215,9 @@ export function createCalendarAuth(config: CalendarConfig) {
       return { configured: true, connected: true, account: list[0], accounts: list };
     } catch (err) {
       // A revoked or expired grant looks like a live token until it is used.
+      // Anything else (offline after sleep, a Google outage) is not a sign-out.
       const message = err instanceof Error ? err.message : String(err);
-      return { configured: true, connected: false, error: message };
+      return { configured: true, connected: !isRevoked(err), error: message };
     }
   }
 
