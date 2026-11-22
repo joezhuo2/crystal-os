@@ -66,14 +66,24 @@ function openMailLink(e: React.MouseEvent, url: string) {
   openExternal(url).catch((err) => toast.error("Could not open the email", { description: errorText(err) }));
 }
 
+async function startConnect(provider: MailProvider) {
+  const { url } = await startMailAuth(provider);
+  await openExternal(url);
+}
+
+function reconnect(account: MailAccount) {
+  startConnect(account.provider)
+    .then(() => toast("Finish signing in in your browser", { description: `Sign in as ${account.email}.` }))
+    .catch((err) => toast.error("Could not start sign-in", { description: errorText(err) }));
+}
+
 function ConnectButtons({ status }: { status: MailStatus }) {
   const [error, setError] = useState<string | null>(null);
 
   async function connect(provider: MailProvider) {
     setError(null);
     try {
-      const { url } = await startMailAuth(provider);
-      await openExternal(url);
+      await startConnect(provider);
     } catch (err) {
       setError(errorText(err));
     }
@@ -126,6 +136,9 @@ function Accounts({ status }: { status: MailStatus }) {
           <li key={a.id} className="flex items-center gap-3 text-sm">
             <span className="text-xs text-muted-foreground w-14 shrink-0">{PROVIDER_LABEL[a.provider]}</span>
             <span className="truncate flex-1 min-w-0">{a.email}</span>
+            <Button size="sm" variant="ghost" onClick={() => reconnect(a)}>
+              <RefreshCw /> Reconnect
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => setPending(a)} disabled={disconnect.isPending}>
               Disconnect
             </Button>
@@ -328,7 +341,12 @@ function Dashboard({ status }: { status: MailStatus }) {
           {data.errors.map((e) => (
             <li key={e.accountId} className="flex items-center gap-2">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              Could not read {e.account}: {e.message}
+              <span className="flex-1 min-w-0">Could not read {e.account}: {e.message}</span>
+              {status.accounts.some((a) => a.id === e.accountId) && (
+                <Button size="sm" variant="ghost" className="h-6" onClick={() => reconnect(status.accounts.find((a) => a.id === e.accountId) as MailAccount)}>
+                  <RefreshCw /> Reconnect
+                </Button>
+              )}
             </li>
           ))}
         </ul>
