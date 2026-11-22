@@ -7,12 +7,16 @@
 
 import { useSyncExternalStore } from "react";
 import { REVIEW_KINDS, type ReviewKind } from "@/lib/orbitReview";
+import { DEFAULT_MOOD_LABELS, MOODS, MOOD_TAGS, type Mood } from "@/lib/dailyNote";
 
 const AUTO_EXPORT_KEY = "crystal-os-orbit-auto-export";
 const SEEN_KEY = "crystal-os-orbit-seen";
 const EXPORTED_KEY = "crystal-os-orbit-auto-exported";
 const NOTIFIED_KEY = "crystal-os-orbit-notified";
 const VIEW_KEY = "crystal-os-orbit-view";
+const MOOD_LABELS_KEY = "crystal-os-orbit-mood-labels";
+const MOOD_TAGS_KEY = "crystal-os-orbit-mood-tags";
+const AUTO_SAVE_KEY = "crystal-os-orbit-auto-save-daily";
 
 type ByKind = Partial<Record<ReviewKind, string>>;
 
@@ -33,6 +37,10 @@ export interface OrbitState {
   /** The Weekly/Monthly/Yearly switch, remembered. */
   view: ReviewKind;
   landing: OrbitLanding;
+  moodLabels: Record<Mood, string>;
+  moodTags: string[];
+  /** Saves an unsaved Today entry to its daily note once its day is over. */
+  autoSaveDaily: boolean;
 }
 
 function read(key: string): string | null {
@@ -62,6 +70,26 @@ function readByKind(key: string): ByKind {
   }
 }
 
+function readMoodLabels(): Record<Mood, string> {
+  try {
+    const parsed = JSON.parse(read(MOOD_LABELS_KEY) ?? "{}");
+    const out = { ...DEFAULT_MOOD_LABELS };
+    for (const mood of MOODS) if (typeof parsed?.[mood] === "string" && parsed[mood].trim()) out[mood] = parsed[mood];
+    return out;
+  } catch {
+    return { ...DEFAULT_MOOD_LABELS };
+  }
+}
+
+function readMoodTags(): string[] {
+  try {
+    const parsed = JSON.parse(read(MOOD_TAGS_KEY) ?? "null");
+    return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === "string") : [...MOOD_TAGS];
+  } catch {
+    return [...MOOD_TAGS];
+  }
+}
+
 function load(): OrbitState {
   return {
     autoExport: read(AUTO_EXPORT_KEY) === "1",
@@ -70,6 +98,9 @@ function load(): OrbitState {
     notified: readByKind(NOTIFIED_KEY),
     view: REVIEW_KINDS.find((kind) => kind === read(VIEW_KEY)) ?? "weekly",
     landing: null,
+    moodLabels: readMoodLabels(),
+    moodTags: readMoodTags(),
+    autoSaveDaily: read(AUTO_SAVE_KEY) === "1",
   };
 }
 
@@ -121,6 +152,21 @@ export const orbitStore = {
   setView(view: ReviewKind) {
     write(VIEW_KEY, view);
     set({ ...state, view });
+  },
+
+  setMoodLabels(moodLabels: Record<Mood, string>) {
+    write(MOOD_LABELS_KEY, JSON.stringify(moodLabels));
+    set({ ...state, moodLabels });
+  },
+
+  setMoodTags(moodTags: string[]) {
+    write(MOOD_TAGS_KEY, JSON.stringify(moodTags));
+    set({ ...state, moodTags });
+  },
+
+  setAutoSaveDaily(on: boolean) {
+    write(AUTO_SAVE_KEY, on ? "1" : "0");
+    set({ ...state, autoSaveDaily: on });
   },
 
   land(landing: OrbitLanding) {

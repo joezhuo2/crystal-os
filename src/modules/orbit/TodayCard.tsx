@@ -1,25 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, PenLine } from "lucide-react";
+import { Loader2, PenLine, Settings2 } from "lucide-react";
 import { GlassTip } from "@/components/ui/glass-tooltip";
 import { HabitsToday } from "@/modules/orbit/HabitsToday";
+import { MoodSettings } from "@/modules/orbit/MoodSettings";
+import { useHabitsData } from "@/hooks/useHabits";
 import { useNow } from "@/hooks/useOrbitReview";
 import { useCreateNote, useRawNote, useSaveNote, useVaultNotes, vaultErrorCode } from "@/hooks/useVault";
-import { EMPTY_ENTRY, MOODS, MOOD_TAGS, dailyNotePath, mergeToday, parseToday, pickDailyFolder, type TodayEntry } from "@/lib/dailyNote";
+import { EMPTY_ENTRY, MOODS, dailyNotePath, mergeToday, parseToday, pickDailyFolder, type TodayEntry } from "@/lib/dailyNote";
+import { isActiveOn } from "@/lib/habits";
+import { useIsInstalled } from "@/lib/installedModules";
+import { useOrbitStore } from "@/lib/orbitStore";
+import { readDrafts, writeDraft } from "@/lib/todayDraft";
 import { toLocalDateStr } from "@/lib/utils";
-
-const MOOD_LABELS: Record<(typeof MOODS)[number], string> = {
-  rough: "Rough",
-  low: "Low",
-  okay: "Okay",
-  good: "Good",
-  great: "Great",
-};
 
 /**
  * Today's focus, mood, and reflection, written into the vault's daily note.
  * The note is the only store: the card reads it on open and merges its own
  * block back in, so whatever else is in the note is left as it was.
+ *
+ * Unsaved typing is kept on this device as a draft until it is saved.
  *
  * Below it, the habits (Supabase, not the note), with a grid of this week or
  * this month as the Weekly/Monthly switch shows.
@@ -38,14 +38,25 @@ export function TodayCard({ focusOnMount, kind }: { focusOnMount: boolean; kind:
   const create = useCreateNote();
   const pending = save.isPending || create.isPending;
 
+  const { moodLabels, moodTags } = useOrbitStore();
+  const [moodSettings, setMoodSettings] = useState(false);
+  const trading = useIsInstalled("trades");
+  const habits = (useHabitsData().data?.habits ?? []).filter((h) => isActiveOn(h, day));
+
   const [entry, setEntry] = useState<TodayEntry>(EMPTY_ENTRY);
   const [dirty, setDirty] = useState(false);
 
-  // A new day starts a blank entry.
+  // A new day starts from its unsaved draft, or blank.
   useEffect(() => {
-    setEntry(EMPTY_ENTRY);
-    setDirty(false);
-  }, [path]);
+    const draft = path ? readDrafts()[day] : undefined;
+    const restore = draft?.path === path;
+    setEntry(restore ? draft.entry : EMPTY_ENTRY);
+    setDirty(restore);
+  }, [path]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (dirty && path) writeDraft(day, { path, entry });
+  }, [entry, dirty]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fill the form from the note, but never over something being typed.
   useEffect(() => {
@@ -67,6 +78,7 @@ export function TodayCard({ focusOnMount, kind }: { focusOnMount: boolean; kind:
 
   const onSaved = (savedPath: string) => {
     setDirty(false);
+    writeDraft(day, null);
     void raw.refetch();
     toast.success("Saved to today's note", { description: savedPath });
   };
@@ -107,10 +119,18 @@ export function TodayCard({ focusOnMount, kind }: { focusOnMount: boolean; kind:
           <PenLine className="w-3.5 h-3.5" aria-hidden="true" />
           <span id="orbit-today">Today</span>
         </h2>
-        <span className="text-[11px] text-muted-foreground">
-          {now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-muted-foreground">
+            {now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+          </span>
+          <GlassTip label="Moods and tags" hint="Rename moods, add or remove tags" tone="orbit">
+            <button type="button" className="orbit-icon-button" onClick={() => setMoodSettings(true)} aria-label="Manage moods and tags">
+              <Settings2 className="w-3.5 h-3.5" />
+            </button>
+          </GlassTip>
+        </div>
       </div>
+      <MoodSettings open={moodSettings} onOpenChange={setMoodSettings} />
 
       {vaultError ? (
         <p className="text-sm text-muted-foreground">
@@ -151,13 +171,13 @@ export function TodayCard({ focusOnMount, kind }: { focusOnMount: boolean; kind:
                   className={`orbit-chip ${entry.mood === m ? "orbit-chip-on" : ""}`}
                   disabled={!ready}
                 >
-                  {MOOD_LABELS[m]}
+                  {moodLabels[m]}
                 </button>
               ))}
             </div>
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Mood tags">
               <span className="text-xs text-muted-foreground mr-1">Tags</span>
-              {[...new Set([...MOOD_TAGS, ...(entry.moodTags ?? [])])].map((tag) => {
+              {[...new Set([...moodTags, ...(entry.moodTags ?? [])])].map((tag) => {
                 const on = !!entry.moodTags?.includes(tag);
                 return (
                   <button
@@ -197,6 +217,41 @@ export function TodayCard({ focusOnMount, kind }: { focusOnMount: boolean; kind:
                 disabled={!ready}
               />
             </label>
+            {habits.length > 0 && (
+              <fieldset className="grid gap-1.5">
+                <legend className="text-xs text-muted-foreground mb-1">Habit notes (optional)</legend>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {habits.map((h) => (
+                    <label key={h.id} className="flex items-center gap-2 min-w-0">
+                      <span className="orbit-habit-dot shrink-0" style={{ background: h.color }} aria-hidden="true" />
+                      <input
+                        value={entry.habitNotes?.[h.name] ?? ""}
+                        onChange={(e) => edit({ habitNotes: { ...entry.habitNotes, [h.name]: e.target.value } })}
+                        maxLength={200}
+                        placeholder={h.name}
+                        aria-label={`Note for ${h.name}`}
+                        className="orbit-textarea flex-1 min-w-0"
+                        disabled={!ready}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+            {trading && (
+              <label className="grid gap-1">
+                <span className="text-xs text-muted-foreground">Trading notes (optional)</span>
+                <textarea
+                  value={entry.tradingNotes ?? ""}
+                  onChange={(e) => edit({ tradingNotes: e.target.value })}
+                  maxLength={4000}
+                  rows={4}
+                  placeholder="Setups, mistakes, what the market did"
+                  className="orbit-textarea resize-y"
+                  disabled={!ready}
+                />
+              </label>
+            )}
           </div>
           <div className="flex flex-col gap-1.5 md:items-end min-w-0">
             <button type="submit" className="orbit-button" disabled={!ready || pending}>
