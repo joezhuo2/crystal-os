@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.12] - 2026-11-23 - Ledger journal notes and trade edits save again in the desktop app.
+
+### Fixed
+
+- **Ledger journal notes save again.** In the desktop app, saving a position's journal failed with "Failed to fetch". Editing a trade failed the same way. Both work now.
+
 ## [v0.19.11] - 2026-11-22 - The Today card becomes a journal, and Google Calendar and the Courier stop signing you out.
 
 ### Added
