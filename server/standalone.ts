@@ -107,7 +107,7 @@ export function createApiHandler({ env, requireUser, rootDir }: ApiHandlerOption
 
     if (req.method === "OPTIONS") {
       if (allowed) {
-        res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE");
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE");
         res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
         res.setHeader("Access-Control-Max-Age", "600");
         res.statusCode = 204;
