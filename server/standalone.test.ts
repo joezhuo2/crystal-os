@@ -76,6 +76,7 @@ describe("createApiHandler", () => {
     expect(res.status).toBe(204);
     expect(res.headers["access-control-allow-origin"]).toBe("http://tauri.localhost");
     expect(String(res.headers["access-control-allow-headers"])).toMatch(/Authorization/);
+    expect(String(res.headers["access-control-allow-methods"])).toMatch(/\bPUT\b/);
   });
 
   it("refuses cross-origin access from any other origin", async () => {
