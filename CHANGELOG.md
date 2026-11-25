@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.13] - 2026-11-25 - The Claude API key you save in Settings keeps working after a restart.
+
+### Fixed
+
+- **Your saved Claude API key survives a restart.** If Windows also had an `ANTHROPIC_API_KEY` environment variable, the desktop app used that one after a restart, and an old key there caused "invalid x-api-key" errors. Keys saved in Settings now take priority over environment variables.
+
 ## [v0.19.12] - 2026-11-23 - Ledger journal notes and trade edits save again in the desktop app.
 
 ### Fixed
