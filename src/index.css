@@ -163,7 +163,7 @@
     opacity: 0;
     pointer-events: none;
     will-change: transform;
-    transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* Labels and the full header show only while expanded; the "C" only while
@@ -1323,7 +1323,6 @@
     opacity: var(--lit, 0);
     visibility: hidden;
     transition: opacity 160ms ease-out, visibility 0s linear 160ms;
-    will-change: opacity;
   }
 
   .obsidian-crystal[data-lit] .obsidian-crystal-reflect {
@@ -1472,6 +1471,7 @@
     .obsidian-sparkle::after,
     .obsidian-aura {
       animation: none;
+      will-change: auto;
     }
 
     .obsidian-sparkle::before,
@@ -1901,10 +1901,9 @@
      wrapper: opacity on an ancestor of a backdrop-filter drops the blur, so
      each glass card fades on its own, and so does any element beside them
      with no glass card inside it (headers, toolbars). The fill is backwards
-     only, so once done the animation leaves nothing behind. */
-  .view-enter[data-entering] :is(.glass-card, .glass-card-hover),
-  .view-enter[data-entering] > :not(:has(.glass-card, .glass-card-hover)):not(.glass-card, .glass-card-hover),
-  .view-enter[data-entering] :has(.glass-card, .glass-card-hover) > :not(:has(.glass-card, .glass-card-hover)):not(.glass-card, .glass-card-hover) {
+     only, so once done the animation leaves nothing behind. ViewEnter marks
+     these with `data-view-fade`. */
+  .view-enter[data-entering] [data-view-fade] {
     animation: view-enter 400ms ease-out backwards;
   }
 
@@ -3534,6 +3533,7 @@
     .atmo-cloud-band,
     .atmo-fog {
       animation: none;
+      will-change: auto;
     }
   }
 }
@@ -4292,6 +4292,7 @@
     .home-nebula-pulse,
     .home-terminal-cursor {
       animation: none;
+      will-change: auto;
     }
   }
 }
@@ -4404,6 +4405,50 @@ html.perf-backdrop-still .backdrop-slot *::after {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
+}
+
+html.perf-backdrop-still .backdrop-slot :is(.obsidian-haze, .atmo-ribbon, .atmo-cloud-band, .atmo-fog),
+html.perf-still :is(.home-atmo-aurora, .home-atmo-precip) {
+  will-change: auto;
+}
+
+html.perf-no-blur *,
+html.perf-no-blur *::before,
+html.perf-no-blur *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html.perf-no-blur .obsidian-crystal-reflect {
+  backdrop-filter: brightness(1.9) saturate(1.8) contrast(1.1) !important;
+}
+
+@layer components {
+  html.perf-no-blur .glass-card {
+    background: var(--glass-card-bg, linear-gradient(hsl(var(--glass-bg) / 0.05), hsl(var(--glass-bg) / 0.05))), hsl(var(--background) / 0.8);
+  }
+
+  html.perf-no-blur .glass-card-hover {
+    background: var(--glass-hover-bg, linear-gradient(hsl(var(--glass-bg) / 0.05), hsl(var(--glass-bg) / 0.05))), hsl(var(--background) / 0.8);
+  }
+
+  html.perf-no-blur :is(.orbit-card, .home-card-atmosphere, [data-sonner-toast].glass-toast) {
+    background-color: hsl(var(--background) / 0.8);
+  }
+
+  html.perf-no-blur :is(.nebula-panel, .home-card-nebula) {
+    background-color: rgb(8 6 20 / 0.88);
+  }
+
+  html.perf-no-blur :is(.orbit-hint, .orbit-stepper) {
+    background-color: rgb(4 6 18 / 0.86);
+  }
+}
+
+@layer utilities {
+  html[data-theme="default"].perf-no-blur :is([class*="home-card-"], .orbit-card, .nebula-panel) {
+    background-color: hsl(0 0% 6% / 0.9);
+  }
 }
 
 /* The Horizon's event dots. On the page's first load they pop in cell by
@@ -4700,6 +4745,16 @@ html.perf-still .horizon-dot-cascade {
   inherits: false;
 }
 
+@property --glow-x {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --glow-y {
+  syntax: "*";
+  inherits: false;
+}
+
 @layer base {
   html[data-theme="default"],
   html[data-theme="default"] .home-space {
@@ -4748,7 +4803,7 @@ html.perf-still .horizon-dot-cascade {
   }
 
   html[data-theme="default"] :is(.glass-card, .glass-card-hover, [class*="home-card-"]):hover {
-    background-image: radial-gradient(320px circle at var(--x, 50%) var(--y, 50%), rgb(255 255 255 / 0.08), transparent 70%);
+    background-image: radial-gradient(320px circle at var(--glow-x, 50%) var(--glow-y, 50%), rgb(255 255 255 / 0.08), transparent 70%);
   }
 
   html[data-theme="default"] :is(.glass-card, .glass-card-hover, [class*="home-card-"])::after {
@@ -4760,7 +4815,9 @@ html.perf-still .horizon-dot-cascade {
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.25s;
-    background: radial-gradient(200px circle at var(--x, 50%) var(--y, 50%), rgb(255 255 255 / 0.65), transparent 70%);
+    --glow-x: inherit;
+    --glow-y: inherit;
+    background: radial-gradient(200px circle at var(--glow-x, 50%) var(--glow-y, 50%), rgb(255 255 255 / 0.65), transparent 70%);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
@@ -4804,16 +4861,53 @@ html.perf-still .horizon-dot-cascade {
     animation: star-border-spin 4s linear infinite;
   }
 
-  html[data-theme="default"] .star-border:disabled::after {
+  html[data-theme="default"] .star-border:has(> .star-border-ring)::after {
+    content: none;
+  }
+
+  .star-border-ring {
     display: none;
   }
 
-  html[data-theme="default"].perf-backdrop-still .star-border::after {
+  html[data-theme="default"] .star-border-ring {
+    display: block;
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    overflow: hidden;
+    container-type: size;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  }
+
+  html[data-theme="default"] .star-border-ring::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: calc(142cqmax + 4px);
+    height: calc(142cqmax + 4px);
+    margin: calc(-71cqmax - 2px);
+    background: conic-gradient(transparent 0 72%, rgb(255 255 255 / 0.9) 92%, transparent 100%);
+    animation: star-border-rotate 4s linear infinite;
+  }
+
+  html[data-theme="default"] .star-border:disabled::after,
+  html[data-theme="default"] .star-border:disabled > .star-border-ring {
+    display: none;
+  }
+
+  html[data-theme="default"].perf-backdrop-still .star-border::after,
+  html[data-theme="default"].perf-backdrop-still .star-border-ring::before {
     animation: none;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    html[data-theme="default"] .star-border::after {
+    html[data-theme="default"] .star-border::after,
+    html[data-theme="default"] .star-border-ring::before {
       animation: none;
     }
   }
@@ -4822,6 +4916,12 @@ html.perf-still .horizon-dot-cascade {
 @keyframes star-border-spin {
   to {
     --star-angle: 360deg;
+  }
+}
+
+@keyframes star-border-rotate {
+  to {
+    transform: rotate(360deg);
   }
 }
 

@@ -192,7 +192,6 @@ export default function HomeGrid({ widgets }: { widgets: HomeWidget[] }) {
         d.lastTarget = target;
         if (target) update((l) => ({ ...l, order: swap(l.order, d.id, target) }));
       }
-      positionDragged();
     };
     const onUp = (e: PointerEvent) => {
       if (drag.current && e.pointerId === drag.current.pointerId) endDrag(true);

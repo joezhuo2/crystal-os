@@ -37,7 +37,7 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     const filled = variant == null || variant === "default";
     const star = size !== "icon" && (filled || variant === "outline");
@@ -46,7 +46,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size, className }), star && "star-border", star && filled && "star-border-fill")}
         ref={ref}
         {...props}
-      />
+      >
+        {children}
+        {star && !asChild && <span aria-hidden className="star-border-ring" />}
+      </Comp>
     );
   },
 );

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useAppActivity } from "@/lib/appActivity";
-import { startFrameLoop } from "@/lib/frameLoop";
+import { onBackdropFpsChange, startFrameLoop } from "@/lib/frameLoop";
+import { backdropFps } from "@/lib/perfSettings";
 
 const MAX_FPS = 30;
 const MAX_DPR = 1.5;
@@ -137,21 +138,22 @@ export default function FluxLines() {
     let time = STILL_TIME;
     let stopLoop: (() => void) | undefined;
     let last = 0;
+    let fps = MAX_FPS;
+    let scale = 1;
 
     const render = () => {
-      const ratio = canvas.width / Math.max(1, canvas.clientWidth);
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.useProgram(program);
       gl.bindVertexArray(vao);
       gl.uniform2f(uResolution, canvas.width, canvas.height);
       gl.uniform1f(uTime, time);
-      gl.uniform1f(uLine, ratio * 0.5);
-      gl.uniform1f(uMaxHalf, 28 * ratio);
+      gl.uniform1f(uLine, scale * 0.5);
+      gl.uniform1f(uMaxHalf, 28 * scale);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
 
     const frame = (now: number) => {
-      const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / MAX_FPS;
+      const dt = last ? Math.min(1.5 / fps, (now - last) / 1000) : 1 / fps;
       last = now;
       time += dt;
       render();
@@ -168,14 +170,17 @@ export default function FluxLines() {
         render();
         return;
       }
-      stopLoop = startFrameLoop(MAX_FPS, frame);
+      fps = backdropFps(MAX_FPS);
+      stopLoop = startFrameLoop(fps, frame);
     };
     wakeRef.current = wake;
+    const unsubscribeFps = onBackdropFpsChange(MAX_FPS, wake);
 
     const resize = () => {
       const ratio = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       canvas.width = Math.max(1, Math.round(canvas.clientWidth * ratio));
       canvas.height = Math.max(1, Math.round(canvas.clientHeight * ratio));
+      scale = canvas.width / Math.max(1, canvas.clientWidth);
       render();
     };
     const observer = new ResizeObserver(resize);
@@ -185,6 +190,7 @@ export default function FluxLines() {
 
     return () => {
       wakeRef.current = () => undefined;
+      unsubscribeFps();
       stopLoop?.();
       observer.disconnect();
       gl.deleteProgram(program);

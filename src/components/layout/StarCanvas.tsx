@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { appActivity } from "@/lib/appActivity";
 import { useBackdropStill } from "@/lib/backdropSlot";
-import { startFrameLoop } from "@/lib/frameLoop";
+import { onBackdropFpsChange, startFrameLoop } from "@/lib/frameLoop";
+import { backdropFps } from "@/lib/perfSettings";
 
 const STAR_FPS = 12;
 const MAX_DPR = 1.5;
@@ -39,9 +40,10 @@ export default function StarCanvas({ rgb, opacity = 0.95, className = "" }: { rg
 
     const draw = (now: number) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = `rgb(${rgb})`;
       for (const star of stars) {
         const twinkle = still ? 0.6 : 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(now / 1000 * star.speed + star.phase));
-        ctx.fillStyle = `rgb(${rgb} / ${opacity * twinkle})`;
+        ctx.globalAlpha = opacity * twinkle;
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
         ctx.fill();
@@ -61,12 +63,14 @@ export default function StarCanvas({ rgb, opacity = 0.95, className = "" }: { rg
     // The loop only runs while the window can be seen.
     const run = () => {
       stopLoop();
-      if (appActivity.getState().visible) stopLoop = startFrameLoop(STAR_FPS, draw);
+      if (appActivity.getState().visible) stopLoop = startFrameLoop(backdropFps(STAR_FPS), draw);
     };
     run();
     const unsubscribe = appActivity.subscribe(run);
+    const unsubscribeFps = onBackdropFpsChange(STAR_FPS, run);
     return () => {
       unsubscribe();
+      unsubscribeFps();
       stopLoop();
       window.removeEventListener("resize", onResize);
     };
