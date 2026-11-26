@@ -1,4 +1,4 @@
-import { useEffect, useState, type ElementType, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { AnimatePresence, m } from "framer-motion";
 import { toast } from "sonner";
@@ -268,6 +268,16 @@ function Dashboard({ status }: { status: MailStatus }) {
   const showAccount = status.accounts.length > 1;
   const days = status.cache.retainDays;
   const data = digest.data;
+  const lists = useMemo(
+    () =>
+      data && {
+        bills: sortBills(data.items),
+        board: jobPipeline(data.items),
+        orders: newestFirst(data.items, "order"),
+        security: newestFirst(data.items, "security"),
+      },
+    [data],
+  );
 
   const header = (
     <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -309,7 +319,7 @@ function Dashboard({ status }: { status: MailStatus }) {
     );
   }
 
-  if (digest.isError || !data) {
+  if (digest.isError || !data || !lists) {
     return (
       <>
         {header}
@@ -322,11 +332,8 @@ function Dashboard({ status }: { status: MailStatus }) {
   }
 
   const summary = mailSummary(data.items, now);
-  const bills = sortBills(data.items);
-  const board = jobPipeline(data.items);
+  const { bills, board, orders, security } = lists;
   const jobs = board[stage];
-  const orders = newestFirst(data.items, "order");
-  const security = newestFirst(data.items, "security");
   const row = (item: MailItem, extra?: ReactNode) => (
     <ItemRow key={item.id} item={item} now={now} showAccount={showAccount}>
       {extra}

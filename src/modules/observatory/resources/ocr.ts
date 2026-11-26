@@ -32,7 +32,21 @@ function getWorker(): Promise<Tesseract.Worker> {
   }));
 }
 
+export const OCR_IDLE_MS = 120_000;
+let running = 0;
+let idleTimer: ReturnType<typeof setTimeout> | undefined;
+
 export async function ocrPage(image: HTMLCanvasElement | HTMLImageElement | Blob): Promise<OcrResult> {
+  clearTimeout(idleTimer);
+  running++;
+  try {
+    return await recognize(image);
+  } finally {
+    if (--running === 0) idleTimer = setTimeout(() => void terminateOcr(), OCR_IDLE_MS);
+  }
+}
+
+async function recognize(image: HTMLCanvasElement | HTMLImageElement | Blob): Promise<OcrResult> {
   const worker = await getWorker();
   const { data } = await worker.recognize(image, {}, { text: true, blocks: true });
   const words = (data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words)));

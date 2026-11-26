@@ -249,7 +249,7 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
     return () => window.clearTimeout(t);
   }, [zoom]);
 
-  const [chats, setChats] = useState<{ id: number; image: AiImage }[]>([]);
+  const [chats, setChats] = useState<{ id: number; image: AiImage; url: string }[]>([]);
   const [activeChat, setActiveChat] = useState(0);
   const nextChat = useRef(1);
   const closeChat = (id: number) => {
@@ -285,7 +285,7 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
       const image = captureBox(el, drawn, resource.name);
       if (!image) return;
       const id = nextChat.current++;
-      setChats((c) => [...c, { id, image }]);
+      setChats((c) => [...c, { id, image, url: imageUrl(image) }]);
       setActiveChat(id);
       setAiOpen(true);
     };
@@ -373,7 +373,7 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
                     onClick={() => setActiveChat(c.id)}
                     className={`h-10 w-14 shrink-0 overflow-hidden rounded border bg-white transition-opacity ${c.id === activeChat ? "border-sky-500 ring-1 ring-sky-500" : "border-border/60 opacity-60 hover:opacity-100"}`}
                   >
-                    <img src={imageUrl(c.image)} alt="" className="h-full w-full object-cover object-left-top" />
+                    <img src={c.url} alt="" className="h-full w-full object-cover object-left-top" />
                   </button>
                 ))}
               </div>

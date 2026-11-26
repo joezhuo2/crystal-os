@@ -144,7 +144,7 @@ export function LineAreaChart<K extends string, R extends { [key in K]: number }
   labelGap?: number;
 }) {
   const id = useId();
-  const [hover, setHover] = useState<{ i: number; on: boolean } | null>(null);
+  const [hover, setHover] = useState<{ i: number; on: boolean; rest?: boolean } | null>(null);
 
   const plotW = Math.max(1, width - Y_AXIS_WIDTH - PAD_RIGHT);
   const plotH = Math.max(1, height - X_AXIS_HEIGHT - PAD_TOP);
@@ -174,7 +174,8 @@ export function LineAreaChart<K extends string, R extends { [key in K]: number }
 
   const onMove = (e: ReactPointerEvent<SVGRectElement>) => {
     const box = e.currentTarget.getBoundingClientRect();
-    setHover(data.length ? { i: nearestIndex(e.clientX - box.left, box.width, data.length), on: true } : null);
+    const i = data.length ? nearestIndex(e.clientX - box.left, box.width, data.length) : -1;
+    setHover((h) => (i < 0 ? null : h?.on && h.i === i ? h : { i, on: true }));
   };
 
   const row = hover ? data[hover.i] : undefined;
@@ -228,7 +229,13 @@ export function LineAreaChart<K extends string, R extends { [key in K]: number }
           ))}
         </g>
         {hover && row && (
-          <g pointerEvents="none" style={{ opacity: hover.on ? 1 : 0, transition: animate ? "opacity 160ms ease-out" : undefined }}>
+          <g
+            pointerEvents="none"
+            style={{ opacity: hover.on ? 1 : 0, transition: animate ? "opacity 160ms ease-out" : undefined }}
+            onTransitionEnd={(e) => {
+              if (e.target === e.currentTarget && e.propertyName === "opacity") setHover((h) => (h && !h.on && !h.rest ? { ...h, rest: true } : h));
+            }}
+          >
             <line
               x1={0}
               x2={0}
@@ -240,7 +247,7 @@ export function LineAreaChart<K extends string, R extends { [key in K]: number }
             />
             {series.map((s) => (
               <g key={s.key} style={{ transform: `translate(${x(hover.i)}px, ${y(row[s.key] as number)}px)`, transition: glide }}>
-                <circle r={9} fill={s.color} opacity={0.18} className={animate ? "chart-hover-halo" : undefined} />
+                <circle r={9} fill={s.color} opacity={0.18} className={animate && !hover.rest ? "chart-hover-halo" : undefined} />
                 <circle r={3.5} fill={s.color} stroke="hsl(222 47% 11%)" strokeWidth={1.5} />
               </g>
             ))}

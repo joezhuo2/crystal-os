@@ -431,7 +431,7 @@ function KanbanBoard({
     });
   const isFolded = (id: string) => FOLDED_COLUMNS.includes(id) && !shownColumns.has(id);
 
-  const columns = buildBoardColumns(tasks, taskCategories, today);
+  const columns = useMemo(() => buildBoardColumns(tasks, taskCategories, today), [tasks, taskCategories, today]);
 
   // Only task drags on this Board count; a checklist item being reordered is not one.
   const planFor = (taskId: string | null | undefined, target: BoardTarget) => {

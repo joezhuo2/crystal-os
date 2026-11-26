@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
@@ -44,6 +44,7 @@ export function ReaderAi({ image, onClear }: { image: AiImage | null; onClear: (
   const started = useRef(false);
   const stop = useRef<AbortController | null>(null);
   const end = useRef<HTMLDivElement>(null);
+  const src = useMemo(() => (image ? imageUrl(image) : ""), [image]);
 
   useEffect(() => () => stop.current?.abort(), []);
 
@@ -97,7 +98,7 @@ export function ReaderAi({ image, onClear }: { image: AiImage | null; onClear: (
   return (
     <div className="space-y-3 p-1">
       <div className="relative w-fit">
-        <img src={imageUrl(image)} alt="Captured region" className="max-h-40 rounded-md border border-border/60 bg-white object-contain" />
+        <img src={src} alt="Captured region" className="max-h-40 rounded-md border border-border/60 bg-white object-contain" />
         <Button type="button" variant="secondary" size="icon" className="absolute right-1 top-1 h-6 w-6" aria-label="Remove captured region" onClick={onClear}>
           <X className="h-3.5 w-3.5" />
         </Button>

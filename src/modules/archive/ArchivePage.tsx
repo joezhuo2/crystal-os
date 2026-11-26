@@ -167,7 +167,7 @@ function useWheelScroll(ref: RefObject<HTMLElement | null>) {
   }, [ref]);
 }
 
-function NoteList({
+const NoteList = memo(function NoteList({
   notes,
   selectedPath,
   onSelect,
@@ -239,7 +239,7 @@ function NoteList({
       )}
     </div>
   );
-}
+});
 
 function ConnectionGroup({
   label,
@@ -387,7 +387,7 @@ function QuickNotes({ label, items, onSelect }: { label: string; items: { path: 
   );
 }
 
-function NoteReader({
+const NoteReader = memo(function NoteReader({
   linkTargets,
   allNotes,
   pinned,
@@ -570,7 +570,7 @@ function NoteReader({
       )}
     </m.div>
   );
-}
+});
 
 const DESKTOP_HINTS: Record<string, { title: string; hint: string }> = {
   not_configured: {
