@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { initNotificationBridges } from "./notifications";
+import { initNotificationBridges, notifyAll } from "./notifications";
 import { portal } from "./portalStore";
 
 const { sendNotification, focus } = vi.hoisted(() => ({
@@ -85,5 +85,15 @@ describe("Portal notification bridge", () => {
     portal.setTitle("discord", "(1) Discord");
     await flush();
     expect(toasted()).toEqual([]);
+  });
+});
+
+describe("notifyAll", () => {
+  const alerts = (n: number) => Array.from({ length: n }, (_, i) => ({ key: `job-follow-up:${i}`, title: `Follow up with Co ${i}`, body: "b" }));
+
+  it("folds a burst into one notification", async () => {
+    notifyAll(alerts(80));
+    await flush();
+    expect(toasted()).toEqual(["Follow up with Co 0 +79 more"]);
   });
 });

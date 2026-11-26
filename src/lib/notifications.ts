@@ -367,7 +367,18 @@ export async function notify(alert: Pick<PlannedAlert, "title" | "body"> & { key
 /** Shows each alert that has not been shown before. */
 export function deliver(alerts: PlannedAlert[]) {
   if (alerts.length === 0 || isQuiet(notifySettings.getState(), new Date())) return;
-  for (const alert of takeUnsent(alerts)) void notify(alert);
+  notifyAll(takeUnsent(alerts));
+}
+
+const BURST_MAX = 3;
+
+export function notifyAll(alerts: PlannedAlert[]) {
+  if (alerts.length <= BURST_MAX) {
+    for (const alert of alerts) void notify(alert);
+    return;
+  }
+  const [first] = alerts;
+  void notify({ ...first, title: `${first.title} +${alerts.length - 1} more` });
 }
 
 /**
@@ -408,7 +419,7 @@ export function initNotificationBridges(): () => void {
     // running focus session mutes the Portal altogether.
     if (alerts.length === 0 || !notifySettings.getState().portal || document.hasFocus()) return;
     if (selectFocusMuted(pomodoro.getState())) return;
-    for (const alert of alerts) void notify(alert);
+    notifyAll(alerts);
   });
 
   return () => {
