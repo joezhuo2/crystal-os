@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.20.0] - 2026-11-26 - Lower CPU and memory use in every tab, three new Performance options, and no more notification bursts.
+
+### Added
+
+- **Backdrop frame rate.** **Settings → Performance → Backdrop frame rate** draws the animated backdrops at full or half rate. Motion keeps the same speed at either rate.
+- **Reduce blur.** A new Performance switch replaces the frosted-glass blur behind cards, panels and toasts with solid panels. It is part of **Performance mode**.
+- **Background refresh.** Turn it off and weather, calendar events and travel times stop refreshing while the window is hidden. Reminders still fire. On by default.
+
+### Changed
+
+- **Performance mode now covers five switches.** If you had it on, your four earlier switches stay on, but the master switch shows off until you turn it on again, because Reduce blur starts off.
+- **Animations cost less.** The spinning button border, the card hover glow, the page fade-in and the progress bars now run without redrawing the page on every frame. They look the same.
+- **The sidebar highlight slides faster,** in 220 ms instead of 300 ms.
+- **Backdrops do less work per frame,** and the Nebula backdrop stops redrawing when its swirl speed is 0.
+- **Less work while you are not looking.** The calendar's "now" line and the Home sky stop updating the whole page every minute, and the "now" line pauses while the window is hidden.
+- **Lower memory use.** The text-recognition engine in The Observatory is released two minutes after its last use, and large blurred backdrop layers are freed while they hold still.
+- **Smoother typing and dragging** in The Archive search, The Nebula while a reply streams, the Observatory reader, the task board, the month calendar, the charts and the Courier dashboard.
+
+### Fixed
+
+- **One notification instead of dozens.** When more than three alerts arrive together, such as many job follow-ups, you get one notification ending in "+N more".
+- **One message for failed offline changes.** Changes that could not sync after being offline are reported in a single message with a count.
+
 ## [v0.19.13] - 2026-11-25 - The Claude API key you save in Settings keeps working after a restart.
 
 ### Fixed

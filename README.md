@@ -4,15 +4,15 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-1830%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.19.13-6366F1)
+![Tests](https://img.shields.io/badge/tests-1929%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.20.0-6366F1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 > A personal productivity dashboard built with React, TypeScript, your Google Calendar, and your Obsidian vault. Your data stays on your device. Tasks, calendar, finances, weather, a Pomodoro timer, and a searchable read/write view of your notes — all behind one glassmorphic interface and one command palette.
 
 <p align="center"><img src="docs/images/crystal-os-tour.gif" alt="A tour of Crystal OS: The Pulse, The Engine, The Horizon, The Orbit, The Vault, The Ledger, The Courier, The Atmosphere, The Observatory (courses, topics and a review card), The Archive, The Portal and Settings" width="840"></p>
 
-Current release: **v0.19.13** — see [CHANGELOG.md](CHANGELOG.md) for release history.
+Current release: **v0.20.0** — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 [Features](#-features) • [Install](#-install-windows) • [Quick Start](#-quick-start) • [Customization](#-customization) • [Deployment](#-deployment) • [License](#-license)
 
@@ -793,13 +793,16 @@ The sidecar reads its server-side settings from the app config directory:
 - **Web build.** Browsers refuse to embed these sites in another page, so there the Portal keeps your app list and opens each app in a new tab.
 - The app pages draw above Crystal OS's own UI, so menus and dialogs (such as the pill right-click menu or tray **Quick Add**) hide the app while they are open. A still picture of the page stays in its place behind them. The pages get no access to Crystal OS commands. The view talks to Rust through the `portal_*` commands in `src/lib/portalNative.ts`.
 
-**Performance.** **Settings → Performance** has a master switch, four switches that can each be set alone, and a Portal setting. All apply at once and are saved in `localStorage`.
+**Performance.** **Settings → Performance** has a master switch, five switches that can each be set alone, two more options, and a Portal setting. All apply at once and are saved in `localStorage`.
 
-- **Performance mode** (off by default) turns all four switches below on or off together. It reads as on only while every one of them is on, so changing one on its own turns it off. A browser that saved the old single flag keeps its behaviour: all four start on.
+- **Performance mode** (off by default) turns the five switches below, from Load views on demand to Reduce blur, on or off together. It reads as on only while every one of them is on, so changing one on its own turns it off. A browser that saved the old single flag keeps its four switches on; Reduce blur starts off, so the master reads off until you turn it on.
 - **Load views on demand**. No view is fetched ahead: each loads the first time you open it. Off, the three views you open most (counted in `localStorage`, `crystal-os:tab-visits`; Engine and Horizon on a fresh install) are fetched one at a time at the first idle moment after Home has settled. The Nebula, Terminal and Portal pages are lazy chunks like the rest; the work they keep running in the background lives in their stores and in Rust, which load with the app.
 - **Free cached data sooner**. Data no view is using is dropped after the time chosen in **Free cached data after** (1 to 60 minutes, 1 by default) instead of five. Each query keeps its own `staleTime`, so a view reopened in time shows its data without refetching.
 - **Reduce transitions**. Page transitions and CSS animations jump to their end state (loading spinners and the small `data-smooth` controls keep moving). The page backdrops are not touched by this switch.
 - **Still backdrops**. The backdrops behind every page (stars, aurora, rain, nebula, terminal static, sparkles, and the image backdrops' animation) hold one frame. Work the Nebula, Terminal and Portal do in the background is never paused by it.
+- **Reduce blur**. The frosted-glass blur behind cards, panels and toasts is replaced with solid panels.
+- **Backdrop frame rate** (Full or Half, not part of Performance mode; shown while Still backdrops is off). Half draws the animated backdrops at half their frame rate, at the same motion speed.
+- **Background refresh** (on by default, not part of Performance mode). Off, weather, calendar events and travel times stop refreshing while the window is hidden; reminders still fire.
 - **Portal unload delay** (desktop), in seconds: see **Keep loaded in background** above.
 
 Whatever the switches say, hiding the window to the tray or minimising it now stops the backdrop animation loops, freezes CSS animations, and pauses polling (weather refresh, calendar and vault refetches); stale data refetches when the window comes back. Closing the window with its **×** now goes through the same path as the tray and hotkey, so it also trims memory.
