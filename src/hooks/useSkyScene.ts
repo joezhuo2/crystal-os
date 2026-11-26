@@ -20,13 +20,22 @@ export function useSkyScene(): SkyScene {
   const { cityId } = useAtmosphere();
   const { data } = useWeather(cityId);
   const [now, setNow] = useState(() => new Date());
+  const sunrise = data?.sunTimes.sunrise;
+  const sunset = data?.sunTimes.sunset;
 
   useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 60_000);
+    const tick = () =>
+      setNow((prev) => {
+        const next = new Date();
+        const same = next.toDateString() === prev.toDateString() && skyPhase(next, sunrise, sunset) === skyPhase(prev, sunrise, sunset);
+        return same ? prev : next;
+      });
+    tick();
+    const id = window.setInterval(tick, 60_000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [sunrise, sunset]);
 
-  const phase = skyPhase(now, data?.sunTimes.sunrise, data?.sunTimes.sunset);
+  const phase = skyPhase(now, sunrise, sunset);
   const iconCode = data?.current.iconCode;
   const weather = useMemo(() => (iconCode === undefined ? skyWeather(0) : skyWeather(iconCode)), [iconCode]);
   const day = now.toDateString();

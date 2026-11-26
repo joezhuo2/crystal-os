@@ -1,6 +1,12 @@
+import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
-import { _resetPlaces, travelMinutes, upcomingLocations } from "./pulse";
+import { appActivity } from "@/lib/appActivity";
+import { perfSettings } from "@/lib/perfSettings";
+import { TRAVEL_REFRESH_MS, _resetPlaces, travelMinutes, upcomingLocations, useTravelTimes } from "./pulse";
+
+const getPosition = vi.hoisted(() => vi.fn());
+vi.mock("@/hooks/useWeather", () => ({ getPosition }));
 
 function json(body: unknown, ok = true) {
   return Promise.resolve({ ok, json: () => Promise.resolve(body) } as Response);
@@ -46,5 +52,44 @@ describe("upcomingLocations", () => {
         now,
       ),
     ).toEqual(["Main St"]);
+  });
+});
+
+describe("useTravelTimes", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    appActivity._setWindowShown(true);
+    localStorage.clear();
+    perfSettings._reset();
+  });
+
+  it("skips the half-hourly refresh while hidden only when background refresh is off", async () => {
+    vi.useFakeTimers();
+    getPosition.mockReset().mockRejectedValue(new Error("no position"));
+    const event = {
+      id: "e",
+      calendarId: "primary",
+      summary: "",
+      allDay: false,
+      startISO: new Date(Date.now() + 60 * 60_000).toISOString(),
+      location: "Main St",
+    } as CalendarEvent;
+    renderHook(() => useTravelTimes([event], true));
+    expect(getPosition).toHaveBeenCalledTimes(1);
+    appActivity._setWindowShown(false);
+    await act(async () => {
+      vi.advanceTimersByTime(TRAVEL_REFRESH_MS);
+    });
+    expect(getPosition).toHaveBeenCalledTimes(2);
+    perfSettings.setSwitch("backgroundRefresh", false);
+    await act(async () => {
+      vi.advanceTimersByTime(TRAVEL_REFRESH_MS);
+    });
+    expect(getPosition).toHaveBeenCalledTimes(2);
+    appActivity._setWindowShown(true);
+    await act(async () => {
+      vi.advanceTimersByTime(TRAVEL_REFRESH_MS);
+    });
+    expect(getPosition).toHaveBeenCalledTimes(3);
   });
 });

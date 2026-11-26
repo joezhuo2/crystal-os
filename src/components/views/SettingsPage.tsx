@@ -1439,7 +1439,7 @@ export default function SettingsPage() {
         <Section id="performance" icon={Gauge} title="Performance">
           <Row
             title="Performance mode"
-            description="Turns all four switches below on or off together. It shows as on only while every one of them is on; change any of them on its own to fine-tune. The Nebula, Terminal and Portal keep running in the background as usual."
+            description="Turns the five switches below, from Load views on demand to Reduce blur, on or off together. It shows as on only while every one of them is on; change any of them on its own to fine-tune. The Nebula, Terminal and Portal keep running in the background as usual."
           >
             <Switch checked={perf.performanceMode} onCheckedChange={perfSettings.setPerformanceMode} />
           </Row>
@@ -1481,6 +1481,34 @@ export default function SettingsPage() {
             description="The backdrops behind every page (stars, aurora, rain, nebula, terminal static, sparkles) hold one frame instead of animating, which also takes the load off the GPU. Nothing running in the Nebula, Terminal or Portal is affected."
           >
             <Switch checked={perf.stillBackdrops} onCheckedChange={(on) => perfSettings.setSwitch("stillBackdrops", on)} />
+          </Row>
+          {!perf.stillBackdrops && (
+            <Row
+              title="Backdrop frame rate"
+              description="Half draws the animated backdrops at half their usual frame rate, which roughly halves the work they take. The motion looks a little less smooth."
+            >
+              <Select value={String(perf.backdropFrameScale)} onValueChange={perfSettings.setBackdropFrameScale}>
+                <SelectTrigger className="h-8 w-28" aria-label="Backdrop frame rate">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Full</SelectItem>
+                  <SelectItem value="0.5">Half</SelectItem>
+                </SelectContent>
+              </Select>
+            </Row>
+          )}
+          <Row
+            title="Reduce blur"
+            description="Replaces the frosted-glass blur behind panels, menus and dialogs with solid panels, which takes a large share of the drawing work off the GPU."
+          >
+            <Switch checked={perf.reduceBlur} onCheckedChange={(on) => perfSettings.setSwitch("reduceBlur", on)} />
+          </Row>
+          <Row
+            title="Refresh in the background"
+            description="Weather and the calendar events used for reminders keep refreshing while the window is hidden or minimised. Off pauses that until you return; reminders you set still arrive on time."
+          >
+            <Switch checked={perf.backgroundRefresh} onCheckedChange={(on) => perfSettings.setSwitch("backgroundRefresh", on)} />
           </Row>
           {desktop && (
             <Row
