@@ -4,8 +4,9 @@ import { GlassTip } from "@/components/ui/glass-tooltip";
 import { parseRecurrence, type CalendarEvent } from "@/hooks/useGoogleCalendar";
 import type { Task } from "@/contexts/AppContext";
 import { taskColor, tasksForDate } from "@/lib/horizonDots";
-import { toLocalDateStr } from "@/lib/utils";
 import { usePerfSettings } from "@/lib/perfSettings";
+import { useAppActivity } from "@/lib/appActivity";
+import { useToday } from "@/hooks/useToday";
 import { MINUTES_PER_DAY, daysBetween, draggedStart, dropSlot, fromMinutes, layoutDay, resizedSpan, shiftedSpan, snapMinutes } from "@/lib/timeGrid";
 
 /** Height of one hour, in px. */
@@ -83,18 +84,36 @@ function shortTime(time: string): string {
   return new Date(`2000-01-01T${time}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
-/** Minutes since local midnight, ticking once a minute, for the "now" line. */
+const readNowMinutes = () => {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
+};
+
+/** Minutes since local midnight, ticking once a minute while the window can be seen, for the "now" line. */
 function useNowMinutes(): number {
-  const read = () => {
-    const d = new Date();
-    return d.getHours() * 60 + d.getMinutes();
-  };
-  const [now, setNow] = useState(read);
+  const { visible } = useAppActivity();
+  const [now, setNow] = useState(readNowMinutes);
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(read()), 60_000);
+    if (!visible) return;
+    setNow(readNowMinutes());
+    const timer = window.setInterval(() => setNow(readNowMinutes()), 60_000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [visible]);
   return now;
+}
+
+function NowLine() {
+  const now = useNowMinutes();
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute inset-x-0 z-10 pointer-events-none"
+      style={{ top: Math.min(now, MINUTES_PER_DAY) * PX_PER_MIN }}
+    >
+      <div className="h-px bg-rose-400" />
+      <div className="absolute -left-1 -top-1 w-2 h-2 rounded-full bg-rose-400" />
+    </div>
+  );
 }
 
 /**
@@ -133,8 +152,7 @@ export default function TimeGrid({
   dropMinutes?: number;
   onDropTask?: (date: string, startTime: string, endTime: string) => void;
 }) {
-  const today = toLocalDateStr();
-  const now = useNowMinutes();
+  const today = useToday();
   const scrollRef = useRef<HTMLDivElement>(null);
   const tip = tipColors ?? [color, color];
   const { reduceTransitions } = usePerfSettings();
@@ -274,7 +292,7 @@ export default function TimeGrid({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const hour = showsToday ? Math.max(0, Math.floor(now / 60) - 1) : DEFAULT_SCROLL_HOUR;
+    const hour = showsToday ? Math.max(0, Math.floor(readNowMinutes() / 60) - 1) : DEFAULT_SCROLL_HOUR;
     el.scrollTop = hour * HOUR_PX;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dates[0], showsToday]);
@@ -441,16 +459,7 @@ export default function TimeGrid({
                 />
               ))}
 
-              {date === today && (
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-x-0 z-10 pointer-events-none"
-                  style={{ top: Math.min(now, MINUTES_PER_DAY) * PX_PER_MIN }}
-                >
-                  <div className="h-px bg-rose-400" />
-                  <div className="absolute -left-1 -top-1 w-2 h-2 rounded-full bg-rose-400" />
-                </div>
-              )}
+              {date === today && <NowLine />}
 
               {timedTasks.map((task) => {
                 const [h, m] = task.startTime.split(":").map(Number);

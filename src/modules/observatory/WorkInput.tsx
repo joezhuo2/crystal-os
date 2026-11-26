@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ClipboardEvent, type DragEvent } from "react";
+import { useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent } from "react";
 import { FileText, Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ export function WorkInput({ work, onChange, label, placeholder, pdf = false }: {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const [reading, setReading] = useState(0);
+  const urls = useMemo(() => work.images.map(imageUrl), [work.images]);
   const latest = useRef(work);
   latest.current = work;
   const set = (w: Work) => {
@@ -73,7 +74,7 @@ export function WorkInput({ work, onChange, label, placeholder, pdf = false }: {
           ))}
           {work.images.map((img, i) => (
             <li key={`i${i}`} className="relative">
-              <img src={imageUrl(img)} alt={img.name} className="h-16 w-16 rounded-md border border-border/60 object-cover" />
+              <img src={urls[i]} alt={img.name} className="h-16 w-16 rounded-md border border-border/60 object-cover" />
               <button type="button" aria-label={`Remove ${img.name}`} className="absolute -right-1.5 -top-1.5 rounded-full bg-background p-0.5 text-muted-foreground hover:text-foreground" onClick={() => onChange({ ...work, images: work.images.filter((_, j) => j !== i) })}>
                 <X className="h-3 w-3" />
               </button>

@@ -10,6 +10,7 @@ import { isQuiet, useNotifySettings } from "@/lib/notifySettings";
 import { useInstalledModules } from "@/lib/installedModules";
 import type { TabId } from "@/modules/registry";
 import { usesSidecar } from "@/lib/platform";
+import { usePerfSettings } from "@/lib/perfSettings";
 import { useTravelTimes } from "@/lib/pulse";
 import { useWeather, weatherAlerts } from "@/hooks/useWeather";
 import { useAtmosphere } from "@/lib/atmosphereStore";
@@ -17,7 +18,7 @@ import { toLocalDateStr } from "@/lib/utils";
 
 /** How often due times and reminders are checked. */
 const CHECK_MS = 30 * 1000;
-/** How often the next day of events is fetched again, window shown or not. */
+/** How often the next day of events is fetched again, window shown or not unless background refresh is off. */
 const EVENTS_REFRESH_MS = 10 * 60 * 1000;
 /** Matches CalendarPage's key, so reminders follow the calendar picked in The Horizon. */
 const CALENDAR_STORAGE_KEY = "crystal-os-google-calendar";
@@ -71,6 +72,7 @@ export default function NotificationScheduler() {
     if (weather && alertWeather) deliver(weatherAlerts(weather, toLocalDateStr()));
   }, [weather, alertWeather]);
   const hour = useHour();
+  const { backgroundRefresh } = usePerfSettings();
   const habits = useHabitsData();
   const reminders = useHabitReminders();
 
@@ -94,7 +96,7 @@ export default function NotificationScheduler() {
     enabled: wantEvents && connected,
     refetchInterval: EVENTS_REFRESH_MS,
     // Reminders matter most while the window is hidden in the tray.
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: backgroundRefresh,
   });
 
   const eventList = events.data?.events ?? [];

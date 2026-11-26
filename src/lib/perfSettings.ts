@@ -13,6 +13,9 @@ export const FREE_CACHE_KEY = "crystal-os-perf-free-cache";
 export const CACHE_MINUTES_KEY = "crystal-os-perf-cache-minutes";
 export const REDUCE_TRANSITIONS_KEY = "crystal-os-perf-no-transitions";
 export const STILL_BACKDROPS_KEY = "crystal-os-perf-still-backdrops";
+export const REDUCE_BLUR_KEY = "crystal-os-perf-reduce-blur";
+export const BACKGROUND_REFRESH_KEY = "crystal-os-perf-background-refresh";
+export const BACKDROP_FRAME_SCALE_KEY = "crystal-os-perf-backdrop-frame-scale";
 
 /** Seconds a Portal app with "Keep loaded" off may stay hidden before it is unloaded. */
 export const DEFAULT_UNLOAD_DELAY = 60;
@@ -24,7 +27,7 @@ export const MAX_CACHE_MINUTES = 60;
 export const CACHE_MINUTES_OFF = 5;
 
 export interface PerfSettings {
-  /** Master switch: true only while all four switches below are on. */
+  /** Master switch: true only while all five frugal switches below are on. */
   performanceMode: boolean;
   /** Load the main views only when first opened, with no fetching ahead. */
   lazyViews: boolean;
@@ -36,20 +39,25 @@ export interface PerfSettings {
   reduceTransitions: boolean;
   /** The page backdrops hold still. */
   stillBackdrops: boolean;
+  reduceBlur: boolean;
+  backgroundRefresh: boolean;
+  backdropFrameScale: number;
   /** Seconds, 0 to MAX_UNLOAD_DELAY. */
   unloadDelay: number;
 }
 
-type Switch = "lazyViews" | "freeCache" | "reduceTransitions" | "stillBackdrops";
+type Switch = "lazyViews" | "freeCache" | "reduceTransitions" | "stillBackdrops" | "reduceBlur" | "backgroundRefresh";
 
 const SWITCH_KEYS: Record<Switch, string> = {
   lazyViews: LAZY_VIEWS_KEY,
   freeCache: FREE_CACHE_KEY,
   reduceTransitions: REDUCE_TRANSITIONS_KEY,
   stillBackdrops: STILL_BACKDROPS_KEY,
+  reduceBlur: REDUCE_BLUR_KEY,
+  backgroundRefresh: BACKGROUND_REFRESH_KEY,
 };
 
-const SWITCHES = Object.keys(SWITCH_KEYS) as Switch[];
+const SWITCHES: Switch[] = ["lazyViews", "freeCache", "reduceTransitions", "stillBackdrops", "reduceBlur"];
 
 /** Whole seconds within range. Anything unreadable falls back to the default. */
 export function clampUnloadDelay(value: unknown): number {
@@ -63,6 +71,11 @@ export function clampCacheMinutes(value: unknown): number {
   const n = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : NaN;
   if (!Number.isFinite(n)) return DEFAULT_CACHE_MINUTES;
   return Math.min(MAX_CACHE_MINUTES, Math.max(1, Math.round(n)));
+}
+
+export function clampBackdropFrameScale(value: unknown): number {
+  const n = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : NaN;
+  return Number.isFinite(n) && n < 0.75 ? 0.5 : 1;
 }
 
 /** Milliseconds unused data stays cached under these settings. */
@@ -99,12 +112,16 @@ function load(): PerfSettings {
   };
   const delay = read(UNLOAD_DELAY_KEY);
   const minutes = read(CACHE_MINUTES_KEY);
+  const frameScale = read(BACKDROP_FRAME_SCALE_KEY);
   return withMode({
     lazyViews: flag(LAZY_VIEWS_KEY),
     freeCache: flag(FREE_CACHE_KEY),
     cacheMinutes: minutes === null ? DEFAULT_CACHE_MINUTES : clampCacheMinutes(minutes),
     reduceTransitions: flag(REDUCE_TRANSITIONS_KEY),
     stillBackdrops: flag(STILL_BACKDROPS_KEY),
+    reduceBlur: read(REDUCE_BLUR_KEY) === "1",
+    backgroundRefresh: read(BACKGROUND_REFRESH_KEY) !== "0",
+    backdropFrameScale: frameScale === null ? 1 : clampBackdropFrameScale(frameScale),
     unloadDelay: delay === null ? DEFAULT_UNLOAD_DELAY : clampUnloadDelay(delay),
   });
 }
@@ -127,12 +144,12 @@ export const perfSettings = {
     };
   },
 
-  /** Turns all four switches on or off together. */
+  /** Turns the five frugal switches on or off together. */
   setPerformanceMode(on: boolean) {
     if (on === state.performanceMode && SWITCHES.every((k) => state[k] === on)) return;
     write(PERF_MODE_KEY, on ? "1" : "0");
     for (const k of SWITCHES) write(SWITCH_KEYS[k], on ? "1" : "0");
-    set(withMode({ ...state, lazyViews: on, freeCache: on, reduceTransitions: on, stillBackdrops: on }));
+    set(withMode({ ...state, lazyViews: on, freeCache: on, reduceTransitions: on, stillBackdrops: on, reduceBlur: on }));
   },
 
   setSwitch(key: Switch, on: boolean) {
@@ -148,6 +165,13 @@ export const perfSettings = {
     set(withMode({ ...state, cacheMinutes }));
   },
 
+  setBackdropFrameScale(value: unknown) {
+    const backdropFrameScale = clampBackdropFrameScale(value);
+    if (backdropFrameScale === state.backdropFrameScale) return;
+    write(BACKDROP_FRAME_SCALE_KEY, String(backdropFrameScale));
+    set(withMode({ ...state, backdropFrameScale }));
+  },
+
   setUnloadDelay(value: unknown) {
     const unloadDelay = clampUnloadDelay(value);
     if (unloadDelay === state.unloadDelay) return;
@@ -160,6 +184,10 @@ export const perfSettings = {
     set(load());
   },
 };
+
+export function backdropFps(base: number): number {
+  return Math.max(1, Math.round(base * state.backdropFrameScale));
+}
 
 export function usePerfSettings() {
   return useSyncExternalStore(perfSettings.subscribe, perfSettings.getState);

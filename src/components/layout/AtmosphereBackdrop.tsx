@@ -4,7 +4,8 @@ import { useSkyScene } from "@/hooks/useSkyScene";
 import { appActivity } from "@/lib/appActivity";
 import { useBackdropStill } from "@/lib/backdropSlot";
 import { useAtmosphere } from "@/lib/atmosphereStore";
-import { startFrameLoop } from "@/lib/frameLoop";
+import { onBackdropFpsChange, startFrameLoop } from "@/lib/frameLoop";
+import { backdropFps } from "@/lib/perfSettings";
 import { auroraStrength, moonPath, pineRidge, starVisibility, type SkyWeather } from "@/lib/atmosphereScene";
 
 const PRECIP_FPS = 30;
@@ -212,12 +213,14 @@ function PrecipCanvas({ weather, rootRef }: { weather: SkyWeather; rootRef: Reac
     const run = () => {
       stopLoop();
       last = 0;
-      if (appActivity.getState().visible) stopLoop = startFrameLoop(PRECIP_FPS, tick);
+      if (appActivity.getState().visible) stopLoop = startFrameLoop(backdropFps(PRECIP_FPS), tick);
     };
     run();
     const unsubscribe = appActivity.subscribe(run);
+    const unsubscribeFps = onBackdropFpsChange(PRECIP_FPS, run);
     return () => {
       unsubscribe();
+      unsubscribeFps();
       stopLoop();
       window.removeEventListener("resize", onResize);
       setFlash(false);

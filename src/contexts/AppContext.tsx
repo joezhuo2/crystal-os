@@ -478,7 +478,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!result) return;
     for (const { write, message } of result.failed) {
       console.error(`[crystal-os] offline ${write.op} on ${write.table} failed:`, message);
-      toast.error("Could not sync a change made offline", { description: message });
+    }
+    if (result.failed.length) {
+      const more = result.failed.length - 1;
+      const { message } = result.failed[0];
+      toast.error(more ? `Could not sync ${more + 1} changes made offline` : "Could not sync a change made offline", {
+        description: more ? `${message} +${more} more` : message,
+      });
     }
     if (result.sent.some((w) => w.table === "task_completions")) {
       queryClient.invalidateQueries({ queryKey: ORBIT_QUERY_KEY });

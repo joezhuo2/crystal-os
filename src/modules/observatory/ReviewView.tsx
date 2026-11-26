@@ -373,7 +373,7 @@ export function ReviewView({ courses, onClose, initialFilter, compact, source }:
             </span>
           </div>
           <div className="h-1.5 rounded-full bg-secondary/60 overflow-hidden" role="progressbar" aria-label="Session progress" aria-valuemin={0} aria-valuemax={total} aria-valuenow={answered}>
-            <m.div className="h-full bg-primary" initial={false} animate={{ width: `${total ? (answered / total) * 100 : 0}%` }} transition={{ duration: still ? 0 : 0.3 }} />
+            <m.div className="h-full w-full origin-left bg-primary" initial={false} animate={{ scaleX: total ? answered / total : 0 }} transition={{ duration: still ? 0 : 0.3 }} />
           </div>
         </div>
       )}

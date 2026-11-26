@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { Check, Image, Pencil, Sparkles, Undo2, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -50,7 +50,7 @@ function RegionImage({ doc, region }: { doc: PDFDocumentProxy; region: Region })
 
 interface Props { path: string; code: string; topics: Topic[]; doc: PDFDocumentProxy | null; type?: QuestionType }
 
-export function PoolView({ path, code, topics, doc, type = "worked" }: Props) {
+export const PoolView = memo(function PoolView({ path, code, topics, doc, type = "worked" }: Props) {
   const { folder, aiExtract } = useObservatorySettings();
   const ai = useObservatoryAi();
   const queryClient = useQueryClient();
@@ -286,4 +286,4 @@ export function PoolView({ path, code, topics, doc, type = "worked" }: Props) {
       </ul>
     </div>
   );
-}
+});

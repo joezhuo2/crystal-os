@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { appActivity } from "@/lib/appActivity";
 import { useBackdropStill } from "@/lib/backdropSlot";
-import { startFrameLoop } from "@/lib/frameLoop";
+import { onBackdropFpsChange, startFrameLoop } from "@/lib/frameLoop";
+import { backdropFps } from "@/lib/perfSettings";
 import type { NebulaTheme } from "@/lib/harness/types";
 
 const MAX_FPS = 30;
@@ -150,8 +151,10 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
 
     const tick = (now: number) => {
       if (document.hidden) return;
-      clock += ((now - lastNow) / 1000) * themeRef.current.swirlSpeed;
+      const step = ((now - lastNow) / 1000) * themeRef.current.swirlSpeed;
       lastNow = now;
+      if (!step) return;
+      clock += step;
       draw();
     };
 
@@ -160,7 +163,7 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
       stopLoop();
       if (!stillRef.current && appActivity.getState().visible) {
         lastNow = performance.now();
-        stopLoop = startFrameLoop(MAX_FPS, tick);
+        stopLoop = startFrameLoop(backdropFps(MAX_FPS), tick);
       }
     };
 
@@ -210,12 +213,14 @@ function Nebula({ theme, onFail }: { theme: NebulaTheme; onFail: () => void }) {
     // Stop the loop entirely while the window is hidden (tray or minimised),
     // instead of waking every frame to skip drawing.
     const unsubscribe = appActivity.subscribe(resume);
+    const unsubscribeFps = onBackdropFpsChange(MAX_FPS, resume);
     canvas.addEventListener("webglcontextlost", onLost);
     canvas.addEventListener("webglcontextrestored", onRestored);
 
     return () => {
       resumeRef.current = () => undefined;
       unsubscribe();
+      unsubscribeFps();
       stopLoop();
       observer.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
@@ -248,26 +253,28 @@ function Stars({ density }: { density: number }) {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    let stars: { x: number; y: number; size: number; phase: number; speed: number; hue: number }[] = [];
+    let stars: { x: number; y: number; size: number; phase: number; speed: number; core: string; glow: string }[] = [];
+    const fill = (hue: number, light: number) => (hue ? `hsl(${hue} 90% ${light}%)` : "#fff");
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       canvas.width = Math.floor(canvas.clientWidth * dpr);
       canvas.height = Math.floor(canvas.clientHeight * dpr);
       const count = Math.round(canvas.clientWidth * canvas.clientHeight * STARS_PER_PIXEL * density * 2);
-      stars = Array.from({ length: count }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: (1.2 + Math.random() ** 3 * 5) * dpr,
-        phase: Math.random() * Math.PI * 2,
-        speed: 0.3 + Math.random() * 1.6,
-        hue: Math.random() < 0.2 ? 210 : Math.random() < 0.1 ? 40 : 0,
-      }));
+      stars = Array.from({ length: count }, () => {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const size = (1.2 + Math.random() ** 3 * 5) * dpr;
+        const phase = Math.random() * Math.PI * 2;
+        const speed = 0.3 + Math.random() * 1.6;
+        const hue = Math.random() < 0.2 ? 210 : Math.random() < 0.1 ? 40 : 0;
+        return { x, y, size, phase, speed, core: fill(hue, 88), glow: fill(hue, 80) };
+      });
     };
 
-    const star = (x: number, y: number, size: number, alpha: number, hue: number) => {
-      const color = hue ? `hsl(${hue} 90% 88% / ${alpha})` : `rgb(255 255 255 / ${alpha})`;
-      ctx.fillStyle = color;
+    const star = (x: number, y: number, size: number, alpha: number, core: string, glow: string) => {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = core;
       ctx.beginPath();
       const w = size * 0.18;
       ctx.moveTo(x, y - size);
@@ -276,7 +283,8 @@ function Stars({ density }: { density: number }) {
       ctx.quadraticCurveTo(x - w, y + w, x - size, y);
       ctx.quadraticCurveTo(x - w, y - w, x, y - size);
       ctx.fill();
-      ctx.fillStyle = hue ? `hsl(${hue} 90% 80% / ${alpha * 0.25})` : `rgb(255 255 255 / ${alpha * 0.25})`;
+      ctx.globalAlpha = alpha * 0.25;
+      ctx.fillStyle = glow;
       ctx.beginPath();
       ctx.arc(x, y, size * 0.35, 0, Math.PI * 2);
       ctx.fill();
@@ -288,7 +296,7 @@ function Stars({ density }: { density: number }) {
         const wave = 0.5 + 0.5 * Math.sin((now / 1000) * s.speed + s.phase);
         // Sharp peaks read as blinks rather than a slow pulse.
         const twinkle = still ? 0.55 : 0.15 + 0.85 * wave ** 6;
-        star(s.x, s.y, s.size * (0.6 + 0.4 * twinkle), twinkle, s.hue);
+        star(s.x, s.y, s.size * (0.6 + 0.4 * twinkle), twinkle, s.core, s.glow);
       }
     };
 
@@ -305,14 +313,16 @@ function Stars({ density }: { density: number }) {
     // The loop only runs while the window can be seen.
     const run = () => {
       stopLoop();
-      if (appActivity.getState().visible) stopLoop = startFrameLoop(MAX_FPS, (now) => {
+      if (appActivity.getState().visible) stopLoop = startFrameLoop(backdropFps(MAX_FPS), (now) => {
         if (!document.hidden) draw(now);
       });
     };
     run();
     const unsubscribe = appActivity.subscribe(run);
+    const unsubscribeFps = onBackdropFpsChange(MAX_FPS, run);
     return () => {
       unsubscribe();
+      unsubscribeFps();
       stopLoop();
       observer.disconnect();
     };

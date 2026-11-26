@@ -36,7 +36,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionEntry[] = [
   { id: "theme", title: "Theme", hint: "Default or Orbit, Flux Lines background", keywords: ["appearance", "default theme", "orbit theme", "black and white", "monochrome", "flux lines", "animated background", "dark", "colours", "colors"] },
   { id: "backgrounds", title: "Backgrounds", hint: "Page and Home box images, blur, opacity", keywords: ["background image", "backdrop", "wallpaper", "blur", "opacity", "home widgets", "home box", "horizon", "engine", "orbit", "portal", "archive", "observatory"] },
   { id: "privacy", title: "Privacy", hint: "Privacy mode", keywords: ["privacy mode", "blur", "hide money", "amounts", "screen share", "archive notes"] },
-  { id: "performance", title: "Performance", hint: "Performance mode", keywords: ["performance mode", "animations", "transitions", "backdrops", "cache", "lazy load", "portal unload delay", "speed"] },
+  { id: "performance", title: "Performance", hint: "Performance mode", keywords: ["performance mode", "animations", "transitions", "backdrops", "backdrop frame rate", "blur", "reduce blur", "background refresh", "polling", "cache", "lazy load", "portal unload delay", "speed"] },
   { id: "install", title: "Install & update", hint: "Version, updates", keywords: ["update", "version", "installer", "upgrade"], desktopOnly: true },
   { id: "diagnostics", title: "Diagnostics", hint: "Error report", keywords: ["error report", "copy diagnostics", "debug", "bug"] },
 ];

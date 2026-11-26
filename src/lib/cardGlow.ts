@@ -11,8 +11,8 @@ export function installCardGlow() {
     const card = target.closest<HTMLElement>('.glass-card, .glass-card-hover, [class*="home-card-"]');
     if (!card) return;
     const rect = card.getBoundingClientRect();
-    card.style.setProperty("--x", `${event.clientX - rect.left}px`);
-    card.style.setProperty("--y", `${event.clientY - rect.top}px`);
+    card.style.setProperty("--glow-x", `${event.clientX - rect.left}px`);
+    card.style.setProperty("--glow-y", `${event.clientY - rect.top}px`);
   };
 
   document.addEventListener(

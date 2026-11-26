@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { usePerfSettings } from "@/lib/perfSettings";
 
 const API_BASE = "https://api.weather.gc.ca/collections/citypageweather-realtime/items";
 
@@ -324,11 +325,12 @@ async function fetchWeather(cityId: string): Promise<WeatherData> {
 }
 
 export function useWeather(cityId: string) {
+  const { backgroundRefresh } = usePerfSettings();
   return useQuery<WeatherData>({
     queryKey: ["weather", cityId],
     queryFn: () => fetchWeather(cityId),
     refetchInterval: 10 * 60 * 1000, // refresh every 10 minutes
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: backgroundRefresh,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });

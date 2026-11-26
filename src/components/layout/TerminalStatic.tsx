@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { appActivity } from "@/lib/appActivity";
 import { useBackdropStill } from "@/lib/backdropSlot";
-import { startFrameLoop } from "@/lib/frameLoop";
+import { onBackdropFpsChange, startFrameLoop } from "@/lib/frameLoop";
+import { backdropFps } from "@/lib/perfSettings";
 
 const FPS = 20;
 const PIXEL = 4;
@@ -32,30 +33,38 @@ export default function TerminalStatic() {
     resize();
     window.addEventListener("resize", resize);
 
+    let frames = 1;
     const tick = () => {
       // Fade what was drawn before, so each pixel flashes then dies away.
-      ctx.fillStyle = "rgb(0 0 0 / 0.35)";
+      ctx.fillStyle = "#000";
+      ctx.globalAlpha = 1 - 0.65 ** frames;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const size = PIXEL * Math.min(window.devicePixelRatio || 1, MAX_DPR);
-      const burst = Math.random() < 0.06;
-      const count = burst ? 120 + Math.random() * 120 : 10 + Math.floor(Math.random() * 20);
+      const burst = Math.random() < 1 - 0.94 ** frames;
+      const count = burst ? 120 + Math.random() * 120 : (10 + Math.floor(Math.random() * 20)) * frames;
+      ctx.fillStyle = "#fff";
       for (let i = 0; i < count; i++) {
-        ctx.fillStyle = `rgb(255 255 255 / ${0.4 + Math.random() * 0.6})`;
+        ctx.globalAlpha = 0.4 + Math.random() * 0.6;
         ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, size, size);
       }
+      ctx.globalAlpha = 1;
     };
     // The loop only runs while the window can be seen.
     let stopLoop: () => void = () => undefined;
     const run = () => {
       stopLoop();
-      if (appActivity.getState().visible) stopLoop = startFrameLoop(FPS, tick);
+      const fps = backdropFps(FPS);
+      frames = FPS / fps;
+      if (appActivity.getState().visible) stopLoop = startFrameLoop(fps, tick);
     };
     run();
     const unsubscribe = appActivity.subscribe(run);
+    const unsubscribeFps = onBackdropFpsChange(FPS, run);
 
     return () => {
       unsubscribe();
+      unsubscribeFps();
       stopLoop();
       window.removeEventListener("resize", resize);
     };

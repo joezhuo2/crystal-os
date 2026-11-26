@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { AnimatePresence } from "framer-motion";
 import type { Task } from "@/contexts/AppContext";
@@ -15,17 +15,23 @@ const weekdayOf = (date: string) => WEEKDAY_SHORT[new Date(`${date}T12:00:00`).g
 
 export function TodayView({ tasks, today, card }: { tasks: Task[]; today: string; card: Card }) {
   const [picked, setPicked] = useState(today);
-  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(today, i)), [today]);
   const day = days.includes(picked) ? picked : today;
-  const open = tasks.filter((t) => !t.completed);
-  const overdue = day === today ? open.filter((t) => isTaskOverdue(t, today)) : [];
-  const due = open.filter((t) => taskFallsOnDate(t, day) && !overdue.includes(t));
+  const { counts, overdue, due } = useMemo(() => {
+    const open = tasks.filter((t) => !t.completed);
+    const overdue = day === today ? open.filter((t) => isTaskOverdue(t, today)) : [];
+    return {
+      counts: days.map((d) => open.filter((t) => taskFallsOnDate(t, d)).length),
+      overdue,
+      due: open.filter((t) => taskFallsOnDate(t, day) && !overdue.includes(t)),
+    };
+  }, [tasks, today, day, days]);
 
   return (
     <div className="space-y-4 min-h-[120px]">
       <div data-fade-unit role="group" aria-label="Week" className="grid grid-cols-7 gap-1.5">
-        {days.map((d) => {
-          const count = open.filter((t) => taskFallsOnDate(t, d)).length;
+        {days.map((d, i) => {
+          const count = counts[i];
           const on = d === day;
           return (
             <button
@@ -64,7 +70,7 @@ export function TodayView({ tasks, today, card }: { tasks: Task[]; today: string
 }
 
 export function UpcomingView({ tasks, today, card }: { tasks: Task[]; today: string; card: Card }) {
-  const groups = upcomingByDate(tasks, today);
+  const groups = useMemo(() => upcomingByDate(tasks, today), [tasks, today]);
   return (
     <div className="space-y-4 min-h-[120px]">
       {groups.map(({ date, tasks: list }) => (

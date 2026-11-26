@@ -444,14 +444,18 @@ function MonthDays({
   const getDateStr = (day: number) =>
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-  const dotsFor = (day: number) => dotsForDate(getDateStr(day), events, tasks, color);
+  const dotsByDay = useMemo(
+    () => days.map((day) => (day === null ? [] : dotsForDate(getDateStr(day), events, tasks, color))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [days, year, month, events, tasks, color],
+  );
 
   return (
     <div className="grid grid-cols-7 gap-1">
       {days.map((day, i) => {
         if (day === null) return <div key={`empty-${i}`} />;
         const dateStr = getDateStr(day);
-        const dots = dotsFor(day);
+        const dots = dotsByDay[i];
         const count = dots.length;
         const isToday = dateStr === today;
 

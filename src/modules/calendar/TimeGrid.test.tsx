@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import { act, fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import { appActivity } from "@/lib/appActivity";
 import type { ReactElement } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
@@ -60,6 +61,26 @@ describe("TimeGrid", () => {
     column.getBoundingClientRect = () => ({ top: 0, left: 0 }) as DOMRect;
     fireEvent.click(column, { clientY: 516 });
     expect(onCreateAt).toHaveBeenCalledWith("2026-09-30", "10:30");
+  });
+
+  it("moves the now line each minute only while the window can be seen", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    vi.setSystemTime(new Date(2026, 8, 30, 10, 0));
+    try {
+      const { container } = render(<TimeGrid dates={["2026-09-30"]} events={[]} color="#60a5fa" onEdit={() => {}} onCreateAt={() => {}} />);
+      const top = () => (container.querySelector(".bg-rose-400")?.parentElement as HTMLElement).style.top;
+      expect(top()).toBe("480px");
+      act(() => appActivity._setWindowShown(false));
+      act(() => vi.advanceTimersByTime(5 * 60_000));
+      expect(top()).toBe("480px");
+      act(() => appActivity._setWindowShown(true));
+      expect(top()).toBe("484px");
+      act(() => vi.advanceTimersByTime(60_000));
+      expect(top()).toBe("484.8px");
+    } finally {
+      act(() => appActivity._setWindowShown(true));
+      vi.useRealTimers();
+    }
   });
 
   it("shows all-day events in the strip above the grid", () => {

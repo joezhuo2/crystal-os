@@ -1,4 +1,4 @@
-import { memo, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { memo, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AppProvider } from "@/contexts/AppContext";
 import { appUi, useAppUi } from "@/lib/appUi";
 import { recordRecent } from "@/lib/recents";
@@ -39,6 +39,7 @@ import { useShortcut } from "@/hooks/useShortcut";
 import { stepTab } from "@/lib/stepTab";
 import { installedModules, useInstalledModules } from "@/lib/installedModules";
 import { LazyTaskForm, LazyTransactionDrawer, lazyViews as views, preloadViews, recordVisit } from "@/lib/viewLoader";
+import { markFadeUnits } from "@/lib/viewFade";
 
 /** Tabs with a page backdrop of their own. */
 const BACKDROP_TABS: ReadonlySet<TabId> = new Set(["home", "settings", "terminal", "portal", "fun", "nebula", "weather", "archive", "calendar", "tasks", "orbit", "observatory"]);
@@ -57,16 +58,26 @@ const VIEW_ENTER_MS = 500;
  * blur of every glass card inside it until the fade ended (opacity on an
  * ancestor of a backdrop-filter does that), so the cards flashed see-through
  * and then snapped back. Instead `data-entering` fades each glass card, and
- * the content beside them, on its own (`.view-enter` in index.css). It is
- * removed shortly after, so content that appears later does not fade.
+ * the content beside them, on its own (`.view-enter` in index.css), marked by
+ * `markFadeUnits` as content arrives. It is removed shortly after, so content
+ * that appears later does not fade.
  */
 function ViewEnter({ fade, children }: { fade: boolean; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el || !fade) return;
-    const timer = window.setTimeout(() => el.removeAttribute("data-entering"), VIEW_ENTER_MS);
-    return () => clearTimeout(timer);
+    markFadeUnits(el);
+    const observer = new MutationObserver(() => markFadeUnits(el));
+    observer.observe(el, { childList: true, subtree: true });
+    const timer = window.setTimeout(() => {
+      observer.disconnect();
+      el.removeAttribute("data-entering");
+    }, VIEW_ENTER_MS);
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    };
   }, [fade]);
   return (
     <div ref={ref} className="view-enter" data-entering={fade ? "" : undefined}>

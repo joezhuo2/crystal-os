@@ -1,5 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { startFrameLoop } from "./frameLoop";
+import { onBackdropFpsChange, startFrameLoop } from "./frameLoop";
+
+const perf = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  return { scale: 1, listeners, notify: () => listeners.forEach((l) => l()) };
+});
+
+vi.mock("@/lib/perfSettings", () => ({
+  backdropFps: (base: number) => Math.max(1, Math.round(base * perf.scale)),
+  perfSettings: {
+    subscribe: (l: () => void) => {
+      perf.listeners.add(l);
+      return () => perf.listeners.delete(l);
+    },
+  },
+}));
 
 // Fake timers drive requestAnimationFrame at a 16 ms refresh.
 beforeEach(() => {
@@ -38,5 +53,22 @@ describe("startFrameLoop", () => {
     vi.advanceTimersByTime(500);
     expect(onFrame).toHaveBeenCalledTimes(1);
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("onBackdropFpsChange", () => {
+  it("restarts only when the scaled rate changes", () => {
+    const restart = vi.fn();
+    const off = onBackdropFpsChange(30, restart);
+    perf.notify();
+    expect(restart).not.toHaveBeenCalled();
+    perf.scale = 0.5;
+    perf.notify();
+    perf.notify();
+    expect(restart).toHaveBeenCalledTimes(1);
+    off();
+    perf.scale = 1;
+    perf.notify();
+    expect(restart).toHaveBeenCalledTimes(1);
   });
 });

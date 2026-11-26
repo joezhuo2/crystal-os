@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { FolderPlus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlideEffect } from "@/components/crystal/GlideEffect";
@@ -14,6 +14,9 @@ import { useShortcut } from "@/hooks/useShortcut";
 import { isDesktop } from "@/lib/platform";
 import { candidates } from "@/lib/harness/modelRouter";
 import { harness, selectActiveChat, selectProjectTokens } from "@/lib/harness/store";
+
+const DiffReviewPane = memo(DiffReview);
+const NebulaCliPane = memo(NebulaCli);
 
 const VIEW_KEY = "crystal-os-nebula-view";
 type NebulaView = "chat" | "cli" | "codex";
@@ -92,7 +95,7 @@ export default function NebulaPage() {
       </header>
 
       {view !== "chat" ? (
-        <NebulaCli key={view} cli={view === "codex" ? "codex" : "claude"} projects={state.projects} />
+        <NebulaCliPane key={view} cli={view === "codex" ? "codex" : "claude"} projects={state.projects} />
       ) : !ready ? (
         <NebulaSetupCard />
       ) : (
@@ -114,7 +117,7 @@ export default function NebulaPage() {
                   claudeModel={state.config!.claudeModel}
                   mediumChain={candidates("medium", state.config!).map((c) => c.label).join(" → ")}
                 />
-                <DiffReview key={project.path} cwd={project.path} chatTitle={chat.title} running={Boolean(runtime?.running)} />
+                <DiffReviewPane key={project.path} cwd={project.path} chatTitle={chat.title} running={Boolean(runtime?.running)} />
                 <ChatView chat={chat} messages={runtime?.messages ?? []} running={Boolean(runtime?.running)} stopping={Boolean(runtime?.stopping)} loaded={Boolean(runtime?.loaded)} banner={runtime?.banner ?? null} />
               </>
             ) : (

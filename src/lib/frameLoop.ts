@@ -9,6 +9,8 @@
  * three times per drawn frame instead of five.
  */
 
+import { backdropFps, perfSettings } from "@/lib/perfSettings";
+
 /** How long before a frame is due the timer hands over to requestAnimationFrame. */
 const LEAD_MS = 8;
 /** A frame this close to due is drawn rather than pushed to the next refresh. */
@@ -46,4 +48,14 @@ export function startFrameLoop(fps: number, onFrame: (now: number) => void): () 
     cancelAnimationFrame(frame);
     clearTimeout(timer);
   };
+}
+
+export function onBackdropFpsChange(base: number, restart: () => void): () => void {
+  let fps = backdropFps(base);
+  return perfSettings.subscribe(() => {
+    const next = backdropFps(base);
+    if (next === fps) return;
+    fps = next;
+    restart();
+  });
 }

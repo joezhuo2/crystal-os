@@ -18,6 +18,8 @@ const defaultFormat = (value: number) => Math.round(value).toLocaleString();
 export function AnimatedNumber({ value, duration = 600, format = defaultFormat, className, ...rest }: AnimatedNumberProps) {
   const [shown, setShown] = useState(value);
   const current = useRef(value);
+  const formatRef = useRef(format);
+  formatRef.current = format;
 
   useEffect(() => {
     if (current.current === value) return;
@@ -29,10 +31,15 @@ export function AnimatedNumber({ value, duration = 600, format = defaultFormat, 
     const from = current.current;
     const start = performance.now();
     let frame = 0;
+    let text = formatRef.current(from);
     const tick = (now: number) => {
       const t = (now - start) / duration;
       current.current = interpolate(from, value, t);
-      setShown(current.current);
+      const next = formatRef.current(current.current);
+      if (next !== text || t >= 1) {
+        text = next;
+        setShown(current.current);
+      }
       if (t < 1) frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);

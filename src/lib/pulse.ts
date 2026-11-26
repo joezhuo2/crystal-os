@@ -12,6 +12,8 @@
 import { useEffect, useState } from "react";
 import type { CalendarEvent } from "@/hooks/useGoogleCalendar";
 import { getPosition } from "@/hooks/useWeather";
+import { appActivity } from "@/lib/appActivity";
+import { perfSettings } from "@/lib/perfSettings";
 
 export interface LatLon {
   lat: number;
@@ -97,7 +99,9 @@ export function useTravelTimes(events: CalendarEvent[], enabled: boolean): Recor
       if (live) setTimes(next);
     };
     void run();
-    const id = window.setInterval(run, TRAVEL_REFRESH_MS);
+    const id = window.setInterval(() => {
+      if (perfSettings.getState().backgroundRefresh || appActivity.getState().visible) void run();
+    }, TRAVEL_REFRESH_MS);
     return () => {
       live = false;
       window.clearInterval(id);

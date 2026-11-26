@@ -73,9 +73,11 @@ let started = false;
 /**
  * Starts tracking, once. Also:
  * - puts `app-hidden` / `perf-still` / `perf-backdrop-still` on <html>, which pause or stop CSS
- *   animations (index.css), and `privacy-mode`, which blurs private content;
+ *   animations (index.css), `perf-no-blur`, which swaps frosted glass for solid panels, and
+ *   `privacy-mode`, which blurs private content;
  * - tells React Query the app is unfocused while hidden, which stops
- *   `refetchInterval` polling and refetches stale data on return.
+ *   `refetchInterval` polling (except queries with `refetchIntervalInBackground`, which
+ *   follow the background refresh switch) and refetches stale data on return.
  */
 export function startAppActivity() {
   if (started || typeof document === "undefined") return;
@@ -86,6 +88,7 @@ export function startAppActivity() {
     root.classList.toggle("app-hidden", !state.visible);
     root.classList.toggle("perf-still", perfSettings.getState().reduceTransitions);
     root.classList.toggle("perf-backdrop-still", perfSettings.getState().stillBackdrops);
+    root.classList.toggle("perf-no-blur", perfSettings.getState().reduceBlur);
     root.classList.toggle("privacy-mode", privacySettings.blurred());
     root.dataset.theme = themeSettings.getState().theme;
   };
