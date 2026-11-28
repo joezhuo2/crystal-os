@@ -15,9 +15,16 @@ const POWERPOINT_SCRIPT: &str = "$ErrorActionPreference = 'Stop'; \
   try { $deck.SaveAs($env:CRYSTAL_CONVERT_OUT, 32) } finally { $deck.Close(); \
   if ($app.Presentations.Count -eq 0) { $app.Quit() } }";
 
+const WORD_SCRIPT: &str = "$ErrorActionPreference = 'Stop'; \
+  $app = New-Object -ComObject Word.Application; \
+  $doc = $app.Documents.Open($env:CRYSTAL_CONVERT_IN, $false, $true); \
+  try { $doc.ExportAsFixedFormat($env:CRYSTAL_CONVERT_OUT, 17) } finally { $doc.Close(0); \
+  if ($app.Documents.Count -eq 0) { $app.Quit() } }";
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum Kind {
   Slides,
+  Document,
   Html,
 }
 
@@ -26,6 +33,7 @@ fn kind_of(name: &str) -> Option<(Kind, &'static str)> {
   match ext.as_str() {
     "pptx" => Some((Kind::Slides, "pptx")),
     "ppt" => Some((Kind::Slides, "ppt")),
+    "docx" => Some((Kind::Document, "docx")),
     "html" => Some((Kind::Html, "html")),
     "htm" => Some((Kind::Html, "htm")),
     _ => None,
@@ -66,18 +74,18 @@ fn run(command: Command) -> Result<(), String> {
   }
 }
 
-fn slides_to_pdf(dir: &Path, input: &Path, output: &Path) -> Result<(), String> {
+fn office_to_pdf(dir: &Path, input: &Path, output: &Path, script: &str, app: &str, what: &str) -> Result<(), String> {
   let mut tried = Vec::new();
   if cfg!(windows) {
-    let mut powerpoint = Command::new("powershell");
-    powerpoint
-      .args(["-NoProfile", "-NonInteractive", "-Command", POWERPOINT_SCRIPT])
+    let mut office = Command::new("powershell");
+    office
+      .args(["-NoProfile", "-NonInteractive", "-Command", script])
       .env("CRYSTAL_CONVERT_IN", input)
       .env("CRYSTAL_CONVERT_OUT", output);
-    match run(powerpoint) {
+    match run(office) {
       Ok(()) if output.is_file() => return Ok(()),
-      Ok(()) => tried.push("PowerPoint wrote no PDF".to_string()),
-      Err(err) => tried.push(format!("PowerPoint: {err}")),
+      Ok(()) => tried.push(format!("{app} wrote no PDF")),
+      Err(err) => tried.push(format!("{app}: {err}")),
     }
   }
   let soffice = program_files("LibreOffice/program/soffice.exe").unwrap_or_else(|| PathBuf::from("soffice"));
@@ -88,7 +96,7 @@ fn slides_to_pdf(dir: &Path, input: &Path, output: &Path) -> Result<(), String> 
     Ok(()) => tried.push("LibreOffice wrote no PDF".to_string()),
     Err(err) => tried.push(format!("LibreOffice: {err}")),
   }
-  Err(format!("Converting slides needs PowerPoint or LibreOffice ({})", tried.join("; ")))
+  Err(format!("Converting {what} needs {app} or LibreOffice ({})", tried.join("; ")))
 }
 
 fn html_to_pdf(dir: &Path, input: &Path, output: &Path) -> Result<(), String> {
@@ -111,7 +119,7 @@ fn html_to_pdf(dir: &Path, input: &Path, output: &Path) -> Result<(), String> {
 }
 
 fn convert(name: &str, bytes: &[u8]) -> Result<Vec<u8>, String> {
-  let (kind, ext) = kind_of(name).ok_or("Only .pptx, .ppt, .html and .htm files can be converted")?;
+  let (kind, ext) = kind_of(name).ok_or("Only .pptx, .ppt, .docx, .html and .htm files can be converted")?;
   let dir = std::env::temp_dir().join(format!("crystal-os-convert-{}-{}", std::process::id(), NEXT.fetch_add(1, Ordering::Relaxed)));
   std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
   let input = dir.join(format!("input.{ext}"));
@@ -119,7 +127,8 @@ fn convert(name: &str, bytes: &[u8]) -> Result<Vec<u8>, String> {
   let result = std::fs::write(&input, bytes)
     .map_err(|e| e.to_string())
     .and_then(|()| match kind {
-      Kind::Slides => slides_to_pdf(&dir, &input, &output),
+      Kind::Slides => office_to_pdf(&dir, &input, &output, POWERPOINT_SCRIPT, "PowerPoint", "slides"),
+      Kind::Document => office_to_pdf(&dir, &input, &output, WORD_SCRIPT, "Word", "documents"),
       Kind::Html => html_to_pdf(&dir, &input, &output),
     })
     .and_then(|()| std::fs::read(&output).map_err(|e| e.to_string()));
@@ -145,9 +154,11 @@ mod tests {
   use super::*;
 
   #[test]
-  fn only_slides_and_html_convert() {
+  fn only_slides_documents_and_html_convert() {
     assert_eq!(kind_of("Week 1.PPTX"), Some((Kind::Slides, "pptx")));
     assert_eq!(kind_of("old.ppt"), Some((Kind::Slides, "ppt")));
+    assert_eq!(kind_of("Lab 2.DOCX"), Some((Kind::Document, "docx")));
+    assert_eq!(kind_of("old.doc"), None);
     assert_eq!(kind_of("outline.final.html"), Some((Kind::Html, "html")));
     assert_eq!(kind_of("page.htm"), Some((Kind::Html, "htm")));
     assert_eq!(kind_of("notes.pdf"), None);

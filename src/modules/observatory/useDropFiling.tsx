@@ -48,7 +48,7 @@ export function useDropFiling({ courseHint, typeHint }: { courseHint?: string; t
 
   const handle = async (files: File[]) => {
     const rejected = files.filter((f) => !ACCEPTED.test(f.name));
-    if (rejected.length) toast.error("Only PDF, PowerPoint and HTML files can be filed", { description: rejected.map((f) => f.name).join(", ") });
+    if (rejected.length) toast.error("Only PDF, PowerPoint, Word and HTML files can be filed", { description: rejected.map((f) => f.name).join(", ") });
     const seen = new Set(filedNames);
     const skipped: string[] = [];
     const fresh = files.filter((f) => {
