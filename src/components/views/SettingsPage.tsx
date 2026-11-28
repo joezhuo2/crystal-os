@@ -1338,6 +1338,15 @@ export default function SettingsPage() {
             <Row title="Ask the AI as soon as I box a region" description="In the reader, dragging a box over a page sends it to the AI at once. While off, the AI panel waits for your question. Needs a provider. Default off.">
               <ObservatoryFlagSwitch flag="aiCaptureAsk" label="Ask the AI as soon as I box a region" needsAi />
             </Row>
+            <Row title="Ask about every course" description="A chat on the Observatory home that answers from all your courses. Each question sends a map of your topic and PDF titles, chapters and page headings, then the text or images of the few pages the AI picks. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="aiAskAll" label="Ask about every course" needsAi />
+            </Row>
+            <Row title="Ask about a course" description="A chat on a course page that answers from that course's PDFs and topic notes. Each question sends a map of them, then the text or images of the few pages the AI picks. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="aiAskCourse" label="Ask about a course" needsAi />
+            </Row>
+            <Row title="Ask about the open PDF" description="In the reader, type a question without boxing a region and the AI answers from the open PDF. Each question sends a map of its chapters and page headings, then the text or images of the few pages the AI picks. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="aiAskResource" label="Ask about the open PDF" needsAi />
+            </Row>
             <Row title="Deep Sky: suggest from my projects" description="Suggest things to learn from the projects in the folders below. Needs a provider. Default off.">
               <ObservatoryFlagSwitch flag="deepSkyProjects" label="Deep Sky: suggest from my projects" needsAi />
             </Row>

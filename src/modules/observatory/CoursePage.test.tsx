@@ -48,7 +48,14 @@ vi.mock("./TopicLinks", () => ({ TopicLinks: () => null }));
 vi.mock("./focus", () => ({ requestFocus: vi.fn(), releaseFocus: vi.fn() }));
 vi.mock("./ExamEventLink", () => ({ ExamEventLink: () => null }));
 vi.mock("./ResourcesTab", () => ({
-  ResourceToolbar: () => null, ResourcesTab: ({ topics: ts }: { topics: Topic[] }) => <p>Resources for {ts.length} topics</p> }));
+  ResourceToolbar: () => null,
+  ResourcesTab: ({ topics: ts, onReading }: { topics: Topic[]; onReading?: (open: boolean) => void }) => (
+    <>
+      <p>Resources for {ts.length} topics</p>
+      <button type="button" onClick={() => onReading?.(true)}>Open a resource</button>
+    </>
+  ),
+}));
 vi.mock("@/lib/ai", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/ai")>()), askAi: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { error: (...a: unknown[]) => toastError(...a), success: vi.fn(), warning: vi.fn() } }));
 
@@ -92,6 +99,44 @@ describe("CoursePage resources", () => {
     renderPage();
     fireEvent.click(screen.getByRole("tab", { name: "Resources" }));
     expect(screen.getByText("Resources for 2 topics")).toBeInTheDocument();
+  });
+
+  it("hides the course Back button while a resource is open so back stays on Resources", () => {
+    renderPage();
+    fireEvent.click(screen.getByRole("tab", { name: "Resources" }));
+    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open a resource" }));
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    expect(screen.getByRole("tab", { name: "Resources" })).toHaveAttribute("aria-selected", "true");
+  });
+});
+
+describe("CoursePage ask", () => {
+  const button = () => screen.queryByRole("button", { name: "Ask about MATH117" });
+  beforeEach(() => Object.assign(window, { __TAURI_INTERNALS__: {} }));
+  afterEach(() => {
+    delete (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+    setObservatoryAiProvider("none");
+    setObservatoryFlag("aiAskCourse", false);
+  });
+
+  it("shows the ask icon on every tab only while the flag is on and a provider is set", () => {
+    setObservatoryFlag("aiAskCourse", true);
+    const first = renderPage();
+    expect(button()).toBeNull();
+    first.unmount();
+
+    setObservatoryAiProvider("claude");
+    setObservatoryFlag("aiAskCourse", false);
+    const second = renderPage();
+    expect(button()).toBeNull();
+    second.unmount();
+
+    setObservatoryFlag("aiAskCourse", true);
+    renderPage();
+    expect(button()).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Grades" }));
+    expect(button()).toBeInTheDocument();
   });
 });
 
@@ -159,9 +204,12 @@ describe("CoursePage grades", () => {
     expect((screen.getByText("Secured").nextSibling as HTMLElement).querySelector(".sr-only")?.textContent).toBe("32%");
     fireEvent.blur(input);
     expect(parseCourse(files.get(coursePath)!.content).exams[0]!.scores).toBeUndefined();
-    fireEvent.click(screen.getByRole("button", { name: /Save grades/ }));
+    const save = screen.getByRole("button", { name: "Save grades" });
+    expect(screen.getByRole("tablist", { name: "Course sections" }).parentElement).toContainElement(save);
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
     await waitFor(() => expect(parseCourse(files.get(coursePath)!.content).exams[0]!.scores).toEqual([{ label: "#1", score: 80 }]));
-    expect(await screen.findByRole("button", { name: /Saved/ })).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save grades" })).toBeDisabled());
   });
 
   it("asks before leaving the Grades tab with unsaved scores", async () => {

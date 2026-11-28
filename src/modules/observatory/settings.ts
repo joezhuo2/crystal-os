@@ -22,6 +22,9 @@ export interface ObservatorySettings {
   aiDraft: boolean;
   aiExtract: boolean;
   aiCaptureAsk: boolean;
+  aiAskAll: boolean;
+  aiAskCourse: boolean;
+  aiAskResource: boolean;
   deepSkyProjects: boolean;
   deepSkyFolders: string[];
   deepSkyRandom: boolean;
@@ -30,10 +33,10 @@ export interface ObservatorySettings {
 
 type Flag =
   | "keywordSort" | "focusOnTopic" | "focusOnResource" | "focusOnAnswer" | "focusAsk" | "focusAutoStop" | "reminder"
-  | "aiSort" | "aiDraft" | "aiExtract" | "aiCaptureAsk" | "deepSkyProjects" | "deepSkyRandom" | "deepSkyFillHome";
+  | "aiSort" | "aiDraft" | "aiExtract" | "aiCaptureAsk" | "aiAskAll" | "aiAskCourse" | "aiAskResource" | "deepSkyProjects" | "deepSkyRandom" | "deepSkyFillHome";
 const FLAGS: Flag[] = [
   "keywordSort", "focusOnTopic", "focusOnResource", "focusOnAnswer", "focusAsk", "focusAutoStop", "reminder",
-  "aiSort", "aiDraft", "aiExtract", "aiCaptureAsk", "deepSkyProjects", "deepSkyRandom", "deepSkyFillHome",
+  "aiSort", "aiDraft", "aiExtract", "aiCaptureAsk", "aiAskAll", "aiAskCourse", "aiAskResource", "deepSkyProjects", "deepSkyRandom", "deepSkyFillHome",
 ];
 const AI_CHOICES: readonly AiChoice[] = ["none", "claude", "nim", "omniroute"];
 
@@ -43,6 +46,7 @@ const DEFAULTS: ObservatorySettings = {
   focusOnTopic: true, focusOnResource: true, focusOnAnswer: true, focusAsk: true, focusAutoStop: true, idleMinutes: 5,
   reminder: false, reminderTime: "19:00",
   aiProvider: "none", aiModel: "", aiSort: false, aiThreshold: 0.75, aiDraft: false, aiExtract: false, aiCaptureAsk: false,
+  aiAskAll: false, aiAskCourse: false, aiAskResource: false,
   deepSkyProjects: false, deepSkyFolders: [], deepSkyRandom: false, deepSkyFillHome: false,
 };
 

@@ -36,7 +36,7 @@ export interface AppUiState {
   terminalTarget: number | null;
 }
 
-export interface ObservatoryTarget { code?: string; tab?: "Overview" | "Topics" | "Resources" | "Grades"; topic?: string; view?: "review" | "inbox" | "deepsky" }
+export interface ObservatoryTarget { code?: string; tab?: "Overview" | "Topics" | "Resources" | "Grades"; topic?: string; resource?: string; page?: number; view?: "review" | "inbox" | "deepsky" }
 
 const initialState: AppUiState = {
   showTaskForm: false,
