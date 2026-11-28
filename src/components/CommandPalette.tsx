@@ -81,7 +81,7 @@ import { AnimatePresence, m } from "framer-motion";
 import { isDesktop, openExternal } from "@/lib/platform";
 import { usePortalOcclusion } from "@/hooks/usePortal";
 import { readRecents, type RecentItem } from "@/lib/recents";
-import { SETTINGS_SECTIONS, settingsSectionValue } from "@/lib/settingsSections";
+import { SETTINGS_SECTIONS, matchKeymapGroupSections, settingsSectionValue } from "@/lib/settingsSections";
 import { calendarWasConnected, useCalendarEvents, useCalendarStatus } from "@/hooks/useGoogleCalendar";
 import { pickedCalendarId } from "@/hooks/useTodayCapacity";
 import { capacityWindow, useCapacitySettings } from "@/lib/capacitySettings";
@@ -1321,8 +1321,8 @@ function SearchOverlay({ onClose, onNavigate }: Omit<CommandPaletteProps, "open"
                         ))}
                       {/* Individual sections only once something is typed, or the list would crowd the empty bar. */}
                       {search &&
-                        SETTINGS_SECTIONS.filter((section) => (!section.desktopOnly || isDesktop()) && (!section.module || on(section.module))).map((section) => {
-                          const Icon = SECTION_ICONS[section.id] ?? Settings;
+                        [...SETTINGS_SECTIONS, ...matchKeymapGroupSections(text)].filter((section) => (!section.desktopOnly || isDesktop()) && (!section.module || on(section.module))).map((section) => {
+                          const Icon = SECTION_ICONS[section.id.split("#")[0]] ?? Settings;
                           return (
                             <CommandItem
                               key={section.id}

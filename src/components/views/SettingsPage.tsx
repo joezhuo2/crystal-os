@@ -144,26 +144,30 @@ function Section({ id, icon: Icon, title, children }: { id: string; icon: React.
   // The command palette's "jump to section": unfold it (saved, like a click),
   // scroll to it and flash it. Waits for the page to clear its search first,
   // since a filtered-out section is hidden and cannot be scrolled to.
-  const jumpTarget = useAppUi((s) => s.settingsSection);
+  const [jumpId, jumpAnchor] = (useAppUi((s) => s.settingsSection) ?? "").split("#");
   const [flash, setFlash] = useState(false);
+  const [anchor, setAnchor] = useState<string>();
   useEffect(() => {
-    if (jumpTarget !== id || searching) return;
+    if (jumpId !== id || searching) return;
     appUi.setSettingsSection(null);
     writeCollapsed(id, false);
     setOpen(true);
+    setAnchor(jumpAnchor);
     setFlash(true);
-  }, [jumpTarget, searching, id]);
+  }, [jumpId, jumpAnchor, searching, id]);
 
   // Apart from the jump, which re-runs as soon as it clears the request.
   useEffect(() => {
     if (!flash) return;
-    const frame = requestAnimationFrame(() => sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    const section = sectionRef.current;
+    const target = (anchor && section?.querySelector<HTMLElement>(`[data-settings-anchor="${anchor}"]`)) || section;
+    const frame = requestAnimationFrame(() => target?.scrollIntoView({ behavior: "smooth", block: "start" }));
     const timer = window.setTimeout(() => setFlash(false), FLASH_MS);
     return () => {
       cancelAnimationFrame(frame);
       window.clearTimeout(timer);
     };
-  }, [flash]);
+  }, [flash, anchor]);
 
   const toggle = () => {
     if (searching) return setOverride(!shown);
@@ -690,7 +694,7 @@ function KeymapSettings() {
   return (
     <>
       {groups.map(({ category, actions }) => (
-        <div key={category} className="space-y-3 pt-3 first:pt-0">
+        <div key={category} data-settings-anchor={category} className="space-y-3 pt-3 first:pt-0 scroll-mt-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{KEYMAP_CATEGORY_LABELS[category]}</p>
           {actions.map((action) => {
             const binding = bindingFor(action.id) ?? action.defaultKey;

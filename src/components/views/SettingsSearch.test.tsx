@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { appUi } from "@/lib/appUi";
-import { SETTINGS_SECTIONS } from "@/lib/settingsSections";
+import { KEYMAP_GROUP_SECTIONS, SETTINGS_SECTIONS } from "@/lib/settingsSections";
 
 vi.mock("@/lib/platform", async (orig) => ({ ...(await orig<object>()), isDesktop: () => false }));
 vi.mock("@/hooks/useGlobalHotkey", () => ({ useGlobalHotkeys: () => ({ statuses: null }) }));
@@ -91,6 +91,30 @@ describe("Jumping to a section from the command palette", () => {
 
       act(() => vi.advanceTimersByTime(2000));
       expect(section("performance").hasAttribute("data-flash")).toBe(false);
+    } finally {
+      vi.useRealTimers();
+      appUi.reset();
+    }
+  });
+
+  it("scrolls to an in-app shortcut group inside its section", () => {
+    vi.useFakeTimers();
+    try {
+      const scrolled: Element[] = [];
+      Element.prototype.scrollIntoView = vi.fn(function (this: Element) {
+        scrolled.push(this);
+      });
+      render(<SettingsPage />);
+      for (const entry of KEYMAP_GROUP_SECTIONS) {
+        const [id, anchor] = entry.id.split("#");
+        expect(section(id).querySelector(`[data-settings-anchor="${anchor}"]`), entry.id).not.toBeNull();
+      }
+
+      act(() => appUi.setSettingsSection("keymap#observatory"));
+      act(() => vi.advanceTimersByTime(50));
+      expect(expanded("keymap")).toBe("true");
+      expect(scrolled.at(-1)?.getAttribute("data-settings-anchor")).toBe("observatory");
+      expect(appUi.getState().settingsSection).toBeNull();
     } finally {
       vi.useRealTimers();
       appUi.reset();

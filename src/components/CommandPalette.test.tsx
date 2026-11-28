@@ -173,6 +173,24 @@ describe("Command palette Settings sections", () => {
     expect(onNavigate).toHaveBeenCalledWith("settings");
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("jump to a module's in-app shortcut group by '<module> hotkey', only when the module is named", () => {
+    renderPalette();
+    for (const query of ["observatory hotkey", "observatory shortcuts", "observatory keybinds"]) {
+      fireEvent.change(screen.getByRole("combobox"), { target: { value: query } });
+      expect(screen.getByText("Settings → In-app shortcuts → The Observatory"), query).toBeInTheDocument();
+    }
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "calendar hotkeys" } });
+    expect(screen.getByText("Settings → In-app shortcuts → The Horizon")).toBeInTheDocument();
+    expect(screen.queryByText("Settings → In-app shortcuts → The Observatory")).toBeNull();
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "hotkey" } });
+    expect(screen.queryByText(/Settings → In-app shortcuts → /)).toBeNull();
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "observatory hotkey" } });
+    fireEvent.click(screen.getByText("Settings → In-app shortcuts → The Observatory"));
+    expect(appUi.getState().settingsSection).toBe("keymap#observatory");
+    expect(onNavigate).toHaveBeenCalledWith("settings");
+  });
 });
 
 describe("Command palette free-slot finder", () => {
