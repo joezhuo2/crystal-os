@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.20.1] - 2026-11-27 - Ask the AI about your courses in The Observatory, Word documents as resources, and search that finds shortcut groups.
+
+### Added
+
+- **Ask about every course.** With **Settings → The Observatory → Ask about every course** on, a new button on the Observatory home opens a chat that answers from all your course PDFs and topic notes.
+- **Ask about a course.** A second switch adds the same chat to each course page, on the tab row, limited to that course.
+- **Ask about the open PDF.** A third switch lets the reader's AI panel take a typed question without boxing a region first. It finds the relevant pages itself, so long PDFs stay fast.
+- **Only the relevant pages are sent.** The AI first sees a short map of chapters and page headings, picks at most 12 pages, and answers from those. Each answer lists its sources; click one to open the PDF at that page. All three switches need an AI provider and are off by default.
+- **Word documents.** Drop a `.docx` file and it is saved as a PDF first, like slides. This needs Word or LibreOffice.
+- **Search finds shortcut groups.** Typing "observatory hotkey", "calendar shortcuts" or similar in the search bar offers **Settings → In-app shortcuts** for that module and scrolls to its group.
+
+### Changed
+
+- **Deleting a resource asks first.** The trash button now opens a confirmation. Undo still restores the file.
+- **Save grades is an icon on the tab row,** next to Overview, Topics, Resources and Grades, like the Resources buttons.
+
+### Fixed
+
+- **Back from a PDF returns to Resources.** While a resource is open, the course's Back button, which went to the Observatory home, is hidden. The reader's Resources button takes you back to the list.
+
 ## [v0.20.0] - 2026-11-26 - Lower CPU and memory use in every tab, three new Performance options, and no more notification bursts.
 
 ### Added

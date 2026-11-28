@@ -92,17 +92,19 @@ describe("DropZone", () => {
 
   it("rejects non-PDFs and sorts each PDF on its own", async () => {
     renderZone("MATH117");
-    drop(pdf("a.pdf"), pdf("notes.docx"), pdf("b.PDF"));
+    drop(pdf("a.pdf"), pdf("notes.doc"), pdf("b.PDF"));
     await waitFor(() => expect(fileDrop).toHaveBeenCalledTimes(2));
-    expect(toast.error).toHaveBeenCalledWith("Only PDF, PowerPoint and HTML files can be filed", { description: "notes.docx" });
+    expect(toast.error).toHaveBeenCalledWith("Only PDF, PowerPoint, Word and HTML files can be filed", { description: "notes.doc" });
     expect(fileDrop).toHaveBeenCalledWith(expect.objectContaining({ name: "a.pdf" }), expect.any(Array), { courseHint: "MATH117", typeHint: undefined });
   });
 
-  it("converts slides and web pages to PDF before filing them", async () => {
+  it("converts slides, Word documents and web pages to PDF before filing them", async () => {
     renderZone();
-    drop(pdf("Week 1.pptx"), pdf("outline.html"));
-    await waitFor(() => expect(fileDrop).toHaveBeenCalledTimes(2));
+    drop(pdf("Week 1.pptx"), pdf("outline.html"), pdf("Lab 2.DOCX"));
+    await waitFor(() => expect(fileDrop).toHaveBeenCalledTimes(3));
     expect(convertToPdf).toHaveBeenCalledWith("Week 1.pptx", expect.any(Uint8Array));
+    expect(convertToPdf).toHaveBeenCalledWith("Lab 2.DOCX", expect.any(Uint8Array));
+    expect(fileDrop).toHaveBeenCalledWith(expect.objectContaining({ name: "Lab 2.pdf" }), expect.any(Array), expect.anything());
     expect(fileDrop).toHaveBeenCalledWith({ name: "Week 1.pdf", bytes: new Uint8Array([9]) }, expect.any(Array), expect.anything());
     expect(fileDrop).toHaveBeenCalledWith(expect.objectContaining({ name: "outline.pdf" }), expect.any(Array), expect.anything());
   });

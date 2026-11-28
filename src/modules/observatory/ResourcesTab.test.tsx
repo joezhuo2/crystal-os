@@ -91,10 +91,20 @@ describe("ResourcesTab", () => {
   it("deletes a resource and restores it on undo", async () => {
     show();
     fireEvent.click(within(screen.getByRole("region", { name: "Question sheets" })).getByRole("button", { name: /^delete /i }));
+    expect(deleteResource).not.toHaveBeenCalled();
+    fireEvent.click(within(await screen.findByRole("alertdialog", { name: "Delete ps1.pdf?" })).getByRole("button", { name: "Delete" }));
     await waitFor(() => expect(deleteResource).toHaveBeenCalledWith(resources[1]));
     await waitFor(() => expect(undoToast).toHaveBeenCalled());
     act(() => undoToast.mock.calls[0]![1]());
     await waitFor(() => expect(restoreResource).toHaveBeenCalledWith([{ from: "a", path: "b" }]));
+  });
+
+  it("deletes nothing when the confirmation is cancelled", async () => {
+    show();
+    fireEvent.click(within(screen.getByRole("region", { name: "Question sheets" })).getByRole("button", { name: /^delete /i }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(deleteResource).not.toHaveBeenCalled();
   });
 
   it("opens the reader and moves a resource", async () => {

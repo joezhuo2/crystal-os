@@ -14,6 +14,7 @@ import { useAppActivity } from "@/lib/appActivity";
 import { appUi, useAppUi, type ObservatoryTarget } from "@/lib/appUi";
 import { HABIT_COLORS } from "@/lib/habits";
 import { toLocalDateStr } from "@/lib/utils";
+import { AskButton } from "./AskButton";
 import { CourseDialog, type CourseDraft } from "./CourseDialog";
 import { CoursePage } from "./CoursePage";
 import { DEEP_SKY } from "./deepsky/deepsky";
@@ -132,7 +133,7 @@ export default function ObservatoryPage() {
   const [inbox, setInbox] = useState(false);
   const [tab, setTab] = useState<Tab>("courses");
   const [reviewCode, setReviewCode] = useState<string | undefined>();
-  const [jump, setJump] = useState<{ tab?: ObservatoryTarget["tab"]; topic?: string; n: number }>({ n: 0 });
+  const [jump, setJump] = useState<{ tab?: ObservatoryTarget["tab"]; topic?: string; resource?: { pdf: string; page?: number }; n: number }>({ n: 0 });
   const { resources: unsorted } = useResources(null);
   const target = useAppUi((s) => s.observatoryTarget);
 
@@ -154,7 +155,7 @@ export default function ObservatoryPage() {
     setTab(target.view === "deepsky" || target.code === DEEP_SKY ? "deepsky" : "courses");
     if (!target.view && target.code && target.code !== DEEP_SKY) {
       setOpenCode(target.code);
-      setJump((j) => ({ tab: target.tab, topic: target.topic, n: j.n + 1 }));
+      setJump((j) => ({ tab: target.tab, topic: target.topic, resource: target.resource ? { pdf: target.resource, page: target.page } : undefined, n: j.n + 1 }));
     }
   }, [target]);
 
@@ -227,6 +228,9 @@ export default function ObservatoryPage() {
           {!open && !reviewing && !inbox && tab === "courses" && (
             <FindAllQuestionsButton codes={courses.filter((e) => !e.course.archived).map((e) => e.course.code)} label="Find questions in every course with AI" />
           )}
+          {!open && !reviewing && !inbox && tab === "courses" && (
+            <AskButton courses={courses.filter((e) => !e.course.archived).map((e) => e.course)} flag="aiAskAll" label="Ask about every course" />
+          )}
           <IconAction icon={GraduationCap} label="Review" hint="Due and new cards (R)" action={() => setReviewing(true)} />
           <IconAction icon={Plus} label="New course" hint="N" variant="default" action={openNewCourse} />
         </div>
@@ -270,7 +274,7 @@ export default function ObservatoryPage() {
         ) : tab === "deepsky" ? (
           <DeepSkyView courses={courses.map((e) => e.course)} />
         ) : open ? (
-          <CoursePage key={`${open.course.code}-${jump.n}`} entry={open} initialTab={jump.tab} initialTopic={jump.topic} onBack={() => setOpenCode(null)} />
+          <CoursePage key={`${open.course.code}-${jump.n}`} entry={open} initialTab={jump.tab} initialTopic={jump.topic} initialResource={jump.resource} onBack={() => setOpenCode(null)} />
         ) : loading ? (
           <div role="status" aria-label="Loading courses" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[0, 1, 2].map((i) => (

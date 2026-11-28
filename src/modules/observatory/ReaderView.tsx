@@ -1,7 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { releaseFocus, requestFocus } from "./focus";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { ArrowLeft, ChevronDown, Maximize2, Minimize2, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileText, Maximize2, Minimize2, ZoomIn, ZoomOut } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { SkeletonLines } from "@/components/ui/dashboard-skeletons";
@@ -9,6 +9,7 @@ import { ThemedSelect } from "@/components/ui/field-controls";
 import { useShortcut } from "@/hooks/useShortcut";
 import { fetchRawNote } from "@/hooks/useVault";
 import { parseFrontmatter, readVaultBinary } from "@/lib/vaultNative";
+import type { AskScope } from "./aiAsk";
 import { canvasImage, imageUrl, type AiImage } from "./aiImages";
 import type { Topic } from "./model";
 import { FindQuestionsButton } from "./FindQuestions";
@@ -20,6 +21,7 @@ import { ocrPage } from "./resources/ocr";
 import { openPdf, renderPage } from "./resources/pdf";
 import { chapterPoolPath } from "./resources/process";
 import { UNCLEAR_BELOW } from "./resources/types";
+import { useObservatorySettings } from "./settings";
 
 interface BookChapter { number: string; title: string; start: number; end: number }
 
@@ -134,9 +136,9 @@ function Fold({ title, open, onToggle, label, children }: { title: string; open:
   );
 }
 
-interface Props { resource: Resource; code: string; topics: Topic[]; onBack: () => void }
+interface Props { resource: Resource; code: string; topics: Topic[]; onBack: () => void; initialPage?: number }
 
-export function ReaderView({ resource, code, topics, onBack }: Props) {
+export function ReaderView({ resource, code, topics, onBack, initialPage }: Props) {
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [chapter, setChapter] = useState<string>("");
@@ -299,11 +301,21 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
   useShortcut("observatory.fullScreen", toggleFull);
   const paneHeight = full ? "h-[calc(100vh-5rem)]" : "h-[75vh]";
 
+  const toPage = (n: number | undefined) => pagesRef.current?.querySelector(`[data-page="${n}"]`)?.scrollIntoView({ block: "start" });
+  useEffect(() => {
+    if (initialPage) toPage(initialPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc, ratio]);
+  const { aiAskResource } = useObservatorySettings();
+  const askScope = useMemo<AskScope>(
+    () => ({ courses: [], topics: [], resources: [{ pdf: resource.pdf, sidecar: resource.sidecar, title: resource.title || resource.name, type: resource.type, code }] }),
+    [resource, code],
+  );
+
   const current = chapters.find((c) => c.number === chapter) ?? chapters[0];
   const jump = (value: string) => {
     setChapter(value);
-    const start = chapters.find((c) => c.number === value)?.start;
-    pagesRef.current?.querySelector(`[data-page="${start}"]`)?.scrollIntoView({ block: "start" });
+    toPage(chapters.find((c) => c.number === value)?.start);
   };
 
   const poolPath =
@@ -362,8 +374,19 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
           style={{ gridTemplateRows: `auto ${aiOpen ? 3 : 0}fr${poolPath ? ` auto ${poolOpen ? 2 : 0}fr` : ""}` }}
         >
           <Fold title="AI" label="AI" open={aiOpen} onToggle={() => setAiOpen((o) => !o)}>
-            {chats.length > 1 && (
+            {chats.length + (aiAskResource ? 1 : 0) > 1 && (
               <div role="group" aria-label="Chats" className="sticky top-0 z-10 flex gap-1.5 overflow-x-auto bg-background p-1">
+                {aiAskResource && (
+                  <button
+                    type="button"
+                    aria-label="Chat about the whole PDF"
+                    aria-pressed={activeChat === 0}
+                    onClick={() => setActiveChat(0)}
+                    className={`flex h-10 w-14 shrink-0 items-center justify-center rounded border transition-opacity ${activeChat === 0 ? "border-sky-500 ring-1 ring-sky-500" : "border-border/60 opacity-60 hover:opacity-100"}`}
+                  >
+                    <FileText className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                )}
                 {chats.map((c, i) => (
                   <button
                     key={c.id}
@@ -378,7 +401,13 @@ export function ReaderView({ resource, code, topics, onBack }: Props) {
                 ))}
               </div>
             )}
-            {chats.length === 0 && <ReaderAi image={null} onClear={() => {}} />}
+            {aiAskResource ? (
+              <div hidden={activeChat !== 0}>
+                <ReaderAi image={null} onClear={() => {}} scope={askScope} onPage={toPage} />
+              </div>
+            ) : (
+              chats.length === 0 && <ReaderAi image={null} onClear={() => {}} />
+            )}
             {chats.map((c) => (
               <div key={c.id} hidden={c.id !== activeChat}>
                 <ReaderAi image={c.image} onClear={() => closeChat(c.id)} />

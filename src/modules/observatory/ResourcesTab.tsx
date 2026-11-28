@@ -2,7 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { BookOpen, Check, FileQuestion, FolderInput, Library, Play, Presentation, RefreshCw, Trash2, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { isDesktop } from "@/lib/platform";
 import { undoToast } from "@/lib/undo";
@@ -137,13 +147,21 @@ function Suggestions({ code, resource, onDone }: { code: string; resource: Resou
   );
 }
 
-export function ResourcesTab({ course, topics, onReading }: { course: Course; topics: Topic[]; onReading?: (open: boolean) => void }) {
+export function ResourcesTab({ course, topics, onReading, initialResource }: { course: Course; topics: Topic[]; onReading?: (open: boolean) => void; initialResource?: { pdf: string; page?: number } }) {
   const { resources, loading } = useResources(course.code);
   const { courses } = useCourses();
   const queryClient = useQueryClient();
   const [progress, setProgress] = useState<Record<string, ProcessProgress>>({});
   const [reading, setReading] = useState<Resource | null>(null);
+  const opened = useRef(false);
+  useEffect(() => {
+    const r = !opened.current && initialResource && resources.find((x) => x.pdf === initialResource.pdf);
+    if (!r) return;
+    opened.current = true;
+    setReading(r);
+  }, [resources, initialResource]);
   const [moving, setMoving] = useState<Resource | null>(null);
+  const [deleting, setDeleting] = useState<Resource | null>(null);
   const isReading = !!reading;
   useEffect(() => {
     onReading?.(isReading);
@@ -190,7 +208,8 @@ export function ResourcesTab({ course, topics, onReading }: { course: Course; to
     }
   };
 
-  if (reading) return <ReaderView resource={reading} code={course.code} topics={topics} onBack={() => setReading(null)} />;
+  if (reading)
+    return <ReaderView resource={reading} code={course.code} topics={topics} onBack={() => setReading(null)} initialPage={reading.pdf === initialResource?.pdf ? initialResource.page : undefined} />;
 
   return (
     <div className="space-y-4">
@@ -223,7 +242,7 @@ export function ResourcesTab({ course, topics, onReading }: { course: Course; to
                           <FindQuestionsButton jobs={[{ resource: r, code: course.code, topics }]} label={`Find questions in ${r.name} with AI`} />
                           <IconAction icon={BookOpen} label={`Open ${r.name}`} hint="Read it with its question pool" action={() => setReading(r)} />
                           <IconAction icon={FolderInput} label={`Move ${r.name}`} hint="Another course or type" action={() => setMoving(r)} />
-                          <IconAction icon={Trash2} label={`Delete ${r.name}`} hint="Moves it to the trash; Undo restores it" className="hover:text-destructive" action={() => remove(r)} />
+                          <IconAction icon={Trash2} label={`Delete ${r.name}`} hint="Asks first, then moves it to the trash" className="hover:text-destructive" action={() => { setDeleting(r); return false; }} />
                         </span>
                       )}
                     </div>
@@ -251,6 +270,20 @@ export function ResourcesTab({ course, topics, onReading }: { course: Course; to
           onClose={() => setMoving(null)}
         />
       )}
+      <AlertDialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleting?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>The PDF and its notes move to the vault's .trash folder. Undo restores them.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className={buttonVariants({ variant: "destructive" })} onClick={() => deleting && void remove(deleting)}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -58,6 +58,7 @@ describe("observatory settings", () => {
       focusOnTopic: true, focusOnResource: true, focusOnAnswer: true, focusAsk: false, focusAutoStop: true, idleMinutes: 1,
       reminder: false, reminderTime: "19:00",
       aiProvider: "none", aiModel: "", aiSort: false, aiThreshold: 0.75, aiDraft: false, aiExtract: false, aiCaptureAsk: false,
+      aiAskAll: false, aiAskCourse: false, aiAskResource: false,
       deepSkyProjects: false, deepSkyFolders: [], deepSkyRandom: false, deepSkyFillHome: false,
     });
   });

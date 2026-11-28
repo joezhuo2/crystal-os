@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
-import { AlertTriangle, Plus, Save, X } from "lucide-react";
+import { AlertTriangle, Plus, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import { ThemedSelect } from "@/components/ui/field-controls";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Switch } from "@/components/ui/switch";
-import { ActionButton } from "./ActionButton";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { bestOf, computeGrades, neededFor, TARGETS, toGpa, type ItemGrade, type Needed } from "./grades";
 import type { Course, Graded, Score } from "./model";
@@ -112,13 +111,18 @@ export interface GradesHandle {
   discard: () => void;
 }
 
-export const GradesTab = forwardRef<GradesHandle, { course: Course; onEdit: () => void }>(function GradesTab({ course, onEdit }, ref) {
+export const GradesTab = forwardRef<GradesHandle, { course: Course; onEdit: () => void; onDirty?: (dirty: boolean) => void }>(function GradesTab({ course, onEdit, onDirty }, ref) {
   const { folder } = useObservatorySettings();
   const queryClient = useQueryClient();
   const [items, setItems] = useState<Items>({ exams: course.exams, assessments: course.assessments });
   const [adding, setAdding] = useState<Record<string, boolean>>({});
   const [custom, setCustom] = useState("");
   const [dirty, setDirty] = useState(false);
+  useEffect(() => {
+    onDirty?.(dirty);
+    return () => onDirty?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty]);
   const [s] = useState(() => ({ course, folder, items, dirty: false, saving: 0 }));
   s.course = course;
   s.folder = folder;
@@ -197,12 +201,6 @@ export const GradesTab = forwardRef<GradesHandle, { course: Course; onEdit: () =
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end gap-3">
-        {dirty && <span className="text-xs text-muted-foreground">Unsaved changes</span>}
-        <ActionButton size="sm" action={save} pending="Saving" done="Saved" disabled={!dirty}>
-          <Save className="h-3.5 w-3.5 mr-1" /> Save grades
-        </ActionButton>
-      </div>
       <section className="glass-card p-4 space-y-3 text-sm">
         <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>

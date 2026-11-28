@@ -4,6 +4,8 @@
  * keywords are the section's row titles plus words people search for.
  */
 
+import { fuzzyRank, fuzzyScore } from "@/lib/fuzzy";
+import { KEYMAP, KEYMAP_CATEGORY_LABELS, type KeymapCategory } from "@/lib/keymap";
 import type { TabId } from "@/modules/registry";
 
 export interface SettingsSectionEntry {
@@ -30,7 +32,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionEntry[] = [
   { id: "engine", title: "The Engine", hint: "Work day hours", keywords: ["tasks", "work day starts", "work day ends", "capacity", "fits today", "focus sounds", "ambient", "noise", "rain", "pomodoro"], module: "tasks" },
   { id: "notifications", title: "Notifications", hint: "Do Not Disturb, reminders", keywords: ["do not disturb", "dnd", "scheduled do not disturb", "quiet hours", "quiet from", "quiet until", "task due times", "task reminders", "deadline", "calendar reminders", "remind before events", "pulse", "leave by", "travel time", "pomodoro", "portal messages", "orbit reviews", "budget alerts", "bill reminders", "habit reminders","startup", "test", "what's new", "changelog", "release notes"] },
   { id: "orbit", title: "The Orbit", hint: "Auto-export reviews", keywords: ["auto-export reviews", "weekly", "monthly", "yearly", "review"], module: "orbit" },
-  { id: "observatory", title: "The Observatory", hint: "Courses folder, review, focus, reminder", keywords: ["study", "courses", "flashcards", "fsrs", "focus", "pomodoro", "auto start", "auto stop", "idle", "review reminder", "sort pdfs", "ai", "claude", "deep sky", "drafting"], module: "observatory" },
+  { id: "observatory", title: "The Observatory", hint: "Courses folder, review, focus, reminder", keywords: ["study", "courses", "flashcards", "fsrs", "focus", "pomodoro", "auto start", "auto stop", "idle", "review reminder", "sort pdfs", "ai", "claude", "deep sky", "drafting", "ask", "chat"], module: "observatory" },
   { id: "mail", title: "The Courier", hint: "Mail sorting provider, model and cache", keywords: ["mail", "cache", "fetch window", "retention", "email", "gmail", "bills", "job applications", "orders", "security alerts", "ai provider", "model", "api key override"], module: "mail" },
   { id: "atmosphere", title: "The Atmosphere", hint: "Weather effects, aurora, background", keywords: ["weather effects", "aurora", "background image", "image blur", "sky"], module: "weather" },
   { id: "theme", title: "Theme", hint: "Default or Orbit, Flux Lines background", keywords: ["appearance", "default theme", "orbit theme", "black and white", "monochrome", "flux lines", "animated background", "dark", "colours", "colors"] },
@@ -40,6 +42,39 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionEntry[] = [
   { id: "install", title: "Install & update", hint: "Version, updates", keywords: ["update", "version", "installer", "upgrade"], desktopOnly: true },
   { id: "diagnostics", title: "Diagnostics", hint: "Error report", keywords: ["error report", "copy diagnostics", "debug", "bug"] },
 ];
+
+const KEYMAP_GROUP_MODULE: Record<KeymapCategory, TabId | undefined> = {
+  general: undefined,
+  engine: "tasks",
+  horizon: "calendar",
+  archive: "archive",
+  observatory: "observatory",
+  nebula: "nebula",
+  terminal: "terminal",
+  orbit: "orbit",
+};
+
+const KEYMAP_GROUP_WORDS = ["hotkeys", "shortcuts", "keybinds", "keybindings", "keymap", "keys"];
+
+const groupName = (category: KeymapCategory) =>
+  `${category} ${KEYMAP_GROUP_MODULE[category] ?? ""} ${KEYMAP_CATEGORY_LABELS[category].replace(/^The /, "")}`;
+
+export const KEYMAP_GROUP_SECTIONS: readonly SettingsSectionEntry[] = (Object.keys(KEYMAP_CATEGORY_LABELS) as KeymapCategory[])
+  .filter((category) => KEYMAP.some((a) => a.category === category))
+  .map((category) => ({
+    id: `keymap#${category}`,
+    title: `In-app shortcuts → ${KEYMAP_CATEGORY_LABELS[category]}`,
+    hint: `${KEYMAP_CATEGORY_LABELS[category]} single-key shortcuts`,
+    keywords: [groupName(category), ...KEYMAP_GROUP_WORDS],
+    module: KEYMAP_GROUP_MODULE[category],
+  }));
+
+export function matchKeymapGroupSections(query: string): SettingsSectionEntry[] {
+  const tokens = query.split(/\s+/).filter(Boolean);
+  return fuzzyRank(query, KEYMAP_GROUP_SECTIONS, settingsSectionValue).filter((entry) =>
+    tokens.some((token) => fuzzyScore(token, groupName(entry.id.split("#")[1] as KeymapCategory)) > 0),
+  );
+}
 
 /** The text cmdk matches the palette query against. */
 export function settingsSectionValue(entry: SettingsSectionEntry): string {

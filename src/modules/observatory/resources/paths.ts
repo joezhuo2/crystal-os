@@ -15,8 +15,8 @@ export const INBOX = "_inbox";
 export const resourceDir = (folder: string, code: string, type: ResourceType) => `${folder}/${code}/resources/${RESOURCE_DIRS[type]}`;
 export const inboxDir = (folder: string) => `${folder}/${INBOX}`;
 
-export const CONVERTIBLE = /\.(pptx?|html?)$/i;
-export const ACCEPTED = /\.(pdf|pptx?|html?)$/i;
+export const CONVERTIBLE = /\.(pptx?|docx|html?)$/i;
+export const ACCEPTED = /\.(pdf|pptx?|docx|html?)$/i;
 
 export const pdfStem = (fileName: string) =>
   fileName

@@ -144,26 +144,30 @@ function Section({ id, icon: Icon, title, children }: { id: string; icon: React.
   // The command palette's "jump to section": unfold it (saved, like a click),
   // scroll to it and flash it. Waits for the page to clear its search first,
   // since a filtered-out section is hidden and cannot be scrolled to.
-  const jumpTarget = useAppUi((s) => s.settingsSection);
+  const [jumpId, jumpAnchor] = (useAppUi((s) => s.settingsSection) ?? "").split("#");
   const [flash, setFlash] = useState(false);
+  const [anchor, setAnchor] = useState<string>();
   useEffect(() => {
-    if (jumpTarget !== id || searching) return;
+    if (jumpId !== id || searching) return;
     appUi.setSettingsSection(null);
     writeCollapsed(id, false);
     setOpen(true);
+    setAnchor(jumpAnchor);
     setFlash(true);
-  }, [jumpTarget, searching, id]);
+  }, [jumpId, jumpAnchor, searching, id]);
 
   // Apart from the jump, which re-runs as soon as it clears the request.
   useEffect(() => {
     if (!flash) return;
-    const frame = requestAnimationFrame(() => sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    const section = sectionRef.current;
+    const target = (anchor && section?.querySelector<HTMLElement>(`[data-settings-anchor="${anchor}"]`)) || section;
+    const frame = requestAnimationFrame(() => target?.scrollIntoView({ behavior: "smooth", block: "start" }));
     const timer = window.setTimeout(() => setFlash(false), FLASH_MS);
     return () => {
       cancelAnimationFrame(frame);
       window.clearTimeout(timer);
     };
-  }, [flash]);
+  }, [flash, anchor]);
 
   const toggle = () => {
     if (searching) return setOverride(!shown);
@@ -690,7 +694,7 @@ function KeymapSettings() {
   return (
     <>
       {groups.map(({ category, actions }) => (
-        <div key={category} className="space-y-3 pt-3 first:pt-0">
+        <div key={category} data-settings-anchor={category} className="space-y-3 pt-3 first:pt-0 scroll-mt-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{KEYMAP_CATEGORY_LABELS[category]}</p>
           {actions.map((action) => {
             const binding = bindingFor(action.id) ?? action.defaultKey;
@@ -1333,6 +1337,15 @@ export default function SettingsPage() {
             </Row>
             <Row title="Ask the AI as soon as I box a region" description="In the reader, dragging a box over a page sends it to the AI at once. While off, the AI panel waits for your question. Needs a provider. Default off.">
               <ObservatoryFlagSwitch flag="aiCaptureAsk" label="Ask the AI as soon as I box a region" needsAi />
+            </Row>
+            <Row title="Ask about every course" description="A chat on the Observatory home that answers from all your courses. Each question sends a map of your topic and PDF titles, chapters and page headings, then the text or images of the few pages the AI picks. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="aiAskAll" label="Ask about every course" needsAi />
+            </Row>
+            <Row title="Ask about a course" description="A chat on a course page that answers from that course's PDFs and topic notes. Each question sends a map of them, then the text or images of the few pages the AI picks. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="aiAskCourse" label="Ask about a course" needsAi />
+            </Row>
+            <Row title="Ask about the open PDF" description="In the reader, type a question without boxing a region and the AI answers from the open PDF. Each question sends a map of its chapters and page headings, then the text or images of the few pages the AI picks. Needs a provider. Default off.">
+              <ObservatoryFlagSwitch flag="aiAskResource" label="Ask about the open PDF" needsAi />
             </Row>
             <Row title="Deep Sky: suggest from my projects" description="Suggest things to learn from the projects in the folders below. Needs a provider. Default off.">
               <ObservatoryFlagSwitch flag="deepSkyProjects" label="Deep Sky: suggest from my projects" needsAi />

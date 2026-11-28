@@ -19,7 +19,7 @@ export const PAGES_PER_CALL = 5;
 const IMAGE_SCALE = 1.5;
 
 export const normalizeQuestion = (s: string) => s.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
-const needsImage = (p: PdfPage) => textConfidence(p.text).needsOcr || isMathGarbled(p.text);
+export const needsImage = (p: PdfPage) => textConfidence(p.text).needsOcr || isMathGarbled(p.text);
 
 async function poolTexts(paths: string[]): Promise<string[]> {
   const out: string[] = [];
@@ -44,7 +44,7 @@ async function topicTexts(folder: string, code: string, topics: Topic[]): Promis
   return out;
 }
 
-function chaptersFor(type: string, stored: unknown, doc: PdfDoc): Chapter[] {
+export function chaptersFor(type: string, stored: unknown, doc: PdfDoc): Chapter[] {
   if (type !== "textbook") return [];
   const kept = storedChapters(stored);
   return kept.length ? kept : detectChapters(doc).value;

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Archive, ArchiveRestore, ArrowLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeft, ChevronRight, Pencil, Save, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -19,6 +19,7 @@ import { useShortcut } from "@/hooks/useShortcut";
 import { useAppActivity } from "@/lib/appActivity";
 import { isDesktop } from "@/lib/platform";
 import { undoToast } from "@/lib/undo";
+import { AskButton } from "./AskButton";
 import { CourseDialog } from "./CourseDialog";
 import { ExamEventLink } from "./ExamEventLink";
 import { GradesTab, type GradesHandle } from "./GradesTab";
@@ -38,7 +39,7 @@ const TABS = ["Overview", "Topics", "Resources", "Grades"] as const;
 
 const EXPAND_TRANSITION = { type: "tween", duration: 0.2, ease: [0.4, 0, 0.2, 1] } as const;
 
-export function CoursePage({ entry, onBack, initialTab, initialTopic }: { entry: CourseEntry; onBack: () => void; initialTab?: (typeof TABS)[number]; initialTopic?: string }) {
+export function CoursePage({ entry, onBack, initialTab, initialTopic, initialResource }: { entry: CourseEntry; onBack: () => void; initialTab?: (typeof TABS)[number]; initialTopic?: string; initialResource?: { pdf: string; page?: number } }) {
   const { course, path } = entry;
   const { folder } = useObservatorySettings();
   const { still } = useAppActivity();
@@ -52,6 +53,7 @@ export function CoursePage({ entry, onBack, initialTab, initialTopic }: { entry:
   const grades = useRef<GradesHandle>(null);
   const [leave, setLeave] = useState<(() => void) | null>(null);
   const [reading, setReading] = useState(false);
+  const [gradesDirty, setGradesDirty] = useState(false);
   const guard = (go: () => void) => (grades.current?.dirty() ? setLeave(() => go) : go());
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["vault"] });
   const fail = (title: string, err: unknown) => toast.error(title, { description: err instanceof Error ? err.message : String(err) });
@@ -90,9 +92,11 @@ export function CoursePage({ entry, onBack, initialTab, initialTopic }: { entry:
 
   return (
     <div className="space-y-5">
-      <Button variant="ghost" size="sm" onClick={() => guard(onBack)}>
-        <ArrowLeft className="h-4 w-4 mr-1" /> Back
-      </Button>
+      {!reading && (
+        <Button variant="ghost" size="sm" onClick={() => guard(onBack)}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back
+        </Button>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <span className="h-3 w-3 rounded-full shrink-0" style={{ background: course.color }} aria-hidden="true" />
@@ -130,7 +134,16 @@ export function CoursePage({ entry, onBack, initialTab, initialTopic }: { entry:
           </button>
         ))}
       </GlideEffect>
-      {tab === "Resources" && <ResourceToolbar course={course} />}
+      <div className="flex items-center gap-2">
+        {tab === "Resources" && <ResourceToolbar course={course} />}
+        {tab === "Grades" && (course.exams.length > 0 || course.assessments.length > 0) && (
+          <div className="flex items-center gap-2">
+            {gradesDirty && <span className="text-xs text-muted-foreground">Unsaved changes</span>}
+            <IconAction icon={Save} label="Save grades" disabled={!gradesDirty} action={() => grades.current?.save()} />
+          </div>
+        )}
+        <AskButton courses={[course]} flag="aiAskCourse" label={`Ask about ${course.code}`} />
+      </div>
       </div>
 
       <AnimatePresence mode="wait" initial={false}>
@@ -208,8 +221,8 @@ export function CoursePage({ entry, onBack, initialTab, initialTopic }: { entry:
               <PriorityMap code={course.code} courseName={course.name} topics={topics} initialOpen={initialTopic} />
             </>
           )}
-          {tab === "Resources" && <ResourcesTab course={course} topics={topics} onReading={setReading} />}
-          {tab === "Grades" && <GradesTab ref={grades} key={course.code} course={course} onEdit={() => guard(() => setEditing(true))} />}
+          {tab === "Resources" && <ResourcesTab course={course} topics={topics} onReading={setReading} initialResource={initialResource} />}
+          {tab === "Grades" && <GradesTab ref={grades} key={course.code} course={course} onDirty={setGradesDirty} onEdit={() => guard(() => setEditing(true))} />}
         </m.div>
       </AnimatePresence>
 
